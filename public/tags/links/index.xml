@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Links on daschl writes. sometimes.</title>
+    <link>http://nitschinger.at/tags/links/</link>
+    <description>Recent content in Links on daschl writes. sometimes.</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 06 Aug 2013 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://nitschinger.at/tags/links/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Useful Couchbase Resources &amp; Blog Posts</title>
+      <link>http://nitschinger.at/Useful-Couchbase-Resources-Blog-Posts/</link>
+      <pubDate>Tue, 06 Aug 2013 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/Useful-Couchbase-Resources-Blog-Posts/</guid>
+      <description>
+
+&lt;p&gt;The following list is a convenient way to get access to lots of resources, blog posts and material that have been shared throughout the past months. I tried to separate them by area, but of course lots of them overlap to some extent.&lt;/p&gt;
+
+&lt;p&gt;They are sorted by date (so you&amp;rsquo;ll find the most recent ones on top) and include the author where possible. Be aware that some of the older articles may already be outdated  or not 100% accurate.&lt;/p&gt;
+
+&lt;p&gt;I&amp;rsquo;ll try to update this page as new articles get published, so it may pay off to come back here from time to time and check out the topmost ones. If you want to see your article included, post them in the comments!&lt;/p&gt;
+
+&lt;h2 id=&#34;starting-out:76a11daebb48e304a92800ea720c7bd4&#34;&gt;Starting Out&lt;/h2&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;http://www.couchbase.com/docs/couchbase-manual-2.1.0/&#34;&gt;Official Couchbase Server 2.1 Manual&lt;/a&gt;: The official manual and a good starting point for all kinds of general-purpose and architectural questions.&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;http://www.couchbase.com/docs/couchbase-devguide-2.1.0/&#34;&gt;Couchbase Server 2.1 Developer Guide&lt;/a&gt;: The developer guide is particularly useful for developers that are new to document modeling and general app-related questions.&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;http://www.couchbase.com/communities&#34;&gt;The Community Portal&lt;/a&gt;: Starting point for all SDK-related questions and links.&lt;/li&gt;
+&lt;li&gt;2013-04-24 &lt;a href=&#34;http://blog.couchbase.com/top-10-things-ops-sys-admin-must-know-about-couchbase&#34;&gt;Top 10 things an Ops / Sys admin must know about Couchbase&lt;/a&gt;: Ten short rules that sys admins that maintain Couchbase clusters should keep in mind.&lt;/li&gt;
+&lt;li&gt;2012-07-06 &lt;a href=&#34;http://tugdualgrall.blogspot.co.at/2012/07/couchbase-101-install-store-and-query.html&#34;&gt;Couchbase 101 : Install, Store and Query Data (tgrall)&lt;/a&gt;: A very basic introduction for people starting out, teaching the very basics in a hands-on fashion.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&#34;installation-infrastructure:76a11daebb48e304a92800ea720c7bd4&#34;&gt;Installation &amp;amp; Infrastructure&lt;/h2&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;http://www.couchbase.com/docs/couchbase-manual-2.1.0/couchbase-getting-started.html&#34;&gt;Official Installation Guide for 2.1&lt;/a&gt;: The official installation guide, read this before installing on production systems.&lt;/li&gt;
+&lt;li&gt;2013-08-05 &lt;a href=&#34;http://trondn.blogspot.no/2013/08/running-couchbase-211-on-smartos.html&#34;&gt;Running Couchbase 2.1.1 on SmartOS (trondn)&lt;/a&gt;: Learn how to - step by step - compile and run a Couchbase cluster on SmartOS. This is for all the Solaris fans out there!&lt;/li&gt;
+&lt;li&gt;2013-07-22 &lt;a href=&#34;http://blog.couchbase.com/deploying-couchbase-chef&#34;&gt;Deploying Couchbase with Chef (ketakigangal)&lt;/a&gt;: If you use Chef to automate your infrastructure, this blog post shows you how to integrate Couchbase with it.&lt;/li&gt;
+&lt;li&gt;2013-07-11 &lt;a href=&#34;http://tugdualgrall.blogspot.co.at/2013/07/deploy-your-nodecouchbase-application.html&#34;&gt;Deploy your Node/Couchbase application to the cloud with Clever Cloud (tgrall)&lt;/a&gt;: You&amp;rsquo;ll learn how to deploy your Node.JS app with Couchbase onto &amp;ldquo;clever cloud&amp;rdquo;, a PaaS provider.&lt;/li&gt;
+&lt;li&gt;2013-06-27 &lt;a href=&#34;http://www.ebruakagunduz.com/2013/06/nagios-plugin-to-monitor-couchbase.html?spref=tw&#34;&gt;Nagios plugin to monitor Couchbase (Ebru Akagündüz)&lt;/a&gt;: If you are using Nagios to monitor your infrastructure, this post shows you how to integrate Couchbase with a single plugin.&lt;/li&gt;
+&lt;li&gt;2013-05-31 &lt;a href=&#34;http://tugdualgrall.blogspot.co.at/2013/05/create-couchbase-cluster-in-one-command.html&#34;&gt;Create a Couchbase cluster in less than a minute with Ansible (tgrall)&lt;/a&gt;: Create a Couchbase cluster automatically with Ansible, a systems automation framework like chef.&lt;/li&gt;
+&lt;li&gt;2013-05-27 &lt;a href=&#34;http://nitschinger.at/A-Couchbase-Cluster-in-Minutes-with-Vagrant-and-Puppet&#34;&gt;A Couchbase Cluster in Minutes with Vagrant and Puppet (daschl)&lt;/a&gt;: If you want to setup a 4 node cluster with couchbase in minutes, this blog post shows you how to do it.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&#34;document-design-data-import-export:76a11daebb48e304a92800ea720c7bd4&#34;&gt;Document Design &amp;amp; Data Import/Export&lt;/h2&gt;
+
+&lt;ul&gt;
+&lt;li&gt;2013-07-18 &lt;a href=&#34;http://tugdualgrall.blogspot.co.at/2013/07/how-to-implement-document-versioning.html&#34;&gt;How to implement Document Versioning with Couchbase (tgrall)&lt;/a&gt;: See how to implement document versioning by using a key-based approach. Uses the Java SDK, but can be adapted for all languages.&lt;/li&gt;
+&lt;li&gt;2013-07-08 &lt;a href=&#34;http://dev.theladders.com/2013/07/denormalize-the-datas-for-great-good&#34;&gt;Denormalize the Datas for Great Good (John Connolly)&lt;/a&gt;: See how TheLadders benefited from denormalizing its dataset and using Couchbase, greatly reducing their response times.&lt;/li&gt;
+&lt;li&gt;2013-07-03 &lt;a href=&#34;http://tugdualgrall.blogspot.co.at/2013/07/sql-to-nosql-importing-data-from-rdbms.html&#34;&gt;SQL to NoSQL : Copy your data from MySQL to Couchbase (tgrall)&lt;/a&gt;: A Java-based tool to import data from a SQL database into Couchbase.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&#34;views:76a11daebb48e304a92800ea720c7bd4&#34;&gt;Views&lt;/h2&gt;
+
+&lt;ul&gt;
+&lt;li&gt;2013-07-25 &lt;a href=&#34;http://blog.couchbase.com/caching-queries-couchbase-high-performance&#34;&gt;Caching queries in Couchbase for high performance (Alexis Roos)&lt;/a&gt;: Learn how to cache view results for better performance.&lt;/li&gt;
+&lt;li&gt;2013-07-12 &lt;a href=&#34;http://blog.couchbase.com/calculating-average-document-size-documents-stored-couchbase&#34;&gt;Calculating average document size of documents stored in Couchbase. (Alexis Roos)&lt;/a&gt;: With a simple map and a custom reduce function, one can easily calculate the average document size in the bucket.&lt;/li&gt;
+&lt;li&gt;2013-06-14 &lt;a href=&#34;http://avsej.net/2013/analyzing-binary-data-in-couchbase&#34;&gt;Analyzing Binary Data in Couchbase (avsej)&lt;/a&gt;: Shows how to access binary (non-json) data from a View. Uses ruby to store the data, but can be adapted to any language.&lt;/li&gt;
+&lt;li&gt;2013-02-18 &lt;a href=&#34;http://tugdualgrall.blogspot.co.at/2013/02/how-to-get-latest-document-by-datetime.html&#34;&gt;How to get the latest document by date/time field (tgrall)&lt;/a&gt;: A simple example on how to sort View-data based on a timestamp.&lt;/li&gt;
+&lt;li&gt;2013-02-13 &lt;a href=&#34;http://tugdualgrall.blogspot.co.at/2013/02/introduction-to-collated-views-with.html&#34;&gt;Introduction to Collated Views with Couchbase 2.0 (tgrall)&lt;/a&gt;: Views can also be used to output &amp;ldquo;master/detail&amp;rdquo;-like scenarios. This post shows how.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&#34;java-sdk-jvm:76a11daebb48e304a92800ea720c7bd4&#34;&gt;Java SDK &amp;amp; JVM&lt;/h2&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;http://www.couchbase.com/communities/java/getting-started&#34;&gt;Getting Started &amp;amp; Download&lt;/a&gt;: The official &amp;ldquo;Getting Started&amp;rdquo; page for the Java SDK. Introduction, Tutorial and Downloads.&lt;/li&gt;
+&lt;li&gt;2013-05-16 &lt;a href=&#34;http://nitschinger.at/Logging-with-the-Couchbase-Java-Client&#34;&gt;Logging with the Couchbase Java Client (daschl)&lt;/a&gt;: An in-depth post about how to correctly configure logging for the Java SDK (and the underlying spymemcached library).&lt;/li&gt;
+&lt;li&gt;2013-04-17 &lt;a href=&#34;http://nitschinger.at/Couchbase-Java-SDK-Internals&#34;&gt;Couchbase Java SDK Internals (daschl)&lt;/a&gt;: A very detailed post about the inner workings of the Java SDK. Recommended for advanced users who want to understand more of the internals.&lt;/li&gt;
+&lt;li&gt;2012-12-30 &lt;a href=&#34;http://tugdualgrall.blogspot.co.at/2012/12/couchbase-101-create-views-mapreduce.html&#34;&gt;Couchbase 101: Create views (MapReduce) from your Java application (tgrall)&lt;/a&gt;: How to create views and design documents directly from the Java SDK.&lt;/li&gt;
+&lt;li&gt;2012-11-05 &lt;a href=&#34;http://tugdualgrall.blogspot.co.at/2012/11/couchbase-create-large-dataset-using.html&#34;&gt;Couchbase : Create a large dataset using Twitter and Java (tgrall)&lt;/a&gt;: Feed data from Twitter directly into your Couchbase cluster through the Java SDK.&lt;/li&gt;
+&lt;li&gt;2012-04-26 &lt;a href=&#34;http://nitschinger.at/Accessing-Couchbase-from-Scala&#34;&gt;Accessing Couchbase from Scala (daschl)&lt;/a&gt;: How to access the Couchbase Java SDK from the Scala programing language.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&#34;net:76a11daebb48e304a92800ea720c7bd4&#34;&gt;.NET&lt;/h2&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;http://www.couchbase.com/communities/net/getting-started&#34;&gt;Getting Started &amp;amp; Download&lt;/a&gt;: The official &amp;ldquo;Getting Started&amp;rdquo; page for the .NET SDK. Introduction, Tutorial and Downloads.&lt;/li&gt;
+&lt;li&gt;2013-06-14 &lt;a href=&#34;http://vimeo.com/68378224&#34;&gt;Video: Code-First NoSQL with .NET and Couchbase (John Zablocki)&lt;/a&gt;: A video where John Zablocki gives an introduction into NoSQL development and especially with Couchbase.&lt;/li&gt;
+&lt;li&gt;2013-03-06 &lt;a href=&#34;http://blog.couchbase.com/net-couchbase-client-instrumentation-aspnet-and-glimpse&#34;&gt;.NET Couchbase Client Instrumentation with ASP.NET and Glimpse (John Zablocki)&lt;/a&gt;: See how to get your Couchbase server-side logging errors easily displayed in the browser console. Very helpful during development.&lt;/li&gt;
+&lt;li&gt;2013-02-01 &lt;a href=&#34;http://blog.couchbase.com/moving-no-schema-stack-c-and-dynamic-types&#34;&gt;Moving No Schema up the Stack with C# and Dynamic Types (John Zablocki)&lt;/a&gt;: This blog post shows how to store schemaless data with both dictionaries and C#&amp;rsquo;s dynamic typing.&lt;/li&gt;
+&lt;li&gt;2013-01-04 &lt;a href=&#34;http://blog.couchbase.com/xdcr-aspnet-and-nancy&#34;&gt;XDCR with ASP.NET and Nancy (John Zablocki)&lt;/a&gt;: Learn how to build an XDCR endpoint (like ElasticSearch integration) and read the data through our XDCR mechanisms.&lt;/li&gt;
+&lt;li&gt;2012-10-23 &lt;a href=&#34;http://blog.couchbase.com/using-c-domain-objects-define-couchbase-views&#34;&gt;Using C# Domain Objects to Define Couchbase Views (John Zablocki)&lt;/a&gt;: How to automatically create DesignDocuments based of C# domain objects.&lt;/li&gt;
+&lt;li&gt;2012-10-05 &lt;a href=&#34;http://blog.couchbase.com/new-visual-studio-code-snippets-net-couchbase-client-library&#34;&gt;New Visual Studio Code Snippets for the .NET Couchbase Client Library (John Zablocki)&lt;/a&gt;: A collection of helpful snippets in the day-to-day development process.&lt;/li&gt;
+&lt;li&gt;2012-09-20 &lt;a href=&#34;http://blog.couchbase.com/strongly-typed-views-net-client-library&#34;&gt;Strongly Typed Views with the .NET Client Library (John Zablocki)&lt;/a&gt;: Learn how to map View responses directly onto domain objects.&lt;/li&gt;
+&lt;li&gt;2012-08-01 &lt;a href=&#34;http://blog.couchbase.com/introducing-couchbase-aspnet-outputcache-provider&#34;&gt;Introducing the Couchbase ASP.NET OutputCache Provider (John Zablocki)&lt;/a&gt;: A short post on how to use Couchbase for easy caching in the ASP.NET environment.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&#34;php:76a11daebb48e304a92800ea720c7bd4&#34;&gt;PHP&lt;/h2&gt;
+
+&lt;p&gt;(Note: some of these posts are outdated in the way that currently the &amp;ldquo;way to go&amp;rdquo; when installing the PHP SDK is through PECL. See the the &lt;a href=&#34;http://www.couchbase.com/communities/php/getting-started&#34;&gt;Getting Started &amp;amp; Download&lt;/a&gt; guide for more information.)&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;http://www.couchbase.com/communities/php/getting-started&#34;&gt;Getting Started &amp;amp; Download&lt;/a&gt;: The official &amp;ldquo;Getting Started&amp;rdquo; page for the PHP SDK. Introduction, Tutorial and Downloads.&lt;/li&gt;
+&lt;li&gt;2013-04-02  &lt;a href=&#34;http://trondn.blogspot.co.at/2013/04/couchbase-php-xampp-and-windows.html&#34;&gt;Couchbase, PHP, XAMPP and Windows (trondn)&lt;/a&gt;: A short post on how to use the PHP SDK from Microsoft Windows.&lt;/li&gt;
+&lt;li&gt;2013-04-01 &lt;a href=&#34;http://trondn.blogspot.co.at/2013/04/building-couchbase-php-driver-on-ubuntu.html&#34;&gt;Building Couchbase PHP driver on Ubuntu (trondn)&lt;/a&gt;: Learn how to build the Couchbase driver on Ubuntu and use it in a simple program.&lt;/li&gt;
+&lt;li&gt;2013-02-04 &lt;a href=&#34;http://trondn.blogspot.co.at/2013/02/accessing-couchbase-from-php-on-your-mac.html&#34;&gt;Accessing Couchbase from PHP on your Mac! (trondn)&lt;/a&gt; Building and running the SDK on your Mac is easy, learn how to do it in this post.&lt;/li&gt;
+&lt;li&gt;2012-11-01 &lt;a href=&#34;http://trondn.blogspot.co.at/2012/11/building-php-extension-for-couchbase-on.html&#34;&gt;Building the PHP extension for Couchbase on Microsoft Windows! (trondn)&lt;/a&gt;: Learn how to compile the SDK on Windows using Visual Studio 2008.&lt;/li&gt;
+&lt;li&gt;2012-06-25 &lt;a href=&#34;http://nitschinger.at/How-to-store-PHP-sessions-in-Couchbase&#34;&gt;How to store PHP sessions in Couchbase (daschl)&lt;/a&gt;: This post shows how to store PHP sessions in Couchbase using different mechanims (not only the official SDK).&lt;/li&gt;
+&lt;li&gt;2012-06-21 &lt;a href=&#34;http://nitschinger.at/Using-Couchbase-as-a-flexible-session-store&#34;&gt;Using Couchbase as a flexible session store (daschl)&lt;/a&gt;: With Couchbase Server 2.0, JSON data and Views, its easy to run metrics over your sessions and identify user behavior. Learn how in this post.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&#34;c-go:76a11daebb48e304a92800ea720c7bd4&#34;&gt;C &amp;amp; Go&lt;/h2&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;http://www.couchbase.com/communities/c/getting-started&#34;&gt;Getting Started &amp;amp; Download with the C SDK&lt;/a&gt;: The official &amp;ldquo;Getting Started&amp;rdquo; page for the C SDK. Introduction, Tutorial and Downloads.&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/couchbaselabs/go-couchbase&#34;&gt;Official Go Client Repository&lt;/a&gt;: The Go repository with code and simple examples.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&#34;ruby:76a11daebb48e304a92800ea720c7bd4&#34;&gt;Ruby&lt;/h2&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;http://www.couchbase.com/communities/ruby/getting-started&#34;&gt;Getting Started &amp;amp; Download&lt;/a&gt;: The official &amp;ldquo;Getting Started&amp;rdquo; page for the Ruby SDK. Introduction, Tutorial and Downloads.&lt;/li&gt;
+&lt;li&gt;2013-02-23 &lt;a href=&#34;http://avsej.net/links/2013/couchbase-and-rails/&#34;&gt;Couchbase and Rails Talk (avsej)&lt;/a&gt;: A presentation by our lead Ruby SDK developer on how to integrate it with Ruby on Rails.&lt;/li&gt;
+&lt;li&gt;2013-02-11 &lt;a href=&#34;http://blog.couchbase.com/using-couchbase-ruby-gem-eventmachine&#34;&gt;Using Couchbase Ruby Gem with EventMachine (avsej)&lt;/a&gt;: This post shows how to use the Ruby SDK together with the high performance EventMachine (custom protocols and performance for TCP/IP) gem.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&#34;node-js:76a11daebb48e304a92800ea720c7bd4&#34;&gt;Node.JS&lt;/h2&gt;
+
+&lt;ul&gt;
+&lt;li&gt;2013-03-06 &lt;a href=&#34;http://tugdualgrall.blogspot.co.at/2013/03/easy-application-development-with.html&#34;&gt;Easy application development with Couchbase, Angular and Node (tgrall)&lt;/a&gt;: Storing Ideas and Votes in Couchbase with Angular and NodeJS.&lt;/li&gt;
+&lt;li&gt;2013-01-04 &lt;a href=&#34;http://tugdualgrall.blogspot.co.at/2013/01/getting-started-with-couchbase-and.html&#34;&gt;Getting started with Couchbase and node.js on Windows (tgrall)&lt;/a&gt;: How to install and use the NodeJS Couchbase client library on Windows.&lt;/li&gt;
+&lt;li&gt;2012-11-13 &lt;a href=&#34;http://tugdualgrall.blogspot.co.at/2012/11/building-chat-application-using-nodejs.html&#34;&gt;Building a chat application using Node.js and Couchbase (tgrall)&lt;/a&gt;: A nice chat application using Couchbase, NodeJS and socket.io for &amp;ldquo;real time&amp;rdquo; feeling.&lt;/li&gt;
+&lt;li&gt;2012-09-24 &lt;a href=&#34;http://tugdualgrall.blogspot.co.at/2012/09/create-simple-nodejs-and-couchbase.html&#34;&gt;Create a Simple Node.js and Couchbase application&amp;hellip; on OS X (tgrall)&lt;/a&gt; A simple (but maybe outdated) tutorial on how to use the NodeJS driver from OSX.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&#34;python:76a11daebb48e304a92800ea720c7bd4&#34;&gt;Python&lt;/h2&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;http://www.couchbase.com/communities/python/getting-started&#34;&gt;Getting Started &amp;amp; Download&lt;/a&gt;: The official &amp;ldquo;Getting Started&amp;rdquo; page for the Python SDK. Introduction, Tutorial and Downloads.&lt;/li&gt;
+&lt;li&gt;2013-06-21 &lt;a href=&#34;http://mnunberg.github.io/2013/python-extension-windows-binaries&#34;&gt;Python Extension Windows Binaries (mnunberg)&lt;/a&gt;: A tale by our maintainer of the Python SDK on how to upload Windows binaries to PyPi.&lt;/li&gt;
+&lt;li&gt;2013-05-30 &lt;a href=&#34;http://blog.couchbase.com/whats-python-couchbase-sdk&#34;&gt;What&amp;rsquo;s up with the Python Couchbase SDK (volker)&lt;/a&gt;: A rundown of the latest changes on the Python SDK.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&#34;ecosystem:76a11daebb48e304a92800ea720c7bd4&#34;&gt;Ecosystem&lt;/h2&gt;
+
+&lt;ul&gt;
+&lt;li&gt;2013-07-31 &lt;a href=&#34;http://www.ortussolutions.com/blog/couchbase-cluster-setup-orm-secondary-cache-introduction&#34;&gt;Couchbase: Cluster Setup + ORM Secondary Cache Introduction (Brad Wood)&lt;/a&gt;: Using ColdFusion and looking for a secondary cache implementation? Look no further.&lt;/li&gt;
+&lt;li&gt;2013-07-22 &lt;a href=&#34;http://blog.jeroenreijn.com/2013/07/visitor-analysis-with-couchbase-elasticsearch.html&#34;&gt;Real-time visitor analysis with Couchbase, Elasticsearch and Kibana (Jeroen Reijn)&lt;/a&gt;: A great post on a customer&amp;rsquo;s use case for real-time visitor analysis.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&#34;troubleshooting:76a11daebb48e304a92800ea720c7bd4&#34;&gt;Troubleshooting&lt;/h2&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;http://www.couchbase.com/docs/couchbase-manual-2.1.0/couchbase-troubleshooting.html&#34;&gt;Official troubleshooting Guide&lt;/a&gt;: The best place to start if something goes wrong on the server and you don&amp;rsquo;t know why.&lt;/li&gt;
+&lt;li&gt;2012-12-26 &lt;a href=&#34;http://tugdualgrall.blogspot.co.at/2012/12/what-to-do-if-your-couchbase-server.html&#34;&gt;What to do if your Couchbase Server does not start? (tgrall)&lt;/a&gt;: If you have troubles getting older Couchbase Server 2.0 versions to run on Windows, this post is for you.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&#34;fun-stuff:76a11daebb48e304a92800ea720c7bd4&#34;&gt;Fun Stuff&lt;/h2&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/couchbaselabs/DeveloperDay&#34;&gt;Example code for lots of SDKs and Languages&lt;/a&gt;: Our DeveloperDay material with hands-on code examples to try and learn.&lt;/li&gt;
+&lt;li&gt;2013-06-18 &lt;a href=&#34;http://nitschinger.at/Fun-with-Couchbase-Views-and-Message-Pack&#34;&gt;Fun with Couchbase Views and MessagePack (daschl)&lt;/a&gt;: While JSON is tried and true, with a little twiggling and some fun you can get Couchbase Views to speak MessagePack!&lt;/li&gt;
+&lt;li&gt;2013-04-29 &lt;a href=&#34;http://tugdualgrall.blogspot.co.at/2013/04/screencast-fun-with-couchbase-mapreduce.html&#34;&gt;Screencast : Fun with Couchbase, MapReduce and Twitter (tgrall)&lt;/a&gt;: A Screencast on importing Twitter data into Couchbase and analyzing it on the fly through Views.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Last Updated: 2013-08-06 (daschl)&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

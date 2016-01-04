@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rss &middot; daschl writes. sometimes.</title>
+
+    <meta name="description" content="">
+
+    <meta name="generator" content="Hugo 0.15" />
+    <meta name="twitter:card" content="summary">
+    
+    <meta name="twitter:title" content="Rss &middot; daschl writes. sometimes.">
+    <meta name="twitter:description" content="">
+
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Rss &middot; daschl writes. sometimes.">
+    <meta property="og:description" content="">
+
+    <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Oxygen:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
+    <!--[if lte IE 8]>
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-old-ie-min.css">
+    <![endif]-->
+    <!--[if gt IE 8]><!-->
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
+    <!--<![endif]-->
+
+    <link rel="stylesheet" href="http://nitschinger.at//css/all.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <link rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." href="http://nitschinger.at//index.xml" />
+</head>
+<body>
+
+
+<div id="layout" class="pure-g">
+    <div class="sidebar pure-u-1 pure-u-md-1-4">
+    <div class="header">
+        <hgroup>
+            <h1 class="brand-title"><a href="http://nitschinger.at/">daschl writes. sometimes.</a></h1>
+            <h2 class="brand-tagline"></h2>
+        </hgroup>
+
+        <nav class="nav">
+            <ul class="nav-list">
+                
+                
+                <li class="nav-item">
+                    <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+
+    <div class="content pure-u-1 pure-u-md-3-4">
+        <div>
+            
+            <div class="posts">
+                
+                <h1 class="content-subhead">20 Nov 2010</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="http://nitschinger.at/Add-an-RSS-Feed-to-your-blog-with-Lithium/" class="post-title">Add an RSS-Feed to your blog with Lithium</a>
+
+                        <p class="post-meta">
+                            
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        <p>Adding an RSS-Feed to your blog with li3 is really straightforward, because all the infrastructure you need is already at your fingertips. I assume that you already have some posts stored in your database, you serve them to your users via <code>/posts</code> and the new RSS-File should be accessible via <code>/posts.rss</code>.</p>
+
+<p>First, we need to tell Lithium that we want to add another Media-Type to our application. Add the following to your <code>app/config/bootstrap/media.php</code>-File (and don&rsquo;t forget to uncomment it in <code>app/config/bootstrap.php</code>). You can also comment the other code out in this file if you don&rsquo;t need it.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">use</span> <span style="color: #000000">lithium\net\http\Media;</span>
+<span style="color: #000000">Media::type(</span><span style="color: #C41A16">&#39;rss&#39;</span><span style="color: #000000">,</span> <span style="color: #C41A16">&#39;application/rss+xml&#39;</span><span style="color: #000000">);</span>
+</pre></div>
+
+<p>Next, let&rsquo;s add a link to our <code>default.html.php</code>-Layout so that our feed shows up in the browser.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">html</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">link</span>(<span style="color: #C41A16">&#39;RSS-Feed&#39;</span>, <span style="color: #C41A16">&#39;/posts.rss&#39;</span>, <span style="color: #A90D91">array</span>(<span style="color: #C41A16">&#39;type&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;rss&#39;</span>)); <span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>Before we start to create our RSS-Views, check that your <code>PostsController::index()</code>-Method looks something like this and returns one or more posts to the View.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">index</span>() {
+    <span style="color: #000000">$posts</span> <span style="color: #000000">=</span> <span style="color: #000000">Post::all</span>(<span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;order&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;created&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;DESC&#39;</span>)));
+    <span style="color: #A90D91">return</span> <span style="color: #000000">compact</span>(<span style="color: #C41A16">&#39;posts&#39;</span>);
+}
+</pre></div>
+
+<p>Alright, first create a new <code>default.rss.php</code>-Layout (in <code>app/views/layouts</code>):</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span> <span style="color: #A90D91">echo</span> <span style="color: #C41A16">&#39;&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; ?&gt;&#39;</span>; <span style="color: #633820">?&gt;</span>
+    <span style="color: #000000">&lt;rss</span> <span style="color: #836C28">version=</span><span style="color: #C41A16">&quot;2.0&quot;</span><span style="color: #000000">&gt;</span>
+        <span style="color: #000000">&lt;channel&gt;</span>
+            <span style="color: #000000">&lt;title&gt;</span>My cool Blog<span style="color: #000000">&lt;/title&gt;</span>
+            <span style="color: #000000">&lt;description&gt;</span>A short description about my blog.<span style="color: #000000">&lt;/description&gt;</span>
+            <span style="color: #000000">&lt;link&gt;</span>http://exampleblog.com/<span style="color: #000000">&lt;/link&gt;</span>
+            <span style="color: #000000">&lt;lastBuildDate&gt;</span><span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #A90D91">date</span>(<span style="color: #C41A16">&#39;D, d M Y g:i:s O&#39;</span>); <span style="color: #633820">?&gt;</span><span style="color: #000000">&lt;/lastBuildDate&gt;</span>
+            <span style="color: #000000">&lt;pubDate&gt;</span><span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #A90D91">date</span>(<span style="color: #C41A16">&#39;D, d M Y g:i:s O&#39;</span>); <span style="color: #633820">?&gt;</span><span style="color: #000000">&lt;/pubDate&gt;</span>
+            <span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">content</span>(); <span style="color: #633820">?&gt;</span>
+        <span style="color: #000000">&lt;/channel&gt;</span>
+    <span style="color: #000000">&lt;/rss&gt;</span>
+</pre></div>
+
+<p>The previous code is just basic RSS-Markup. Feel free to add a custom title, description, link and so on. The <code>lastBuildDate</code> and <code>pubDate</code> are generated dynamically. <code>&lt;?= $this-&gt;content(); ?&gt;</code> will render our <code>posts</code>-View which we&rsquo;ll add now. Insert the following code in <code>app/views/posts/index.rss.php</code>:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">    <span style="color: #633820">&lt;?php</span> <span style="color: #A90D91">foreach</span>(<span style="color: #000000">$posts</span> <span style="color: #A90D91">As</span> <span style="color: #000000">$post</span>)<span style="color: #000000">:</span> <span style="color: #633820">?&gt;</span>
+    <span style="color: #000000">&lt;item&gt;</span>
+        <span style="color: #000000">&lt;title&gt;</span><span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #000000">$post-&gt;</span><span style="color: #836C28">title</span>; <span style="color: #633820">?&gt;</span><span style="color: #000000">&lt;/title&gt;</span>
+        <span style="color: #000000">&lt;description&gt;</span><span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #000000">$post-&gt;</span><span style="color: #836C28">teaser</span>; <span style="color: #633820">?&gt;</span><span style="color: #000000">&lt;/description&gt;</span>
+        <span style="color: #000000">&lt;link&gt;</span><span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">html</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">link</span>(<span style="color: #000000">$post-&gt;</span><span style="color: #836C28">title</span>, <span style="color: #A90D91">array</span>(<span style="color: #C41A16">&#39;Posts::show&#39;</span>, <span style="color: #C41A16">&#39;slug&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">$post-&gt;</span><span style="color: #836C28">slug</span>)); <span style="color: #633820">?&gt;</span><span style="color: #000000">&lt;/link&gt;</span>
+        <span style="color: #000000">&lt;guid</span> <span style="color: #836C28">isPermaLink=</span><span style="color: #C41A16">&quot;true&quot;</span><span style="color: #000000">&gt;</span>http://exampleblog.com/<span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #000000">$post-&gt;</span><span style="color: #836C28">slug</span> <span style="color: #633820">?&gt;</span><span style="color: #000000">&lt;/guid&gt;</span>
+        <span style="color: #000000">&lt;pubDate&gt;</span><span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #A90D91">date</span>(<span style="color: #C41A16">&#39;D, d M Y g:i:s O&#39;</span>, <span style="color: #000000">$post-&gt;</span><span style="color: #836C28">created</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">sec</span>); <span style="color: #633820">?&gt;</span><span style="color: #000000">&lt;/pubDate&gt;</span>
+    <span style="color: #000000">&lt;/item&gt;</span>
+    <span style="color: #633820">&lt;?php</span> <span style="color: #A90D91">endforeach</span>; <span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>You may need to modify the attributes according to your database schema. If you need help on this, feel free to contact me or ask in #li3 on FreeNode.</p>
+
+<p>That&rsquo;s it! You&rsquo;ve added an RSS-Feed to your blog. You can now click the RSS-Icon in your browser or render it directly with <code>http://exampleblog.com/posts.rss</code>. BTW: that&rsquo;s exactly how I did it for this blog, so I hope that it should work for you too!</p>
+
+                    </div>
+                </section>
+                
+            </div>
+            
+
+            <div class="footer">
+    <div class="pure-menu pure-menu-horizontal pure-menu-open">
+        <ul>
+		<li>&copy; Michael Nitschinger 2010-2016</li>
+        </ul>
+    </div>
+</div>
+<script src="http://nitschinger.at//js/all.min.js"></script>
+
+        </div>
+    </div>
+</div>
+
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', '', 'auto');
+ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

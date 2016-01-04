@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Letters from Lithium #1 &middot; daschl writes. sometimes.</title>
+
+    <meta name="description" content="Letters from Lithium keeps you up to date with Lithium and its community. Issue #1 2011-08-02">
+
+    <meta name="generator" content="Hugo 0.15" />
+    <meta name="twitter:card" content="summary">
+    
+    <meta name="twitter:title" content="Letters from Lithium #1 &middot; daschl writes. sometimes.">
+    <meta name="twitter:description" content="Letters from Lithium keeps you up to date with Lithium and its community. Issue #1 2011-08-02">
+
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Letters from Lithium #1 &middot; daschl writes. sometimes.">
+    <meta property="og:description" content="Letters from Lithium keeps you up to date with Lithium and its community. Issue #1 2011-08-02">
+
+    <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Oxygen:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
+    <!--[if lte IE 8]>
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-old-ie-min.css">
+    <![endif]-->
+    <!--[if gt IE 8]><!-->
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
+    <!--<![endif]-->
+
+    <link rel="stylesheet" href="http://nitschinger.at//css/all.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <link rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." href="http://nitschinger.at//index.xml" />
+</head>
+<body>
+
+
+<div id="layout" class="pure-g">
+    <div class="sidebar pure-u-1 pure-u-md-1-4">
+    <div class="header">
+        <hgroup>
+            <h1 class="brand-title"><a href="http://nitschinger.at/">daschl writes. sometimes.</a></h1>
+            <h2 class="brand-tagline"></h2>
+        </hgroup>
+
+        <nav class="nav">
+            <ul class="nav-list">
+                
+                
+                <li class="nav-item">
+                    <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+
+    <div class="content pure-u-1 pure-u-md-3-4">
+        <div>
+            
+            <div class="posts">
+                <h1 class="content-subhead">02 Aug 2011</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="http://nitschinger.at/Letters-from-Lithium-1/" class="post-title">Letters from Lithium #1</a>
+
+                        <p class="post-meta">
+                            
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        
+
+<h2 id="about:ee82dedf484a67ec02efb082c30c3644">About</h2>
+
+<p>&ldquo;Letters from Lithium&rdquo; will be published on a regular basis to give you an update on what happens in the Lithium community. If you have interesting topics/plugins/stuff you want to read about, feel free to contact me through twitter or email.</p>
+
+<h2 id="core-news:ee82dedf484a67ec02efb082c30c3644">Core News</h2>
+
+<p>The <a href="https://github.com/UnionOfRAD/lithium/wiki/Roadmap">Roadmap</a> to 1.0 is going pretty well so far, and relationship support for relational databases has been already merged into master. For the impatient, there is also some documentation for it underway which can be found <a href="https://github.com/UnionOfRAD/manual/blob/master/en/working-with-data/relationships.wiki">here</a>. As the docs are not finished yet, you&rsquo;ll have to clone the repository locally to view them in their full glory (don&rsquo;t forget to clone <code>li3_docs</code> too). The core team is also working on relationship support for MongoDB, which will also ship before 1.0. For those who come from CakePHP: there won&rsquo;t be a <code>hasAndBelongsToMany</code> relationship, because we&rsquo;ll add support for nested relationships which can be used to achieve the same result in a better and cleaner way.</p>
+
+<p>We&rsquo;re very excited to see more and more people contributing code to the core. <a href="https://github.com/doobry">Chris Beswick</a> did an awesome job recently and refactored a significant part of the routing system (<a href="https://github.com/UnionOfRAD/lithium/commits/master?author=doobry">commits</a>) which makes compiling routes significantly faster. Also there&rsquo;s a huge <a href="https://github.com/UnionOfRAD/lithium/pull/45">pull request</a> open that brings <a href="http://www.postgresql.org/">PostgreSQL</a> integration to the Lithium core.</p>
+
+<p>Lithium wants to be a first-class citizen on Windows, so there&rsquo;s a <a href="https://github.com/UnionOfRAD/lithium/tree/windows">branch</a> open that tries to track, find and fix all bugs and test-cases on Windows. If you&rsquo;re developing on Windows and have some spare time, contact one of the core members on IRC and we&rsquo;ll get you started. We aim to make all test cases run on Windows before the 1.0 release.</p>
+
+<h2 id="plugins:ee82dedf484a67ec02efb082c30c3644">Plugins</h2>
+
+<p>I&rsquo;ve recently <a href="http://nitschinger.at/Lithium-plugin-roundup">compiled a list of plugins</a> and readers also posted their additions in the comments below. There are plans to bring the <a href="http://lab.lithify.me">Lithium Lab</a> up to date and integrate it even better with the Lithium framework so in the future you should be able to install and share plugins right from there. I&rsquo;ll cover this in greater detail in one of the next letters.</p>
+
+<p><a href="https://github.com/alkemann">Alexander Morland</a> is developing a <a href="https://github.com/alkemann/li3_zmq">plugin</a> for <a href="http://www.zeromq.org/">ZeroMQ</a> and is always searching for feedback and contributions. If you need message passing in your application (like queues or pub/sub), then you should definitely check it out.</p>
+
+<p>If you don&rsquo;t know which plugins are available, try <a href="https://github.com/search?langOverride=&amp;language=PHP&amp;q=li3_&amp;repo=&amp;start_value=1&amp;type=Repositories&amp;x=32&amp;y=21">this</a> search on Github!</p>
+
+<h2 id="blogs-media:ee82dedf484a67ec02efb082c30c3644">Blogs &amp; Media</h2>
+
+<p>For those who don&rsquo;t know yet, <a href="http://raymondjulin.com/">Raymond Julin</a> did compile a list of useful resources back in January which can be found <a href="http://blog.raymondjulin.com/2011/01/06/list-of-useful-lithium-li3-resources/">here</a>. In addition to that, <a href="http://www.shift8creative.com/about">Tom Maiaroto</a> wrote a <a href="http://www.shift8creative.com/blog/getting-started-with-minerva">blog post</a> that helps you to get up and running with <a href="https://github.com/tmaiaroto/minerva">Minerva</a>, his CMS based on Lithium.</p>
+
+<p>Lithium now has <a href="http://vimeo.com/channels/li3">Vimeo Channel</a> which also contains the <a href="http://vimeo.com/26183322">Introducing Lithium</a> talk by Nate. You should definitely check that out if you&rsquo;re new to Lithium and need a one-hour introduction.</p>
+
+<h2 id="universe:ee82dedf484a67ec02efb082c30c3644">Universe</h2>
+
+<p>As a side note, the <a href="http://www.union-of-rad.com/">UnionOfRAD</a> is looking for client work (preferrably in the NY area), so if you need talented developers that know Lithium and its surroundings from the inside out please contact <a href="http://www.nateabele.com">Nate Abele</a> on <a href="http://www.twitter.com/nateabele">twitter</a> or IRC.</p>
+
+                    </div>
+                    <div id="disqus_thread"></div>
+<script type="text/javascript">
+    var disqus_shortname = 'daschl';
+    var disqus_identifier = 'http:\/\/nitschinger.at\/Letters-from-Lithium-1\/';
+    var disqus_title = 'Letters from Lithium #1';
+    var disqus_url = 'http:\/\/nitschinger.at\/Letters-from-Lithium-1\/';
+
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+                </section>
+            </div>
+            <div class="footer">
+    <div class="pure-menu pure-menu-horizontal pure-menu-open">
+        <ul>
+		<li>&copy; Michael Nitschinger 2010-2016</li>
+        </ul>
+    </div>
+</div>
+<script src="http://nitschinger.at//js/all.min.js"></script>
+
+        </div>
+    </div>
+</div>
+
+
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', '', 'auto');
+ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,320 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Session on daschl writes. sometimes.</title>
+    <link>http://nitschinger.at/tags/session/</link>
+    <description>Recent content in Session on daschl writes. sometimes.</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Thu, 21 Jun 2012 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://nitschinger.at/tags/session/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Using Couchbase as a flexible session store</title>
+      <link>http://nitschinger.at/Using-Couchbase-as-a-flexible-session-store/</link>
+      <pubDate>Thu, 21 Jun 2012 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/Using-Couchbase-as-a-flexible-session-store/</guid>
+      <description>
+
+&lt;p&gt;This post shows you how you can use the &lt;a href=&#34;http://www.couchbase.com&#34;&gt;Couchbase 2.0 server&lt;/a&gt; as a flexible session store. What do I mean by flexible? Well, the combination of a highly scalable key-value store and the possibility to query your data through views allows you to gain unique insight inside your data in near realtime.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s look at some obstacles that we as application developers face and then see how we may solve them through Couchbase and its functionality. Of course, there are lots of ways to solve the same problem domain and the solutions provided here may not fit your problem as good as another technology/stack/software. I&amp;rsquo;d love to hear your opinions on this if you have a more elegant or flexible approach with a similar technology.&lt;/p&gt;
+
+&lt;h2 id=&#34;introduction:512f62c3475e795b4e119166c489818f&#34;&gt;Introduction&lt;/h2&gt;
+
+&lt;p&gt;The root of all session storage problems is that most web applications need to store some kind of state across pages and HTTP is by design &lt;a href=&#34;http://en.wikipedia.org/wiki/Stateless_protocol&#34;&gt;stateless&lt;/a&gt;. Therefore, we need to use some of the solutions that were invented to fill exactly this gap.&lt;/p&gt;
+
+&lt;p&gt;As a developer, you can choose between storing session data either on the client-side or on the server-side. The client-side usually is a synonym for &lt;a href=&#34;http://en.wikipedia.org/wiki/HTTP_cookie&#34;&gt;cookies&lt;/a&gt;, but new technologies like &lt;a href=&#34;http://www.html5rocks.com/en/tutorials/offline/storage/&#34;&gt;HTML 5 client-side storage&lt;/a&gt; slowly emerge. Since cookies are stored on the client-side, they are not under complete control of the application and are therefore a possible security issue (and have size limitations that may be too small for your requirements). Solutions like &lt;a href=&#34;http://nitschinger.at/Session-Encryption-with-Lithium&#34;&gt;encryption&lt;/a&gt; and &lt;a href=&#34;http://en.wikipedia.org/wiki/HMAC&#34;&gt;HMAC&lt;/a&gt; exist, but still they lack the dynamic part of backend databases.&lt;/p&gt;
+
+&lt;p&gt;On the server-side, you can usually choose between either a storage mechanism provided by your language/application server or a standalone software. For example, PHP provides a &lt;a href=&#34;http://www.php.net/manual/en/reserved.variables.session.php&#34;&gt;$_SESSION&lt;/a&gt; superglobal that stores data across requests.  In Java, you can work with &lt;a href=&#34;http://docs.oracle.com/cd/E17802_01/webservices/webservices/docs/1.6/api/javax/servlet/http/HttpSession.html&#34;&gt;HttpSession&lt;/a&gt; objects that allow you to do the same. All these mechanisms have one limitation: they are bound to the application container/webserver where the application is executed (therefore, they are called &amp;ldquo;sticky&amp;rdquo;). This means that when we need to use more than one application server to scale out at the same time and a &lt;a href=&#34;http://haproxy.1wt.eu/&#34;&gt;proxy&lt;/a&gt; (or load balancer) routes the requests randomly, it is possible that application server 1 has no idea what sessions are active on application server 2. As a result, a user may be logged out on the next request.&lt;/p&gt;
+
+&lt;p&gt;To overcome this issue, we need to refactor the session handling part out of the application server into a standalone software. This allows our application servers to read and write from a central session store and as a result all of them share the same session state.&lt;/p&gt;
+
+&lt;p&gt;One of the oldest and most used software solutions is &lt;a href=&#34;http://memcached.org/&#34;&gt;memcached&lt;/a&gt;. Memcached was developed by &lt;a href=&#34;http://www.danga.com/&#34;&gt;Danga Interactive&lt;/a&gt; to remedy the scalability issues at &lt;a href=&#34;http://www.livejournal.com/&#34;&gt;LiveJournal&lt;/a&gt;. It provides a distributed memory object caching system that has a key-based lookup mechanism and is fast because all data is stored in-memory. While memcached is amazing, it has one major limitation: it doesn&amp;rsquo;t persist the data on disk, so if one server goes down it may take some time to prime the cache again (called warm-up time).&lt;/p&gt;
+
+&lt;p&gt;Some developers identified the additional need and started a full protocol-compatible project that was eventually called &lt;a href=&#34;http://en.wikipedia.org/wiki/Membase&#34;&gt;Membase&lt;/a&gt;. Aside from disk persistence, Membase provided more functionality like replication and live cluster reconfiguration. In 2011, Membase merged with CouchOone (the main driver behind &lt;a href=&#34;http://couchdb.apache.org/&#34;&gt;Apache CouchDB&lt;/a&gt;) to form &lt;a href=&#34;http://www.couchbase.com/&#34;&gt;Couchbase&lt;/a&gt;. Couchbase 1.8 is basically a renamed and slightly enhanced version of Membase, while Couchbase 2.0 (currently in developer preview release) adds incremental map/reduce, distributed indexing and cross-cluster replication.&lt;/p&gt;
+
+&lt;p&gt;That&amp;rsquo;s the short story on the origins of Couchbase. Note that there are lots of other awesome projects out there that help you achieve similar results, with &lt;a href=&#34;http://redis.io/&#34;&gt;Redis&lt;/a&gt;, &lt;a href=&#34;http://www.mongodb.org/&#34;&gt;MongoDB&lt;/a&gt; or &lt;a href=&#34;http://wiki.basho.com/&#34;&gt;Riak&lt;/a&gt; as the more prominent ones. Espcially Redis provides more powerful data structures on top of the &amp;ldquo;key/value&amp;rdquo; pattern and is definitely worth a look.&lt;/p&gt;
+
+&lt;h2 id=&#34;implementation:512f62c3475e795b4e119166c489818f&#34;&gt;Implementation&lt;/h2&gt;
+
+&lt;p&gt;The most simple use case that all session stores need to fulfill is - of course - to store and read session data in a very performant way. Most of the time, a unique session identifier is used as the key and some arbitrary payload as the value (for example usernames, ids or other related data).&lt;/p&gt;
+
+&lt;p&gt;Note that this post aims to be a SDK-independent introduction to the topic, and the exact syntax may vary a bit from SDK to SDK (I&amp;rsquo;m using PHP here, but the syntax is nearly identical for the other SDKs). As the Couchbase API is similar to memcached, you should feel right at home if you&amp;rsquo;ve used it already (at least for the basic commands).&lt;/p&gt;
+
+&lt;p&gt;Couchbase provides you with &lt;code&gt;get&lt;/code&gt; and &lt;code&gt;set&lt;/code&gt; methods to read and store a value identified by a unique key. The key should be a string and the value preferably a JSON object. You can also store serialized or binary data, but you then loose the ability to query it through views. On the &lt;code&gt;set&lt;/code&gt;-command, you can also pass in an optional expiration time, which comes in handy if you want to expire sessions automatically. Here&amp;rsquo;s an example to store a session document:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$user&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array(&lt;/span&gt;
+    &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;username&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;daschl&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt;
+    &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;fullname&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;Michael Nitschinger&amp;#39;&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;$document&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;json_encode($user);&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;$couchbase-&amp;gt;set(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;user:1234&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$document,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;60);&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This stores the given JSON document with the key &lt;code&gt;user:1234&lt;/code&gt; and a expiry time of 60 seconds in Couchbase. If you provide a expiry time that is larger than 30 days, Couchbase assumes that you pass in a unix timestamp (as a result, you can also pass absolute timestamps instead of relative ones).&lt;/p&gt;
+
+&lt;p&gt;To read it back afterwards, you can use the &lt;code&gt;get&lt;/code&gt; method:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$couchbase-&amp;gt;get(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;user:1234&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If you want to delete the key (for example to destroy the session), you can just remove the key:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$couchbase-&amp;gt;delete(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;user:1234&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;You can also just &amp;ldquo;touch&amp;rdquo; the document, so that the expiry key will be refreshed:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$couchbase-&amp;gt;touch(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;user:1234&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;60);&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Of course that&amp;rsquo;s just the simplest use case, but it is often enough to start with. If you&amp;rsquo;re curious, you can also &lt;a href=&#34;http://www.couchbase.com/docs/couchbase-sdk-php-1.1/api-reference-summary.html&#34;&gt;look into&lt;/a&gt; &lt;code&gt;getMulti&lt;/code&gt; and &lt;code&gt;setMulti&lt;/code&gt; to fetch more keys at the same time. One thing to remember is that when you specify an expiration time the key will only be deleted on the next fetch and not automatically. If you have a large batch of keys that you want to remove you need some kind of background script that touches them and makes sure they are actually deleted. Note that you can also wait for the Couchbase background job to delete the expired keys for you which runs every hour by default.&lt;/p&gt;
+
+&lt;p&gt;Now, all of this can be done with nearly every key/value store out there (let&amp;rsquo;s leave the other capabilities like replication and persistence out for now). Since CouchOne merged with Membase, Couchbase 2.0 includes a key feature of CouchDB: accessing your data through views.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s assume we want to write an admin dashboard that allows us to monitor some of our application KPIs to help us understand the current load it is facing. To achieve this, we want to graph the following information in realtime:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;How many users are currently active on the website.&lt;/li&gt;
+&lt;li&gt;How many users are currently logged in.&lt;/li&gt;
+&lt;li&gt;All users that come from Vienna/Austria (since our website sells local food here in Austria).&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;In order to achieve this, we need some way to differentiate if a user is just visiting the website or is logged in. Also, we need to store the location from where he is coming. Since this a more-or-less SDK-agnostic post, here are some hints how this could be done:&lt;/p&gt;
+
+&lt;p&gt;When an anonymous user requests our website, we initiate a session that identifies him by his ip-address and does a lookup of his location based on some external information (for example the &lt;a href=&#34;http://www.maxmind.com/app/geolite&#34;&gt;MaxMind GeoLite database&lt;/a&gt;). We store a session identifier in a cookie and the following document in Couchbase:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;// Key: user:&amp;lt;SESSION-IDENTIFIER&amp;gt;
+{
+    &amp;quot;namespace&amp;quot;: &amp;quot;sessions&amp;quot;,
+    &amp;quot;type&amp;quot;: &amp;quot;anonymous&amp;quot;,
+    &amp;quot;lastSeen&amp;quot;: &amp;quot;&amp;lt;timestamp&amp;gt;&amp;quot;,
+    &amp;quot;firstSeen&amp;quot;: &amp;quot;&amp;lt;timestamp&amp;gt;&amp;quot;,
+    &amp;quot;remoteAddress&amp;quot;: &amp;quot;&amp;lt;ipaddr&amp;gt;&amp;quot;,
+    &amp;quot;location&amp;quot;: &amp;quot;Vienna/Austria&amp;quot;
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If the user is logged in, we can clear the old session and instantiate a new one with more details about our user:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;// Key: user:&amp;lt;SESSION-IDENTIFIER&amp;gt;
+{
+    &amp;quot;namespace&amp;quot;: &amp;quot;sessions&amp;quot;,
+    &amp;quot;type&amp;quot;: &amp;quot;user&amp;quot;,
+    &amp;quot;userID&amp;quot;: &amp;quot;&amp;lt;userID&amp;gt;&amp;quot;,
+    &amp;quot;lastSeen&amp;quot;: &amp;quot;&amp;lt;timestamp&amp;gt;&amp;quot;,
+    &amp;quot;firstSeen&amp;quot;: &amp;quot;&amp;lt;timestamp&amp;gt;&amp;quot;,
+    &amp;quot;remoteAddress&amp;quot;: &amp;quot;&amp;lt;ipaddr&amp;gt;&amp;quot;,
+    &amp;quot;location&amp;quot;: &amp;quot;Vienna/Austria&amp;quot;,
+    &amp;quot;name&amp;quot;: &amp;quot;&amp;lt;full name&amp;gt;&amp;quot;
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The whole store, delete and update calls can be done with the basic methods described above, but what I want to concentrate on are the views. If you want to follow along, here is a short PHP script that populates the default bucket with some data to work with:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
+    &lt;span style=&#34;color: #177500&#34;&gt;// Open the Connection&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;$couchbase&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Couchbase&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;127.0.0.1:8091&amp;quot;&lt;/span&gt;);
+
+    &lt;span style=&#34;color: #177500&#34;&gt;// Create some fake data with random hashes to simulate session identifiers.&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;$data&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;array&lt;/span&gt;(
+        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;68ea304124beaa7e648cc1327d793b0a&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;array&lt;/span&gt;(
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;namespace&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;sessions&amp;#39;&lt;/span&gt;,
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;type&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;anonymous&amp;#39;&lt;/span&gt;,
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;lastSeen&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;time&lt;/span&gt;(),
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;firstSeen&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;time&lt;/span&gt;(),
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;remoteAddress&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;192.168.0.1&amp;#39;&lt;/span&gt;,
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;location&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;Vienna/Austria&amp;#39;&lt;/span&gt;
+        ),
+        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;6254b64d554a88b629bdbfc507d8c267&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;array&lt;/span&gt;(
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;namespace&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;sessions&amp;#39;&lt;/span&gt;,
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;type&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;anonymous&amp;#39;&lt;/span&gt;,
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;lastSeen&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;time&lt;/span&gt;(),
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;firstSeen&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;time&lt;/span&gt;()&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;3600&lt;/span&gt;,
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;remoteAddress&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;10.10.10.10&amp;#39;&lt;/span&gt;,
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;location&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;Berlin/Germany&amp;#39;&lt;/span&gt;
+        ),
+        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;6148bae4fad02c0edfd7dbd8d54d79f1&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;array&lt;/span&gt;(
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;namespace&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;sessions&amp;#39;&lt;/span&gt;,
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;type&amp;quot;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;user&amp;quot;&lt;/span&gt;,
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;userID&amp;quot;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;1234&amp;quot;&lt;/span&gt;,
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;lastSeen&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;time&lt;/span&gt;()&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;7200&lt;/span&gt;,
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;firstSeen&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;time&lt;/span&gt;()&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;7800&lt;/span&gt;,
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;remoteAddress&amp;quot;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;1.2.3.4&amp;quot;&lt;/span&gt;,
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;location&amp;quot;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Rome/Italy&amp;quot;&lt;/span&gt;,
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;name&amp;quot;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Luigi Manfrotto&amp;quot;&lt;/span&gt;
+        ),
+        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;4aeb265e299c41450dd6af813d0bef97&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;array&lt;/span&gt;(
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;namespace&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;sessions&amp;#39;&lt;/span&gt;,
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;type&amp;quot;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;user&amp;quot;&lt;/span&gt;,
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;userID&amp;quot;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;1104&amp;quot;&lt;/span&gt;,
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;lastSeen&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;time&lt;/span&gt;(),
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;firstSeen&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;time&lt;/span&gt;(),
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;remoteAddress&amp;quot;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;2.3.4.5&amp;quot;&lt;/span&gt;,
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;location&amp;quot;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Vienna/Austria&amp;quot;&lt;/span&gt;,
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;name&amp;quot;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Hans Huber&amp;quot;&lt;/span&gt;
+        )
+    );
+
+    &lt;span style=&#34;color: #177500&#34;&gt;// Store the documents in Couchbase&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;foreach&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$data&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;as&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$hash&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$document&lt;/span&gt;) {
+        &lt;span style=&#34;color: #000000&#34;&gt;$couchbase-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;set&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;user:$hash&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #A90D91&#34;&gt;json_encode&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$document&lt;/span&gt;));
+    }
+&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now that we have four documents to work with, we can start creating views from the Couchbase GUI. Head over to the &amp;ldquo;Views&amp;rdquo; section and click on &amp;ldquo;Create Development View&amp;rdquo;. The way Couchbase works is that you write your view queries in development mode on a subset of your documents and when you&amp;rsquo;re finished you can publish them to production. Since we have only four documents in the bucket, it won&amp;rsquo;t make any difference here.&lt;/p&gt;
+
+&lt;p&gt;The name of our design document is &lt;code&gt;_design/dev_sessions&lt;/code&gt; and the first view is called &lt;code&gt;active&lt;/code&gt;. This one will return all currently logged in users:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;doc&lt;/span&gt;) {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;doc&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;namespace&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;sessions&amp;#39;&lt;/span&gt;) {
+        &lt;span style=&#34;color: #000000&#34;&gt;emit&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;doc&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;_id&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;doc&lt;/span&gt;);
+    }
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If you save it and click &lt;code&gt;Show Results&lt;/code&gt;, then you&amp;rsquo;ll see all four documents below that got matched. You can also click on the URI string above &lt;code&gt;?connection_timeout=60000&amp;amp;limit=10&amp;amp;skip=0&lt;/code&gt; to see the actual response in your browser. But what if we just want the total number of users logged in? We can use a built-in reduce function for that. In the &amp;ldquo;Reduce&amp;rdquo; textarea to the right just enter &lt;code&gt;_count&lt;/code&gt;. If you click save and then show the results again, you can see that we just got one document back with no key and just &lt;code&gt;4&lt;/code&gt; as the value.&lt;/p&gt;
+
+&lt;p&gt;The nice thing here is that we can pass &lt;code&gt;reduce=true/false&lt;/code&gt; as a param and then get either the full response back or just the aggregated version. So this query gives us all active users on the website. Let&amp;rsquo;s write another view that just returns the logged in users:&lt;/p&gt;
+
+&lt;p&gt;Modify the view like here and then click &lt;code&gt;Save As...&lt;/code&gt; and name it &lt;code&gt;logged_in&lt;/code&gt;:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;doc&lt;/span&gt;) {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;doc&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;namespace&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;sessions&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;doc&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;user&amp;#39;&lt;/span&gt;) {
+        &lt;span style=&#34;color: #000000&#34;&gt;emit&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;doc&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;_id&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;doc&lt;/span&gt;);
+    }
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The reduce function can be reused in the same way. As you can see, with just a bit more code in JavaScript we have another view that just returns the logged in users. Now we want to display a third diagram that displays all users from &lt;code&gt;Vienna/Austria&lt;/code&gt;. This time, we want to differentiate between anonymous and logged in users so that they can be displayed in two distinct graphs. Our map function may look like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;doc&lt;/span&gt;) {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;doc&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;namespace&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;sessions&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;doc&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;location&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;Vienna/Austria&amp;#39;&lt;/span&gt;) {
+        &lt;span style=&#34;color: #000000&#34;&gt;emit&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;doc&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;type&lt;/span&gt;, &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;);
+    }
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Every time we find a document with the correct location, we emit a document with the key of either &lt;code&gt;anonymous&lt;/code&gt; or &lt;code&gt;user&lt;/code&gt;. As values we supply a value of &lt;code&gt;1&lt;/code&gt; since we can reuse that in our reduce function. The reduce function is again the built in &lt;code&gt;_count&lt;/code&gt; function, but this time we pass an additional param &lt;code&gt;group_level&lt;/code&gt; with a value of &lt;code&gt;1&lt;/code&gt; to our query. This way, Couchbase aggregates our data and returns a document like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;// Params: ?group_level=1&amp;amp;reduce=true&amp;amp;connection_timeout=60000&amp;amp;limit=10&amp;amp;skip=0
+{
+    &amp;quot;rows&amp;quot;: [
+        {&amp;quot;key&amp;quot;:&amp;quot;anonymous&amp;quot;,&amp;quot;value&amp;quot;:1},
+        {&amp;quot;key&amp;quot;:&amp;quot;user&amp;quot;,&amp;quot;value&amp;quot;:1}
+    ]
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If we insert another &lt;code&gt;user&lt;/code&gt; document the counter would display &lt;code&gt;2&lt;/code&gt;. If we don&amp;rsquo;t use the grouping level setting, Couchbase would just return the total amount of documents emitted.&lt;/p&gt;
+
+&lt;p&gt;All of these views assumed that we have some kind of realtime polling to our backend, because the results didn&amp;rsquo;t include grouping by a distinct timestamp. In order to load a graph with meaningful results for the last hour, we can return it aggregated by timestamp (we can reuse the same &lt;code&gt;_count&lt;/code&gt; reduce function and the level 1 grouping):&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;doc&lt;/span&gt;) {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;doc&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;namespace&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;sessions&amp;#39;&lt;/span&gt;) {
+        &lt;span style=&#34;color: #000000&#34;&gt;emit&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;doc&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;lastSeen&lt;/span&gt;, &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;);
+    }
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;An example output would look like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;// Params: ?group_level=1&amp;amp;connection_timeout=60000&amp;amp;limit=10&amp;amp;skip=0
+{
+    &amp;quot;rows&amp;quot;:[
+        {&amp;quot;key&amp;quot;:1339997680,&amp;quot;value&amp;quot;:1},
+        {&amp;quot;key&amp;quot;:1340004880,&amp;quot;value&amp;quot;:3}
+    ]
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now, if we have record for the last year in our database it won&amp;rsquo;t make much sense to fetch them all on every request. If you look one entry below the &lt;code&gt;group_level&lt;/code&gt; param, you&amp;rsquo;ll find &lt;code&gt;startkey&lt;/code&gt; and &lt;code&gt;endkey&lt;/code&gt; options. With these two you can provide a timerange to fetch the results.&lt;/p&gt;
+
+&lt;h2 id=&#34;performance:512f62c3475e795b4e119166c489818f&#34;&gt;Performance&lt;/h2&gt;
+
+&lt;p&gt;I know that synthetic benchmarks never provide reproducible results in production environments, but they provide at least a rough estimation on how the application may be able to perform under certain conditions.&lt;/p&gt;
+
+&lt;p&gt;Thankfully, &lt;a href=&#34;http://trondn.blogspot.co.at/&#34;&gt;Trond Norbye&lt;/a&gt; added a nice little program to &lt;a href=&#34;http://www.couchbase.com/develop/c/next&#34;&gt;libcouchbase&lt;/a&gt; that allows you to generate load on your Couchbase server and then analyze the response times directly on the console (of course you can get real-time metrics from the Couchbase GUI as well). The program is called &lt;code&gt;pillowfight&lt;/code&gt; and is distributed with the source of libcouchbase. It stores a bunch of keys (1000 by default) and then runs &amp;ldquo;mget&amp;rdquo; operations on them and measures the time they need to get returned. In order to run it, you need to compile it from source (which I&amp;rsquo;ll show in a later post but it&amp;rsquo;s not that hard if you are used to compiling on unix-based systems).&lt;/p&gt;
+
+&lt;p&gt;On my middle-class Dell notebook with an average processor (Core2 Duo P8700), 4 gigs of RAM and a SSD drive, 90% of the keys return in about 70 microseconds. If I look at the Couchbase GUI for my bucket, I can see that my instance runs somewhere between 10.000 and 12.000 operations per second. I recommend you to run this program on your dev machine just for fun and to get a feeling how it performs. It is also a handy way to generate a constant load on your Couchbase instances and add a large number of keys in an easy way (you can find more params with the -? switch).&lt;/p&gt;
+
+&lt;p&gt;If you ran the program, it would be cool to share your results in the comments below.&lt;/p&gt;
+
+&lt;h2 id=&#34;wrapping-up:512f62c3475e795b4e119166c489818f&#34;&gt;Wrapping Up&lt;/h2&gt;
+
+&lt;p&gt;From both its history and current feature set, chances are that Couchbase is a possible solution to your session store needs. It provides you with both fast and flexible querying mechanisms and is capable to scale up to more nodes with just a few clicks if you need it to. There are definitely other good storage systems out there (like redis), so make sure to dig deeper into the concepts to find out if Couchbase is right for your application.&lt;/p&gt;
+
+&lt;p&gt;As Couchbase 2.0 comes closer and closer to the final release, I think it&amp;rsquo;s a good time to look into the system and see what it&amp;rsquo;s capable of. Also, if you need any help I found that the guys behind Couchbase are very friendly and helpful. You can also ping me via twitter if you like!&lt;/p&gt;
+
+&lt;p&gt;If you&amp;rsquo;re just getting your feet wet with Couchbase, I also have two introductory posts on &lt;a href=&#34;http://nitschinger.at/Getting-Started-with-Couchbase-and-PHP&#34;&gt;PHP&lt;/a&gt; and &lt;a href=&#34;http://nitschinger.at/Accessing-Couchbase-from-Scala&#34;&gt;Scala&lt;/a&gt; that you may find helpful!&lt;/p&gt;
+
+&lt;p&gt;Finally, kudos to &lt;a href=&#34;http://twitter.com/ingenthr&#34;&gt;@ingenthr&lt;/a&gt; for reviewing this post and providing valuable insight into Couchbase.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Session Encryption with Lithium</title>
+      <link>http://nitschinger.at/Session-Encryption-with-Lithium/</link>
+      <pubDate>Fri, 20 Jan 2012 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/Session-Encryption-with-Lithium/</guid>
+      <description>
+
+&lt;h2 id=&#34;the-basics:2a6783489cdbf95c96d62a3bcdf50b5d&#34;&gt;The Basics&lt;/h2&gt;
+
+&lt;p&gt;If you check out the &lt;code&gt;master&lt;/code&gt; branch, you can use the new &lt;code&gt;Encrypt&lt;/code&gt; strategy to encrypt your session data automatically. This means that you can read and write session data in cleartext and they will be encrypted on the fly before getting stored (in a cookie, for example). You can read my post about &amp;ldquo;baking cookies like a chef&amp;rdquo; for  PHPAdvent 2011 &lt;a href=&#34;http://phpadvent.org/2011/bake-cookies-like-a-chef-by-michael-nitschinger&#34;&gt;here&lt;/a&gt;. The article covers both HMAC signatures and encryption, and is a good place to start. This post will go a little bit deeper in how to use and configure the &lt;code&gt;Encrypt&lt;/code&gt; strategy in Lithium. Note that you need to have the &lt;a href=&#34;http://php.net/manual/en/book.mcrypt.php&#34;&gt;mcrypt&lt;/a&gt; extension installed and enabled for this to work.&lt;/p&gt;
+
+&lt;p&gt;Here&amp;rsquo;s the simplest configuration you can start with:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;Session::config(array(&amp;#39;default&amp;#39; =&amp;gt; array(
+    &amp;#39;adapter&amp;#39; =&amp;gt; &amp;#39;Cookie&amp;#39;,
+    &amp;#39;strategies&amp;#39; =&amp;gt; array(&amp;#39;Encrypt&amp;#39; =&amp;gt; array(&amp;#39;secret&amp;#39; =&amp;gt; &amp;#39;f00bar$&lt;span style=&#34;color: #000000&#34;&gt;l1thium&lt;/span&gt;&amp;#39;))
+)));
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This will store all your session data in a cookie. If you don&amp;rsquo;t change anything else, your data will be encrypted with &lt;a href=&#34;http://en.wikipedia.org/wiki/Advanced_Encryption_Standard&#34;&gt;AES&lt;/a&gt; in  &lt;a href=&#34;http://en.wikipedia.org/wiki/Block_cipher_modes_of_operation#Cipher-block_chaining_.28CBC.29&#34;&gt;CBC&lt;/a&gt; mode with a block size of 256 bits (32 byte). This is a secure and sensible default, so if you don&amp;rsquo;t need anything special just stick with the defaults.&lt;/p&gt;
+
+&lt;p&gt;You can now read and write cleartext data and it will be encrypted on the fly for you. For example:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;Session::write(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;key&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;my secret value&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The result will look like this on the client side:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;appcookie[__encrypted]=c3Rqv%2FFYnuwAevxeseII7lOvyoOTi2foMfB%2FCoO4l4FcutRvBn7qq%2BZrPVWC%2FzEYEiSSFMWv7EhEx4ew99%2FmPQ%3D%3D
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;You can then read the value again with &lt;code&gt;Session::read(&#39;key&#39;);&lt;/code&gt; or delete it with &lt;code&gt;Session::delete(&#39;key&#39;);&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;That&amp;rsquo;s it. If you don&amp;rsquo;t want to dig into the internals, you can safely stop reading now and implement it in your own application.&lt;/p&gt;
+
+&lt;h2 id=&#34;further-discussion:2a6783489cdbf95c96d62a3bcdf50b5d&#34;&gt;Further Discussion&lt;/h2&gt;
+
+&lt;p&gt;Still here? Awesome!&lt;/p&gt;
+
+&lt;p&gt;While the &lt;code&gt;mcrypt&lt;/code&gt; extension does the heavy lifting for us, the &lt;code&gt;Encrypt&lt;/code&gt; strategy abstracts necessary cruft like vector generation, key strengthening and resource management. While this is okay for most parts of the framework, in my opinion, when it comes to security, you should have a good understanding what is going on under the hood. Code ist not perfect, and it may contain semantical or design flaws that put your whole application (and customers) to risk. Also, security standards shift over time and what is now secure may not be in a few months.&lt;/p&gt;
+
+&lt;p&gt;If you don&amp;rsquo;t override the default settings, Lithium encrypts your data with the &lt;code&gt;MCRYPT_RIJNDAEL_128&lt;/code&gt; cipher in &lt;code&gt;MCRYPT_MODE_CBC&lt;/code&gt; mode. What
+most developers get wrong is the fact that the &lt;code&gt;128&lt;/code&gt; doesn&amp;rsquo;t represent the strength of the key size, but the block size that is used. Strictly
+speaking, &lt;code&gt;MCRYPT_RIJNDAEL_256&lt;/code&gt; is not part of the AES standard (because AES has a fixed block size of 128 bits and a key size of 128, 192 or 256 bits). The key size is determined by the length of the key that you pass to the &lt;code&gt;mcrypt&lt;/code&gt; extension.&lt;/p&gt;
+
+&lt;p&gt;So to make sure we use the longest key possible, we hash the given secret with &lt;code&gt;sha256&lt;/code&gt; and then substring the length we need. As &lt;code&gt;mcrypt&lt;/code&gt; tells us which key lengths are supported for which cipher (through &lt;a href=&#34;http://php.net/manual/en/function.mcrypt-enc-get-key-size.php&#34;&gt;mcrypt_enc_get_key_size&lt;/a&gt;), it is possible to determine the strongest key length. Note that this doesn&amp;rsquo;t mean that you should use weak keys in the first place just because they get hashed anyway. In practice, you will only create them once so make sure they contain enough entropy.&lt;/p&gt;
+
+&lt;p&gt;As always, the Lithium core provides sensible defaults but also lets you outgrow the framework if you need to. You can specify your own cipher or mode like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;Session::config(array(&amp;#39;default&amp;#39; =&amp;gt; array(
+    &amp;#39;adapter&amp;#39; =&amp;gt; &amp;#39;Cookie&amp;#39;,
+    &amp;#39;strategies&amp;#39; =&amp;gt; array(&amp;#39;Encrypt&amp;#39; =&amp;gt; array(
+        &amp;#39;cipher&amp;#39; =&amp;gt; MCRYPT_RIJNDAEL_256,
+        &amp;#39;mode&amp;#39;   =&amp;gt; MCRYPT_MODE_ECB, // Don&amp;#39;t use ECB when you don&amp;#39;t have to!
+        &amp;#39;secret&amp;#39;     =&amp;gt; &amp;#39;f00bar$&lt;span style=&#34;color: #000000&#34;&gt;l1thium&lt;/span&gt;&amp;#39;
+    ))
+)));
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Here&amp;rsquo;s a list of &lt;a href=&#34;http://www.php.net/manual/en/mcrypt.ciphers.php&#34;&gt;ciphers&lt;/a&gt; and &lt;a href=&#34;http://www.php.net/manual/en/mcrypt.constants.php&#34;&gt;modes&lt;/a&gt; you can use. Of course you need to make sure that your custom cipher/mode combination is supported.&lt;/p&gt;
+
+&lt;p&gt;If you don&amp;rsquo;t like how Lithium hashes your key or if you want to has it on your own, there&amp;rsquo;s also a way to do this. If the length of your key is equal or longer than the longest key size supported by the algorithm, it gets passed through unchanged. Here&amp;rsquo;s how it works:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;protected&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;_hashSecret&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt;) {
+    &lt;span style=&#34;color: #000000&#34;&gt;$size&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;mcrypt_enc_get_key_size&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;static&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;::$_resource&lt;/span&gt;);
+
+    &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;strlen&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$size&lt;/span&gt;) {
+        &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt;;
+    }
+
+    &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;substr&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;hash&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;sha256&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt;, &lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;), &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$size&lt;/span&gt;);
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;In my opinion, you should always encrypt your data if it gets stored on the client side. Lithium provides a convenient and transparent way to do it, so go ahead and use it in your own applications to make them more secure.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Encoding &middot; daschl writes. sometimes.</title>
+
+    <meta name="description" content="">
+
+    <meta name="generator" content="Hugo 0.15" />
+    <meta name="twitter:card" content="summary">
+    
+    <meta name="twitter:title" content="Encoding &middot; daschl writes. sometimes.">
+    <meta name="twitter:description" content="">
+
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Encoding &middot; daschl writes. sometimes.">
+    <meta property="og:description" content="">
+
+    <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Oxygen:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
+    <!--[if lte IE 8]>
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-old-ie-min.css">
+    <![endif]-->
+    <!--[if gt IE 8]><!-->
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
+    <!--<![endif]-->
+
+    <link rel="stylesheet" href="http://nitschinger.at//css/all.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <link rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." href="http://nitschinger.at//index.xml" />
+</head>
+<body>
+
+
+<div id="layout" class="pure-g">
+    <div class="sidebar pure-u-1 pure-u-md-1-4">
+    <div class="header">
+        <hgroup>
+            <h1 class="brand-title"><a href="http://nitschinger.at/">daschl writes. sometimes.</a></h1>
+            <h2 class="brand-tagline"></h2>
+        </hgroup>
+
+        <nav class="nav">
+            <ul class="nav-list">
+                
+                
+                <li class="nav-item">
+                    <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+
+    <div class="content pure-u-1 pure-u-md-3-4">
+        <div>
+            
+            <div class="posts">
+                
+                <h1 class="content-subhead">18 Jun 2013</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="http://nitschinger.at/Fun-with-Couchbase-Views-and-Message-Pack/" class="post-title">Fun with Couchbase Views and MessagePack</a>
+
+                        <p class="post-meta">
+                            
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        
+
+<p>Alright, before we start I have to admit that this is a little bit of a hack. Not that it doesn&rsquo;t work, but of course Couchbase Server 2.0 officially only supports JSON documents to be queried through Views. In addition to that, it is not so much known that you have access to all the other documents through Base64 encoding. Recently, <a href="http://avsej.net/2013/analyzing-binary-data-in-couchbase/">Sergey</a> showed us how to very easily analyze binary data in Couchbase Views and this brought me on the idea to take it one step further.</p>
+
+<p>In this blog post we&rsquo;re going to store <a href="http://msgpack.org/">MessagePack</a> formatted data in Couchbase and then make its content available to Views (and allow us to query it). Note that you don&rsquo;t need to patch Couchbase for this, its just a snippet of JavaScript code that you need to include in your map function. We&rsquo;ll be using Java on the client side here, but nearly every combination of our official SDKs and MessagePack modules works for this.</p>
+
+<h2 id="storing-the-data:1023c91939326ad5b8553640bc76ed2b">Storing the Data</h2>
+
+<p>In order to store something meaningful we can query later, let&rsquo;s create a Maven project with all needed dependencies. Note that I&rsquo;m assuming you have a Couchbase Server installation running and are familiar with the Couchbase Java SDK (at least a little bit). Also I won&rsquo;t cover the View fundamentals since this is a little advanced topic.</p>
+
+<p>Here are the required dependencies to start with the fun:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">&lt;dependencies&gt;</span>
+    <span style="color: #000000">&lt;dependency&gt;</span>
+        <span style="color: #000000">&lt;groupId&gt;</span>couchbase<span style="color: #000000">&lt;/groupId&gt;</span>
+        <span style="color: #000000">&lt;artifactId&gt;</span>couchbase-client<span style="color: #000000">&lt;/artifactId&gt;</span>
+        <span style="color: #000000">&lt;version&gt;</span>1.1.7<span style="color: #000000">&lt;/version&gt;</span>
+    <span style="color: #000000">&lt;/dependency&gt;</span>
+    <span style="color: #000000">&lt;dependency&gt;</span>
+        <span style="color: #000000">&lt;groupId&gt;</span>org.msgpack<span style="color: #000000">&lt;/groupId&gt;</span>
+        <span style="color: #000000">&lt;artifactId&gt;</span>msgpack<span style="color: #000000">&lt;/artifactId&gt;</span>
+        <span style="color: #000000">&lt;version&gt;</span>0.6.7<span style="color: #000000">&lt;/version&gt;</span>
+    <span style="color: #000000">&lt;/dependency&gt;</span>
+<span style="color: #000000">&lt;/dependencies&gt;</span>
+</pre></div>
+
+<p>Also, don&rsquo;t forget that the Couchbase SDK lives in its own repository:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">&lt;repository&gt;</span>
+    <span style="color: #000000">&lt;id&gt;</span>couchbase<span style="color: #000000">&lt;/id&gt;</span>
+    <span style="color: #000000">&lt;name&gt;</span>Couchbase Maven Repository<span style="color: #000000">&lt;/name&gt;</span>
+    <span style="color: #000000">&lt;url&gt;</span>http://files.couchbase.com/maven2/<span style="color: #000000">&lt;/url&gt;</span>
+    <span style="color: #000000">&lt;snapshots&gt;</span>
+        <span style="color: #000000">&lt;enabled&gt;</span>false<span style="color: #000000">&lt;/enabled&gt;</span>
+    <span style="color: #000000">&lt;/snapshots&gt;</span>
+<span style="color: #000000">&lt;/repository&gt;</span>
+</pre></div>
+
+<p>Now, we can create a simple script that connects to Couchbase, creates some HashMaps with meaningful content, encodes them with the MessagePack encoder and stores them in the database:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">import</span> <span style="color: #000000">com.couchbase.client.CouchbaseClient</span>;
+<span style="color: #A90D91">import</span> <span style="color: #000000">org.msgpack.MessagePack</span>;
+
+<span style="color: #A90D91">import</span> <span style="color: #000000">java.net.URI</span>;
+<span style="color: #A90D91">import</span> <span style="color: #000000">java.util.Arrays</span>;
+<span style="color: #A90D91">import</span> <span style="color: #000000">java.util.HashMap</span>;
+
+<span style="color: #000000">public</span> <span style="color: #A90D91">class</span> <span style="color: #3F6E75">Main</span> {
+
+  <span style="color: #000000">public</span> <span style="color: #000000">static</span> <span style="color: #000000">void</span> <span style="color: #000000">main</span>(<span style="color: #000000">String</span>[] <span style="color: #000000">args</span>) <span style="color: #000000">throws</span> <span style="color: #000000">Exception</span> {
+
+    <span style="color: #000000">//</span> <span style="color: #000000">Connect</span> <span style="color: #000000">to</span> <span style="color: #000000">Couchbase</span>
+    <span style="color: #000000">CouchbaseClient</span> <span style="color: #000000">cb</span> <span style="color: #000000">=</span> <span style="color: #000000">new</span> <span style="color: #000000">CouchbaseClient</span>(<span style="color: #000000">Arrays.asList</span>(<span style="color: #000000">new</span> <span style="color: #000000">URI</span>(<span style="color: #C41A16">&quot;http://127.0.0.1:8091/pools&quot;</span>)), <span style="color: #C41A16">&quot;default&quot;</span>, <span style="color: #C41A16">&quot;&quot;</span>);
+
+    <span style="color: #000000">//</span> <span style="color: #000000">Init</span> <span style="color: #000000">MessagePack</span>
+    <span style="color: #000000">MessagePack</span> <span style="color: #000000">msgpack</span> <span style="color: #000000">=</span> <span style="color: #000000">new</span> <span style="color: #000000">MessagePack</span>();
+
+    <span style="color: #000000">//</span> <span style="color: #000000">Create</span> <span style="color: #000000">a</span> <span style="color: #000000">few</span> <span style="color: #000000">Documents</span> <span style="color: #A90D91">with</span> <span style="color: #000000">some</span> <span style="color: #000000">content</span>
+    <span style="color: #000000">HashMap&lt;String</span>, <span style="color: #000000">String&gt;</span> <span style="color: #000000">user1</span> <span style="color: #000000">=</span> <span style="color: #000000">new</span> <span style="color: #000000">HashMap&lt;String</span>, <span style="color: #000000">String&gt;</span>();
+    <span style="color: #000000">user1.put</span>(<span style="color: #C41A16">&quot;firstname&quot;</span>, <span style="color: #C41A16">&quot;Michael&quot;</span>);
+    <span style="color: #000000">user1.put</span>(<span style="color: #C41A16">&quot;lastname&quot;</span>, <span style="color: #C41A16">&quot;Nitschinger&quot;</span>);
+
+    <span style="color: #000000">HashMap&lt;String</span>, <span style="color: #000000">String&gt;</span> <span style="color: #000000">user2</span> <span style="color: #000000">=</span> <span style="color: #000000">new</span> <span style="color: #000000">HashMap&lt;String</span>, <span style="color: #000000">String&gt;</span>();
+    <span style="color: #000000">user2.put</span>(<span style="color: #C41A16">&quot;firstname&quot;</span>, <span style="color: #C41A16">&quot;Matt&quot;</span>);
+    <span style="color: #000000">user2.put</span>(<span style="color: #C41A16">&quot;lastname&quot;</span>, <span style="color: #C41A16">&quot;Ingenthron&quot;</span>);
+
+    <span style="color: #000000">HashMap&lt;String</span>, <span style="color: #000000">String&gt;</span> <span style="color: #000000">user3</span> <span style="color: #000000">=</span> <span style="color: #000000">new</span> <span style="color: #000000">HashMap&lt;String</span>, <span style="color: #000000">String&gt;</span>();
+    <span style="color: #000000">user3.put</span>(<span style="color: #C41A16">&quot;firstname&quot;</span>, <span style="color: #C41A16">&quot;Sergey&quot;</span>);
+    <span style="color: #000000">user3.put</span>(<span style="color: #C41A16">&quot;lastname&quot;</span>, <span style="color: #C41A16">&quot;Avseyev&quot;</span>);
+
+    <span style="color: #000000">//</span> <span style="color: #000000">Encode</span> <span style="color: #000000">and</span> <span style="color: #000000">store</span> <span style="color: #000000">them</span>
+    <span style="color: #000000">cb.set</span>(<span style="color: #C41A16">&quot;user:michael&quot;</span>, <span style="color: #000000">msgpack.write</span>(<span style="color: #000000">user1</span>))<span style="color: #000000">.get</span>();
+    <span style="color: #000000">cb.set</span>(<span style="color: #C41A16">&quot;user:matt&quot;</span>, <span style="color: #000000">msgpack.write</span>(<span style="color: #000000">user2</span>))<span style="color: #000000">.get</span>();
+    <span style="color: #000000">cb.set</span>(<span style="color: #C41A16">&quot;user:sergey&quot;</span>, <span style="color: #000000">msgpack.write</span>(<span style="color: #000000">user3</span>))<span style="color: #000000">.get</span>();
+
+    <span style="color: #000000">//</span> <span style="color: #000000">Close</span> <span style="color: #000000">the</span> <span style="color: #000000">Connection</span>
+    <span style="color: #000000">cb.shutdown</span>();
+  }
+
+}
+</pre></div>
+
+<p>The only new part to Couchbase folks is the &ldquo;MessagePack&rdquo; code. You create a new instance of <code>MessagePack</code> and then pass the data to the <code>write</code> method. I&rsquo;m not an expert on this library, but it looks like you can also make it work with generic POJOs, which would be something to look into if you model an actual application with it.</p>
+
+<h2 id="querying-the-data:1023c91939326ad5b8553640bc76ed2b">Querying the Data</h2>
+
+<p>Now if we run the code, we&rsquo;ll see that three documents have been persisted, but they show up as binary. That&rsquo;s because its not JSON and kind of expected. Now, go create a View on your bucket and start out with an empty map function like this:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">function</span>(<span style="color: #000000">doc</span>, <span style="color: #000000">meta</span>) {
+  <span style="color: #000000">emit</span>(<span style="color: #000000">doc</span>, <span style="color: #A90D91">null</span>);
+}
+</pre></div>
+
+<p>If you query it, you&rsquo;ll see the document keys emitted like <code>gqhsYXN0bmFtZadBdnNleWV2qWZpcnN0bmFtZaZTZXJnZXk</code>, which is <a href="http://en.wikipedia.org/wiki/Base64">Base64</a> encoding. Now, let&rsquo;s change the view function a bit and use the built-in <code>decodeBase64</code> method:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">function</span>(<span style="color: #000000">doc</span>, <span style="color: #000000">meta</span>) {
+  <span style="color: #000000">emit</span>(<span style="color: #000000">decodeBase64</span>(<span style="color: #000000">doc</span>), <span style="color: #A90D91">null</span>);
+}
+</pre></div>
+
+<p>Now your output looks more like <code>[130,168,108,97,115,116,110,97,109,...121]</code>, which is the native format of MessagePack! You would also see the same output if you take the result of <code>msgpack.write()</code> and print out the byte array properly.</p>
+
+<p>The first step is done, we have direct access to the stored data. Now we need to decode it. The good news is that there is a JavaScript library for MessagePack, but it doesn&rsquo;t work out of the box with our view code. The library does lots of browser stuff which we don&rsquo;t have in the environment. <a href="https://raw.github.com/msgpack/msgpack-javascript/master/msgpack.js">here</a> is the link to the original library.</p>
+
+<p>Now, after some fiddling with the code and removing unneeded parts (but actually not changing how it works), I ended up with something that works. You can go ahead and grab the full snippet <a href="https://gist.github.com/daschl/5796263">here</a>. Personally, I prefer to have my map functions short and sweet, so here is the same code, but <a href="https://gist.github.com/daschl/5796268">minified</a>.</p>
+
+<p>Now, we can plug this code into our map function and use the method to decode our data on the fly:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">function</span>(<span style="color: #000000">doc</span>, <span style="color: #000000">meta</span>) {
+    <span style="color: #177500">/*!{id:msgpack.js,ver:1.05,license:&quot;MIT&quot;,author:&quot;uupaa.js@gmail.com&quot;}*/</span>
+    <span style="color: #177500">/* Modified by @daschl and @avsej to strip out whats not needed */</span>
+    <span style="color: #A90D91">var</span> <span style="color: #000000">msgunpack=</span><span style="color: #A90D91">function</span>(){<span style="color: #A90D91">function</span> <span style="color: #000000">k</span>(){<span style="color: #A90D91">var</span> <span style="color: #000000">g</span>,<span style="color: #000000">d</span>,<span style="color: #000000">e</span>,<span style="color: #000000">b=</span><span style="color: #1C01CE">0</span>,<span style="color: #000000">f</span>,<span style="color: #000000">h</span>,<span style="color: #000000">c=m</span>;<span style="color: #000000">d=c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span>;<span style="color: #A90D91">if</span>(<span style="color: #1C01CE">224</span><span style="color: #000000">&lt;=d</span>)<span style="color: #A90D91">return</span> <span style="color: #000000">d-</span><span style="color: #1C01CE">256</span>;<span style="color: #A90D91">if</span>(<span style="color: #1C01CE">192</span><span style="color: #000000">&gt;d</span>){<span style="color: #A90D91">if</span>(<span style="color: #1C01CE">128</span><span style="color: #000000">&gt;d</span>)<span style="color: #A90D91">return</span> <span style="color: #000000">d</span>;<span style="color: #1C01CE">144</span><span style="color: #000000">&gt;d?</span>(<span style="color: #000000">b=d-</span><span style="color: #1C01CE">128</span>,<span style="color: #000000">d=</span><span style="color: #1C01CE">128</span>)<span style="color: #000000">:</span><span style="color: #1C01CE">160</span><span style="color: #000000">&gt;d?</span>(<span style="color: #000000">b=d-</span><span style="color: #1C01CE">144</span>,<span style="color: #000000">d=</span><span style="color: #1C01CE">144</span>)<span style="color: #000000">:</span>(<span style="color: #000000">b=d-</span><span style="color: #1C01CE">160</span>,<span style="color: #000000">d=</span><span style="color: #1C01CE">160</span>)}<span style="color: #A90D91">switch</span>(<span style="color: #000000">d</span>){<span style="color: #A90D91">case</span> <span style="color: #1C01CE">192</span><span style="color: #000000">:</span><span style="color: #A90D91">return</span> <span style="color: #A90D91">null</span>;<span style="color: #A90D91">case</span> <span style="color: #1C01CE">194</span><span style="color: #000000">:</span><span style="color: #A90D91">return</span><span style="color: #000000">!</span><span style="color: #1C01CE">1</span>;<span style="color: #A90D91">case</span> <span style="color: #1C01CE">195</span><span style="color: #000000">:</span><span style="color: #A90D91">return</span><span style="color: #000000">!</span><span style="color: #1C01CE">0</span>;<span style="color: #A90D91">case</span> <span style="color: #1C01CE">202</span><span style="color: #000000">:</span><span style="color: #A90D91">return</span> <span style="color: #000000">b=</span><span style="color: #1C01CE">16777216</span><span style="color: #000000">*c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">+</span>(<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">&lt;&lt;</span><span style="color: #1C01CE">16</span>)<span style="color: #000000">+</span>(<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">&lt;&lt;</span><span style="color: #1C01CE">8</span>)<span style="color: #000000">+c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span>,<span style="color: #000000">f=b&gt;&gt;</span><span style="color: #1C01CE">23</span><span style="color: #000000">&amp;</span><span style="color: #1C01CE">255</span>,<span style="color: #000000">h=b&amp;</span><span style="color: #1C01CE">8388607</span>,<span style="color: #000000">!b||</span><span style="color: #1C01CE">2147483648</span><span style="color: #000000">===b?</span><span style="color: #1C01CE">0</span><span style="color: #000000">:</span><span style="color: #1C01CE">255</span><span style="color: #000000">===f?h?</span><span style="color: #A90D91">NaN</span><span style="color: #000000">:</span><span style="color: #A90D91">Infinity</span><span style="color: #000000">:</span>(<span style="color: #000000">b&amp;</span><span style="color: #1C01CE">2147483648</span><span style="color: #000000">?-</span><span style="color: #1C01CE">1</span><span style="color: #000000">:</span><span style="color: #1C01CE">1</span>)<span style="color: #000000">*</span>(<span style="color: #000000">h|</span><span style="color: #1C01CE">8388608</span>)<span style="color: #000000">*</span><span style="color: #A90D91">Math</span>.<span style="color: #000000">pow</span>(<span style="color: #1C01CE">2</span>,<span style="color: #000000">f-</span><span style="color: #1C01CE">127</span><span style="color: #000000">-</span><span style="color: #1C01CE">23</span>);<span style="color: #A90D91">case</span> <span style="color: #1C01CE">203</span><span style="color: #000000">:b=</span><span style="color: #1C01CE">16777216</span><span style="color: #000000">*c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">+</span>(<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">&lt;&lt;</span><span style="color: #1C01CE">16</span>)<span style="color: #000000">+</span>(<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">&lt;&lt;</span><span style="color: #1C01CE">8</span>)<span style="color: #000000">+c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span>;<span style="color: #000000">d=b&amp;</span><span style="color: #1C01CE">2147483648</span>;
+    <span style="color: #000000">f=b&gt;&gt;</span><span style="color: #1C01CE">20</span><span style="color: #000000">&amp;</span><span style="color: #1C01CE">2047</span>;<span style="color: #000000">h=b&amp;</span><span style="color: #1C01CE">1048575</span>;<span style="color: #A90D91">if</span>(<span style="color: #000000">!b||</span><span style="color: #1C01CE">2147483648</span><span style="color: #000000">===b</span>)<span style="color: #A90D91">return</span> <span style="color: #000000">a+=</span><span style="color: #1C01CE">4</span>,<span style="color: #1C01CE">0</span>;<span style="color: #A90D91">if</span>(<span style="color: #1C01CE">2047</span><span style="color: #000000">===f</span>)<span style="color: #A90D91">return</span> <span style="color: #000000">a+=</span><span style="color: #1C01CE">4</span>,<span style="color: #000000">h?</span><span style="color: #A90D91">NaN</span><span style="color: #000000">:</span><span style="color: #A90D91">Infinity</span>;<span style="color: #000000">b=</span><span style="color: #1C01CE">16777216</span><span style="color: #000000">*c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">+</span>(<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">&lt;&lt;</span><span style="color: #1C01CE">16</span>)<span style="color: #000000">+</span>(<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">&lt;&lt;</span><span style="color: #1C01CE">8</span>)<span style="color: #000000">+c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span>;<span style="color: #A90D91">return</span>(<span style="color: #000000">d?-</span><span style="color: #1C01CE">1</span><span style="color: #000000">:</span><span style="color: #1C01CE">1</span>)<span style="color: #000000">*</span>((<span style="color: #000000">h|</span><span style="color: #1C01CE">1048576</span>)<span style="color: #000000">*</span><span style="color: #A90D91">Math</span>.<span style="color: #000000">pow</span>(<span style="color: #1C01CE">2</span>,<span style="color: #000000">f-</span><span style="color: #1C01CE">1023</span><span style="color: #000000">-</span><span style="color: #1C01CE">20</span>)<span style="color: #000000">+b*</span><span style="color: #A90D91">Math</span>.<span style="color: #000000">pow</span>(<span style="color: #1C01CE">2</span>,<span style="color: #000000">f-</span><span style="color: #1C01CE">1023</span><span style="color: #000000">-</span><span style="color: #1C01CE">52</span>));<span style="color: #A90D91">case</span> <span style="color: #1C01CE">207</span><span style="color: #000000">:</span><span style="color: #A90D91">return</span> <span style="color: #000000">b=</span><span style="color: #1C01CE">16777216</span><span style="color: #000000">*c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">+</span>(<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">&lt;&lt;</span><span style="color: #1C01CE">16</span>)<span style="color: #000000">+</span>(<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">&lt;&lt;</span><span style="color: #1C01CE">8</span>)<span style="color: #000000">+c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span>,<span style="color: #1C01CE">4294967296</span><span style="color: #000000">*b+</span><span style="color: #1C01CE">16777216</span><span style="color: #000000">*c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">+</span>(<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">&lt;&lt;</span><span style="color: #1C01CE">16</span>)<span style="color: #000000">+</span>(<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">&lt;&lt;</span><span style="color: #1C01CE">8</span>)<span style="color: #000000">+c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span>;<span style="color: #A90D91">case</span> <span style="color: #1C01CE">206</span><span style="color: #000000">:b+=</span><span style="color: #1C01CE">16777216</span><span style="color: #000000">*c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">+</span>(<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">&lt;&lt;</span><span style="color: #1C01CE">16</span>);<span style="color: #A90D91">case</span> <span style="color: #1C01CE">205</span><span style="color: #000000">:b+=c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">&lt;&lt;</span><span style="color: #1C01CE">8</span>;<span style="color: #A90D91">case</span> <span style="color: #1C01CE">204</span><span style="color: #000000">:</span><span style="color: #A90D91">return</span> <span style="color: #000000">b+c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span>;<span style="color: #A90D91">case</span> <span style="color: #1C01CE">211</span><span style="color: #000000">:</span><span style="color: #A90D91">return</span> <span style="color: #000000">b=c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span>,<span style="color: #000000">b&amp;</span><span style="color: #1C01CE">128</span><span style="color: #000000">?-</span><span style="color: #1C01CE">1</span><span style="color: #000000">*</span>(<span style="color: #1C01CE">72057594037927936</span><span style="color: #000000">*</span>(<span style="color: #000000">b^</span><span style="color: #1C01CE">255</span>)<span style="color: #000000">+</span>
+    <span style="color: #1C01CE">281474976710656</span><span style="color: #000000">*</span>(<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">^</span><span style="color: #1C01CE">255</span>)<span style="color: #000000">+</span><span style="color: #1C01CE">1099511627776</span><span style="color: #000000">*</span>(<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">^</span><span style="color: #1C01CE">255</span>)<span style="color: #000000">+</span><span style="color: #1C01CE">4294967296</span><span style="color: #000000">*</span>(<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">^</span><span style="color: #1C01CE">255</span>)<span style="color: #000000">+</span><span style="color: #1C01CE">16777216</span><span style="color: #000000">*</span>(<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">^</span><span style="color: #1C01CE">255</span>)<span style="color: #000000">+</span><span style="color: #1C01CE">65536</span><span style="color: #000000">*</span>(<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">^</span><span style="color: #1C01CE">255</span>)<span style="color: #000000">+</span><span style="color: #1C01CE">256</span><span style="color: #000000">*</span>(<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">^</span><span style="color: #1C01CE">255</span>)<span style="color: #000000">+</span>(<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">^</span><span style="color: #1C01CE">255</span>)<span style="color: #000000">+</span><span style="color: #1C01CE">1</span>)<span style="color: #000000">:</span><span style="color: #1C01CE">72057594037927936</span><span style="color: #000000">*b+</span><span style="color: #1C01CE">281474976710656</span><span style="color: #000000">*c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">+</span><span style="color: #1C01CE">1099511627776</span><span style="color: #000000">*c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">+</span><span style="color: #1C01CE">4294967296</span><span style="color: #000000">*c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">+</span><span style="color: #1C01CE">16777216</span><span style="color: #000000">*c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">+</span><span style="color: #1C01CE">65536</span><span style="color: #000000">*c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">+</span><span style="color: #1C01CE">256</span><span style="color: #000000">*c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">+c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span>;<span style="color: #A90D91">case</span> <span style="color: #1C01CE">210</span><span style="color: #000000">:</span><span style="color: #A90D91">return</span> <span style="color: #000000">b=</span><span style="color: #1C01CE">16777216</span><span style="color: #000000">*c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">+</span>(<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">&lt;&lt;</span><span style="color: #1C01CE">16</span>)<span style="color: #000000">+</span>(<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">&lt;&lt;</span><span style="color: #1C01CE">8</span>)<span style="color: #000000">+c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span>,<span style="color: #1C01CE">2147483648</span><span style="color: #000000">&gt;b?b:b-</span><span style="color: #1C01CE">4294967296</span>;<span style="color: #A90D91">case</span> <span style="color: #1C01CE">209</span><span style="color: #000000">:</span><span style="color: #A90D91">return</span> <span style="color: #000000">b=</span>(<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">&lt;&lt;</span><span style="color: #1C01CE">8</span>)<span style="color: #000000">+c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span>,<span style="color: #1C01CE">32768</span><span style="color: #000000">&gt;b?b:b-</span><span style="color: #1C01CE">65536</span>;<span style="color: #A90D91">case</span> <span style="color: #1C01CE">208</span><span style="color: #000000">:</span><span style="color: #A90D91">return</span> <span style="color: #000000">b=c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span>,<span style="color: #1C01CE">128</span><span style="color: #000000">&gt;b?b:b-</span><span style="color: #1C01CE">256</span>;<span style="color: #A90D91">case</span> <span style="color: #1C01CE">219</span><span style="color: #000000">:b+=</span><span style="color: #1C01CE">16777216</span><span style="color: #000000">*c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">+</span>(<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">&lt;&lt;</span>
+    <span style="color: #1C01CE">16</span>);<span style="color: #A90D91">case</span> <span style="color: #1C01CE">218</span><span style="color: #000000">:b+=</span>(<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">&lt;&lt;</span><span style="color: #1C01CE">8</span>)<span style="color: #000000">+c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span>;<span style="color: #A90D91">case</span> <span style="color: #1C01CE">160</span><span style="color: #000000">:f=</span><span style="color: #633820">[]</span>;<span style="color: #000000">d=a</span>;<span style="color: #A90D91">for</span>(<span style="color: #000000">g=d+b</span>;<span style="color: #000000">d&lt;g</span>;)<span style="color: #000000">e=c</span><span style="color: #633820">[</span><span style="color: #000000">++d</span><span style="color: #633820">]</span>,<span style="color: #000000">f</span>.<span style="color: #000000">push</span>(<span style="color: #1C01CE">128</span><span style="color: #000000">&gt;e?e:</span><span style="color: #1C01CE">224</span><span style="color: #000000">&gt;e?</span>(<span style="color: #000000">e&amp;</span><span style="color: #1C01CE">31</span>)<span style="color: #000000">&lt;&lt;</span><span style="color: #1C01CE">6</span><span style="color: #000000">|c</span><span style="color: #633820">[</span><span style="color: #000000">++d</span><span style="color: #633820">]</span><span style="color: #000000">&amp;</span><span style="color: #1C01CE">63</span><span style="color: #000000">:</span>(<span style="color: #000000">e&amp;</span><span style="color: #1C01CE">15</span>)<span style="color: #000000">&lt;&lt;</span><span style="color: #1C01CE">12</span><span style="color: #000000">|</span>(<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++d</span><span style="color: #633820">]</span><span style="color: #000000">&amp;</span><span style="color: #1C01CE">63</span>)<span style="color: #000000">&lt;&lt;</span><span style="color: #1C01CE">6</span><span style="color: #000000">|c</span><span style="color: #633820">[</span><span style="color: #000000">++d</span><span style="color: #633820">]</span><span style="color: #000000">&amp;</span><span style="color: #1C01CE">63</span>);<span style="color: #000000">a=d</span>;<span style="color: #A90D91">return</span> <span style="color: #1C01CE">10240</span><span style="color: #000000">&gt;f</span>.<span style="color: #000000">length?l</span>.<span style="color: #000000">apply</span>(<span style="color: #A90D91">null</span>,<span style="color: #000000">f</span>)<span style="color: #000000">:n</span>(<span style="color: #000000">f</span>);<span style="color: #A90D91">case</span> <span style="color: #1C01CE">223</span><span style="color: #000000">:b+=</span><span style="color: #1C01CE">16777216</span><span style="color: #000000">*c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">+</span>(<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">&lt;&lt;</span><span style="color: #1C01CE">16</span>);<span style="color: #A90D91">case</span> <span style="color: #1C01CE">222</span><span style="color: #000000">:b+=</span>(<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">&lt;&lt;</span><span style="color: #1C01CE">8</span>)<span style="color: #000000">+c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span>;<span style="color: #A90D91">case</span> <span style="color: #1C01CE">128</span><span style="color: #000000">:</span><span style="color: #A90D91">for</span>(<span style="color: #000000">h=</span>{};<span style="color: #000000">b--</span>;){<span style="color: #000000">g=c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">-</span><span style="color: #1C01CE">160</span>;<span style="color: #000000">f=</span><span style="color: #633820">[]</span>;<span style="color: #000000">d=a</span>;<span style="color: #A90D91">for</span>(<span style="color: #000000">g=d+g</span>;<span style="color: #000000">d&lt;g</span>;)<span style="color: #000000">e=c</span><span style="color: #633820">[</span><span style="color: #000000">++d</span><span style="color: #633820">]</span>,<span style="color: #000000">f</span>.<span style="color: #000000">push</span>(<span style="color: #1C01CE">128</span><span style="color: #000000">&gt;e?e:</span><span style="color: #1C01CE">224</span><span style="color: #000000">&gt;e?</span>(<span style="color: #000000">e&amp;</span><span style="color: #1C01CE">31</span>)<span style="color: #000000">&lt;&lt;</span><span style="color: #1C01CE">6</span><span style="color: #000000">|c</span><span style="color: #633820">[</span><span style="color: #000000">++d</span><span style="color: #633820">]</span><span style="color: #000000">&amp;</span><span style="color: #1C01CE">63</span><span style="color: #000000">:</span>(<span style="color: #000000">e&amp;</span><span style="color: #1C01CE">15</span>)<span style="color: #000000">&lt;&lt;</span><span style="color: #1C01CE">12</span><span style="color: #000000">|</span>(<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++d</span><span style="color: #633820">]</span><span style="color: #000000">&amp;</span><span style="color: #1C01CE">63</span>)<span style="color: #000000">&lt;&lt;</span><span style="color: #1C01CE">6</span><span style="color: #000000">|c</span><span style="color: #633820">[</span><span style="color: #000000">++d</span><span style="color: #633820">]</span><span style="color: #000000">&amp;</span><span style="color: #1C01CE">63</span>);<span style="color: #000000">a=d</span>;<span style="color: #000000">h</span><span style="color: #633820">[</span><span style="color: #000000">l.apply</span>(<span style="color: #A90D91">null</span>,<span style="color: #000000">f</span>)<span style="color: #633820">]</span><span style="color: #000000">=k</span>()}<span style="color: #A90D91">return</span> <span style="color: #000000">h</span>;<span style="color: #A90D91">case</span> <span style="color: #1C01CE">221</span><span style="color: #000000">:b+=</span><span style="color: #1C01CE">16777216</span><span style="color: #000000">*c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">+</span>(<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">&lt;&lt;</span><span style="color: #1C01CE">16</span>);<span style="color: #A90D91">case</span> <span style="color: #1C01CE">220</span><span style="color: #000000">:b+=</span>
+    (<span style="color: #000000">c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span><span style="color: #000000">&lt;&lt;</span><span style="color: #1C01CE">8</span>)<span style="color: #000000">+c</span><span style="color: #633820">[</span><span style="color: #000000">++a</span><span style="color: #633820">]</span>;<span style="color: #A90D91">case</span> <span style="color: #1C01CE">144</span><span style="color: #000000">:</span><span style="color: #A90D91">for</span>(<span style="color: #000000">f=</span><span style="color: #633820">[]</span>;<span style="color: #000000">b--</span>;)<span style="color: #000000">f</span>.<span style="color: #000000">push</span>(<span style="color: #000000">k</span>());<span style="color: #A90D91">return</span> <span style="color: #000000">f</span>}}<span style="color: #A90D91">function</span> <span style="color: #000000">n</span>(<span style="color: #000000">a</span>){<span style="color: #A90D91">try</span>{<span style="color: #A90D91">return</span> <span style="color: #000000">l</span>.<span style="color: #000000">apply</span>(<span style="color: #A90D91">this</span>,<span style="color: #000000">a</span>)}<span style="color: #A90D91">catch</span>(<span style="color: #000000">d</span>){}<span style="color: #A90D91">for</span>(<span style="color: #A90D91">var</span> <span style="color: #000000">e=</span><span style="color: #633820">[]</span>,<span style="color: #000000">b=</span><span style="color: #1C01CE">0</span>,<span style="color: #000000">f=a</span>.<span style="color: #000000">length</span>,<span style="color: #000000">h=p</span>;<span style="color: #000000">b&lt;f</span>;<span style="color: #000000">++b</span>)<span style="color: #000000">e</span><span style="color: #633820">[</span><span style="color: #000000">b</span><span style="color: #633820">]</span><span style="color: #000000">=h</span><span style="color: #633820">[</span><span style="color: #000000">a[b</span><span style="color: #633820">]</span>];<span style="color: #A90D91">return</span> <span style="color: #000000">e</span>.<span style="color: #000000">join</span>(<span style="color: #C41A16">&quot;&quot;</span>)}<span style="color: #A90D91">var</span> <span style="color: #000000">j=</span>{},<span style="color: #000000">p=</span>{},<span style="color: #000000">m=</span><span style="color: #633820">[]</span>,<span style="color: #000000">a=</span><span style="color: #1C01CE">0</span>,<span style="color: #000000">l=</span><span style="color: #A90D91">String</span>.<span style="color: #000000">fromCharCode</span>;<span style="color: #A90D91">return</span> <span style="color: #A90D91">function</span>(<span style="color: #000000">g</span>){<span style="color: #A90D91">var</span> <span style="color: #000000">d</span>;<span style="color: #A90D91">if</span>(<span style="color: #C41A16">&quot;string&quot;</span><span style="color: #000000">===</span><span style="color: #A90D91">typeof</span> <span style="color: #000000">g</span>){<span style="color: #000000">d=</span><span style="color: #633820">[]</span>;<span style="color: #A90D91">var</span> <span style="color: #000000">e=g</span>.<span style="color: #000000">split</span>(<span style="color: #C41A16">&quot;&quot;</span>),<span style="color: #000000">b=-</span><span style="color: #1C01CE">1</span>,<span style="color: #000000">f</span>;<span style="color: #000000">f=e</span>.<span style="color: #000000">length</span>;<span style="color: #A90D91">for</span>(<span style="color: #000000">g=f%</span><span style="color: #1C01CE">8</span>;<span style="color: #000000">g--</span>;)<span style="color: #000000">++b</span>,<span style="color: #000000">d</span><span style="color: #633820">[</span><span style="color: #000000">b</span><span style="color: #633820">]</span><span style="color: #000000">=j</span><span style="color: #633820">[</span><span style="color: #000000">e[b</span><span style="color: #633820">]</span>];<span style="color: #A90D91">for</span>(<span style="color: #000000">g=f&gt;&gt;</span><span style="color: #1C01CE">3</span>;<span style="color: #000000">g--</span>;)<span style="color: #000000">d</span>.<span style="color: #000000">push</span>(<span style="color: #000000">j</span><span style="color: #633820">[</span><span style="color: #000000">e[++b</span><span style="color: #633820">]</span>],<span style="color: #000000">j</span><span style="color: #633820">[</span><span style="color: #000000">e[++b</span><span style="color: #633820">]</span>],<span style="color: #000000">j</span><span style="color: #633820">[</span><span style="color: #000000">e[++b</span><span style="color: #633820">]</span>],<span style="color: #000000">j</span><span style="color: #633820">[</span><span style="color: #000000">e[++b</span><span style="color: #633820">]</span>],<span style="color: #000000">j</span><span style="color: #633820">[</span><span style="color: #000000">e[++b</span><span style="color: #633820">]</span>],<span style="color: #000000">j</span><span style="color: #633820">[</span><span style="color: #000000">e[++b</span><span style="color: #633820">]</span>],<span style="color: #000000">j</span><span style="color: #633820">[</span><span style="color: #000000">e[++b</span><span style="color: #633820">]</span>],<span style="color: #000000">j</span><span style="color: #633820">[</span><span style="color: #000000">e[++b</span><span style="color: #633820">]</span>])}<span style="color: #A90D91">else</span> <span style="color: #000000">d=g</span>;<span style="color: #000000">m=d</span>;<span style="color: #000000">a=-</span><span style="color: #1C01CE">1</span>;<span style="color: #A90D91">return</span> <span style="color: #000000">k</span>()}}();
+
+    <span style="color: #A90D91">var</span> <span style="color: #000000">obj</span> <span style="color: #000000">=</span> <span style="color: #000000">msgunpack</span>(<span style="color: #000000">decodeBase64</span>(<span style="color: #000000">doc</span>));
+    <span style="color: #A90D91">if</span>(<span style="color: #000000">obj</span>.<span style="color: #000000">firstname</span>) {
+        <span style="color: #000000">emit</span>(<span style="color: #000000">obj</span>.<span style="color: #000000">firstname</span>, <span style="color: #A90D91">null</span>);
+    }
+}
+</pre></div>
+
+<p>This map function decodes our MessagePack data and just emits the value with key &ldquo;firstname&rdquo;. Once you query this view, you&rsquo;ll see stuff like this emitted:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">{
+    total_rows: 3,
+    rows: [{
+        id: &quot;user:matt&quot;,
+        key: &quot;Matt&quot;,
+        value: null
+    },{
+        id: &quot;user:michael&quot;,
+        key: &quot;Michael&quot;,
+        value: null
+    },{
+        id: &quot;user:sergey&quot;,
+        key: &quot;Sergey&quot;,
+        value: null
+    }]
+}
+</pre></div>
+
+<p>Isn&rsquo;t that lovely? We can now query this view from our Java SDK and use the MessagePack decoding facilities to retrieve the full documents as needed:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// Query View
+View view = cb.getView(&quot;designname&quot;, &quot;viewname&quot;);
+ViewResponse response = cb.query(view, new Query().setIncludeDocs(true));
+
+// Iterate and load full documents
+for (ViewRow row : response) {
+  System.out.println(msgpack.read((byte[]) row.getDocument()));
+}
+</pre></div>
+
+<p>On the console, you&rsquo;ll see the full document content:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">{&quot;lastname&quot;:&quot;Ingenthron&quot;,&quot;firstname&quot;:&quot;Matt&quot;}
+{&quot;lastname&quot;:&quot;Nitschinger&quot;,&quot;firstname&quot;:&quot;Michael&quot;}
+{&quot;lastname&quot;:&quot;Avseyev&quot;,&quot;firstname&quot;:&quot;Sergey&quot;}
+</pre></div>
+
+<p>Of course, feel free to use all the well-known query mechanisms for Views.</p>
+
+<h2 id="benefits-anyone:1023c91939326ad5b8553640bc76ed2b">Benefits, anyone?</h2>
+
+<p>Now one could argue that this is nice to play around with, but what do I actually gain from it? Arguably, there is more work included for the developer, and maybe for the Server side as well.</p>
+
+<p>MessagePack makes bold claims that its faster and smaller than JSON, so lets try to verify this in our environment.</p>
+
+<p>To verify the size argument, let&rsquo;s go ahead and create 1M docs with a &ldquo;reasonable&rdquo; size and store them both through JSON and MessagePack. Since the overhead for each document is static inside Couchbase Server, we can very easily see how much RAM is used to hold the documents and conclude on the size difference (which is what matters at the end).</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">int</span> <span style="color: #000000">numdocs</span> <span style="color: #000000">=</span> <span style="color: #000000">1000000;</span>
+<span style="color: #000000">HashMap&lt;String,</span> <span style="color: #000000">Object&gt;</span> <span style="color: #000000">user</span> <span style="color: #000000">=</span> <span style="color: #000000">new</span> <span style="color: #000000">HashMap&lt;String,</span> <span style="color: #000000">Object&gt;();</span>
+<span style="color: #000000">user</span><span style="color: #3F6E75">.put</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;firstname&quot;</span><span style="color: #000000">,</span> <span style="color: #C41A16">&quot;Michael&quot;</span><span style="color: #000000">);</span>
+<span style="color: #000000">user</span><span style="color: #3F6E75">.put</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;lastname&quot;</span><span style="color: #000000">,</span> <span style="color: #C41A16">&quot;Nitschinger&quot;</span><span style="color: #000000">);</span>
+<span style="color: #000000">user</span><span style="color: #3F6E75">.put</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;age&quot;</span><span style="color: #000000">,</span> <span style="color: #000000">25);</span>
+<span style="color: #000000">user</span><span style="color: #3F6E75">.put</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;loggedIn&quot;</span><span style="color: #000000">,</span> <span style="color: #000000">false);</span>
+<span style="color: #000000">user</span><span style="color: #3F6E75">.put</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;active&quot;</span><span style="color: #000000">,</span> <span style="color: #000000">true);</span>
+
+<span style="color: #000000">for</span> <span style="color: #000000">(int</span> <span style="color: #000000">i</span> <span style="color: #000000">=</span> <span style="color: #000000">0;</span> <span style="color: #000000">i</span> <span style="color: #000000">&lt;</span> <span style="color: #000000">numdocs;</span> <span style="color: #000000">i++)</span> {
+  <span style="color: #000000">cb.set</span>(<span style="color: #C41A16">&quot;user:&quot;</span> <span style="color: #000000">+</span> <span style="color: #000000">i,</span> <span style="color: #000000">msgpack.write</span>(<span style="color: #000000">user</span>))<span style="color: #000000">.get</span>();
+}
+</pre></div>
+
+<p>For 1M documents on my machine with Couchbase Server 2.0, the amount of RAM used is 166MB. Now, let&rsquo;s do the same with JSON. I&rsquo;m going to use <a href="https://code.google.com/p/google-gson/">Google GSON</a> to convert the HashMap:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">int</span> <span style="color: #000000">numdocs</span> <span style="color: #000000">=</span> <span style="color: #000000">1000000;</span>
+<span style="color: #000000">HashMap&lt;String,</span> <span style="color: #000000">Object&gt;</span> <span style="color: #000000">user</span> <span style="color: #000000">=</span> <span style="color: #000000">new</span> <span style="color: #000000">HashMap&lt;String,</span> <span style="color: #000000">Object&gt;();</span>
+<span style="color: #000000">user</span><span style="color: #3F6E75">.put</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;firstname&quot;</span><span style="color: #000000">,</span> <span style="color: #C41A16">&quot;Michael&quot;</span><span style="color: #000000">);</span>
+<span style="color: #000000">user</span><span style="color: #3F6E75">.put</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;lastname&quot;</span><span style="color: #000000">,</span> <span style="color: #C41A16">&quot;Nitschinger&quot;</span><span style="color: #000000">);</span>
+<span style="color: #000000">user</span><span style="color: #3F6E75">.put</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;age&quot;</span><span style="color: #000000">,</span> <span style="color: #000000">25);</span>
+<span style="color: #000000">user</span><span style="color: #3F6E75">.put</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;loggedIn&quot;</span><span style="color: #000000">,</span> <span style="color: #000000">false);</span>
+<span style="color: #000000">user</span><span style="color: #3F6E75">.put</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;active&quot;</span><span style="color: #000000">,</span> <span style="color: #000000">true);</span>
+
+<span style="color: #000000">for</span> <span style="color: #000000">(int</span> <span style="color: #000000">i</span> <span style="color: #000000">=</span> <span style="color: #000000">0;</span> <span style="color: #000000">i</span> <span style="color: #000000">&lt;</span> <span style="color: #000000">numdocs;</span> <span style="color: #000000">i++)</span> {
+  <span style="color: #000000">cb.set</span>(<span style="color: #C41A16">&quot;user:&quot;</span> <span style="color: #000000">+</span> <span style="color: #000000">i,</span> <span style="color: #000000">gson.toJson</span>(<span style="color: #000000">user</span>))<span style="color: #000000">.get</span>();
+}
+</pre></div>
+
+<p>After inserting those 1M JSON records, Couchbase Server reported exactly 198MB of RAM used! So the difference is 32MB (1/5th of the total data size), or 32 byte per document. That pays off if you have lots of records in your cluster! After doubling the content of the HashMap and storing twice as many documents (2M) MessagePack is ahead of raw JSON by around 96MB. That&rsquo;s another 400K documents you could store (one document is around 230 bytes compared to 285 with raw JSON).</p>
+
+<p>Of course, YMMV depending on the number and size of the documents. I&rsquo;m curious if you could do the same runs on your real workload and see by how much you could improve.</p>
+
+<p>Now, before we talk about RAW encoding/decoding performance, we also need to look into the overhead involved on the server side. Storing and retreiving documents is not slower than any other document, because the server doesn&rsquo;t need to do anything special. The only overhead I can think of is that during index creation, more CPU will be consumed because you execute more JavaScript logic. I guess this CPU overhead increases with the document sizes, but I don&rsquo;t have any actual numbers to share here. Personally, I&rsquo;d use the [sizing]() guidelines for Views and maybe add some more CPU just to be safe. It&rsquo;s important to note that at query time, you won&rsquo;t see a difference between JSON and MessagePack, because the index is already created.</p>
+
+<p>Congratulations if you followed to this point! As a bonus, we&rsquo;ll look into the raw encoding/decoding performance of JSON and MessagePack on the JVM. Since there are lots of JSON libraries out there, we&rsquo;re going to use <a href="http://jackson.codehaus.org/">Jackson</a> and Google GSON. Benchmarking on the JVM is not a trivial task, so I&rsquo;ll do my best to keep it objective and we&rsquo;re going to use <a href="https://code.google.com/p/caliper/">Google Caliper</a> to handle things like JVM warmup. Make sure to add everything to your <code>pom.xml</code> like this:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">&lt;dependency&gt;</span>
+    <span style="color: #000000">&lt;groupId&gt;</span>org.msgpack<span style="color: #000000">&lt;/groupId&gt;</span>
+    <span style="color: #000000">&lt;artifactId&gt;</span>msgpack<span style="color: #000000">&lt;/artifactId&gt;</span>
+    <span style="color: #000000">&lt;version&gt;</span>0.6.7<span style="color: #000000">&lt;/version&gt;</span>
+<span style="color: #000000">&lt;/dependency&gt;</span>
+<span style="color: #000000">&lt;dependency&gt;</span>
+    <span style="color: #000000">&lt;groupId&gt;</span>com.google.code.gson<span style="color: #000000">&lt;/groupId&gt;</span>
+    <span style="color: #000000">&lt;artifactId&gt;</span>gson<span style="color: #000000">&lt;/artifactId&gt;</span>
+    <span style="color: #000000">&lt;version&gt;</span>2.2.4<span style="color: #000000">&lt;/version&gt;</span>
+<span style="color: #000000">&lt;/dependency&gt;</span>
+<span style="color: #000000">&lt;dependency&gt;</span>
+    <span style="color: #000000">&lt;groupId&gt;</span>com.google.caliper<span style="color: #000000">&lt;/groupId&gt;</span>
+    <span style="color: #000000">&lt;artifactId&gt;</span>caliper<span style="color: #000000">&lt;/artifactId&gt;</span>
+    <span style="color: #000000">&lt;version&gt;</span>1.0-beta-1<span style="color: #000000">&lt;/version&gt;</span>
+<span style="color: #000000">&lt;/dependency&gt;</span>
+<span style="color: #000000">&lt;dependency&gt;</span>
+    <span style="color: #000000">&lt;groupId&gt;</span>com.google.code.java-allocation-instrumenter<span style="color: #000000">&lt;/groupId&gt;</span>
+    <span style="color: #000000">&lt;artifactId&gt;</span>java-allocation-instrumenter<span style="color: #000000">&lt;/artifactId&gt;</span>
+    <span style="color: #000000">&lt;version&gt;</span>2.1<span style="color: #000000">&lt;/version&gt;</span>
+<span style="color: #000000">&lt;/dependency&gt;</span>
+<span style="color: #000000">&lt;dependency&gt;</span>
+    <span style="color: #000000">&lt;groupId&gt;</span>com.fasterxml.jackson.core<span style="color: #000000">&lt;/groupId&gt;</span>
+    <span style="color: #000000">&lt;artifactId&gt;</span>jackson-databind<span style="color: #000000">&lt;/artifactId&gt;</span>
+    <span style="color: #000000">&lt;version&gt;</span>2.2.2<span style="color: #000000">&lt;/version&gt;</span>
+<span style="color: #000000">&lt;/dependency&gt;</span>
+</pre></div>
+
+<p>In this simple benchmark, we are only testing smaller and slightly larger <code>HashMap</code>s. I know that this test is not conclusive, but it should give you a starting point from where you can do your own research.</p>
+
+<p>To write a Caliper benchmark, you need to extend the <code>Benchmark</code> class from the caliper package. its as simple as this:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">public class EncodingBenchmark extends Benchmark {
+
+  private final Gson gson = new Gson();
+  private final MessagePack msgpack = new MessagePack();
+  private final ObjectMapper mapper = new ObjectMapper();
+
+  private HashMap&lt;String, Object&gt; smallMap;
+  private HashMap&lt;String, Object&gt; largeMap;
+
+  @Override
+  protected void setUp() {
+    smallMap = new HashMap&lt;String, Object&gt;();
+    smallMap.put(&quot;firstname&quot;, &quot;Foo&quot;);
+    smallMap.put(&quot;lastname&quot;, &quot;bar&quot;);
+    smallMap.put(&quot;active&quot;, false);
+
+    largeMap = new HashMap&lt;String, Object&gt;();
+    largeMap.put(&quot;firstname&quot;, &quot;Foo&quot;);
+    largeMap.put(&quot;lastname&quot;, &quot;bar&quot;);
+    largeMap.put(&quot;active&quot;, false);
+    largeMap.put(&quot;firstname1&quot;, &quot;Foo&quot;);
+    largeMap.put(&quot;lastname1&quot;, &quot;bar&quot;);
+    largeMap.put(&quot;active1&quot;, false);
+    largeMap.put(&quot;firstname2&quot;, &quot;Foo&quot;);
+    largeMap.put(&quot;lastname2&quot;, &quot;bar&quot;);
+    largeMap.put(&quot;active2&quot;, false);
+    largeMap.put(&quot;firstname3&quot;, &quot;Foo&quot;);
+    largeMap.put(&quot;lastname3&quot;, &quot;bar&quot;);
+    largeMap.put(&quot;active3&quot;, false);
+  }
+
+  public void timeMessagePackSmall(final int reps) throws Exception {
+    for (int i = 0; i &lt; reps; i++) {
+      msgpack.write(smallMap);
+    }
+  }
+
+  public void timeGoogleGsonSmall(int reps) throws Exception {
+    for (int i = 0; i &lt; reps; i++) {
+      gson.toJson(smallMap);
+    }
+  }
+
+  public void timeJacksonSmall(int reps) throws Exception {
+    for (int i = 0; i &lt; reps; i++) {
+      mapper.writeValueAsString(smallMap);
+    }
+  }
+  public void timeJsonSmartSmall(int reps) throws Exception {
+    for (int i = 0; i &lt; reps; i++) {
+      mapper.writeValueAsString(smallMap);
+    }
+  }
+
+  public void timeMessagePackLarge(final int reps) throws Exception {
+    for (int i = 0; i &lt; reps; i++) {
+      msgpack.write(largeMap);
+    }
+  }
+
+  public void timeGoogleGsonLarge(int reps) throws Exception {
+    for (int i = 0; i &lt; reps; i++) {
+      gson.toJson(largeMap);
+    }
+  }
+
+  public void timeJacksonLarge(int reps) throws Exception {
+    for (int i = 0; i &lt; reps; i++) {
+      mapper.writeValueAsString(largeMap);
+    }
+  }
+}
+</pre></div>
+
+<p>First, we create our converter instances (for MessagePack, GSON and Jackson) and the HashMaps. All the runs in this benchmark are executed by Caliper. We need to modify our <code>main</code> class to load the wrapper:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">import</span> <span style="color: #000000">business.MsgpackBenchmark</span>;
+<span style="color: #A90D91">import</span> <span style="color: #000000">com.google.caliper.runner.CaliperMain</span>;
+
+<span style="color: #000000">public</span> <span style="color: #A90D91">class</span> <span style="color: #3F6E75">Main</span> {
+  <span style="color: #000000">public</span> <span style="color: #000000">static</span> <span style="color: #000000">void</span> <span style="color: #000000">main</span>(<span style="color: #000000">String</span>[] <span style="color: #000000">args</span>) <span style="color: #000000">throws</span> <span style="color: #000000">Exception</span> {
+    <span style="color: #000000">CaliperMain.main</span>(<span style="color: #000000">EncodingBenchmark.class</span>, <span style="color: #000000">args</span>);
+  }
+}
+</pre></div>
+
+<p>Now if you run this in your IDE, you&rsquo;ll see some logging going on:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">Experiment selection: 
+  Instruments:   [allocation, micro]
+  User parameters:   {}
+  Virtual machines:  [default]
+  Selection type:    Full cartesian product
+
+This selection yields 12 experiments.
+Starting experiment 1 of 12: {instrument=allocation, method=GoogleGsonLarge, vm=default, parameters={}}
+Complete!
+Starting experiment 2 of 12: {instrument=allocation, method=GoogleGsonSmall, vm=default, parameters={}}
+Complete!
+Starting experiment 3 of 12: {instrument=allocation, method=JacksonLarge, vm=default, parameters={}}
+Complete!
+Starting experiment 4 of 12: {instrument=allocation, method=JacksonSmall, vm=default, parameters={}}
+Complete!
+...
+Starting experiment 11 of 12: {instrument=micro, method=MessagePackLarge, vm=default, parameters={}}
+Complete!
+Starting experiment 12 of 12: {instrument=micro, method=MessagePackSmall, vm=default, parameters={}}
+Complete!
+
+Execution complete: 7.058m.
+Collected 162 measurements from:
+  2 instrument(s)
+  1 virtual machine(s)
+  6 benchmark(s)
+Results have been uploaded. View them at: https://microbenchmarks.appspot.com/runs/f25820e0-08dd-43f8-833e-e44847400f19
+</pre></div>
+
+<p>Once finished, Caliper even uploaded your results to a webpage (so make sure to have internet connection)! Note that if you see &ldquo;GC errors&rdquo; during your runs, it may be good to retry and if they still persist, consider increasing your heap size a bit. I don&rsquo;t know for how long the data is held on the web page, but <a href="https://microbenchmarks.appspot.com/runs/f25820e0-08dd-43f8-833e-e44847400f19#r:scenario.benchmarkSpec.methodName">here</a> are my results.</p>
+
+<p>At least in my benchmarks I found that libraries like Jackson outperform MessagePack by a large amount when encoding <code>HashMap</code>s. Maybe it&rsquo;s different with other data types and sizes though.</p>
+
+<h2 id="summary:1023c91939326ad5b8553640bc76ed2b">Summary</h2>
+
+<p>I hope this blog post was a fun introduction and showed what&rsquo;s possible with Couchbase Server 2.0 and its new View engine. I found that MessagePack really saves you a good amount of bytes on the wire (and on the server), but is much slower on the JVM when it comes to encoding data (here <code>HashMap</code>s).</p>
+
+                    </div>
+                </section>
+                
+            </div>
+            
+
+            <div class="footer">
+    <div class="pure-menu pure-menu-horizontal pure-menu-open">
+        <ul>
+		<li>&copy; Michael Nitschinger 2010-2016</li>
+        </ul>
+    </div>
+</div>
+<script src="http://nitschinger.at//js/all.min.js"></script>
+
+        </div>
+    </div>
+</div>
+
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', '', 'auto');
+ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

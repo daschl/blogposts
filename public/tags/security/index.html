@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security &middot; daschl writes. sometimes.</title>
+
+    <meta name="description" content="">
+
+    <meta name="generator" content="Hugo 0.15" />
+    <meta name="twitter:card" content="summary">
+    
+    <meta name="twitter:title" content="Security &middot; daschl writes. sometimes.">
+    <meta name="twitter:description" content="">
+
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Security &middot; daschl writes. sometimes.">
+    <meta property="og:description" content="">
+
+    <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Oxygen:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
+    <!--[if lte IE 8]>
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-old-ie-min.css">
+    <![endif]-->
+    <!--[if gt IE 8]><!-->
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
+    <!--<![endif]-->
+
+    <link rel="stylesheet" href="http://nitschinger.at//css/all.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <link rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." href="http://nitschinger.at//index.xml" />
+</head>
+<body>
+
+
+<div id="layout" class="pure-g">
+    <div class="sidebar pure-u-1 pure-u-md-1-4">
+    <div class="header">
+        <hgroup>
+            <h1 class="brand-title"><a href="http://nitschinger.at/">daschl writes. sometimes.</a></h1>
+            <h2 class="brand-tagline"></h2>
+        </hgroup>
+
+        <nav class="nav">
+            <ul class="nav-list">
+                
+                
+                <li class="nav-item">
+                    <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+
+    <div class="content pure-u-1 pure-u-md-3-4">
+        <div>
+            
+            <div class="posts">
+                
+                <h1 class="content-subhead">08 Jun 2011</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="http://nitschinger.at/Securing-Lithium-Forms/" class="post-title">Securing Lithium Forms</a>
+
+                        <p class="post-meta">
+                            
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        <p>CSRF (Cross-Site-Request-Forgery) attacks work by sending arbitary (form) requests from a victim. Normally, the receiving site (in our case the <code>Controller</code> who processes the form data) doesn&rsquo;t know where the data comes from. The CSRF protection in Lithium aims to solve this problem in an elegant and secure way. You can read more about those attacks
+<a href="http://shiflett.org/articles/cross-site-request-forgeries">here</a>. Note that
+you&rsquo;ll need to clone the latest <code>master</code> branch of Lithium if you want to
+try it out now.</p>
+
+<p>CSRF protection in Lithium is twofold. First, you need to add a unique token to your forms and then check in your controller if the sent token is correct. As Lithium stores the generated <code>sessionKey</code> in your session, make sure that you have session support enabled. If you don&rsquo;t activate sessions, the <code>check</code> method fails silently (which we&rsquo;llsee later on). So uncomment the following line in <code>app/config/bootstrap.php</code> (if you haven&rsquo;t already):</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">/**</span>
+<span style="color: #177500"> * This file contains configuration for session (and/or cookie) storage, and user or web service</span>
+<span style="color: #177500"> * authentication.</span>
+<span style="color: #177500"> *</span>
+<span style="color: #177500"> */</span>
+<span style="color: #000000">//</span>require __DIR__ <span style="color: #000000">.</span> <span style="color: #C41A16">&#39;/bootstrap/session.php&#39;</span><span style="color: #000000">;</span>
+</pre></div>
+
+<p>Let&rsquo;s look at the view layer first with a very simple form:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">form</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">create</span>(); <span style="color: #633820">?&gt;</span>
+    <span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">security</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">requestToken</span>(); <span style="color: #633820">?&gt;</span>
+    <span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">form</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">field</span>(<span style="color: #C41A16">&#39;title&#39;</span>); <span style="color: #633820">?&gt;</span>
+    <span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">form</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">submit</span>(<span style="color: #C41A16">&#39;Submit&#39;</span>); <span style="color: #633820">?&gt;</span>
+<span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">form</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">end</span>(); <span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>Thanks to lazy loading, we don&rsquo;t have to do anything special to
+include our new <code>Security</code> helper. The helper provides the
+<code>requestToken()</code> method that generates a unique token (a salted hash) and renders it in a hidden field. If you inspect your form, you should see
+something like this (note that i&rsquo;ve shortened the value attribute for better
+readability):</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">&lt;input type=&quot;hidden&quot; value=&quot;$2a$1...Ay62/W&quot; name=&quot;security[token]&quot;&gt;
+</pre></div>
+
+<p>Now that we&rsquo;ve adapted our form, we can work with it in our controller.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+
+<span style="color: #A90D91">namespace</span> <span style="color: #000000">app\controllers</span>;
+
+<span style="color: #A90D91">use</span> <span style="color: #000000">lithium\security\validation\RequestToken</span>;
+
+<span style="color: #A90D91">class</span> <span style="color: #3F6E75">TasksController</span> <span style="color: #A90D91">extends</span> <span style="color: #000000">\lithium\action\Controller</span> {
+
+    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">add</span>() {
+        <span style="color: #A90D91">if</span>(<span style="color: #000000">$this-&gt;</span><span style="color: #836C28">request</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">data</span>) {
+            <span style="color: #A90D91">if</span>(<span style="color: #000000">!RequestToken::</span><span style="color: #836C28">check</span>(<span style="color: #000000">$this-&gt;</span><span style="color: #836C28">request</span>)) {
+                <span style="color: #000000">RequestToken::</span><span style="color: #836C28">get</span>(<span style="color: #A90D91">array</span>(<span style="color: #C41A16">&#39;regenerate&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">true</span>));
+            } <span style="color: #A90D91">else</span> {
+                <span style="color: #177500">// work with the request as usual</span>
+            }
+        }
+    }
+
+}
+
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>There are many ways how to handle security checks, so the code snippet above shows only one of them. Let&rsquo;s tackle the important parts one by one.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">use lithium\security\validation\RequestToken;
+</pre></div>
+
+<p>You&rsquo;ll need to import the <code>RequestToken</code> class into your namespace, as it is the responsible class for dealing with the tokens.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">RequestToken::check($this-&gt;request);</span>
+</pre></div>
+
+<p>The <code>check</code> method reads the <code>sessionKey</code> from your session and checks if it is identical to the requested one. You can also provide the key directly:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$key</span> <span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;request-&gt;data</span><span style="color: #633820">[</span><span style="color: #C41A16">&#39;security&#39;</span><span style="color: #633820">][</span><span style="color: #C41A16">&#39;token&#39;</span><span style="color: #633820">]</span><span style="color: #000000">;</span>
+<span style="color: #000000">RequestToken::check($key);</span>
+</pre></div>
+
+<p>Now you can modify the key manually (set it to <code>foobar</code> or so) and then see if the <code>check</code> method fails. How you may handle security errors depends heavily on your application. In our example, we regenerate the token with:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">RequestToken::get(array(</span><span style="color: #C41A16">&#39;regenerate&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">true));</span>
+</pre></div>
+
+<p>If you go down this route, you&rsquo;ll also have to tell the user what happend in your view. A more secure route would be to raise an exception (or render a error template) and log what happened. In normal production environments this is clearly a exceptional behavior and therefore should be treated this way. If you need this more often in your controller, you can also move the checks to the <code>_init()</code> method.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">class</span> <span style="color: #000000">TasksController</span> <span style="color: #A90D91">extends</span> <span style="color: #000000">\lithium\action\Controller</span> {
+
+    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">_init</span>() {
+        <span style="color: #000000">parent::_init</span>();
+
+        <span style="color: #A90D91">if</span>(<span style="color: #000000">$this-&gt;request-&gt;data</span> <span style="color: #000000">&amp;&amp;</span> <span style="color: #000000">!RequestToken::check</span>(<span style="color: #000000">$this-&gt;request</span>)) {
+            <span style="color: #000000">$host</span> <span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;request-&gt;env</span>(<span style="color: #C41A16">&#39;HTTP_HOST&#39;</span>);
+            <span style="color: #000000">Logger::error</span>(<span style="color: #C41A16">&quot;Possible CSRF attack from host $host&quot;</span>);
+            <span style="color: #000000">$this-&gt;redirect</span>(<span style="color: #C41A16">&#39;/&#39;</span>);
+        }
+    }
+
+    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">add</span>() {
+        <span style="color: #A90D91">if</span>(<span style="color: #000000">$this-&gt;request-&gt;data</span>) {
+                <span style="color: #177500">// save your data as usual</span>
+        }
+    }
+
+}
+</pre></div>
+
+<p>This should give you a good starting point on how to work with the new
+CSRF protection mechanisms. As of today, there is only one major feature left (namely MongoDB relationships) until Lithium reaches the &ldquo;big one&rdquo; so stay tuned for more announcements in the next weeks!</p>
+
+                    </div>
+                </section>
+                
+            </div>
+            
+
+            <div class="footer">
+    <div class="pure-menu pure-menu-horizontal pure-menu-open">
+        <ul>
+		<li>&copy; Michael Nitschinger 2010-2016</li>
+        </ul>
+    </div>
+</div>
+<script src="http://nitschinger.at//js/all.min.js"></script>
+
+        </div>
+    </div>
+</div>
+
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', '', 'auto');
+ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

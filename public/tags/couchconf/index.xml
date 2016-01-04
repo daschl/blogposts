@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Couchconf on daschl writes. sometimes.</title>
+    <link>http://nitschinger.at/tags/couchconf/</link>
+    <description>Recent content in Couchconf on daschl writes. sometimes.</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 22 Oct 2012 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://nitschinger.at/tags/couchconf/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>New Job, Couchbase Server 2.0 and CouchConf Berlin</title>
+      <link>http://nitschinger.at/New-Job-Couchbase-Server-2-0-and-Couch-Conf-Berlin/</link>
+      <pubDate>Mon, 22 Oct 2012 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/New-Job-Couchbase-Server-2-0-and-Couch-Conf-Berlin/</guid>
+      <description>&lt;p&gt;The last weeks have been pretty exciting for me. I joined Couchbase as a Developer Advocate mostly working on the Java and PHP SDKs as well as helping out developers who are getting started with our product or have questions during their development process.&lt;/p&gt;
+
+&lt;p&gt;The 2.0 release is currently in beta and can be downloaded &lt;a href=&#34;http://www.couchbase.com/couchbase-server/beta&#34;&gt;here&lt;/a&gt;, you may also want to look into the decent &lt;a href=&#34;http://www.couchbase.com/couchbase-server/beta#resources&#34;&gt;documentation&lt;/a&gt; put together by our docs team. If you are speaking german, &lt;a href=&#34;http://it-republik.de/php/artikel/Couchbase-2.0-Mehr-als-nur-Key-Value-Store-5329.html&#34;&gt;here&lt;/a&gt; is a short article that has been published about Couchbase and PHP in preparation for a much longer article coming up in one of the next issues of the &lt;a href=&#34;http://it-republik.de/php/&#34;&gt;PHP Magazin&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;If you are located in Germany or Europe, you may want to join us during &lt;a href=&#34;http://www.couchbase.com/couchconf-berlin&#34;&gt;CouchConf Berlin&lt;/a&gt;, which is happening on October 30th. We also offer developer and operation trainings during that time, so if you want to get your feet wet with Couchbase this is an excellent opportunity. I&amp;rsquo;ll be giving a talk on &amp;ldquo;Getting started with Couchbase App Development&amp;rdquo; and also be around all day (and evening).&lt;/p&gt;
+
+&lt;p&gt;When the 2.0 version is released (in combination with all of the supported SDKs), I will also be able to blog more frequently and also provide sample applications with either Java or PHP. There is a lot cool stuff in the pipeline, so stay tuned.&lt;/p&gt;
+
+&lt;p&gt;If you have any questions around Couchbase or its proper integration up the stack, feel free to ping me directly or get in touch with the other folks either through IRC (#couchbase, #libcouchbase) or the &lt;a href=&#34;http://www.couchbase.com/forums/&#34;&gt;Forums&lt;/a&gt;. While I certainly can&amp;rsquo;t provide answers to all questions, I can link you up with the right people.&lt;/p&gt;
+
+&lt;p&gt;See you in Berlin!&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

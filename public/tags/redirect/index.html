@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirect &middot; daschl writes. sometimes.</title>
+
+    <meta name="description" content="">
+
+    <meta name="generator" content="Hugo 0.15" />
+    <meta name="twitter:card" content="summary">
+    
+    <meta name="twitter:title" content="Redirect &middot; daschl writes. sometimes.">
+    <meta name="twitter:description" content="">
+
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Redirect &middot; daschl writes. sometimes.">
+    <meta property="og:description" content="">
+
+    <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Oxygen:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
+    <!--[if lte IE 8]>
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-old-ie-min.css">
+    <![endif]-->
+    <!--[if gt IE 8]><!-->
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
+    <!--<![endif]-->
+
+    <link rel="stylesheet" href="http://nitschinger.at//css/all.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <link rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." href="http://nitschinger.at//index.xml" />
+</head>
+<body>
+
+
+<div id="layout" class="pure-g">
+    <div class="sidebar pure-u-1 pure-u-md-1-4">
+    <div class="header">
+        <hgroup>
+            <h1 class="brand-title"><a href="http://nitschinger.at/">daschl writes. sometimes.</a></h1>
+            <h2 class="brand-tagline"></h2>
+        </hgroup>
+
+        <nav class="nav">
+            <ul class="nav-list">
+                
+                
+                <li class="nav-item">
+                    <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+
+    <div class="content pure-u-1 pure-u-md-3-4">
+        <div>
+            
+            <div class="posts">
+                
+                <h1 class="content-subhead">16 Sep 2011</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="http://nitschinger.at/Quick-Tip-Lithium-Redirect/" class="post-title">Quick Tip: Lithium Redirect</a>
+
+                        <p class="post-meta">
+                            
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        <p>While migrating <a href="https://github.com/UnionOfRAD/lithium_bin">lithium_bin</a> as part of research over to MongoDB (from CouchDB), I found the following snippet in the <code>routes.php</code> file:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">Router::connect</span>(<span style="color: #C41A16">&#39;/&#39;</span>, <span style="color: #000000">array</span>(), <span style="color: #A90D91">function</span>(<span style="color: #000000">$request</span>) {
+    <span style="color: #000000">$location</span> <span style="color: #000000">=</span> <span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;controller&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;pastes&#39;</span>, <span style="color: #C41A16">&#39;action&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;add&#39;</span>);
+    <span style="color: #A90D91">return</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Response</span>(<span style="color: #000000">compact</span>(<span style="color: #C41A16">&#39;location&#39;</span>));
+});
+</pre></div>
+
+<p>This means that when the user enters the application via the root url (<code>/</code>), he instantly gets redirected to <code>/pastes/add</code> (or a different URL if you have custom routes configured).</p>
+
+<p>This may seem ok at first, but there&rsquo;s a problem. It doesn&rsquo;t take URLs into account that don&rsquo;t live directly under the document root. So if your application lives under <code>http://localhost/pastium/</code>, it will redirect you to <code>http://localhost/pastes/add/</code> which is not really what you want. Instead, do it like this:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">Router::connect</span>(<span style="color: #C41A16">&#39;/&#39;</span>, <span style="color: #000000">array</span>(), <span style="color: #A90D91">function</span>(<span style="color: #000000">$request</span>) {
+    <span style="color: #000000">$location</span> <span style="color: #000000">=</span> <span style="color: #000000">Router::match</span>(<span style="color: #C41A16">&#39;Pastes::add&#39;</span>, <span style="color: #000000">$request</span>);
+    <span style="color: #A90D91">return</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Response</span>(<span style="color: #000000">compact</span>(<span style="color: #C41A16">&#39;location&#39;</span>));
+});
+</pre></div>
+
+<p>In this snippet, the <code>Router</code> takes the current <code>Request</code> into account and returns the correct location (based on the reverse routing information). Now it should redirect you correctly to <code>http://localhost/pastium/pastes/add/</code>.</p>
+
+<p>By the way, this is extracted from the <code>Controller::redirect</code> method, which is implemented in a similar way:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">redirect</span>(<span style="color: #000000">$url</span>, <span style="color: #000000">array</span> <span style="color: #000000">$options</span> <span style="color: #000000">=</span> <span style="color: #000000">array</span>()) {
+    <span style="color: #177500">//...</span>
+    <span style="color: #000000">$this-&gt;_filter</span>(<span style="color: #000000">__METHOD__</span>, <span style="color: #000000">$params</span>, <span style="color: #A90D91">function</span>(<span style="color: #000000">$self</span>, <span style="color: #000000">$params</span>) <span style="color: #000000">use</span> (<span style="color: #000000">$router</span>) {
+        <span style="color: #000000">$options</span> <span style="color: #000000">=</span> <span style="color: #000000">$params</span><span style="color: #633820">[</span><span style="color: #C41A16">&#39;options&#39;</span><span style="color: #633820">]</span>;
+        <span style="color: #000000">$location</span> <span style="color: #000000">=</span> <span style="color: #000000">$options</span><span style="color: #633820">[</span><span style="color: #C41A16">&#39;location&#39;</span><span style="color: #633820">]</span> <span style="color: #000000">?:</span> <span style="color: #000000">$router::match</span>(<span style="color: #000000">$params</span><span style="color: #633820">[</span><span style="color: #C41A16">&#39;url&#39;</span><span style="color: #633820">]</span>, <span style="color: #000000">$self-&gt;request</span>);
+        <span style="color: #000000">$self-&gt;render</span>(<span style="color: #000000">compact</span>(<span style="color: #C41A16">&#39;location&#39;</span>) <span style="color: #000000">+</span> <span style="color: #000000">$options</span>);
+    });
+    <span style="color: #177500">//...</span>
+}
+</pre></div>
+
+<p>If you have any ideas on how to improve this further, feel free to comment below!</p>
+
+                    </div>
+                </section>
+                
+            </div>
+            
+
+            <div class="footer">
+    <div class="pure-menu pure-menu-horizontal pure-menu-open">
+        <ul>
+		<li>&copy; Michael Nitschinger 2010-2016</li>
+        </ul>
+    </div>
+</div>
+<script src="http://nitschinger.at//js/all.min.js"></script>
+
+        </div>
+    </div>
+</div>
+
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', '', 'auto');
+ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

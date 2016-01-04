@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Core &middot; daschl writes. sometimes.</title>
+
+    <meta name="description" content="">
+
+    <meta name="generator" content="Hugo 0.15" />
+    <meta name="twitter:card" content="summary">
+    
+    <meta name="twitter:title" content="Core &middot; daschl writes. sometimes.">
+    <meta name="twitter:description" content="">
+
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Core &middot; daschl writes. sometimes.">
+    <meta property="og:description" content="">
+
+    <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Oxygen:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
+    <!--[if lte IE 8]>
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-old-ie-min.css">
+    <![endif]-->
+    <!--[if gt IE 8]><!-->
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
+    <!--<![endif]-->
+
+    <link rel="stylesheet" href="http://nitschinger.at//css/all.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <link rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." href="http://nitschinger.at//index.xml" />
+</head>
+<body>
+
+
+<div id="layout" class="pure-g">
+    <div class="sidebar pure-u-1 pure-u-md-1-4">
+    <div class="header">
+        <hgroup>
+            <h1 class="brand-title"><a href="http://nitschinger.at/">daschl writes. sometimes.</a></h1>
+            <h2 class="brand-tagline"></h2>
+        </hgroup>
+
+        <nav class="nav">
+            <ul class="nav-list">
+                
+                
+                <li class="nav-item">
+                    <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+
+    <div class="content pure-u-1 pure-u-md-3-4">
+        <div>
+            
+            <div class="posts">
+                
+                <h1 class="content-subhead">09 Jul 2011</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="http://nitschinger.at/Testing-the-Lithium-core-for-fun-and-profit/" class="post-title">Testing the Lithium core for fun and profit</a>
+
+                        <p class="post-meta">
+                            
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        
+
+<p>In modern web frameworks, testing is one of the most important pillars that ensure a clean, stable and extendable codebase. Testing support in Lithium was built in from the beginning and therefore it already features a great code coverage. The Lithium project aims to work out of the box on many platforms, including Microsoft Windows and its IIS, which was often neglected in the past.</p>
+
+<p>The main purpose of this post is to show you how core tests work and were the core team needs help to improve things further. At the end of this post you should be able to write new and extend existing test cases. A side effect of this is that you&rsquo;ll learn parts of the core from the inside out while you&rsquo;re testing them.</p>
+
+<h2 id="introducing-core-tests:ecedfe84f7ffd774ecf4f5159f0f34ea">Introducing core tests</h2>
+
+<p>Before you start writing your own tests, make sure the existing cases work as expected (without any <code>Exceptions</code> or <code>Errors</code>). For developing directly in the core, I&rsquo;d recommend you a slightly different setup than the default one. You should clone the <code>framework</code> and the <code>lithium</code> repository in different directories so you can quickly exchange functionality and symlink stuff if you have to. My setup looks similar to this:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">- web
+    - framework
+    - libraries
+        - lithium
+        - li3_docs
+        - manual
+        - lithium_qa
+</pre></div>
+
+<p>Now tell your <code>framework</code> to look at the right path, hop into <code>app/config/bootstrap/libraries.php</code> and modify the <code>LITHIUM_LIBRARY_PATH</code>.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">define(&#39;LITHIUM_LIBRARY_PATH&#39;, dirname(dirname(LITHIUM_APP_PATH)) . &#39;/libraries&#39;);
+</pre></div>
+
+<p>If you haven&rsquo;t already, make sure that the <code>app/resources</code> folder is writable.</p>
+
+<p>Assuming you have your <code>DOCROOT</code> pointing to <code>web</code>, try to run the tests from the test dashboard located at <code>http://localhost/framework/test</code>. Ideally, your test output should look something like this:</p>
+
+<p><img src="http://nitschinger.at/img/core_testing_overview.png" title="Test Dashboard" /></p>
+
+<p>If you have any failing tests, try to track down if it is your setup or some test cases are not working correctly. If you&rsquo;re unsure, you can always get feedback on #li3 at freenode.</p>
+
+<h2 id="understanding-test-filters:ecedfe84f7ffd774ecf4f5159f0f34ea">Understanding test filters</h2>
+
+<p>Now that existing tests are running as expected, take a look at the buttons on the top. The <code>Affected</code>, <code>Complexity</code>, <code>Coverage</code> and <code>Profiler</code> labeled buttons are called &ldquo;test filters&rdquo; and perform specific tasks on the selected group of test cases.</p>
+
+<p><img src="http://nitschinger.at/img/core_testing_filters.png" title="Test Filters" /></p>
+
+<p>As they are very important, let&rsquo;s go through them in more detail. Note that you need to turn on <a href="http://xdebug.org/">Xdebug</a> to use them, but you should install this extension anyway in your development environment.</p>
+
+<ul>
+<li><strong>Affected:</strong> The <code>affected</code> filter shows you what other tests depend on the currently tested class. This helps you to understand what impact a change to the current code would have and where to look out for possible errors.</li>
+<li><strong>Complexity:</strong> The <code>complexity</code> filter calculates the <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity">Cyclomatic Complexity</a> for each executed method and shows you the worst offenders. According to best practices, a cyclomatic complexity greater than 10 is &ldquo;very complex&rdquo; and should be refactored if possible. This of course depends heavily on the type of code but it provides a good overview on how complex the class is in general and where to look first to decrease complexity.</li>
+<li><strong>Coverage:</strong> The <code>coverage</code> filters tries to find out which lines of the tested code got executed in your test. Lithium has the baseline of 85% test coverage for core classes which should ensure that most of the code is at least once tested somewhere. The current implementation of the coverage filter also shows some false-negatives so make sure to take the result with a grain of salt.</li>
+<li><strong>Profiler:</strong> The <code>profiler</code> filter tells you how long it took to execute the tests and how much memory was used. You can use this to measure the performance of the code and check the impact of code modifications.</li>
+</ul>
+
+<p>Make sure to get familiar with these filters as they are crucial in verifying and investigating your written tests.</p>
+
+<h2 id="investigating-core-tests:ecedfe84f7ffd774ecf4f5159f0f34ea">Investigating core tests</h2>
+
+<p>The best way to get familiar with core tests is to look at existing ones. Let&rsquo;s investigate one test case of the <code>ValidatorTest</code> class.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">/**</span>
+<span style="color: #177500"> * Tests that new methods can be called on Validator by adding rules using Validator::add().</span>
+<span style="color: #177500"> *</span>
+<span style="color: #177500"> * @return void</span>
+<span style="color: #177500"> */</span>
+<span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">testAddCustomRegexMethods</span>() {
+    <span style="color: #000000">$this-&gt;assertNull</span>(<span style="color: #000000">Validator::rules</span>(<span style="color: #C41A16">&#39;foo&#39;</span>));
+
+    <span style="color: #000000">Validator::add</span>(<span style="color: #C41A16">&#39;foo&#39;</span>, <span style="color: #C41A16">&#39;/^foo$/&#39;</span>);
+    <span style="color: #000000">$this-&gt;assertTrue</span>(<span style="color: #000000">Validator::isFoo</span>(<span style="color: #C41A16">&#39;foo&#39;</span>));
+    <span style="color: #000000">$this-&gt;assertFalse</span>(<span style="color: #000000">Validator::isFoo</span>(<span style="color: #C41A16">&#39;bar&#39;</span>));
+    <span style="color: #000000">$this-&gt;assertTrue</span>(<span style="color: #000000">in_array</span>(<span style="color: #C41A16">&#39;foo&#39;</span>, <span style="color: #000000">Validator::rules</span>()));
+    <span style="color: #000000">$this-&gt;assertEqual</span>(<span style="color: #C41A16">&#39;/^foo$/&#39;</span>, <span style="color: #000000">Validator::rules</span>(<span style="color: #C41A16">&#39;foo&#39;</span>));
+
+    <span style="color: #000000">$this-&gt;expectException</span>(<span style="color: #C41A16">&quot;Rule `bar` is not a validation rule.&quot;</span>);
+    <span style="color: #000000">$this-&gt;assertNull</span>(<span style="color: #000000">Validator::isBar</span>(<span style="color: #C41A16">&#39;foo&#39;</span>));
+}
+</pre></div>
+
+<p>If you look closely, you can identify a pattern here that will come frequently. Before you test a specific functionality/value, make sure it isn&rsquo;t already set. You can do this with <code>assertFalse</code>, <code>assertNull</code> or maybe <code>assertTrue(empty(..))</code>. Next, perform the piece of code you want to test (like adding a custom regex rule here) and then perform checks on the entity again. A good rule of thumb is to test normal cases first and then exceptional cases (which often raise <code>Exceptions</code>). You can also break down complicated tests in smaller ones and add helper methods that get called from the main test case.</p>
+
+<p>If your tests contain dependencies, make sure to initialize them in <code>setUp()</code> and remove/reset them in <code>tearDown()</code>. These methods get called before/after all tests in the test class and should leave the environment in a clean state. This prevents unexpected failures in later tests and also keeps the memory usage on a normal level. Here&rsquo;s an example of the <code>MongoDb</code> test class:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">setUp</span>() {
+    <span style="color: #000000">Connections::config</span>(<span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;lithium_mongo_test&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">$this-&gt;_testConfig</span>));
+    <span style="color: #000000">$this-&gt;db</span> <span style="color: #000000">=</span> <span style="color: #000000">Connections::get</span>(<span style="color: #C41A16">&#39;lithium_mongo_test&#39;</span>);
+    <span style="color: #000000">$model</span> <span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;_model</span>;
+    <span style="color: #000000">$model::config</span>(<span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;key&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;_id&#39;</span>));
+    <span style="color: #000000">$model::resetConnection</span>(<span style="color: #A90D91">false</span>);
+
+    <span style="color: #000000">$this-&gt;query</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Query</span>(<span style="color: #000000">compact</span>(<span style="color: #C41A16">&#39;model&#39;</span>) <span style="color: #000000">+</span> <span style="color: #000000">array</span>(
+        <span style="color: #C41A16">&#39;entity&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Document</span>(<span style="color: #000000">compact</span>(<span style="color: #C41A16">&#39;model&#39;</span>))
+    ));
+}
+
+<span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">tearDown</span>() {
+    <span style="color: #A90D91">try</span> {
+        <span style="color: #000000">$this-&gt;db-&gt;</span><span style="color: #A90D91">delete</span>(<span style="color: #000000">$this-&gt;query</span>);
+    } <span style="color: #A90D91">catch</span> (<span style="color: #000000">Exception</span> <span style="color: #000000">$e</span>) {}
+    <span style="color: #000000">unset</span>(<span style="color: #000000">$this-&gt;query</span>);
+}
+</pre></div>
+
+<p>The <code>setUp()</code> method initializes a test connection to the database and <code>tearDown()</code> makes sure that the test database gets deleted and the <code>$this-&gt;query</code> object is freed.</p>
+
+<p>There are a lot more patterns that you&rsquo;ll learn while writing core tests, but this should give you a start.</p>
+
+<h2 id="qa-your-code:ecedfe84f7ffd774ecf4f5159f0f34ea">QA your code</h2>
+
+<p>To ensure a high-quality codebase, Lithium enforces a set of coding standards which can be found <a href="https://github.com/UnionOfRAD/lithium/wiki/Coding-Standards">here</a>. You don&rsquo;t have to know every part of the standard by heart, because Lithium provides a plugin called <a href="https://github.com/UnionOfRAD/lithium_qa">lithium_qa</a>. This plugin checks your code if it complies to the standards and shows you what parts of it are wrong. I recommend you to clone it into the <code>libraries</code> directory shown above. It is also a good idea to add the <code>li3</code> command to your <code>PATH</code> so your calls don&rsquo;t get too verbose.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span><span style="color: #A90D91">cd</span> /usr/local/bin
+<span style="color: #000000">$ </span>sudo ln -s /path/to/lithium/console/li3 li3
+</pre></div>
+
+<p>Let&rsquo;s assume we want to check classes in the <code>lithium\core</code> namespace:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span><span style="color: #A90D91">cd </span>lithium_qa
+<span style="color: #000000">$ </span>li3 syntax ../lithium/core
+<span style="color: #000000">[</span>Passed <span style="color: #000000">]</span> syntax check of <span style="color: #C41A16">`</span>core/Object.php<span style="color: #C41A16">`</span>
+<span style="color: #000000">[</span>Passed <span style="color: #000000">]</span> syntax check of <span style="color: #C41A16">`</span>core/Adaptable.php<span style="color: #C41A16">`</span>
+<span style="color: #000000">[</span>Failed <span style="color: #000000">]</span> syntax check of <span style="color: #C41A16">`</span>core/StaticObject.php<span style="color: #C41A16">`</span>
+59| 101| Maximum line length exceeded
+<span style="color: #000000">[</span>Passed <span style="color: #000000">]</span> syntax check of <span style="color: #C41A16">`</span>core/Environment.php<span style="color: #C41A16">`</span>
+<span style="color: #000000">[</span>Passed <span style="color: #000000">]</span> syntax check of <span style="color: #C41A16">`</span>core/ConfigException.php<span style="color: #C41A16">`</span>
+<span style="color: #000000">[</span>Passed <span style="color: #000000">]</span> syntax check of <span style="color: #C41A16">`</span>core/ClassNotFoundException.php<span style="color: #C41A16">`</span>
+<span style="color: #000000">[</span>Passed <span style="color: #000000">]</span> syntax check of <span style="color: #C41A16">`</span>core/NetworkException.php<span style="color: #C41A16">`</span>
+<span style="color: #000000">[</span>Passed <span style="color: #000000">]</span> syntax check of <span style="color: #C41A16">`</span>core/ErrorHandler.php<span style="color: #C41A16">`</span>
+<span style="color: #000000">[</span>Passed <span style="color: #000000">]</span> syntax check of <span style="color: #C41A16">`</span>core/Libraries.php<span style="color: #C41A16">`</span>
+</pre></div>
+
+<p>There you can see that each core class passed the test except the <code>StaticObject</code> class which has one line (59) that is too long. Now you can edit that file and modify it accordingly. If you&rsquo;re not sure what the output means, head back to the <a href="https://github.com/UnionOfRAD/lithium/wiki/Coding-Standards">official standard</a> and look for the corresponding entry.</p>
+
+<p>Please make sure that all code you want to see in the core respects these standards. You can also use it to test your own code as well!</p>
+
+<h2 id="getting-help:ecedfe84f7ffd774ecf4f5159f0f34ea">Getting help</h2>
+
+<p>If you&rsquo;re new to code testing in Lithium, make sure to read the official guide in the <a href="http://lithify.me/docs/manual/10_testing/readme.wiki">manual</a> first. Next, check out the main <a href="https://github.com/UnionOfRAD/lithium/issues/17">testing ticket on GitHub</a> which is constantly updated and shows what classes need testing. If you need help on testing the core, make sure to join #li3-core on freenode and ping one of the core developers. You can also contact me directly and I&rsquo;ll make sure to help you out or point you in the right direction.</p>
+
+<h2 id="wrapping-up:ecedfe84f7ffd774ecf4f5159f0f34ea">Wrapping up</h2>
+
+<p>You should now be able to run the core tests, extend and write your own and also pass your code through the official code quality assurance tool. Please help out and fork the core, run it on your machine, check for errors, extend current tests, write new ones and correct QA issues. If we all work together, I&rsquo;m sure we can make Lithium the best tested web framework out there. If you want to see more information regarding this topic on my blog, comment down below and I&rsquo;ll see what I can provide.</p>
+
+<p>Keep on coding!</p>
+
+                    </div>
+                </section>
+                
+            </div>
+            
+
+            <div class="footer">
+    <div class="pure-menu pure-menu-horizontal pure-menu-open">
+        <ul>
+		<li>&copy; Michael Nitschinger 2010-2016</li>
+        </ul>
+    </div>
+</div>
+<script src="http://nitschinger.at//js/all.min.js"></script>
+
+        </div>
+    </div>
+</div>
+
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', '', 'auto');
+ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

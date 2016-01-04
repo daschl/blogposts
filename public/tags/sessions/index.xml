@@ -1,0 +1,407 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Sessions on daschl writes. sometimes.</title>
+    <link>http://nitschinger.at/tags/sessions/</link>
+    <description>Recent content in Sessions on daschl writes. sometimes.</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 25 Jun 2012 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://nitschinger.at/tags/sessions/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>How to store PHP sessions in Couchbase</title>
+      <link>http://nitschinger.at/How-to-store-PHP-sessions-in-Couchbase/</link>
+      <pubDate>Mon, 25 Jun 2012 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/How-to-store-PHP-sessions-in-Couchbase/</guid>
+      <description>
+
+&lt;p&gt;My &lt;a href=&#34;http://nitschinger.at/Using-Couchbase-as-a-flexible-session-store&#34;&gt;last post&lt;/a&gt; about storing sessions in Couchbase was more of a general overview on what&amp;rsquo;s possible. This post builds on the foundations and principles discussed and shows you various ways to store PHP sessions in Couchbase. We start out simple by using the built-in &lt;code&gt;session&lt;/code&gt; ini -directives, then head over to the brand new &lt;a href=&#34;http://php.net/manual/en/class.sessionhandlerinterface.php&#34;&gt;SessionHandlerInterface&lt;/a&gt; introduced in PHP 5.4 and finally implement it completely on our own. We&amp;rsquo;ll see how both the complexity and flexibility increase during each of our approaches. In the end it&amp;rsquo;s up to you which method seems appropriate for your use-case.&lt;/p&gt;
+
+&lt;h2 id=&#34;session-handler-and-memcached:70348acea5ad0f0c153f019a522d6d11&#34;&gt;session_handler and memcached&lt;/h2&gt;
+
+&lt;p&gt;This approach has one big advantage: it&amp;rsquo;s dead easy to setup and use. Let&amp;rsquo;s tackle the good parts first and then discuss the weaknesses of this approach.&lt;/p&gt;
+
+&lt;p&gt;We are using the protocol-compatible nature of Couchbase and let the built-in &lt;code&gt;memcached&lt;/code&gt; session handler do the job for us. So the first thing we need to do (apart from installing Couchbase) is install the &lt;code&gt;php5-memcached&lt;/code&gt; extension. If you&amp;rsquo;re on a debian-based system it&amp;rsquo;s as easy as running&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;sudo aptitude install php5-memcached
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If you want to make sure that the extension is correctly installed, check the module on the command line:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;php -m | grep mem
+memcached
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now we need to tell PHP to use the &lt;code&gt;memcached&lt;/code&gt; session handler and where it should save the data. To do this, we need to modify the &lt;code&gt;php.ini&lt;/code&gt; file accordingly. I&amp;rsquo;m using &lt;a href=&#34;http://httpd.apache.org/&#34;&gt;Apache&lt;/a&gt; on &lt;a href=&#34;http://www.ubuntu.com/&#34;&gt;Ubuntu&lt;/a&gt;, so my &lt;code&gt;php.ini&lt;/code&gt; is located under &lt;code&gt;/etc/php5/apache2/php.ini&lt;/code&gt;. Find and replace the following settings with their new values:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;[Session]&lt;/span&gt;
+&lt;span style=&#34;color: #836C28&#34;&gt;session.save_handler&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;memcached&lt;/span&gt;
+&lt;span style=&#34;color: #836C28&#34;&gt;session.save_path&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;localhost:11211&amp;quot;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Of course, you want to replace &lt;code&gt;localhost&lt;/code&gt; with a different address if Couchbase is not running on your local machine. Couchbase uses &lt;code&gt;11211&lt;/code&gt; as its &lt;a href=&#34;http://www.couchbase.com/docs/couchbase-manual-2.0/couchbase-network-ports.html&#34;&gt;data port&lt;/a&gt;, just like memcached. Now we have everything in place, restart the server to get it up and running:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;sudo service apache2 restart
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The infrastructure is in place, so we can now start working with the session store through the &lt;code&gt;$_SESSION&lt;/code&gt; superglobal. Here is a short script that shows how you can work with it:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
+
+&lt;span style=&#34;color: #177500&#34;&gt;// Start the session.&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;session_start&lt;/span&gt;();
+
+&lt;span style=&#34;color: #177500&#34;&gt;// Dump the session to the screen.&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;var_dump&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$_SESSION&lt;/span&gt;);
+
+&lt;span style=&#34;color: #177500&#34;&gt;// Define some data to store.&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;User&lt;/span&gt; { &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$firstname&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;hoo&amp;quot;&lt;/span&gt;; }
+&lt;span style=&#34;color: #000000&#34;&gt;$user&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;User&lt;/span&gt;();
+
+&lt;span style=&#34;color: #177500&#34;&gt;// Store it in the session object.&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;$_SESSION&lt;/span&gt;[&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;user&amp;#39;&lt;/span&gt;] &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$user&lt;/span&gt;;
+&lt;span style=&#34;color: #000000&#34;&gt;$_SESSION&lt;/span&gt;[&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;randomStuff&amp;#39;&lt;/span&gt;] &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;blue&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;couchbase&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;rocks&amp;#39;&lt;/span&gt;);
+
+&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This is not rocket science and exactly the way you&amp;rsquo;d handle sessions through the interface provided by PHP. Check out the &lt;a href=&#34;http://php.net/manual/en/reserved.variables.session.php&#34;&gt;documentation&lt;/a&gt; if you haven&amp;rsquo;t used it yet.&lt;/p&gt;
+
+&lt;p&gt;So, how does PHP store the data in Couchbase? The first thing to note is that all your session data is stored in the &lt;code&gt;default&lt;/code&gt; bucket and uses a binary format (like how it would be stored in memcached). If you inspect the output from our example above, you can see that the user object is actually stored as an object so PHP uses the built-in serializer (if not configured differently) to store the session data. If you look in the bucket, you can see a key like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;memc.sess.key.a6sgl1oldchknlsj8mc3c37b11
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The first part is the prefix and the cryptic string at the end is the PHP session identifier which is carried along by the client through a cookie. If you fire up firebug or chrome and inspect the headers, you can see the corresponding &lt;code&gt;PHPSESSID&lt;/code&gt;:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;Cookie:PHPSESSID=a6sgl1oldchknlsj8mc3c37b11;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The stored document looks like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+&amp;quot;_id&amp;quot;: &amp;quot;memc.sess.key.a6sgl1oldchknlsj8mc3c37b11&amp;quot;,
+&amp;quot;_rev&amp;quot;: &amp;quot;10-000003794c342b870000009800000000&amp;quot;,
+&amp;quot;$&lt;span style=&#34;color: #000000&#34;&gt;flags&lt;/span&gt;&amp;quot;: 0,
+&amp;quot;$&lt;span style=&#34;color: #000000&#34;&gt;expiration&lt;/span&gt;&amp;quot;: 0,
+&amp;quot;$&lt;span style=&#34;color: #000000&#34;&gt;att_reason&lt;/span&gt;&amp;quot;: &amp;quot;invalid_json&amp;quot;
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Since the data is not stored in JSON format, you can&amp;rsquo;t inspect it from the Couchbase GUI directly. So why did I include it here anyway? Look at the &lt;code&gt;$expiration&lt;/code&gt; key. It is important to note that we don&amp;rsquo;t specify an expiration time here, because this is handled through PHP. So if you want to change the expiration time you have to change the appropriate setting using the &lt;code&gt;session.cache_expire&lt;/code&gt; directive. This is different to the approach we&amp;rsquo;ll cover at the end of the article where we implement everything on our own and don&amp;rsquo;t rely on those built-in features.&lt;/p&gt;
+
+&lt;p&gt;This approach is very simple and may suit your needs perfectly, but it comes with some limitations that you need to keep in mind.&lt;/p&gt;
+
+&lt;p&gt;Since the data is not stored in JSON format, you can&amp;rsquo;t use the awesome map/reduce querying mechanisms that Couchbase 2.0 provides. Also, you can&amp;rsquo;t change the bucket or key-names. Another problem is that you can&amp;rsquo;t make use of the automatic, dynamic reconfiguration mechanisms provided by Couchbase. So if the server at the ip-address goes down, PHP won&amp;rsquo;t be able to store sessions in the cluster anymore. Couchbase provides an optional component called &lt;a href=&#34;http://www.couchbase.com/docs/moxi-manual-1.8/moxi-introduction.html&#34;&gt;Moxi&lt;/a&gt; that acts as a proxy between your client and the couchbase cluster and is able to handle such situations. So if you&amp;rsquo;re not able to use the approaches shown in the rest of this post you definitely need to take a look at it!&lt;/p&gt;
+
+&lt;h2 id=&#34;more-flexibility-through-the-sessionhandlerinterface:70348acea5ad0f0c153f019a522d6d11&#34;&gt;More flexibility through the SessionHandlerInterface&lt;/h2&gt;
+
+&lt;p&gt;PHP 5.4 provides a brand new interface called &lt;a href=&#34;http://www.php.net/manual/en/class.sessionhandlerinterface.php&#34;&gt;SessionHandlerInterface&lt;/a&gt; through which we can implement our own session handler. This way, we can use the familiar and built-in &lt;code&gt;$_SESSION&lt;/code&gt; superglobal and make use of the advanced Couchbase functionality.&lt;/p&gt;
+
+&lt;p&gt;We need to implement the following interface:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;SessionHandlerInterface &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    abstract public bool close ( void )
+    abstract public bool destroy ( string $&lt;span style=&#34;color: #000000&#34;&gt;session_id&lt;/span&gt; )
+    abstract public bool gc ( string $&lt;span style=&#34;color: #000000&#34;&gt;maxlifetime&lt;/span&gt; )
+    abstract public bool open ( string $&lt;span style=&#34;color: #000000&#34;&gt;save_path&lt;/span&gt; , string $&lt;span style=&#34;color: #000000&#34;&gt;session_id&lt;/span&gt; )
+    abstract public string read ( string $&lt;span style=&#34;color: #000000&#34;&gt;session_id&lt;/span&gt; )
+    abstract public bool write ( string $&lt;span style=&#34;color: #000000&#34;&gt;session_id&lt;/span&gt; , string $&lt;span style=&#34;color: #000000&#34;&gt;session_data&lt;/span&gt; )
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The following implementation is not meant to be used 1:1 in production, since I haven&amp;rsquo;t tested every aspect of it. Nevertheless it should give you an idea on how such a implementation may look like. Note that you need to have the &lt;code&gt;php-ext-couchbase&lt;/code&gt; extension installed. If you are not sure on how to do this, see my post about &lt;a href=&#34;http://nitschinger.at/Getting-Started-with-Couchbase-and-PHP&#34;&gt;Getting Started with Couchbase and PHP&lt;/a&gt;. You can also find a github gist &lt;a href=&#34;https://gist.github.com/2986942&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
+
+&lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;* A reference implementation of a custom Couchbase session handler.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;*/&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;CouchbaseSessionHandler&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;implements&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;SessionHandlerInterface&lt;/span&gt; {
+
+    &lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    * Holds the Couchbase connection.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    */&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;protected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$_connection&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;null&lt;/span&gt;;
+
+    &lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    * The Couchbase host and port.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    */&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;protected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$_host&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;null&lt;/span&gt;;
+
+    &lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    * The Couchbase bucket name.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    */&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;protected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$_bucket&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;null&lt;/span&gt;;
+
+    &lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    * The prefix to be used in Couchbase keynames.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    */&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;protected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$_keyPrefix&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;session:&amp;#39;&lt;/span&gt;;
+
+    &lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    * Define a expiration time of 10 minutes.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    */&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;protected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$_expire&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;600&lt;/span&gt;;
+
+    &lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    * Set the default configuration params on init.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    */&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;__construct&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$host&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;127.0.0.1:8091&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$bucket&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;default&amp;#39;&lt;/span&gt;) {
+        &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;_host&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$host&lt;/span&gt;;
+        &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;_bucket&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$bucket&lt;/span&gt;;
+    }
+
+    &lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    * Open the connection to Couchbase (called by PHP on `session_start()`)&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    */&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;open&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$savePath&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$sessionName&lt;/span&gt;) {
+        &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;_connection&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Couchbase&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;_host&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;_bucket&lt;/span&gt;);
+        &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;_connection&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;?&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;false&lt;/span&gt;;
+    }
+
+    &lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    * Close the connection. Called by PHP when the script ends.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    */&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;close&lt;/span&gt;() {
+        &lt;span style=&#34;color: #A90D91&#34;&gt;unset&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;_connection&lt;/span&gt;);
+        &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;;
+    }
+
+    &lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    * Read data from the session.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    */&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;read&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$sessionId&lt;/span&gt;) {
+        &lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;_keyPrefix&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$sessionId&lt;/span&gt;;
+        &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;_connection&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;get&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt;);
+
+        &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;?:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;null&lt;/span&gt;;
+    }
+
+    &lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    * Write data to the session.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    */&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;write&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$sessionId&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$sessionData&lt;/span&gt;) {
+        &lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;_keyPrefix&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$sessionId&lt;/span&gt;;
+        &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;empty&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$sessionData&lt;/span&gt;)) {
+            &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;false&lt;/span&gt;;
+        }
+
+        &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;_connection&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;set&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$sessionData&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;_expire&lt;/span&gt;);
+        &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;?&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;false&lt;/span&gt;;
+    }
+
+    &lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    * Delete data from the session.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    */&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;destroy&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$sessionId&lt;/span&gt;) {
+        &lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;_keyPrefix&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$sessionId&lt;/span&gt;;
+        &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;_connection&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;delete&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt;);
+
+        &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;?&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;false&lt;/span&gt;;
+    }
+
+    &lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    * Run the garbage collection.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    */&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;gc&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$maxLifetime&lt;/span&gt;) {
+        &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;;
+    }
+
+}
+
+&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;It&amp;rsquo;s not that complex as it may look like in the first place. At the top of the class we&amp;rsquo;re defining and initializing some variables that hold our configuration. We don&amp;rsquo;t have to do this, but this way we&amp;rsquo;re getting a bit more flexibility and can pass custom settings through the constructor.&lt;/p&gt;
+
+&lt;p&gt;The &lt;code&gt;open&lt;/code&gt; method takes two arguments (according to the interface definition), one for the &lt;code&gt;savePath&lt;/code&gt; and one for the &lt;code&gt;sessionName&lt;/code&gt;. These arguments correspond to the &lt;code&gt;ini&lt;/code&gt;-settings, but we ignore them and make use of our configuration variables passed through the constructor. Inside the &lt;code&gt;open&lt;/code&gt; method we initialize the connection to Couchbase and store the connection resource in a protected variable for later use.&lt;/p&gt;
+
+&lt;p&gt;The &lt;code&gt;close&lt;/code&gt; method is called when the PHP-script ends. We just unset the resource, since there is nothing more to do in our case. If you use a file storage engine you&amp;rsquo;d want to close the file-handle here.&lt;/p&gt;
+
+&lt;p&gt;From now on, we always get the &lt;code&gt;sessionId&lt;/code&gt; passed as an argument. The &lt;code&gt;read&lt;/code&gt; method takes it and adds zhr &lt;code&gt;keyPrefix&lt;/code&gt; we&amp;rsquo;ved defined to the beginning of the string. It then tries to read the record from Couchbase and returns it when it&amp;rsquo;s found. Note that we return &lt;code&gt;null&lt;/code&gt; here, but since &lt;code&gt;$_SESSION&lt;/code&gt; is an array, you&amp;rsquo;ll always work with (empty) arrays on the caller-side.&lt;/p&gt;
+
+&lt;p&gt;The &lt;code&gt;write&lt;/code&gt; method gets the payload as an additional argument since we need to store it somewhere. Note that the data is already serialized, so don&amp;rsquo;t try to use &lt;code&gt;json_encode&lt;/code&gt; or something like this before storing it in Couchbase (that&amp;rsquo;s what I did and then wondered what the hell is wrong unless someone on IRC pointed out that you can&amp;rsquo;t control the serialization mechanism on your own here). As a result, the &lt;code&gt;read&lt;/code&gt; method expects the serialized data as a string and fails silently if you return something else.&lt;/p&gt;
+
+&lt;p&gt;The &lt;code&gt;destroy&lt;/code&gt; method should not contain any surprises, we just delete the document based on the key if it exists. The &lt;code&gt;gc&lt;/code&gt; method is not used here, because Couchbase handles the garbage collection for us. If you store your data in files, you want to clean up old sessions here.&lt;/p&gt;
+
+&lt;p&gt;Now we can use our handler and do some work with it:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;$handler&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;CouchbaseSessionHandler&lt;/span&gt;();
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;session_set_save_handler&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$handler&lt;/span&gt;, &lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;);
+&lt;span style=&#34;color: #A90D91&#34;&gt;session_start&lt;/span&gt;();
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;var_dump&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$_SESSION&lt;/span&gt;);
+
+&lt;span style=&#34;color: #000000&#34;&gt;$_SESSION&lt;/span&gt;[&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;foo&amp;#39;&lt;/span&gt;] &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;null&lt;/span&gt;;
+&lt;span style=&#34;color: #000000&#34;&gt;$_SESSION&lt;/span&gt;[&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;data&amp;#39;&lt;/span&gt;] &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;array&lt;/span&gt;(
+    &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;couchbase&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;rocks&amp;#39;&lt;/span&gt;
+);
+&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;On the first load, the &lt;code&gt;$_SESSION&lt;/code&gt; variable is of course empty. When you reload the page, you should see output like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;array(2) { &amp;#39;foo&amp;#39; =&amp;gt; NULL &amp;#39;data&amp;#39; =&amp;gt; array(1) { &amp;#39;couchbase&amp;#39; =&amp;gt; string(5) &amp;quot;rocks&amp;quot; } }
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;In the Couchbase GUI, we can see that a key has been added to the &lt;code&gt;default&lt;/code&gt; bucket named something like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;session:a6sgl1oldchknlsj8mc3c37b11&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Couchbase provides a handy tool on the command line to inspect our documents - it&amp;rsquo;s called &lt;code&gt;cbc&lt;/code&gt;. We can use it to fetch the contents of our key and peek inside:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;cbc cat session:a6sgl1oldchknlsj8mc3c37b11
+&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;session:a6sgl1oldchknlsj8mc3c37b11&amp;quot;&lt;/span&gt; Size &lt;span style=&#34;color: #1C01CE&#34;&gt;45&lt;/span&gt; Flags 0x0 CAS 0x9d394b19130a0000
+foo|N;data|a:1:&lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;s:9:&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;couchbase&amp;quot;&lt;/span&gt;;s:5:&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;rocks&amp;quot;&lt;/span&gt;;&lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;You can see that the PHP session handler still stores the data in a serialized way (you can also &lt;code&gt;var_dump()&lt;/code&gt; the content of the &lt;code&gt;$sessionData&lt;/code&gt; variable handed over to our &lt;code&gt;write()&lt;/code&gt; method to see the serialized data string).&lt;/p&gt;
+
+&lt;p&gt;This approach is a huge leap forward because it let&amp;rsquo;s us shape the interaction with Couchbase the way we want it to (and we can leverage all commands from the Couchbase PHP-SDK instead of just using a subset provided by the memcached extension). Also, we use the expiration mechanism provided by Couchbase and don&amp;rsquo;t have to handle it ourselves. Finally, by using the &lt;code&gt;php-ext-couchbase&lt;/code&gt; SDK, we don&amp;rsquo;t need to use Moxi anymore because this is all handled for us underneath by the &lt;code&gt;libcouchbase&lt;/code&gt; C library. There is only one limitation left: we still can&amp;rsquo;t use map/reduce functionality because the documents aren&amp;rsquo;t stored in JSON format. To accomplish this, we&amp;rsquo;re getting rid of the PHP session handler altogether and implement it for ourselves.&lt;/p&gt;
+
+&lt;p&gt;Chances are that you&amp;rsquo;re still using PHP 5.3 or lower. If this is the case, you want to either use the &lt;a href=&#34;http://at.php.net/manual/en/class.sessionhandler.php&#34;&gt;old way&lt;/a&gt; to define your session handler or just read on (because the method described below isn&amp;rsquo;t bound to a specific PHP version).&lt;/p&gt;
+
+&lt;h2 id=&#34;implementing-it-on-our-own:70348acea5ad0f0c153f019a522d6d11&#34;&gt;Implementing it on our own&lt;/h2&gt;
+
+&lt;p&gt;When we implement the session handling mechanism on our own, we can reuse all insights from above and also use &lt;a href=&#34;http://nitschinger.at/Handling-JSON-like-a-boss-in-PHP&#34;&gt;JSON&lt;/a&gt; instead of the PHP object serialization. Imagine we&amp;rsquo;re writing yet another PHP framework (don&amp;rsquo;t do that&amp;hellip;) and define a session interface like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;namespace&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;framework\sessions&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;interface&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;SessionHandler&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;read&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$sessionId&lt;/span&gt;);
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;write&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$sessionId&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$data&lt;/span&gt;);
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;delete&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$sessionId&lt;/span&gt;);
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;check&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$sessionId&lt;/span&gt;);
+}
+&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The &lt;code&gt;read&lt;/code&gt;, &lt;code&gt;write&lt;/code&gt; and &lt;code&gt;delete&lt;/code&gt; methods should be clear what they&amp;rsquo;re doing. The &lt;code&gt;check&lt;/code&gt; method checks if the given key is found in the session store.&lt;/p&gt;
+
+&lt;p&gt;Here&amp;rsquo;s again the full implementation, we&amp;rsquo;ll talk it through afterwards:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;namespace&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;framework\sessions&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Couchbase&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;CouchbaseSessionHandler&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;implements&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;SessionHandler&lt;/span&gt; {
+
+    &lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    * Holds the Couchbase connection.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    */&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;protected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$_connection&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;null&lt;/span&gt;;
+    &lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    * The prefix to be used in Couchbase keynames.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    */&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;protected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$_keyPrefix&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;session:&amp;#39;&lt;/span&gt;;
+
+    &lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    * Define a expiration time of 10 minutes.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    */&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;protected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$_expire&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;600&lt;/span&gt;;
+
+    &lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    * Currently in development mode? Used for view loading.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    */&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;protected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$_development&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;null&lt;/span&gt;;
+
+    &lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    * Connect to Couchbase.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    */&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;__construct&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$host&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;127.0.0.1:8091&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$bucket&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;default&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$dev&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;) {
+            &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;_development&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$dev&lt;/span&gt;;
+            &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;_connection&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Couchbase&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$host&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$bucket&lt;/span&gt;);
+            &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;_connection&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;?&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;false&lt;/span&gt;;
+    }
+
+    &lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    * Read the document for the given `sessionId`.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    */&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;read&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$sessionId&lt;/span&gt;) {
+        &lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;_keyPrefix&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$sessionId&lt;/span&gt;;
+
+        &lt;span style=&#34;color: #000000&#34;&gt;$data&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;_connection&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;get&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt;);
+        &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$data&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;?&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;json_decode&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$data&lt;/span&gt;, &lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;null&lt;/span&gt;;
+    }
+
+    &lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    * Write the data.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    */&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;write&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$sessionId&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$data&lt;/span&gt;) {
+        &lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;_keyPrefix&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$sessionId&lt;/span&gt;;
+        &lt;span style=&#34;color: #000000&#34;&gt;$data&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$data&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;type&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;session&amp;#39;&lt;/span&gt;);
+
+        &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;_connection&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;set&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt;, &lt;span style=&#34;color: #A90D91&#34;&gt;json_encode&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$data&lt;/span&gt;), &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;_expire&lt;/span&gt;);
+    }
+
+    &lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    * Delete the data for the given `sessionId`.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    */&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;delete&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$sessionId&lt;/span&gt;) {
+        &lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;_keyPrefix&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$sessionId&lt;/span&gt;;
+
+        &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;_connection&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;delete&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt;);
+    }
+
+    &lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    * Check if a document exists.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;    **/&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;check&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$sessionId&lt;/span&gt;) {
+        &lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;_keyPrefix&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$sessionId&lt;/span&gt;;
+        &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;_connection&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;get&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;?&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;false&lt;/span&gt;;
+    }
+
+}
+&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This implementation is pretty basic and should give you just an idea what&amp;rsquo;s possible. Since we&amp;rsquo;re storing JSON in Couchbase, you can get fancy and implement the &lt;code&gt;read&lt;/code&gt; and &lt;code&gt;check&lt;/code&gt; method not only on the &lt;code&gt;sessionId&lt;/code&gt; level, but also do fine-grained inspection of the keys inside the JSON document.&lt;/p&gt;
+
+&lt;p&gt;The code provided here is very similar to the example above, with only minor changes. The first one is that we open the connection on &lt;code&gt;__construct&lt;/code&gt; and don&amp;rsquo;t have a &lt;code&gt;gc&lt;/code&gt; method since we don&amp;rsquo;t need it here. Inside &lt;code&gt;read&lt;/code&gt; and &lt;code&gt;write&lt;/code&gt; we make use of &lt;code&gt;json_encode&lt;/code&gt; and &lt;code&gt;json_decode&lt;/code&gt; to convert the PHP payload into JSON. The &lt;code&gt;check&lt;/code&gt; method works in a similar fashion to &lt;code&gt;read&lt;/code&gt; but returns &lt;code&gt;true/false&lt;/code&gt; instead of the actual data.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s run some code against our implementation:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;framework\sessions\CouchbaseSessionHandler&lt;/span&gt;;
+
+&lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;* Init the Handler.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;*/&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;$handler&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;CouchbaseSessionHandler&lt;/span&gt;();
+
+&lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;* Generate a Session ID for testing purposes.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;*/&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;$sessionId&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;uniqid&lt;/span&gt;();
+
+&lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;* Store and retreive.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;*/&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;$data&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;couchbase&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;rocks&amp;#39;&lt;/span&gt;);
+
+&lt;span style=&#34;color: #177500&#34;&gt;// Write some data&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;$handler-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;write&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$sessionId&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$data&lt;/span&gt;);
+
+&lt;span style=&#34;color: #177500&#34;&gt;// Returns the array&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;var_dump&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$handler-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;read&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$sessionId&lt;/span&gt;));
+
+&lt;span style=&#34;color: #177500&#34;&gt;// Returns true&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;var_dump&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$handler-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;check&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$sessionId&lt;/span&gt;));
+
+&lt;span style=&#34;color: #177500&#34;&gt;// Delete the document&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;$handler-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;delete&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$sessionId&lt;/span&gt;);
+
+&lt;span style=&#34;color: #177500&#34;&gt;// Returns NULL&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;var_dump&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$handler-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;read&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$sessionId&lt;/span&gt;));
+
+&lt;span style=&#34;color: #177500&#34;&gt;// Returns false&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;var_dump&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$handler-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;check&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$sessionId&lt;/span&gt;));
+
+&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If you comment out the &lt;code&gt;delete&lt;/code&gt; part you can see that the document is stored as JSON in Couchbase. On the next request, you don&amp;rsquo;t need the &lt;code&gt;write&lt;/code&gt; call anymore since the data is loaded directly from Couchbase.&lt;/p&gt;
+
+&lt;p&gt;As a side note, my original idea was to implement a &lt;code&gt;clear&lt;/code&gt; method that deletes all stored session documents. This is a perfect use-case for a view, but since the PHP extension with view support is still in a developer preview, &lt;a href=&#34;http://www.couchbase.com/issues/browse/PCBC-76&#34;&gt;something went wrong&lt;/a&gt;. When this issue is resolved I&amp;rsquo;ll write another blog post focusing on handling views. If you want to implement the &lt;code&gt;clear&lt;/code&gt; method now, you can workaround &lt;code&gt;memcached&lt;/code&gt;-style and maintain a separate document that just holds all keys of the current sessions. You can load this one and then delete all fetched keys.&lt;/p&gt;
+
+&lt;h2 id=&#34;final-thoughts:70348acea5ad0f0c153f019a522d6d11&#34;&gt;Final thoughts&lt;/h2&gt;
+
+&lt;p&gt;There are lots of possibilities on how you can use Couchbase to store your PHP sessions. If you just want to switch to Couchbase on the backend and don&amp;rsquo;t want to touch your code at all, the first option is for you. If you&amp;rsquo;ve used the built-in PHP session handling mechanisms and want to switch to a much more powerful storage engine, the second method may be a good fit. Finally, if you&amp;rsquo;re using a PHP framework that uses its own adapters the last method provides the most flexibility and can be modified to suit all your needs.&lt;/p&gt;
+
+&lt;p&gt;Feel free to share your opinions below!&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

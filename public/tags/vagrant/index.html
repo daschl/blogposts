@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vagrant &middot; daschl writes. sometimes.</title>
+
+    <meta name="description" content="">
+
+    <meta name="generator" content="Hugo 0.15" />
+    <meta name="twitter:card" content="summary">
+    
+    <meta name="twitter:title" content="Vagrant &middot; daschl writes. sometimes.">
+    <meta name="twitter:description" content="">
+
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Vagrant &middot; daschl writes. sometimes.">
+    <meta property="og:description" content="">
+
+    <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Oxygen:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
+    <!--[if lte IE 8]>
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-old-ie-min.css">
+    <![endif]-->
+    <!--[if gt IE 8]><!-->
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
+    <!--<![endif]-->
+
+    <link rel="stylesheet" href="http://nitschinger.at//css/all.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <link rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." href="http://nitschinger.at//index.xml" />
+</head>
+<body>
+
+
+<div id="layout" class="pure-g">
+    <div class="sidebar pure-u-1 pure-u-md-1-4">
+    <div class="header">
+        <hgroup>
+            <h1 class="brand-title"><a href="http://nitschinger.at/">daschl writes. sometimes.</a></h1>
+            <h2 class="brand-tagline"></h2>
+        </hgroup>
+
+        <nav class="nav">
+            <ul class="nav-list">
+                
+                
+                <li class="nav-item">
+                    <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+
+    <div class="content pure-u-1 pure-u-md-3-4">
+        <div>
+            
+            <div class="posts">
+                
+                <h1 class="content-subhead">27 May 2013</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="http://nitschinger.at/A-Couchbase-Cluster-in-Minutes-with-Vagrant-and-Puppet/" class="post-title">A Couchbase Cluster in Minutes with Vagrant and Puppet</a>
+
+                        <p class="post-meta">
+                            
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        
+
+<h2 id="motivation:01658584694d0b54df263036a63ffc32">Motivation</h2>
+
+<p>Since I work as part of the engineering team at Couchbase, I need to run my code against a variety of server deployments. We run a multitude of operating systems and software versions, and so do our customers. In order to fix bugs reliably and build new features, it is critical to get a cluster up and running that resembles these deployments as good as possible. I know that I can run all of these combinations on EC2, but the cost for this would be very high and most of the time its overkill.</p>
+
+<p>What I need is to get such a cluster up and running in minutes and not spending too much time on configuring it. I heard about <a href="http://www.vagrantup.com/">Vagrant</a> and <a href="https://puppetlabs.com/">Puppet</a> in the past, but never got around to use them on my own box (though I always use <a href="https://www.virtualbox.org/">VirtualBox</a> on MacOS to create virtual machines by hand).</p>
+
+<p>This morning I sat down to take a closer look on how these tools can help me to get more productive - and to my huge surprise I got a 4 node Couchbase Server cluster running in less than 30 minutes (with looking up all the configuration details). Since its so easy, I want to share it with you.</p>
+
+<h2 id="prerequisites:01658584694d0b54df263036a63ffc32">Prerequisites</h2>
+
+<p>Before we can provision our nodes, you need to make sure to have Vagrant and VirtualBox installed. If you use MacOS like me, just download the <code>.dmg</code> files for both and you&rsquo;re set. Now, create a directory somewhere to store the configuration files - I called mine &lsquo;vagrants&rsquo;.</p>
+
+<p>In this directory, you need to create a <code>Vagrantfile</code>. Its like the Vagrants <code>makefile</code> and it will pick it up to learn how you want to have your nodes provisioned. Note that this doesn&rsquo;t configure the software on top of the OS (like installing Couchbase), this is handled by puppet in a separate step. Here is the full config:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">Vagrant.configure(&quot;2&quot;) do |config|
+
+    # Number of nodes to provision
+    numNodes = 4
+
+    # IP Address Base for private network
+    ipAddrPrefix = &quot;192.168.56.10&quot;
+
+    # Define Number of RAM for each node
+    config.vm.provider &quot;virtualbox&quot; do |v|
+        v.customize [&quot;modifyvm&quot;, :id, &quot;--memory&quot;, 1024]
+    end
+
+    # Provision the server itself with puppet
+    config.vm.provision :puppet
+
+    # Download the initial box from this url
+    config.vm.box_url = &quot;http://files.vagrantup.com/precise64.box&quot;
+
+    # Provision Config for each of the nodes
+    1.upto(numNodes) do |num|
+        nodeName = (&quot;node&quot; + num.to_s).to_sym
+        config.vm.define nodeName do |node|
+            node.vm.box = &quot;precise64&quot;
+            node.vm.network :private_network, ip: ipAddrPrefix + num.to_s
+            node.vm.provider &quot;virtualbox&quot; do |v|
+                v.name = &quot;Couchbase Server Node &quot; + num.to_s
+            end
+        end
+    end
+
+end
+</pre></div>
+
+<p>This file is just ruby code that configures Vagrant. Let&rsquo;s go through each directive and see what it does for us.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"># Number of nodes to provision
+numNodes = 4
+
+# IP Address Base for private network
+ipAddrPrefix = &quot;192.168.56.10&quot;
+</pre></div>
+
+<p>You can change these values, I just created them to fit my environment here. Depending on the amount of <code>numNodes</code> set, VMs will be created. I added a loop down below depending on this setting, so I don&rsquo;t have to duplicate code a lot. The ip address prefix is used to easily determine the (static) IP address for the server. The numbers will be counted upwards incrementally, so you will end up with four servers accessible through <code>192.168.56.101</code> to <code>192.168.56.104</code>.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"># Define Number of RAM for each node
+config.vm.provider &quot;virtualbox&quot; do |v|
+    v.customize [&quot;modifyvm&quot;, :id, &quot;--memory&quot;, 1024]
+end
+</pre></div>
+
+<p>This config block is needed to increase the memory size of the VM. By default its less than that (I believe around 512MB), and I want to have 1 gig of RAM for each. Of course, feel free to tune that value or remove it completely.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"># Provision the server itself with puppet
+config.vm.provision :puppet
+</pre></div>
+
+<p>Because we&rsquo;ll be using puppet to provision the server software, we need to tell Vagrant to use it.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"># Download the initial box from this url
+config.vm.box_url = &quot;http://files.vagrantup.com/precise64.box&quot;
+</pre></div>
+
+<p>Vagrant reuses predefined images so you don&rsquo;t have to reinstall everything from scratch. Here we use a predefined Ubuntu 12.04 64bit box.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"># Provision Config for each of the nodes
+1.upto(numNodes) do |num|
+    nodeName = (&quot;node&quot; + num.to_s).to_sym
+    config.vm.define nodeName do |node|
+        node.vm.box = &quot;precise64&quot;
+        node.vm.network :private_network, ip: ipAddrPrefix + num.to_s
+        node.vm.provider &quot;virtualbox&quot; do |v|
+            v.name = &quot;Couchbase Server Node &quot; + num.to_s
+        end
+    end
+end
+</pre></div>
+
+<p>This code block configures each virtual machine. Given the number of nodes we want to create, for each of them it assigns an IP address and gives it a descriptive name inside Virtualbox. If you want to add server-dependent settings, the &ldquo;node&rdquo; block is the right place for it. Otherwise it will pick the cluster wide settings defined in the &ldquo;config&rdquo; block.</p>
+
+<p>Now if we would run <code>vagrant up</code> from the command line in this directory, we&rsquo;d get four Ubuntu machines setup where we could SSH into, but nothing else would be installed. In order to make them do something, we want to install Couchbase Server. Puppet is a system automation software and very good at provisioning systems. Vagrant has amazing support for it, all we need to is create a <code>default.pp</code> file inside a <code>manifests</code> directory that looks like this:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">exec { &quot;couchbase-server-source&quot;: 
+    command =&gt; &quot;/usr/bin/wget http://packages.couchbase.com/releases/2.0.1/couchbase-server-enterprise_x86_64_2.0.1.deb&quot;,
+    cwd =&gt; &quot;/home/vagrant/&quot;,
+    creates =&gt; &quot;/home/vagrant/couchbase-server-enterprise_x86_64_2.0.1.deb&quot;,
+    before =&gt; Package[&#39;couchbase-server&#39;]
+}
+
+exec { &quot;install-deps&quot;:
+    command =&gt; &quot;/usr/bin/apt-get install libssl0.9.8&quot;,
+    before =&gt; Package[&#39;couchbase-server&#39;]
+}
+
+package { &quot;couchbase-server&quot;:
+    provider =&gt; dpkg,
+    ensure =&gt; installed,
+    source =&gt; &quot;/home/vagrant/couchbase-server-enterprise_x86_64_2.0.1.deb&quot;
+}
+</pre></div>
+
+<p>Let&rsquo;s go over the internals once more.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">exec { &quot;couchbase-server-source&quot;: 
+    command =&gt; &quot;/usr/bin/wget http://packages.couchbase.com/releases/2.0.1/couchbase-server-enterprise_x86_64_2.0.1.deb&quot;,
+    cwd =&gt; &quot;/home/vagrant/&quot;,
+    creates =&gt; &quot;/home/vagrant/couchbase-server-enterprise_x86_64_2.0.1.deb&quot;,
+    before =&gt; Package[&#39;couchbase-server&#39;]
+}
+</pre></div>
+
+<p>In puppet, we define some tasks that we want to run. This task executes a shell command <code>wget</code> and stores the file inside the home directory of the user. We tell puppet to download the debian package of the server. Note that there is a <code>before</code> dependency to the package installation task, because we can&rsquo;t install it before the file wasn&rsquo;t downloaded.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">exec { &quot;install-deps&quot;:
+    command =&gt; &quot;/usr/bin/apt-get install libssl0.9.8&quot;,
+    before =&gt; Package[&#39;couchbase-server&#39;]
+}
+</pre></div>
+
+<p>We also need to install <code>libssl0.9.8</code> on the server, this is the only dependency it has. We use the command line tool <code>apt-get</code> for this.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">package { &quot;couchbase-server&quot;:
+    provider =&gt; dpkg,
+    ensure =&gt; installed,
+    source =&gt; &quot;/home/vagrant/couchbase-server-enterprise_x86_64_2.0.1.deb&quot;
+}
+</pre></div>
+
+<p>Finally, we can install the debian package from couchbase-server, because the file is in place and all dependencies are satisfied.</p>
+
+<p>Of course, this puppet file is very simple and I&rsquo;m you can do much more with it (and maybe even simplify it more) - but for my needs it is more than enough. If I want a different server version, I just need to change the puppet file and point it to the new debian package.</p>
+
+<p>Now if we run <code>vagrant up</code> again, much more happens. Note that if you want to play with your puppet files, you can also use <code>vagrant provision</code> to apply the changes while the node is running.</p>
+
+<p>If everything is okay, the output should look like this:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">Bringing machine &#39;node1&#39; up with &#39;virtualbox&#39; provider...
+Bringing machine &#39;node2&#39; up with &#39;virtualbox&#39; provider...
+Bringing machine &#39;node3&#39; up with &#39;virtualbox&#39; provider...
+Bringing machine &#39;node4&#39; up with &#39;virtualbox&#39; provider...
+[node1] Clearing any previously set forwarded ports...
+[node1] Creating shared folders metadata...
+[node1] Clearing any previously set network interfaces...
+[node1] Preparing network interfaces based on configuration...
+[node1] Forwarding ports...
+[node1] -- 22 =&gt; 2222 (adapter 1)
+[node1] Running any VM customizations...
+[node1] Booting VM...
+[node1] Waiting for VM to boot. This can take a few minutes.
+[node1] VM booted and ready for use!
+[node1] Configuring and enabling network interfaces...
+[node1] Mounting shared folders...
+[node1] -- /vagrant
+[node1] -- /tmp/vagrant-puppet/manifests
+[node1] Running provisioner: puppet...
+Running Puppet with default.pp...
+stdin: is not a tty
+notice: /Stage[main]//Exec[install-deps]/returns: executed successfully
+notice: Finished catalog run in 0.77 seconds
+.... more for all the other nodes.
+</pre></div>
+
+<p>You can then point your browser to <code>192.168.56.10[1-4]</code> and work with your Couchbase cluster. If you are done with it, you can use the <code>vagrant halt</code> command to shut it down cleanly. Very handy is also <code>vagrant suspend</code>, which will save the state of the nodes instead of shutting them down completely.</p>
+
+<p>If you want to interact with one of the nodes instead of the whole cluster, you can always specify the node identifier. For example, if you want to start only the first node you can do it with the <code>vagrant up node1</code> command.</p>
+
+<p>To me, this is a very fast and clean way to provision server nodes. I just need to change a few lines in a file and get a new cluster without much hassle. Even more important, I can put those config files in version control and <a href="https://github.com/daschl/vagrants">share them</a> with other folks!</p>
+
+                    </div>
+                </section>
+                
+            </div>
+            
+
+            <div class="footer">
+    <div class="pure-menu pure-menu-horizontal pure-menu-open">
+        <ul>
+		<li>&copy; Michael Nitschinger 2010-2016</li>
+        </ul>
+    </div>
+</div>
+<script src="http://nitschinger.at//js/all.min.js"></script>
+
+        </div>
+    </div>
+</div>
+
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', '', 'auto');
+ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

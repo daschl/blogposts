@@ -1,0 +1,8 @@
+baseurl = "http://nitschinger.at/"
+languageCode = "en-us"
+title = "daschl writes. sometimes."
+author = "Michael Nitschinger"
+theme = "purehugo"
+PygmentsCodeFences = true
+pygmentsStyle = "xcode"
+disqusShortname = "daschl"

@@ -1,0 +1,282 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Exceptions on daschl writes. sometimes.</title>
+    <link>http://nitschinger.at/tags/exceptions/</link>
+    <description>Recent content in Exceptions on daschl writes. sometimes.</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 22 May 2012 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://nitschinger.at/tags/exceptions/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>A primer on PHP exceptions</title>
+      <link>http://nitschinger.at/A-primer-on-PHP-exceptions/</link>
+      <pubDate>Tue, 22 May 2012 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/A-primer-on-PHP-exceptions/</guid>
+      <description>
+
+&lt;h1 id=&#34;preface:461468f58b117b97d7e43b7161cf60a9&#34;&gt;Preface&lt;/h1&gt;
+
+&lt;p&gt;Exceptions are and should be an integral part of any general purpose programming language. PHP introduced them long ago (with the release of PHP 5 or 5.1), but it still seems that many of the concepts are not fully understood or ignored by the community. This post aims to be a solid introduction to exception architecture, handling and testing. At the end of the post you should be able to know when to raise an exception and how it should look like.&lt;/p&gt;
+
+&lt;p&gt;Of course, there are many opinions on a topic like this. If you have constructive feedback, feel free to comment below. Let&amp;rsquo;s get started!&lt;/p&gt;
+
+&lt;h1 id=&#34;architecture-best-practices:461468f58b117b97d7e43b7161cf60a9&#34;&gt;Architecture &amp;amp; Best-Practices&lt;/h1&gt;
+
+&lt;p&gt;Here&amp;rsquo;s a golden rule: use exceptions for what their name says: exceptional situations. Don&amp;rsquo;t use exceptions to control the flow of your application logic (like substituting if-statements or to control loops). This not only leads to confusion, but also my slow down your code.&lt;/p&gt;
+
+&lt;p&gt;Edit: Due to some confusions on &lt;a href=&#34;http://www.reddit.com/r/PHP/comments/tz5jw/a_primer_on_php_exceptions/&#34;&gt;reddit&lt;/a&gt;, I think I need to clarify what exceptional situations are. When they occur, your code/request normally can&amp;rsquo;t continue correctly. So, if your database is not ready and you rely on it, you can&amp;rsquo;t continue. If you validate a form and a validation for the &amp;ldquo;username&amp;rdquo; field fails, you can continue and present the user with an error message tied to that form field. This depends heavily on your use case, but I hope you get the point.&lt;/p&gt;
+
+&lt;p&gt;In PHP, you have no way of finding out what exceptions the called method may throw if it isn&amp;rsquo;t documented somewhere or you can look at the code (in contrast, Java provides an explicit &amp;ldquo;throws&amp;rdquo; notation in the method definiton). So if you want to make sure that your code catches everything, you need to catch exceptions from the &amp;ldquo;Exception&amp;rdquo; class (in PHP, all exceptions need to have the &amp;ldquo;Exception&amp;rdquo; class or a descendant of it).&lt;/p&gt;
+
+&lt;p&gt;Here&amp;rsquo;s another tip that might come in handy if you develop code that includes third-party libraries: make sure to &amp;ldquo;normalize&amp;rdquo; your exceptions as soon as possible. This allows you to handle them better up the stack. What do I mean by that? Consider the following example:&lt;/p&gt;
+
+&lt;p&gt;You are writing a database abstraction layer (not that there aren&amp;rsquo;t already enough&amp;hellip;) and you need to integrate third party extensions that handle the lowlevel/protocol stuff. We want to implement two databases: &amp;ldquo;Foobase&amp;rdquo; and &amp;ldquo;BarSQL&amp;rdquo;. When each driver fails to open a connection (for example, we&amp;rsquo;ve provided an invalid hostname), it raises an exception. Foobase raises an  &amp;ldquo;FoobaseConnectionException&amp;rdquo; and BarSQL raises an &amp;ldquo;InvalidHostnameException&amp;rdquo;. This is a nightmare to handle up the stack if we want to log them accordingly or write those exceptions to a third-party logging service. Here&amp;rsquo;s what you can do: catch them early and raise a &amp;ldquo;normalized&amp;rdquo; exception like &amp;ldquo;NetworkException&amp;rdquo; with the actual exception as the message. We&amp;rsquo;ll see later how to do this.&lt;/p&gt;
+
+&lt;p&gt;While providing different exception classes for different situations is fine, make sure not to over engineer it. In my opinion, you should plan your exception classes like you plan the overall architecture of your library. This way, you&amp;rsquo;re also forced to think about all possible exceptional situations that may occur and give you a hint or two where you should be careful. Also, it is often a good idea to refactor dangerous code in their own helper methods so they can be better tested and don&amp;rsquo;t mess up the rest of your code.&lt;/p&gt;
+
+&lt;p&gt;After a bit of theory, let&amp;rsquo;s get to something more practical. How does the exception class hierarchy in PHP look like?&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;- Exception
+    - ErrorException
+    - LogicException
+        - BadFunctionCallException
+            - BadMethodCallException
+        - DomainException
+        - InvalidArgumentException
+        - LengthException
+        - OutOfRangeException
+    - RuntimeException
+        - OutOfBoundsException
+        - OverflowException
+        - RangeException
+        - UnderflowException
+        - UnexpectedValueException
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;At the root of the class hierachy, we have the &lt;a href=&#34;http://us.php.net/manual/en/class.exception.php&#34;&gt;Exception&lt;/a&gt; class. All exceptions have to inherit from it (or a subclass), otherwise you can&amp;rsquo;t throw it. Down the hierachy, we have the &lt;a href=&#34;http://us.php.net/manual/en/class.errorexception.php&#34;&gt;ErrorException&lt;/a&gt;, the &lt;a href=&#34;http://us.php.net/manual/en/class.logicexception.php&#34;&gt;LogicException&lt;/a&gt; and the &lt;a href=&#34;http://us.php.net/manual/en/class.runtimeexception.php&#34;&gt;RuntimeException&lt;/a&gt;. The &lt;code&gt;ErrorException&lt;/code&gt; is used to transform errors into exceptions (we&amp;rsquo;ll see later how). The other ones are the top two exception objects in the &lt;a href=&#34;http://us.php.net/manual/en/book.spl.php&#34;&gt;SPL&lt;/a&gt; hierachy. All other built-in exceptions inhiert from one of them. I won&amp;rsquo;t describe them here, since their names are pretty expressive. Just make sure to throw one of them if they fit your needs. Don&amp;rsquo;t try to invent similar ones when they are already defined. This helps you to keep your exception architecture clean and focused.&lt;/p&gt;
+
+&lt;p&gt;All built-in exception classes don&amp;rsquo;t use a specific namespace (most of them were introduced before PHP 5.3), but you can namespace them similar to normal classes. You&amp;rsquo;re forced to do this if you use a standard like &lt;a href=&#34;https://github.com/php-fig/fig-standards/blob/master/accepted/PSR-0.md&#34;&gt;PSR-0&lt;/a&gt;. For example, &lt;a href=&#34;http://lithify.me&#34;&gt;Lithium&lt;/a&gt; has the following exception defined:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;namespace&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;lithium\net\http&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;RoutingException&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;extends&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;\RuntimeException&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;protected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$code&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;500&lt;/span&gt;;
+}
+&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;You can infer from the context that it has something to do with a &lt;code&gt;Router&lt;/code&gt; and is thrown during runtime. The &lt;code&gt;Router&lt;/code&gt; class who throws it is placed in the same namespace. Notice how the &lt;code&gt;RuntimeException&lt;/code&gt; is prefixed with a backslash - this indicates that we want to use a class from the &amp;ldquo;root&amp;rdquo; namespace. The method who uses is looks like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;namespace&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;lithium\net\http&lt;/span&gt;;
+&lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;lithium\net\http\RoutingException&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;Router&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;extends&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;\lithium\core\StaticObject&lt;/span&gt; {   
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;match&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$url&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;array&lt;/span&gt;(), &lt;span style=&#34;color: #000000&#34;&gt;$context&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;null&lt;/span&gt;, &lt;span style=&#34;color: #A90D91&#34;&gt;array&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$options&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;array&lt;/span&gt;()) {
+        &lt;span style=&#34;color: #177500&#34;&gt;// ...&lt;/span&gt;
+        &lt;span style=&#34;color: #177500&#34;&gt;// code that handles url matching...&lt;/span&gt;
+        &lt;span style=&#34;color: #177500&#34;&gt;// ...&lt;/span&gt;
+        &lt;span style=&#34;color: #A90D91&#34;&gt;throw&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;RoutingException&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;No parameter match found for URL `{&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;$url&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;}`.&amp;quot;&lt;/span&gt;);
+    }
+}
+&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;PHP doesn&amp;rsquo;t provide a way to define what kind exceptions may be thrown, so make sure to document them correctly. Most documentation tools like &lt;a href=&#34;http://www.phpdoc.org/&#34;&gt;phpDocumentor&lt;/a&gt; provide a &lt;code&gt;@throws&lt;/code&gt; annotation. For example:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;MyClass&lt;/span&gt; {
+
+    &lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     * This method just throws an exception.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     *&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     * @throws RuntimeException&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     */&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;foo&lt;/span&gt;() {
+        &lt;span style=&#34;color: #A90D91&#34;&gt;throw&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;RuntimeException&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Ooops...&amp;quot;&lt;/span&gt;);
+    }
+
+}
+&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h1 id=&#34;php-syntax:461468f58b117b97d7e43b7161cf60a9&#34;&gt;PHP Syntax&lt;/h1&gt;
+
+&lt;p&gt;We&amp;rsquo;ve already seen the basic syntax of throwing exceptions, but here is the formal method definition:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;throw new Exception($&lt;span style=&#34;color: #000000&#34;&gt;message&lt;/span&gt;, $&lt;span style=&#34;color: #000000&#34;&gt;code&lt;/span&gt;, $&lt;span style=&#34;color: #000000&#34;&gt;previous&lt;/span&gt;);
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;All arguments are optional, but you should at least provide a descriptive message. The &lt;code&gt;code&lt;/code&gt; argument is an arbitary error code that you can provide. For example, you can define your own codes or use them with HTTP status codes. If you are rethrowing a exception, you can also provide the instance through the &lt;code&gt;previous&lt;/code&gt; argument. This way, both exceptions get raised to the calling method.&lt;/p&gt;
+
+&lt;p&gt;After throwing it, you need to catch it somewhere. PHP provides the familiar try/catch construct, but without a &lt;code&gt;finally&lt;/code&gt; block like in Java.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;try &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    $&lt;span style=&#34;color: #000000&#34;&gt;object&lt;/span&gt; = new IThrowExceptions();
+} catch(Exception $&lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    echo &amp;quot;Caught &amp;quot; . $&lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;-&amp;gt;getMessage();
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The code inside the &lt;code&gt;try&lt;/code&gt; block is evaluated, and if an exception is thrown the &lt;code&gt;catch&lt;/code&gt; block tries to handle it. If the exception can&amp;rsquo;t be handled, it bubbles up the stack. If the exception doesn&amp;rsquo;t get handled in your code, PHP terminates. If you expect different exceptions to be thrown, you can catch more than one at the same time:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;try &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    $&lt;span style=&#34;color: #000000&#34;&gt;foo&lt;/span&gt; = new Foo();
+    $&lt;span style=&#34;color: #000000&#34;&gt;foo&lt;/span&gt;-&amp;gt;bar();
+} catch(InvalidArgumentException $&lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    echo &amp;quot;Just InvalidArgumentExceptions&amp;quot;;
+} catch(RuntimeException $&lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    echo &amp;quot;Just RuntimeExceptions&amp;quot;;
+} catch(Exception $&lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    echo &amp;quot;I catch everything&amp;quot;;
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The last &lt;code&gt;catch(Exception $e)&lt;/code&gt; is used when no previous catch succeeded. Make sure to go from special to general, because when you move the &lt;code&gt;Exception&lt;/code&gt; block to the top, the exception would never sink down to the &lt;code&gt;RuntimeException&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Alright, let&amp;rsquo;s get back to our example from the beginning. Imagine we get a lot of custom exceptions that all have the same meaning. We want to normalize them, so that only one specific type bubbles up the stack. In our example, no matter what kind of exception we receive during &lt;code&gt;_connect&lt;/code&gt;, we want to throw a &lt;code&gt;NetworkException&lt;/code&gt;. It&amp;rsquo;s pretty easy to rethrow the exception:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt; * Our custom Exceptions.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt; */&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;FoobaseConnectException&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;extends&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Exception&lt;/span&gt; {}
+&lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;BarSQLException&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;extends&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Exception&lt;/span&gt; {}
+&lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;NetworkException&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;extends&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Exception&lt;/span&gt; {}
+
+&lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt; * A sample parent datasource.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt; */&lt;/span&gt; 
+&lt;span style=&#34;color: #A90D91&#34;&gt;abstract&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;Datasource&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;connect&lt;/span&gt;() {
+        &lt;span style=&#34;color: #A90D91&#34;&gt;try&lt;/span&gt; {
+            &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;_connect&lt;/span&gt;();
+        } &lt;span style=&#34;color: #A90D91&#34;&gt;catch&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;Exception&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$e&lt;/span&gt;) {
+            &lt;span style=&#34;color: #000000&#34;&gt;$message&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Could not connect: &amp;quot;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$e-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;getMessage&lt;/span&gt;();
+            &lt;span style=&#34;color: #A90D91&#34;&gt;throw&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;NetworkException&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$message&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$e-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;getCode&lt;/span&gt;());
+        }
+    }
+    &lt;span style=&#34;color: #A90D91&#34;&gt;abstract&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;protected&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;_connect&lt;/span&gt;();
+}
+
+&lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt; * Foobase datasource.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt; */&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;Foobase&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;extends&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Datasource&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;protected&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;_connect&lt;/span&gt;() {
+            &lt;span style=&#34;color: #A90D91&#34;&gt;throw&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;FoobaseConnectException&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Holy moly, no DB available&amp;quot;&lt;/span&gt;);
+    }
+}
+
+&lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt; * BarSQL datasource.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt; */&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;BarSQL&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;extends&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Datasource&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;protected&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;_connect&lt;/span&gt;() {
+            &lt;span style=&#34;color: #A90D91&#34;&gt;throw&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;BarSQLException&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Y U NO SQL SERVICE?&amp;quot;&lt;/span&gt;);
+    }
+}
+&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If you execute the following code, a &lt;code&gt;&#39;NetworkException&#39; with message &#39;Could not connect: Holy moly, no DB available&#39;&lt;/code&gt; is raised:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;$foobase&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Foobase&lt;/span&gt;();
+&lt;span style=&#34;color: #000000&#34;&gt;$foobase-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;connect&lt;/span&gt;();
+&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We not only rethrow a different exception, but also incorporate the original message to provide a more detailed error report.&lt;/p&gt;
+
+&lt;p&gt;The exception classes provide more accessor-methods like reading the current line or file, check out the docs &lt;a href=&#34;http://php.net/manual/de/class.exception.php&#34;&gt;here&lt;/a&gt;. In our example above we also added our own exception classes. If you like, you can also add methods and call them later (maybe you need custom stack traces or want to add more information to the exception).&lt;/p&gt;
+
+&lt;p&gt;The last thing that comes in very handy are error handlers. Recall the &lt;code&gt;ErrorException&lt;/code&gt; from the beginning? Here&amp;rsquo;s what you can do with it (taken from &lt;a href=&#34;http://us.php.net/manual/en/class.errorexception.php&#34;&gt;here&lt;/a&gt;):&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;exception_error_handler&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$errno&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$errstr&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$errfile&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$errline&lt;/span&gt; ) {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;throw&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;ErrorException&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$errstr&lt;/span&gt;, &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$errno&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$errfile&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$errline&lt;/span&gt;);
+}
+&lt;span style=&#34;color: #000000&#34;&gt;set_error_handler&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;exception_error_handler&amp;quot;&lt;/span&gt;);
+
+&lt;span style=&#34;color: #177500&#34;&gt;/* Trigger exception */&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;strpos&lt;/span&gt;();
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;PHP throws lots of errors and warnings from built-in methods like &lt;code&gt;strpos&lt;/code&gt;. The problem is that you can&amp;rsquo;t do anything with them in your code until you translate them into exceptions. That&amp;rsquo;s
+why the &lt;code&gt;ErrorException&lt;/code&gt; was implemented. Notice how different the constructor is to the &lt;code&gt;Exception&lt;/code&gt; class, because it mirrors all variables that are passed to the error handler. This allows
+you to capture and handle everything that happens during code execution in a uniform way, being it exceptions or errors.&lt;/p&gt;
+
+&lt;h1 id=&#34;testing-exceptions:461468f58b117b97d7e43b7161cf60a9&#34;&gt;Testing Exceptions&lt;/h1&gt;
+
+&lt;p&gt;Testing exceptions may seem daunting at first, since you need to verfiy that your code fails. This usually means that you need to write unit tests with try/catch blocks and then do
+some kind of assertion inside the catch-block like this (just assume we have some arbitary &lt;code&gt;assert&lt;/code&gt; functions defined):&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;Foo&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;bar&lt;/span&gt;() {
+        &lt;span style=&#34;color: #A90D91&#34;&gt;throw&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;RuntimeException&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;My Message&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #1C01CE&#34;&gt;123&lt;/span&gt;);
+    }
+}
+
+&lt;span style=&#34;color: #000000&#34;&gt;$foo&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Foo&lt;/span&gt;();
+&lt;span style=&#34;color: #A90D91&#34;&gt;try&lt;/span&gt; {
+    &lt;span style=&#34;color: #000000&#34;&gt;$foo-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;bar&lt;/span&gt;();
+} &lt;span style=&#34;color: #A90D91&#34;&gt;catch&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;RuntimeException&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$e&lt;/span&gt;) {
+    &lt;span style=&#34;color: #000000&#34;&gt;assertEqual&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$e-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;getMessage&lt;/span&gt;(), &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;My Message&amp;quot;&lt;/span&gt;);
+    &lt;span style=&#34;color: #000000&#34;&gt;assertEqual&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$e-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;getCode&lt;/span&gt;(), &lt;span style=&#34;color: #1C01CE&#34;&gt;123&lt;/span&gt;);
+}
+
+&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;PHP 5.3 provides us with a very nice addition to the language: &lt;a href=&#34;http://php.net/manual/en/functions.anonymous.php&#34;&gt;closures&lt;/a&gt;. We can write a handy method that lets us test this kind of code very elegantly. Here&amp;rsquo;s a simple helper method:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;assertException&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$closure&lt;/span&gt;) {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;try&lt;/span&gt; {
+        &lt;span style=&#34;color: #000000&#34;&gt;$closure&lt;/span&gt;();
+        &lt;span style=&#34;color: #000000&#34;&gt;echo&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Exception expected, but not thrown&amp;quot;&lt;/span&gt;;
+    } &lt;span style=&#34;color: #A90D91&#34;&gt;catch&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;Exception&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$e&lt;/span&gt;) {
+        &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$e-&amp;gt;getMessage&lt;/span&gt;() &lt;span style=&#34;color: #000000&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt;) {
+            &lt;span style=&#34;color: #000000&#34;&gt;echo&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Correctly thrown&amp;quot;&lt;/span&gt;;
+        } &lt;span style=&#34;color: #A90D91&#34;&gt;else&lt;/span&gt; {
+            &lt;span style=&#34;color: #000000&#34;&gt;echo&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Exception thrown, but with a different message.&amp;quot;&lt;/span&gt;;
+        }
+    }
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We run the closure inside the try/catch block and check if the correct message is raised. Now we can test a code snippet like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;Foo&lt;/span&gt; {
+        &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;bar&lt;/span&gt;() {
+            &lt;span style=&#34;color: #A90D91&#34;&gt;throw&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;RuntimeException&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;My Message&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #1C01CE&#34;&gt;123&lt;/span&gt;);
+        }
+    }
+
+    &lt;span style=&#34;color: #177500&#34;&gt;// prints &amp;quot;Correctly Thrown&amp;quot;&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;assertException&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;My Message&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt;() {
+        &lt;span style=&#34;color: #000000&#34;&gt;$foo&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Foo&lt;/span&gt;();
+        &lt;span style=&#34;color: #000000&#34;&gt;$foo-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;bar&lt;/span&gt;();
+    });
+&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Of course, in a real test suite you want to replace the &lt;code&gt;echo&lt;/code&gt; statements with debug output and add more intelligence. Look &lt;a href=&#34;https://github.com/UnionOfRAD/lithium/blob/master/test/Unit.php#L521&#34;&gt;here&lt;/a&gt; for a practical implementation. This allows you to test exceptions in a natural and convenient way. Here&amp;rsquo;s a real unit test from a &lt;a href=&#34;https://github.com/daschl/li3_couchbase&#34;&gt;Couchbase datasource for Lithium&lt;/a&gt;:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;testConnect&lt;/span&gt;() {
+    &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Couchbase&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;_dbConfig&lt;/span&gt;);
+    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertTrue&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$result-&amp;gt;isConnected&lt;/span&gt;());
+    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertTrue&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;is_string&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$result-&amp;gt;connection-&amp;gt;getVersion&lt;/span&gt;()));
+
+    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertException&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/Unknown host/&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt;() {
+        &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Couchbase&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;host&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;invalidHostname&amp;#39;&lt;/span&gt;));
+    });
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;You can see that the exception assertion is integrated tightly after the normal tests and no try/catch blocks are used. Pretty neat, right?&lt;/p&gt;
+
+&lt;p&gt;Edit: David Thalmann thankfully pointed out that you can also test exceptions through annotations on your test methods. &lt;a href=&#34;http://www.phpunit.de/manual/3.7/en/writing-tests-for-phpunit.html#writing-tests-for-phpunit.exceptions&#34;&gt;Here&amp;rsquo;s&lt;/a&gt; how to do that in &lt;a href=&#34;http://www.phpunit.de&#34;&gt;PHPUnit&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h1 id=&#34;wrapping-up:461468f58b117b97d7e43b7161cf60a9&#34;&gt;Wrapping Up&lt;/h1&gt;
+
+&lt;p&gt;While exceptions are part of nearly every language, using them correctly and not throwing something just for the sake of it is not easy and requires some thought. Make sure to think of your exceptions while you design the API, test and document them correctly. A lot of frameworks do a very good job on this, so keep your eyes open and prepare yourself to learn something new.&lt;/p&gt;
+
+&lt;p&gt;Remember: You gotta catch em&amp;rsquo; all!&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

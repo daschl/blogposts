@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Rss on daschl writes. sometimes.</title>
+    <link>http://nitschinger.at/tags/rss/</link>
+    <description>Recent content in Rss on daschl writes. sometimes.</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sat, 20 Nov 2010 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://nitschinger.at/tags/rss/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Add an RSS-Feed to your blog with Lithium</title>
+      <link>http://nitschinger.at/Add-an-RSS-Feed-to-your-blog-with-Lithium/</link>
+      <pubDate>Sat, 20 Nov 2010 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/Add-an-RSS-Feed-to-your-blog-with-Lithium/</guid>
+      <description>&lt;p&gt;Adding an RSS-Feed to your blog with li3 is really straightforward, because all the infrastructure you need is already at your fingertips. I assume that you already have some posts stored in your database, you serve them to your users via &lt;code&gt;/posts&lt;/code&gt; and the new RSS-File should be accessible via &lt;code&gt;/posts.rss&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;First, we need to tell Lithium that we want to add another Media-Type to our application. Add the following to your &lt;code&gt;app/config/bootstrap/media.php&lt;/code&gt;-File (and don&amp;rsquo;t forget to uncomment it in &lt;code&gt;app/config/bootstrap.php&lt;/code&gt;). You can also comment the other code out in this file if you don&amp;rsquo;t need it.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;lithium\net\http\Media;&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;Media::type(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;rss&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;application/rss+xml&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Next, let&amp;rsquo;s add a link to our &lt;code&gt;default.html.php&lt;/code&gt;-Layout so that our feed shows up in the browser.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;html&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;link&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;RSS-Feed&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/posts.rss&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #A90D91&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;type&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;rss&amp;#39;&lt;/span&gt;)); &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Before we start to create our RSS-Views, check that your &lt;code&gt;PostsController::index()&lt;/code&gt;-Method looks something like this and returns one or more posts to the View.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;index&lt;/span&gt;() {
+    &lt;span style=&#34;color: #000000&#34;&gt;$posts&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Post::all&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;order&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;created&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;DESC&amp;#39;&lt;/span&gt;)));
+    &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;compact&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;posts&amp;#39;&lt;/span&gt;);
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Alright, first create a new &lt;code&gt;default.rss.php&lt;/code&gt;-Layout (in &lt;code&gt;app/views/layouts&lt;/code&gt;):&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;echo&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;&amp;lt;?xml version=&amp;quot;1.0&amp;quot; encoding=&amp;quot;UTF-8&amp;quot; ?&amp;gt;&amp;#39;&lt;/span&gt;; &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;rss&lt;/span&gt; &lt;span style=&#34;color: #836C28&#34;&gt;version=&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;2.0&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;&lt;/span&gt;
+        &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;channel&amp;gt;&lt;/span&gt;
+            &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;title&amp;gt;&lt;/span&gt;My cool Blog&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/title&amp;gt;&lt;/span&gt;
+            &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;description&amp;gt;&lt;/span&gt;A short description about my blog.&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/description&amp;gt;&lt;/span&gt;
+            &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;link&amp;gt;&lt;/span&gt;http://exampleblog.com/&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/link&amp;gt;&lt;/span&gt;
+            &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;lastBuildDate&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;date&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;D, d M Y g:i:s O&amp;#39;&lt;/span&gt;); &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/lastBuildDate&amp;gt;&lt;/span&gt;
+            &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;pubDate&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;date&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;D, d M Y g:i:s O&amp;#39;&lt;/span&gt;); &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/pubDate&amp;gt;&lt;/span&gt;
+            &lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;content&lt;/span&gt;(); &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+        &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/channel&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/rss&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The previous code is just basic RSS-Markup. Feel free to add a custom title, description, link and so on. The &lt;code&gt;lastBuildDate&lt;/code&gt; and &lt;code&gt;pubDate&lt;/code&gt; are generated dynamically. &lt;code&gt;&amp;lt;?= $this-&amp;gt;content(); ?&amp;gt;&lt;/code&gt; will render our &lt;code&gt;posts&lt;/code&gt;-View which we&amp;rsquo;ll add now. Insert the following code in &lt;code&gt;app/views/posts/index.rss.php&lt;/code&gt;:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;    &lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;foreach&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$posts&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;As&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$post&lt;/span&gt;)&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;item&amp;gt;&lt;/span&gt;
+        &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;title&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$post-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;title&lt;/span&gt;; &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/title&amp;gt;&lt;/span&gt;
+        &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;description&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$post-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;teaser&lt;/span&gt;; &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/description&amp;gt;&lt;/span&gt;
+        &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;link&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;html&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;link&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$post-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;title&lt;/span&gt;, &lt;span style=&#34;color: #A90D91&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;Posts::show&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;slug&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$post-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;slug&lt;/span&gt;)); &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/link&amp;gt;&lt;/span&gt;
+        &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;guid&lt;/span&gt; &lt;span style=&#34;color: #836C28&#34;&gt;isPermaLink=&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;true&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;&lt;/span&gt;http://exampleblog.com/&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$post-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;slug&lt;/span&gt; &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/guid&amp;gt;&lt;/span&gt;
+        &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;pubDate&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;date&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;D, d M Y g:i:s O&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$post-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;created&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;sec&lt;/span&gt;); &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/pubDate&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/item&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;endforeach&lt;/span&gt;; &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;You may need to modify the attributes according to your database schema. If you need help on this, feel free to contact me or ask in #li3 on FreeNode.&lt;/p&gt;
+
+&lt;p&gt;That&amp;rsquo;s it! You&amp;rsquo;ve added an RSS-Feed to your blog. You can now click the RSS-Icon in your browser or render it directly with &lt;code&gt;http://exampleblog.com/posts.rss&lt;/code&gt;. BTW: that&amp;rsquo;s exactly how I did it for this blog, so I hope that it should work for you too!&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

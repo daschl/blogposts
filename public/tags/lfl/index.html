@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lfl &middot; daschl writes. sometimes.</title>
+
+    <meta name="description" content="">
+
+    <meta name="generator" content="Hugo 0.15" />
+    <meta name="twitter:card" content="summary">
+    
+    <meta name="twitter:title" content="Lfl &middot; daschl writes. sometimes.">
+    <meta name="twitter:description" content="">
+
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Lfl &middot; daschl writes. sometimes.">
+    <meta property="og:description" content="">
+
+    <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Oxygen:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
+    <!--[if lte IE 8]>
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-old-ie-min.css">
+    <![endif]-->
+    <!--[if gt IE 8]><!-->
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
+    <!--<![endif]-->
+
+    <link rel="stylesheet" href="http://nitschinger.at//css/all.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <link rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." href="http://nitschinger.at//index.xml" />
+</head>
+<body>
+
+
+<div id="layout" class="pure-g">
+    <div class="sidebar pure-u-1 pure-u-md-1-4">
+    <div class="header">
+        <hgroup>
+            <h1 class="brand-title"><a href="http://nitschinger.at/">daschl writes. sometimes.</a></h1>
+            <h2 class="brand-tagline"></h2>
+        </hgroup>
+
+        <nav class="nav">
+            <ul class="nav-list">
+                
+                
+                <li class="nav-item">
+                    <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+
+    <div class="content pure-u-1 pure-u-md-3-4">
+        <div>
+            
+            <div class="posts">
+                
+                <h1 class="content-subhead">05 Sep 2011</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="http://nitschinger.at/Letters-from-Lithium-2/" class="post-title">Letters from Lithium #2</a>
+
+                        <p class="post-meta">
+                            
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        
+
+<h2 id="about:b4182e0f0db9b44aa8cf9721d0e799f0">About</h2>
+
+<p>Letters from Lithium keeps you up to date about what happens in the Lithium core and community. If you have interesting news to share, comment below or ping me on <a href="http://twitter.com/daschl">twitter</a>.</p>
+
+<h2 id="core-news:b4182e0f0db9b44aa8cf9721d0e799f0">Core News</h2>
+
+<p>Routing got a bit more awesome with <a href="https://github.com/UnionOfRAD/lithium/commit/792b916249052b87c368e2e25798a93dceaa0154#L3R636">route continuations</a>. They allow you match more routes in one request, which is very useful in many cases. Take a look at this test case:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">/**</span>
+<span style="color: #177500">* Tests that continuation routes properly fall through and aggregate multiple route parameters.</span>
+<span style="color: #177500">*/</span>
+<span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">testRouteContinuations</span>() {
+    <span style="color: #000000">Router::connect</span>(<span style="color: #C41A16">&#39;/{:locale:en|de|it|jp}/{:args}&#39;</span>, <span style="color: #000000">array</span>(), <span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;continue&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">true</span>));
+    <span style="color: #000000">Router::connect</span>(<span style="color: #C41A16">&#39;/{:controller}/{:action}/{:id:</span><span style="color: #633820">[</span><span style="color: #1C01CE">0</span><span style="color: #000000">-</span><span style="color: #1C01CE">9</span><span style="color: #633820">]</span><span style="color: #C41A16">+}&#39;</span>);
+
+    <span style="color: #000000">$request</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Request</span>(<span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;url&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;/en/posts/view/1138&#39;</span>));
+    <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">Router::process</span>(<span style="color: #000000">$request</span>)<span style="color: #000000">-&gt;params</span>;
+    <span style="color: #000000">$expected</span> <span style="color: #000000">=</span> <span style="color: #000000">array</span> (
+        <span style="color: #C41A16">&#39;controller&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;posts&#39;</span>, <span style="color: #C41A16">&#39;action&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;view&#39;</span>, <span style="color: #C41A16">&#39;id&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;1138&#39;</span>, <span style="color: #C41A16">&#39;locale&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;en&#39;</span>
+    );
+    <span style="color: #000000">$this-&gt;assertEqual</span>(<span style="color: #000000">$expected</span>, <span style="color: #000000">$result</span>);
+}
+</pre></div>
+
+<p>The data branch has been <a href="https://github.com/UnionOfRAD/lithium/commit/107f596b3224b47cfe91a820bae5867a5e0aee6c">merged</a> recently, which should improve the overall stability of the model layer and add a few smaller features. Thanks to <a href="https://github.com/vesln">Veselin Todorov</a>, you <a href="https://github.com/UnionOfRAD/lithium/commit/0c35bef1a36f3ffd6baee3586bf8c3380dfabb81">can now use</a> the &ldquo;last&rdquo; option in validations. This lets you better control the validation stack.</p>
+
+<p><a href="https://github.com/mackstar">Richard McIntyre</a> added <a href="https://github.com/UnionOfRAD/lithium/commit/427ee643e0725cceb42d6f1ee66cf5668d18effa">console environment detection</a> and Nate Abele improved the application detection process.</p>
+
+<p>Of course, various other bugs have been fixed (including the <a href="https://github.com/UnionOfRAD/lithium/commit/cbd0c4d2c07837e2e5ea4f9e8ff8c6a0d1fa1c61">HMAC bug</a>) and small enhancements like <a href="https://github.com/UnionOfRAD/lithium/commit/74514b870c13aac98236111c524ab5c1bc04656f">collection sorting</a> and <a href="https://github.com/UnionOfRAD/lithium/commit/c0d4ff82b1b3bb662ed0e78ed9599437306ca068">Form::error() filtering</a> found their way into the core.</p>
+
+<h2 id="plugins:b4182e0f0db9b44aa8cf9721d0e799f0">Plugins</h2>
+
+<p><a href="https://github.com/eLod">eLod</a> (also known as &ldquo;smoking_kiddo&rdquo; on IRC) created a plugin called <a href="https://github.com/eLod/li3_console">li3_console</a> which provides a fully functional PHP <a href="http://en.wikipedia.org/wiki/Read-eval-print_loop">REPL</a> and also lets you interact with your Lithium environment (like models) from the command line.</p>
+
+<p>If you need to deploy your Lithium application to remote servers and are used to <a href="https://github.com/capistrano/capistrano">Capistrano</a>, you should take a look at <a href="https://github.com/mehlah/capium">capium</a>. It is a ruby gem that provides deploy recipes and rake tasks for Lithium.</p>
+
+<h2 id="blogs-and-media:b4182e0f0db9b44aa8cf9721d0e799f0">Blogs and Media</h2>
+
+<p>For those new to Lithium, <a href="http://www.davidgolding.net/">David Golding</a> recently published a very informative introduction <a href="http://www.scribd.com/doc/62146078/New-to-Lithium-Part-1">here</a>. It gets you up and running quickly and walks you through the creation of models, controllers and views.</p>
+
+<p>Also, <a href="http://www.jblotus.com/">James Fuller</a> released a few blog posts in the last weeks, covering various topics around Lithium. Head over to his blog and read about <a href="http://www.jblotus.com/2011/08/17/adding-a-session-flash-message-to-your-site-in-lithium-php/">Flash Messages</a>, the <a href="http://www.jblotus.com/2011/08/19/how-to-add-a-html-button-element-using-lithium-phps-formhelper/">FormHelper</a>, <a href="http://www.jblotus.com/2011/08/20/super-simple-lithium-php-json-web-service-calls/">Web Service Calls</a>, <a href="http://www.jblotus.com/2011/08/27/understanding-filters-in-lithium-php/">Filters</a> and <a href="http://www.jblotus.com/2011/08/31/using-an-appcontroller-in-lithium-php-to-pass-data-to-the-layout/">AppControllers</a>.</p>
+
+<h2 id="universe:b4182e0f0db9b44aa8cf9721d0e799f0">Universe</h2>
+
+<p>Recently, <a href="http://www.engineyard.com/">Engine Yard</a> (mostly known for their knowledge and cloud platforms in the Ruby on Rails world) acquired <a href="http://orchestra.io">Orchestra</a> to extend their language support. Orchestra is a great platform to deploy your PHP and Lithium applications on to, so give it a try (they also provide free accounts) if you haven&rsquo;t already. The <a href="http://lithify.me/docs/manual/cloud/readme.wiki">manual</a> also provides a short guide if you need help.</p>
+
+<p><a href="https://github.com/Ciaro">Ciaro Vermeire</a> started a (unofficial) community forum for Lithium, which you can find <a href="http://lithium-framework.com/">here</a>. If you like this type of communication, feel free to register, ask for help and - most importantly - share what you know.</p>
+
+                    </div>
+                </section>
+                
+                <h1 class="content-subhead">02 Aug 2011</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="http://nitschinger.at/Letters-from-Lithium-1/" class="post-title">Letters from Lithium #1</a>
+
+                        <p class="post-meta">
+                            
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        
+
+<h2 id="about:ee82dedf484a67ec02efb082c30c3644">About</h2>
+
+<p>&ldquo;Letters from Lithium&rdquo; will be published on a regular basis to give you an update on what happens in the Lithium community. If you have interesting topics/plugins/stuff you want to read about, feel free to contact me through twitter or email.</p>
+
+<h2 id="core-news:ee82dedf484a67ec02efb082c30c3644">Core News</h2>
+
+<p>The <a href="https://github.com/UnionOfRAD/lithium/wiki/Roadmap">Roadmap</a> to 1.0 is going pretty well so far, and relationship support for relational databases has been already merged into master. For the impatient, there is also some documentation for it underway which can be found <a href="https://github.com/UnionOfRAD/manual/blob/master/en/working-with-data/relationships.wiki">here</a>. As the docs are not finished yet, you&rsquo;ll have to clone the repository locally to view them in their full glory (don&rsquo;t forget to clone <code>li3_docs</code> too). The core team is also working on relationship support for MongoDB, which will also ship before 1.0. For those who come from CakePHP: there won&rsquo;t be a <code>hasAndBelongsToMany</code> relationship, because we&rsquo;ll add support for nested relationships which can be used to achieve the same result in a better and cleaner way.</p>
+
+<p>We&rsquo;re very excited to see more and more people contributing code to the core. <a href="https://github.com/doobry">Chris Beswick</a> did an awesome job recently and refactored a significant part of the routing system (<a href="https://github.com/UnionOfRAD/lithium/commits/master?author=doobry">commits</a>) which makes compiling routes significantly faster. Also there&rsquo;s a huge <a href="https://github.com/UnionOfRAD/lithium/pull/45">pull request</a> open that brings <a href="http://www.postgresql.org/">PostgreSQL</a> integration to the Lithium core.</p>
+
+<p>Lithium wants to be a first-class citizen on Windows, so there&rsquo;s a <a href="https://github.com/UnionOfRAD/lithium/tree/windows">branch</a> open that tries to track, find and fix all bugs and test-cases on Windows. If you&rsquo;re developing on Windows and have some spare time, contact one of the core members on IRC and we&rsquo;ll get you started. We aim to make all test cases run on Windows before the 1.0 release.</p>
+
+<h2 id="plugins:ee82dedf484a67ec02efb082c30c3644">Plugins</h2>
+
+<p>I&rsquo;ve recently <a href="http://nitschinger.at/Lithium-plugin-roundup">compiled a list of plugins</a> and readers also posted their additions in the comments below. There are plans to bring the <a href="http://lab.lithify.me">Lithium Lab</a> up to date and integrate it even better with the Lithium framework so in the future you should be able to install and share plugins right from there. I&rsquo;ll cover this in greater detail in one of the next letters.</p>
+
+<p><a href="https://github.com/alkemann">Alexander Morland</a> is developing a <a href="https://github.com/alkemann/li3_zmq">plugin</a> for <a href="http://www.zeromq.org/">ZeroMQ</a> and is always searching for feedback and contributions. If you need message passing in your application (like queues or pub/sub), then you should definitely check it out.</p>
+
+<p>If you don&rsquo;t know which plugins are available, try <a href="https://github.com/search?langOverride=&amp;language=PHP&amp;q=li3_&amp;repo=&amp;start_value=1&amp;type=Repositories&amp;x=32&amp;y=21">this</a> search on Github!</p>
+
+<h2 id="blogs-media:ee82dedf484a67ec02efb082c30c3644">Blogs &amp; Media</h2>
+
+<p>For those who don&rsquo;t know yet, <a href="http://raymondjulin.com/">Raymond Julin</a> did compile a list of useful resources back in January which can be found <a href="http://blog.raymondjulin.com/2011/01/06/list-of-useful-lithium-li3-resources/">here</a>. In addition to that, <a href="http://www.shift8creative.com/about">Tom Maiaroto</a> wrote a <a href="http://www.shift8creative.com/blog/getting-started-with-minerva">blog post</a> that helps you to get up and running with <a href="https://github.com/tmaiaroto/minerva">Minerva</a>, his CMS based on Lithium.</p>
+
+<p>Lithium now has <a href="http://vimeo.com/channels/li3">Vimeo Channel</a> which also contains the <a href="http://vimeo.com/26183322">Introducing Lithium</a> talk by Nate. You should definitely check that out if you&rsquo;re new to Lithium and need a one-hour introduction.</p>
+
+<h2 id="universe:ee82dedf484a67ec02efb082c30c3644">Universe</h2>
+
+<p>As a side note, the <a href="http://www.union-of-rad.com/">UnionOfRAD</a> is looking for client work (preferrably in the NY area), so if you need talented developers that know Lithium and its surroundings from the inside out please contact <a href="http://www.nateabele.com">Nate Abele</a> on <a href="http://www.twitter.com/nateabele">twitter</a> or IRC.</p>
+
+                    </div>
+                </section>
+                
+            </div>
+            
+
+            <div class="footer">
+    <div class="pure-menu pure-menu-horizontal pure-menu-open">
+        <ul>
+		<li>&copy; Michael Nitschinger 2010-2016</li>
+        </ul>
+    </div>
+</div>
+<script src="http://nitschinger.at//js/all.min.js"></script>
+
+        </div>
+    </div>
+</div>
+
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', '', 'auto');
+ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Vienna on daschl writes. sometimes.</title>
+    <link>http://nitschinger.at/tags/vienna/</link>
+    <description>Recent content in Vienna on daschl writes. sometimes.</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sat, 07 Jul 2012 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://nitschinger.at/tags/vienna/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Announcing the Vienna PHP User Group</title>
+      <link>http://nitschinger.at/Announcing-the-Vienna-PHP-User-Group/</link>
+      <pubDate>Sat, 07 Jul 2012 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/Announcing-the-Vienna-PHP-User-Group/</guid>
+      <description>&lt;p&gt;I&amp;rsquo;ve been looking for a decent PHP user group here in Vienna for some time. Sadly, I haven&amp;rsquo;t found even a bad one. Now, I&amp;rsquo;m trying to change this: meet &lt;a href=&#34;http://viennaphp.org/&#34;&gt;viennaphp.org&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;My goal is to create a friendly, welcoming and informative user group that allows beginners and experts alike to share their experiences, opinions and knowledge. I have always met great people when I worked with the open-source community and I think lots of people around here would benefit from it too.&lt;/p&gt;
+
+&lt;p&gt;So, what next? The first thing we need to do is identify a bunch of developers (including you) that is willing to help me bootstrap the user group. I think the best way to do this is to first gather online and then meet for a beer or two and discuss what we can do next.&lt;/p&gt;
+
+&lt;p&gt;Afterwards, I think it&amp;rsquo;s time to find a location where we have the appropriate equipment available to do live presentations and sessions. So, if you know a place where we could do this, I&amp;rsquo;d love to get in touch with you. Also, it would be awesome if someone is willing to sponsor food or drinks, but I think this could be handled at a later point.&lt;/p&gt;
+
+&lt;p&gt;Currently, the web site is pretty basic, but I&amp;rsquo;m planning to add a wiki and a twitter feed so we can interact better. At the moment, you can follow &lt;a href=&#34;https://twitter.com/ViennaPHP&#34;&gt;@ViennaPHP&lt;/a&gt; and tweet with the &lt;a href=&#34;https://twitter.com/search/%23viennaphp&#34;&gt;#viennaphp&lt;/a&gt; hashtag.&lt;/p&gt;
+
+&lt;p&gt;Vienna PHP developers, unite!&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

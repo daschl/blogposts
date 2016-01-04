@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Jmh on daschl writes. sometimes.</title>
+    <link>http://nitschinger.at/tags/jmh/</link>
+    <description>Recent content in Jmh on daschl writes. sometimes.</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 22 Nov 2013 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://nitschinger.at/tags/jmh/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Using JMH for Java Microbenchmarking</title>
+      <link>http://nitschinger.at/Using-JMH-for-Java-Microbenchmarking/</link>
+      <pubDate>Fri, 22 Nov 2013 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/Using-JMH-for-Java-Microbenchmarking/</guid>
+      <description>
+
+&lt;p&gt;So before we dive in, let&amp;rsquo;s rule two things out. First, I&amp;rsquo;m not a JVM expert and second, microbenchmarking is hard. The bigger problem is that it isn&amp;rsquo;t only hard but also looks very easy if you start. You put your test code in a loop, use &lt;code&gt;System.nanoTime&lt;/code&gt; or something similar to measure the total time of the run and divide it by the number of runs. Doing it that way, you could very well let your cat estimate the results (mine would do it for proper catnip).&lt;/p&gt;
+
+&lt;p&gt;Larger companies like Google started their own projects to remedy all kinds of pitfalls and libraries like &lt;a href=&#34;https://code.google.com/p/caliper/&#34;&gt;Caliper&lt;/a&gt; popped out of that. Now finally, some fine folks of the OpenJDK team thought they&amp;rsquo;ll do their own and share it for everyone to use. The tool is called &lt;a href=&#34;http://openjdk.java.net/projects/code-tools/jmh/&#34;&gt;jmh&lt;/a&gt; or also known as &amp;ldquo;Java Microbenchmarking Harness&amp;rdquo;.&lt;/p&gt;
+
+&lt;p&gt;In this post I just show you how to get started, but there are still lots of things you need to think about. I really recommend you to watch &lt;a href=&#34;http://vimeo.com/78900556&#34;&gt;the talk by Aleksey Shipilev&lt;/a&gt; which dives into concepts and pitfalls. You can also find the slides &lt;a href=&#34;http://shipilev.net/pub/talks/devoxx-Nov2013-benchmarking.pdf&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h2 id=&#34;using-jmh:0f20f20af93d3314cabbf6bbd8064467&#34;&gt;Using JMH&lt;/h2&gt;
+
+&lt;p&gt;There are a few ways to use it and all of them are explained on the official website linked above. In general, you want to use the self-contained jar and run them on the command line, but there is also an easy way to run them directly out of your IDE - this is what I&amp;rsquo;m showing you in a second. If you just want to run it from the command line, you do it like (but you need to build the jar first):&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;java -jar target/microbenchmarks.jar -h
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Let&amp;rsquo;s start a maven project in our IDE and add the following dependency (mad props to &lt;a href=&#34;https://twitter.com/_godin_/status/403668134206242817&#34;&gt;Evgeny Mandrikov&lt;/a&gt; for putting it on maven central recently):&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;dependency&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;groupId&amp;gt;&lt;/span&gt;org.openjdk.jmh&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/groupId&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;artifactId&amp;gt;&lt;/span&gt;jmh-core&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/artifactId&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;version&amp;gt;&lt;/span&gt;0.1&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/version&amp;gt;&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/dependency&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now let&amp;rsquo;s write a main method that calls the underlying method of JMH so we can run it easily form our IDE:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;org.openjdk.jmh.Main;&lt;/span&gt;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;Start&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+  &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;main(String...&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;args)&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;Main.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;main&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(args);&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If we hit run, all we&amp;rsquo;ll see is:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;No matching benchmarks. Miss-spelled regexp? Use -v for verbose output.
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Which is good, because we know JMH is working and looking for our benchmarks. Let&amp;rsquo;s write an empty one to get a feeling of how it works.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;package&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;benchmarks;&lt;/span&gt;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;org.openjdk.jmh.annotations.GenerateMicroBenchmark;&lt;/span&gt;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;HelloWorld&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+
+  &lt;span style=&#34;color: #000000&#34;&gt;@GenerateMicroBenchmark&lt;/span&gt;
+  &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;helloWorld()&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+
+  &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+
+&lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;JMH will automatically pick it up from the CLASSPATH and start to run our benchmark. You will see lots of output (forks, warmup runs), but be patient until the end and you&amp;rsquo;ll see something like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;# Fork: 1 of 1
+# Warmup: 20 iterations, 1 s each
+# Measurement: 10 iterations, 1 s each
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Running: benchmarks.HelloWorld.helloWorld
+# Warmup Iteration   1: 3034307.449 ops/ms
+# Warmup Iteration   2: 3108187.599 ops/ms
+# Warmup Iteration   3: 3117686.141 ops/ms
+# Warmup Iteration   4: 3121382.926 ops/ms
+# Warmup Iteration   5: 3100218.889 ops/ms
+# Warmup Iteration   6: 3117158.492 ops/ms
+*** snip ***
+Iteration   7: 2906090.682 ops/ms
+Iteration   8: 3053047.149 ops/ms
+Iteration   9: 3055673.541 ops/ms
+Iteration  10: 3113494.893 ops/ms
+
+Result : 3073969.337 ±(95%) 45679.588 ±(99%) 65631.592 ops/ms
+  Statistics: (min, avg, max) = (2906090.682, 3073969.337, 3120910.177), stdev = 63860.098
+  Confidence intervals: 95% [3028289.749, 3119648.926], 99% [3008337.745, 3139600.930]
+
+
+Benchmark                   Mode Thr     Count  Sec         Mean   Mean error    Units
+b.HelloWorld.helloWorld    thrpt   1        10    1  3073969.337    65631.592   ops/ms
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Note that both the output and the results may look different on your machine. To not fork as often and don&amp;rsquo;t do so many measure runs (for demo purposes), you can apply the following flags for the command in your IDE: &lt;code&gt;-i 10 -f 1&lt;/code&gt;. This will only run one fork and do 10 iterations after warming up. There are dozens of flags you can tune to your needs.&lt;/p&gt;
+
+&lt;h2 id=&#34;benchmarking-real-code:0f20f20af93d3314cabbf6bbd8064467&#34;&gt;Benchmarking real code&lt;/h2&gt;
+
+&lt;p&gt;Now all is fun, but let&amp;rsquo;s test some real code. In Spymemcached, before we put a document on the wire we check that the key is not longer than allowed and - for ascii based operations - also check if they do not contain whitespace and so on. The code in question currently looks like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;validateKey(String&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;key,&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;boolean&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;binary)&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+  &lt;span style=&#34;color: #A90D91&#34;&gt;byte&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;[]&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;keyBytes&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;KeyUtil.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;getKeyBytes&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(key);&lt;/span&gt;
+  &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;(keyBytes.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;length&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;MemcachedClientIF.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;MAX_KEY_LENGTH&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;throw&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;IllegalArgumentException(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Key is too long (maxlen = &amp;quot;&lt;/span&gt;
+        &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;MemcachedClientIF.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;MAX_KEY_LENGTH&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;)&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+  &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;(keyBytes.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;length&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;throw&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;IllegalArgumentException(&lt;/span&gt;
+        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Key must contain at least one character.&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+  &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(!binary)&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #177500&#34;&gt;// Validate the key&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;byte&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;b&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;keyBytes)&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+      &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;(b&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #2300CE&#34;&gt;&amp;#39; &amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;||&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;b&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;#39;\\n&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;||&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;b&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;#39;\\r&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;||&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;b&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+        &lt;span style=&#34;color: #A90D91&#34;&gt;throw&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;IllegalArgumentException(&lt;/span&gt;
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Key contains invalid characters:  ``&amp;quot;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;key&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;&amp;#39;&amp;#39;&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Let&amp;rsquo;s say we don&amp;rsquo;t care about optimizing it yet, but we want to see how it performs if the &amp;ldquo;binary&amp;rdquo; flag is applied or not. Obviously less work is done but we want to see how that turns out in practice. Let&amp;rsquo;s add the dependency so we can use the static method directly from the code:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;dependency&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;groupId&amp;gt;&lt;/span&gt;net.spy&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/groupId&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;artifactId&amp;gt;&lt;/span&gt;spymemcached&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/artifactId&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;version&amp;gt;&lt;/span&gt;2.10.2&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/version&amp;gt;&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/dependency&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;And write a new benchmark that compares both approaches with variation.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;package&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;benchmarks;&lt;/span&gt;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;net.spy.memcached.util.StringUtils;&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;org.openjdk.jmh.annotations.GenerateMicroBenchmark;&lt;/span&gt;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;KeyBench&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+
+  &lt;span style=&#34;color: #177500&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #177500&#34;&gt;   * 12 chars long&lt;/span&gt;
+&lt;span style=&#34;color: #177500&#34;&gt;   */&lt;/span&gt;
+  &lt;span style=&#34;color: #A90D91&#34;&gt;private&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;final&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;String&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;SHORT_KEY&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;user:michael&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;;&lt;/span&gt;
+
+  &lt;span style=&#34;color: #177500&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #177500&#34;&gt;   * 240 chars long&lt;/span&gt;
+&lt;span style=&#34;color: #177500&#34;&gt;   */&lt;/span&gt;
+  &lt;span style=&#34;color: #A90D91&#34;&gt;private&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;final&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;String&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;LONG_KEY&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;thisIsAFunkyKeyWith_underscores_AndAlso334&amp;quot;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt;
+      &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;3252545345NumberslthisIsAFunkyKeyWith_underscores_AndAlso3343252545345Numbe&amp;quot;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt;
+      &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;rslthisIsAFunkyKeyWith_underscores_AndAlso3343252545345NumberslthisIsAFunkyK&amp;quot;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt;
+      &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;eyWith_underscores_AndAlso3343252545345Numbersl&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;;&lt;/span&gt;
+
+  &lt;span style=&#34;color: #000000&#34;&gt;@GenerateMicroBenchmark&lt;/span&gt;
+  &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;validateShortKeyBinary()&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;StringUtils.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;validateKey&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(SHORT_KEY,&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+
+  &lt;span style=&#34;color: #000000&#34;&gt;@GenerateMicroBenchmark&lt;/span&gt;
+  &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;validateShortKeyAscii()&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;StringUtils.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;validateKey&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(SHORT_KEY,&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;false&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+
+  &lt;span style=&#34;color: #000000&#34;&gt;@GenerateMicroBenchmark&lt;/span&gt;
+  &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;validateLongKeyBinary()&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;StringUtils.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;validateKey&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(LONG_KEY,&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+
+  &lt;span style=&#34;color: #000000&#34;&gt;@GenerateMicroBenchmark&lt;/span&gt;
+  &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;validateLongKeyAscii()&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;StringUtils.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;validateKey&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(LONG_KEY,&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;false&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We also see how the performance differs for long and short keys. The first run we do is with 10 iterations and 1 fork:&lt;/p&gt;
+
+&lt;p&gt;Result : 18093.561 ±(95%) 65.824 ±(99%) 94.575 ops/ms
+    Statistics: (min, avg, max) = (17920.967, 18093.561, 18240.197), stdev = 92.022
+    Confidence intervals: 95% [18027.737, 18159.385], 99% [17998.986, 18188.136]&lt;/p&gt;
+
+&lt;p&gt;Benchmark                             Mode Thr     Count  Sec         Mean   Mean error    Units
+  b.KeyBench.validateLongKeyAscii      thrpt   1        10    1     1718.532        8.504   ops/ms
+  b.KeyBench.validateLongKeyBinary     thrpt   1        10    1     3632.664       24.579   ops/ms
+  b.KeyBench.validateShortKeyAscii     thrpt   1        10    1    13198.597       71.557   ops/ms
+  b.KeyBench.validateShortKeyBinary    thrpt   1        10    1    18093.561       94.575   ops/ms&lt;/p&gt;
+
+&lt;p&gt;The first observation we can make is that - without surprise - shorter keys are faster than longer keys. But we can also see that the results are much more consistent for longer keys than shorter ones. So let&amp;rsquo;s grab a coffee (this test took over 10 minutes to complete) and run the results with 20 iterations and 10 forks:&lt;/p&gt;
+
+&lt;p&gt;Result : 17796.673 ±(95%) 56.110 ±(99%) 76.699 ops/ms
+    Statistics: (min, avg, max) = (17441.465, 17796.673, 17947.702), stdev = 119.891
+    Confidence intervals: 95% [17740.563, 17852.783], 99% [17719.974, 17873.371]&lt;/p&gt;
+
+&lt;p&gt;Benchmark                             Mode Thr     Count  Sec         Mean   Mean error    Units
+  b.KeyBench.validateLongKeyAscii      thrpt   1       200    1     1719.010        2.160   ops/ms
+  b.KeyBench.validateLongKeyBinary     thrpt   1       200    1     3745.221       12.101   ops/ms
+  b.KeyBench.validateShortKeyAscii     thrpt   1       200    1    13144.629       16.918   ops/ms
+  b.KeyBench.validateShortKeyBinary    thrpt   1       200    1    17886.628       31.513   ops/ms&lt;/p&gt;
+
+&lt;p&gt;We get similar results, but our mean error rate went down which gives us further confidence in our numbers.&lt;/p&gt;
+
+&lt;p&gt;Now here comes the important part: while microbenchmarking definitely helps to find bottlenecks and shows you pointers where to go fix your code, it (I think more importantly) shows you code that you do not need to optimize. Say if the numbers shown above fit our application purpose we can &amp;ldquo;check them off&amp;rdquo; the list and go look somewhere else to optimize.&lt;/p&gt;
+
+&lt;p&gt;Also, if you are running those benchmarks on your notebook (and not on the servers, where you should too), make sure you don&amp;rsquo;t enable power management so your CPUs work full steam during the full runs. Also, close all other programs that are not essential and leave it alone until the benchmark finishes. That way you reduce the probability of other tasks inferring with your benchmark results and helping you to get more consistent ones.&lt;/p&gt;
+
+&lt;h2 id=&#34;further-considerations:0f20f20af93d3314cabbf6bbd8064467&#34;&gt;Further Considerations&lt;/h2&gt;
+
+&lt;p&gt;Funny enough, JMH not only makes your microbenchmarks more accurate, I think they are also much easier to write. You don&amp;rsquo;t need to fight with things happening in the JVM and your operating system while the tests run. You can integrate those benchmarks into your CI runs when someone checks in a new piece of code and look at historically accurate performance numbers (for crucial pieces in your codebase).&lt;/p&gt;
+
+&lt;p&gt;One thing I need to tell you before finishing this post. Please go watch the video shown above, since there is still a lot to consider, even with JMH. Also a very good pointer is the examples section located &lt;a href=&#34;http://hg.openjdk.java.net/code-tools/jmh/file/tip/jmh-samples/src/main/java/org/openjdk/jmh/samples/&#34;&gt;here&lt;/a&gt;. You should especially be on the lookout for dead code elimination, and the proper use of black holes in JMH.&lt;/p&gt;
+
+&lt;p&gt;Please share your findings and additions in the comments section below!&lt;/p&gt;
+
+&lt;h2 id=&#34;additional-information:0f20f20af93d3314cabbf6bbd8064467&#34;&gt;Additional Information&lt;/h2&gt;
+
+&lt;p&gt;As &lt;a href=&#34;https://twitter.com/shipilev&#34;&gt;Aleksey Shipilёv&lt;/a&gt; points out in the comments, there is also a nice Java API that you can use, instead of just proxying &amp;ldquo;main&amp;rdquo; and emulating the command line. Here is an example that shows how to use it. Note that iterating the MAP is optional, but it gives you a code-readable way of the results. If you just call &lt;code&gt;new Runner(opts).run();&lt;/code&gt;, you will see the identical output as above.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;main(String...&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;args)&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;throws&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Exception&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;Options&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;opts&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;OptionsBuilder()&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;include&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;.*&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;warmupIterations&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;10&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;measurementIterations&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;10&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;jvmArgs&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;-server&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;forks&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;outputFormat&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(OutputFormatType.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;TextReport&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;build&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;();&lt;/span&gt;
+
+  &lt;span style=&#34;color: #000000&#34;&gt;Map&amp;lt;BenchmarkRecord,RunResult&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;records&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Runner(opts).&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;run&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;();&lt;/span&gt;
+  &lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;(Map.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;Entry&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;BenchmarkRecord,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;RunResult&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;records.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;entrySet&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;())&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;Result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;r&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;result.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;getValue&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;().&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;getPrimaryResult&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;();&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;System.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;out&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;API replied benchmark score: &amp;quot;&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;r.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;getScore&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot; &amp;quot;&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;r.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;getScoreUnit&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot; over &amp;quot;&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;r.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;getStatistics&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;().&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;getN&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot; iterations&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Also, the constant keys used in the above example are subject to constant optimizations. To work around that, there is the @State annotation for the class and the static fields need to be instance variables. Here is the updated code sample for clarity, the numbers don&amp;rsquo;t change for the purpose of this post.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;package&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;benchmarks;&lt;/span&gt;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;net.spy.memcached.util.StringUtils;&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;org.openjdk.jmh.annotations.GenerateMicroBenchmark;&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;org.openjdk.jmh.annotations.State;&lt;/span&gt;
+
+&lt;span style=&#34;color: #000000&#34;&gt;@State&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;KeyBench&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+
+  &lt;span style=&#34;color: #177500&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #177500&#34;&gt;   * 12 chars long&lt;/span&gt;
+&lt;span style=&#34;color: #177500&#34;&gt;   */&lt;/span&gt;
+  &lt;span style=&#34;color: #A90D91&#34;&gt;private&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;String&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;SHORT_KEY&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;user:michael&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;;&lt;/span&gt;
+
+  &lt;span style=&#34;color: #177500&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #177500&#34;&gt;   * 240 chars long&lt;/span&gt;
+&lt;span style=&#34;color: #177500&#34;&gt;   */&lt;/span&gt;
+  &lt;span style=&#34;color: #A90D91&#34;&gt;private&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;String&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;LONG_KEY&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;thisIsAFunkyKeyWith_underscores_AndAlso334&amp;quot;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt;
+      &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;3252545345NumberslthisIsAFunkyKeyWith_underscores_AndAlso3343252545345Numbe&amp;quot;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt;
+      &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;rslthisIsAFunkyKeyWith_underscores_AndAlso3343252545345NumberslthisIsAFunkyK&amp;quot;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt;
+      &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;eyWith_underscores_AndAlso3343252545345Numbersl&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;;&lt;/span&gt;
+
+  &lt;span style=&#34;color: #000000&#34;&gt;@GenerateMicroBenchmark&lt;/span&gt;
+  &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;validateShortKeyBinary()&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;StringUtils.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;validateKey&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(SHORT_KEY,&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+
+  &lt;span style=&#34;color: #000000&#34;&gt;@GenerateMicroBenchmark&lt;/span&gt;
+  &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;validateShortKeyAscii()&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;StringUtils.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;validateKey&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(SHORT_KEY,&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;false&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+
+  &lt;span style=&#34;color: #000000&#34;&gt;@GenerateMicroBenchmark&lt;/span&gt;
+  &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;validateLongKeyBinary()&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;StringUtils.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;validateKey&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(LONG_KEY,&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+
+  &lt;span style=&#34;color: #000000&#34;&gt;@GenerateMicroBenchmark&lt;/span&gt;
+  &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;validateLongKeyAscii()&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;StringUtils.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;validateKey&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(LONG_KEY,&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;false&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Thanks for pointing it out Aleksey!&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

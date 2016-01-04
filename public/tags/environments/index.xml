@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Environments on daschl writes. sometimes.</title>
+    <link>http://nitschinger.at/tags/environments/</link>
+    <description>Recent content in Environments on daschl writes. sometimes.</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 19 Jul 2011 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://nitschinger.at/tags/environments/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Using Environments in Lithium</title>
+      <link>http://nitschinger.at/Using-Environments-in-Lithium/</link>
+      <pubDate>Tue, 19 Jul 2011 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/Using-Environments-in-Lithium/</guid>
+      <description>
+
+&lt;h2 id=&#34;introduction:e0f9419424a6c42fa55bfd9ca82fe108&#34;&gt;Introduction&lt;/h2&gt;
+
+&lt;p&gt;Environments help you to manage multiple configurations for your application. Maybe you have a different database for testing than for production or you use file caching in development but &lt;a href=&#34;http://www.php.net/manual/en/intro.apc.php&#34;&gt;APC&lt;/a&gt; in production. If your framework does not support this (or a similar) concept, it can be a pain to code this overhead for yourself. Therefore, Lithium frees you from this by providing a &lt;code&gt;Environment&lt;/code&gt; class (in the &lt;code&gt;\lithium\core&lt;/code&gt; namespace) which handles everything for you automatically. Other concepts like &lt;code&gt;adapters&lt;/code&gt; integrate with your environments and give you a high flexibility while maintaining a set of sensible defaults.&lt;/p&gt;
+
+&lt;p&gt;The next chapter is a whirlwind tour on how to use environments in many places in the framework. Once you know how to work with them, we&amp;rsquo;ll see how you can change the behavior and adapt it further to the needs of your application.&lt;/p&gt;
+
+&lt;h2 id=&#34;using-environments:e0f9419424a6c42fa55bfd9ca82fe108&#34;&gt;Using environments&lt;/h2&gt;
+
+&lt;p&gt;Let&amp;rsquo;s start with the most common use case of environments: define a separate database connection for &lt;code&gt;development&lt;/code&gt;, &lt;code&gt;test&lt;/code&gt; and &lt;code&gt;production&lt;/code&gt;:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;Connections::add(&amp;#39;default&amp;#39;, array(
+    &amp;#39;development&amp;#39; =&amp;gt; array(
+        &amp;#39;type&amp;#39; =&amp;gt; &amp;#39;MongoDb&amp;#39;,
+        &amp;#39;host&amp;#39; =&amp;gt; &amp;#39;localhost&amp;#39;,
+        &amp;#39;database&amp;#39; =&amp;gt; &amp;#39;blog_dev&amp;#39;
+    ), 
+    &amp;#39;test&amp;#39; =&amp;gt; array(
+        &amp;#39;type&amp;#39; =&amp;gt; &amp;#39;MongoDb&amp;#39;,
+        &amp;#39;host&amp;#39; =&amp;gt; &amp;#39;localhost&amp;#39;,
+        &amp;#39;database&amp;#39; =&amp;gt; &amp;#39;blog_test&amp;#39;
+    ),
+    &amp;#39;production&amp;#39; =&amp;gt; array(
+        &amp;#39;type&amp;#39; =&amp;gt; &amp;#39;MongoDb&amp;#39;,
+        &amp;#39;host&amp;#39; =&amp;gt; &amp;#39;localhost&amp;#39;,
+        &amp;#39;database&amp;#39; =&amp;gt; &amp;#39;blog_prod&amp;#39;
+    )
+));
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;As you can see, we don&amp;rsquo;t work with the &lt;code&gt;Environment&lt;/code&gt; class here directly. Instead, the &lt;code&gt;Adaptable&lt;/code&gt; class (from which the &lt;code&gt;Connections&lt;/code&gt; class derives) takes care for us. To understand what&amp;rsquo;s going on, investigate &lt;code&gt;_config()&lt;/code&gt; method inside the &lt;code&gt;Adaptable&lt;/code&gt; class.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #177500&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #177500&#34;&gt; * Gets an array of settings for the given named configuration in the current&lt;/span&gt;
+&lt;span style=&#34;color: #177500&#34;&gt; * environment.&lt;/span&gt;
+&lt;span style=&#34;color: #177500&#34;&gt; *&lt;/span&gt;
+&lt;span style=&#34;color: #177500&#34;&gt; * The default types of settings for all adapters will contain keys for:&lt;/span&gt;
+&lt;span style=&#34;color: #177500&#34;&gt; * `adapter` - The class name of the adapter&lt;/span&gt;
+&lt;span style=&#34;color: #177500&#34;&gt; * `filters` - An array of filters to be applied to the adapter methods&lt;/span&gt;
+&lt;span style=&#34;color: #177500&#34;&gt; *&lt;/span&gt;
+&lt;span style=&#34;color: #177500&#34;&gt; * @see lithium\core\Environment&lt;/span&gt;
+&lt;span style=&#34;color: #177500&#34;&gt; * @param string $name Named configuration.&lt;/span&gt;
+&lt;span style=&#34;color: #177500&#34;&gt; * @return array Settings for the named configuration.&lt;/span&gt;
+&lt;span style=&#34;color: #177500&#34;&gt; */&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;protected&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;_config&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$name&lt;/span&gt;) {
+    &lt;span style=&#34;color: #177500&#34;&gt;//...&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;$env&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Environment::get&lt;/span&gt;();
+    &lt;span style=&#34;color: #000000&#34;&gt;$config&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;isset&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$settings&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;$env&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;]&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;?&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$settings&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;$env&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$settings&lt;/span&gt;;
+    &lt;span style=&#34;color: #177500&#34;&gt;//...&lt;/span&gt;
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The important part is done in the middle of the method. The &lt;code&gt;Environment::get()&lt;/code&gt; method is called and based on the result it either uses the appropriate environment configuration or uses the whole array. This means that you are free to use environments or not.&lt;/p&gt;
+
+&lt;p&gt;You can use the &lt;code&gt;Environment::get()&lt;/code&gt; method for yourself to check out the current environment.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;lithium\core\Environment;&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;echo&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Environment::get();&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;For most of you, this will return &lt;code&gt;development&lt;/code&gt; (if not, the next chapter will show you why). In addition to the &lt;code&gt;get()&lt;/code&gt; method, there is also the &lt;code&gt;is()&lt;/code&gt; method. This method takes a string as the param and returns either true or false if the environment matches your string. There are a lot of use cases for this, one can be found in your &lt;code&gt;routes.php&lt;/code&gt; file:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #177500&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #177500&#34;&gt;* Test routes.&lt;/span&gt;
+&lt;span style=&#34;color: #177500&#34;&gt;*/&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;(!Environment::is(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;production&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;))&lt;/span&gt; {
+    &lt;span style=&#34;color: #000000&#34;&gt;Router::connect&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/test/{:args}&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;controller&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;lithium\test\Controller&amp;#39;&lt;/span&gt;));
+    &lt;span style=&#34;color: #000000&#34;&gt;Router::connect&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/test&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;controller&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;lithium\test\Controller&amp;#39;&lt;/span&gt;));
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This code snippet only includes the &lt;code&gt;test&lt;/code&gt; routes if you&amp;rsquo;re not running a production setup. Here&amp;rsquo;s another one:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;if(Environment::is(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;development&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;))&lt;/span&gt; {
+    &lt;span style=&#34;color: #000000&#34;&gt;Libraries::add&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;li3_docs&amp;#39;&lt;/span&gt;);
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This only includes the &lt;code&gt;li3_docs&lt;/code&gt; library during development, because you generally won&amp;rsquo;t need it in production or testing. And the last one:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$default&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;adapter&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;File&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;strategies&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;Serializer&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;));&lt;/span&gt;
+
+&lt;span style=&#34;color: #000000&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;($apcEnabled&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Environment::is(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;production&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;))&lt;/span&gt; {
+    &lt;span style=&#34;color: #000000&#34;&gt;$&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;default&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;adapter&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;Apc&amp;#39;&lt;/span&gt;);
+}
+&lt;span style=&#34;color: #000000&#34;&gt;Cache::config(compact(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;default&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;));&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This snippet tells Lithium to use file caching in development and APC for production (this is a modified version of the code you can find by default in &lt;code&gt;app/config/cache.php&lt;/code&gt;). I won&amp;rsquo;t give another example here, I think you get the point.&lt;/p&gt;
+
+&lt;h2 id=&#34;advanced-usage:e0f9419424a6c42fa55bfd9ca82fe108&#34;&gt;Advanced usage&lt;/h2&gt;
+
+&lt;p&gt;Now that we know how to use environments, let&amp;rsquo;s see how we can tailor them to our needs. Most of the time you have either different environments or the default detection mechanism doesn&amp;rsquo;t work as expected.&lt;/p&gt;
+
+&lt;p&gt;Before we start to modify the environment detection mechanism, we should look at how it is implemented by default:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;protected&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;_detector&lt;/span&gt;() {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;static&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;::$_detector&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;?:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt;) {
+        &lt;span style=&#34;color: #A90D91&#34;&gt;switch&lt;/span&gt; (&lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;) {
+            &lt;span style=&#34;color: #A90D91&#34;&gt;case&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;in_array&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$request-&amp;gt;env&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;SERVER_ADDR&amp;#39;&lt;/span&gt;), &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;::1&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;127.0.0.1&amp;#39;&lt;/span&gt;)))&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;
+                &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;development&amp;#39;&lt;/span&gt;;
+            &lt;span style=&#34;color: #A90D91&#34;&gt;case&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;preg_match&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/^test/&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$request-&amp;gt;env&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;HTTP_HOST&amp;#39;&lt;/span&gt;)))&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;
+                &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;test&amp;#39;&lt;/span&gt;;
+            &lt;span style=&#34;color: #A90D91&#34;&gt;default&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;
+                &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;production&amp;#39;&lt;/span&gt;;
+        }
+    };
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;You can see that if the server address is &amp;ldquo;127.0.0.1&amp;rdquo; (which basically means you&amp;rsquo;re running on localhost) then the environment defaults to &amp;ldquo;devlopment&amp;rdquo;. If this isn&amp;rsquo;t the case, it tries to find &lt;code&gt;test&lt;/code&gt; in the &lt;code&gt;HTTP_HOST&lt;/code&gt; settings. This is also used by the testing framework so you may want to keep this as it is. If none of these checks match, you&amp;rsquo;re running in production mode.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s say we want to add a &lt;code&gt;staging&lt;/code&gt; environment which is identified by its ip address &lt;code&gt;192.168.100.22&lt;/code&gt;:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;lithium\core\Environment&lt;/span&gt;;
+&lt;span style=&#34;color: #000000&#34;&gt;Environment::is&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt;) {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;switch&lt;/span&gt; (&lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;) {
+        &lt;span style=&#34;color: #A90D91&#34;&gt;case&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;in_array&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$request-&amp;gt;env&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;SERVER_ADDR&amp;#39;&lt;/span&gt;), &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;::1&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;127.0.0.1&amp;#39;&lt;/span&gt;)))&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;
+            &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;development&amp;#39;&lt;/span&gt;;
+        &lt;span style=&#34;color: #A90D91&#34;&gt;case&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;$request-&amp;gt;env&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;SERVER_ADDR&amp;#39;&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;192.168.100.22&amp;#39;&lt;/span&gt;)&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;
+            &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;staging&amp;#39;&lt;/span&gt;;
+        &lt;span style=&#34;color: #A90D91&#34;&gt;case&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;preg_match&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/^test/&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$request-&amp;gt;env&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;HTTP_HOST&amp;#39;&lt;/span&gt;)))&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;
+            &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;test&amp;#39;&lt;/span&gt;;
+        &lt;span style=&#34;color: #A90D91&#34;&gt;default&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;
+            &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;production&amp;#39;&lt;/span&gt;;
+    }
+});
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Easy enough, so here&amp;rsquo;s a final example: assume we don&amp;rsquo;t want to rely on this detection mechanisms. Instead, we set the &lt;code&gt;LITHIUM_ENVIRONMENT&lt;/code&gt; variable in our apache config (maybe through &lt;code&gt;SetEnv LITHIUM_ENVIRONMENT &amp;quot;development&amp;quot;&lt;/code&gt;) and use it in our application. If no config variable is set, let&amp;rsquo;s default to &lt;code&gt;development&lt;/code&gt;:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;lithium\core\Environment&lt;/span&gt;;
+&lt;span style=&#34;color: #000000&#34;&gt;Environment::is&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt;) {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$request-&amp;gt;env&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;lithium_environment&amp;#39;&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;?:&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;development&amp;#39;&lt;/span&gt;;
+});
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Of course, you have to make sure that your custom environment routines get executed before the dependent parts get bootstrapped. You can either put it at the bottom of &lt;code&gt;app/config/boostrap/libraries.php&lt;/code&gt; or add a new config file that gets loaded afterwards.&lt;/p&gt;
+
+&lt;h2 id=&#34;wrapping-up:e0f9419424a6c42fa55bfd9ca82fe108&#34;&gt;Wrapping up&lt;/h2&gt;
+
+&lt;p&gt;After reading this post you should have a basic idea on how environments work in Lithium, how to use them and also how to tailor them to your needs. Keep in mind that they are also reused in other classes and patterns like &lt;code&gt;Adaptable&lt;/code&gt;.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

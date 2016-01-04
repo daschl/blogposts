@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Community on daschl writes. sometimes.</title>
+    <link>http://nitschinger.at/tags/community/</link>
+    <description>Recent content in Community on daschl writes. sometimes.</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 22 Jun 2011 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://nitschinger.at/tags/community/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Lithium plugin roundup</title>
+      <link>http://nitschinger.at/Lithium-plugin-roundup/</link>
+      <pubDate>Wed, 22 Jun 2011 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/Lithium-plugin-roundup/</guid>
+      <description>
+
+&lt;p&gt;Note that this list is by no means complete. If you don&amp;rsquo;t find your own mentioned here, feel free to comment below. I&amp;rsquo;ve also tried to roughly group them so you can find them later more easily.&lt;/p&gt;
+
+&lt;h2 id=&#34;authentication-security:2d9d963d696621d0e0a880c999f831f8&#34;&gt;Authentication &amp;amp; Security&lt;/h2&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/tmaiaroto/li3_access&#34;&gt;li3_access&lt;/a&gt;: Access control library by &lt;em&gt;tmaiaroto&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/weluse/li3_ids&#34;&gt;li3_ids&lt;/a&gt;: Intrusion detection integration (phpids) by &lt;em&gt;weluse&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/gwoo/li3_oauth&#34;&gt;li3_oauth&lt;/a&gt;: OAuth library by &lt;em&gt;gwoo&lt;/em&gt;.&lt;/p&gt;
+
+&lt;h2 id=&#34;apis-and-externals:2d9d963d696621d0e0a880c999f831f8&#34;&gt;APIs and Externals&lt;/h2&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/cgarvis/li3_delayed_job&#34;&gt;li3_delayed_job&lt;/a&gt;: Ruby&amp;rsquo;s Delayed::Job port to Lithium by &lt;em&gt;cgarvis&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/tmaiaroto/li3_facebook&#34;&gt;li3_facebook&lt;/a&gt;: Facebook API wrapper by &lt;em&gt;tmaiaroto&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/JacopKane/li3_flickr&#34;&gt;li3_flickr&lt;/a&gt;: Flickr API wrapper by &lt;em&gt;jacopKane&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/greut/li3_swiftmailer&#34;&gt;li3_swiftmailer&lt;/a&gt;: Interface to the Swiftmailer library by &lt;em&gt;greut&lt;/em&gt;.&lt;/p&gt;
+
+&lt;h2 id=&#34;view-layer-helpers:2d9d963d696621d0e0a880c999f831f8&#34;&gt;View Layer &amp;amp; Helpers&lt;/h2&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/greut/li3_analytics&#34;&gt;li3_analytics&lt;/a&gt;: Integrate Google Analytics easily by &lt;em&gt;greut&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/UnionOfRAD/li3_design&#34;&gt;li3_design&lt;/a&gt;: Useful things for designers like placeholder texts by &lt;em&gt;UnionOfRAD&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://rad-dev.org/li3_flash_message&#34;&gt;li3_flash_message&lt;/a&gt;: Flash message generation by &lt;em&gt;michaelhue&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://rad-dev.org/li3_gravatar&#34;&gt;li3_gravatar&lt;/a&gt;: Gravatar integration by &lt;em&gt;michaelhue&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/harikt/li3_htmlpurifier&#34;&gt;li3_htmlpurifier&lt;/a&gt;: Wrapper around the HTML filtering library by &lt;em&gt;harikt&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/indiefan/li3_injector&#34;&gt;li3_injector&lt;/a&gt;: DOM markup injection by &lt;em&gt;indiefan&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/glaszig/li3_less&#34;&gt;li3_less&lt;/a&gt;: Support for LESS CSS by &lt;em&gt;glaszig&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/sandelius/li3_markdown&#34;&gt;li3_markdown&lt;/a&gt;: Wrapper for PHP Markdown by &lt;em&gt;sandelius&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/primetheus/li3_paginate&#34;&gt;li3_paginate&lt;/a&gt;: Pagination plugin by &lt;em&gt;primetheus&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/greut/li3_pdf&#34;&gt;li3_pdf&lt;/a&gt;: PDF generation plugin by &lt;em&gt;greut&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/masom/li3_sitemap&#34;&gt;li3_sitemap&lt;/a&gt;: Sitemap generator by &lt;em&gt;masom&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/henrikbjorn/li3_twig&#34;&gt;li3_twig&lt;/a&gt;: Twig templating support by &lt;em&gt;henrikbjorn&lt;/em&gt;.&lt;/p&gt;
+
+&lt;h2 id=&#34;data-layer:2d9d963d696621d0e0a880c999f831f8&#34;&gt;Data Layer&lt;/h2&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/greut/li3_activerecord&#34;&gt;li3_activerecord&lt;/a&gt;: PHP ActiveRecord wrapper by &lt;em&gt;greut&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://rad-dev.org/li3_behaviors&#34;&gt;li3_behaviors&lt;/a&gt;: Model behavior support by &lt;em&gt;nateabele&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/weluse/li3_dateable&#34;&gt;li3_dateable&lt;/a&gt;: Adds timestamp to records/documents by &lt;em&gt;weluse&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://rad-dev.org/li3_doctrine&#34;&gt;li3_doctrine&lt;/a&gt;: Doctrine2 integration by &lt;em&gt;Richard McIntyre&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://rad-dev.org/li3_geo&#34;&gt;li3_geo&lt;/a&gt;: Geospatial querying for multiple databases by &lt;em&gt;nateabele&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/raisinbread/li3_simplesearch&#34;&gt;li3_simplesearch&lt;/a&gt;: SQLite3 based searching by &lt;em&gt;raisinbread&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/jperras/li3_sqlsrv&#34;&gt;li3_sqlsrv&lt;/a&gt;: SQL Server datasource by &lt;em&gt;jperras&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/vogan/li3_tree&#34;&gt;li3_tree&lt;/a&gt;: Tree model behavior by &lt;em&gt;vogan&lt;/em&gt;.&lt;/p&gt;
+
+&lt;h2 id=&#34;testing-documentation:2d9d963d696621d0e0a880c999f831f8&#34;&gt;Testing &amp;amp; Documentation&lt;/h2&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/UnionOfRAD/li3_docs&#34;&gt;li3_docs&lt;/a&gt;: Official documentation plugin by &lt;em&gt;UnionOfRAD&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/daschl/li3_fixtures&#34;&gt;li3_fixtures&lt;/a&gt;: Add Fixtures to your tests by &lt;em&gt;daschl&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://rad-dev.org/li3_junit&#34;&gt;li3_junit&lt;/a&gt;: JUnit integration by &lt;em&gt;Michael Harris&lt;/em&gt;.&lt;/p&gt;
+
+&lt;h2 id=&#34;misc:2d9d963d696621d0e0a880c999f831f8&#34;&gt;Misc&lt;/h2&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/UnionOfRAD/li3_cldr&#34;&gt;li3_cldr&lt;/a&gt;: Query the Unicode CLDR by &lt;em&gt;UnionOfRAD&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/Howard3/li3_config_loader&#34;&gt;li3_config_loader&lt;/a&gt;: Load configs on the fly during bootstrap by &lt;em&gt;Howard3&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/Howard3/li3_debug&#34;&gt;li3_debug&lt;/a&gt;: Debugging Library by &lt;em&gt;Howard3&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/daschl/li3_rest&#34;&gt;li3_rest&lt;/a&gt;: adds REST support to your application by &lt;em&gt;daschl&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;I have to say that I&amp;rsquo;m very excited to see what the community is currently building and how Lithium as a whole evolves. Thanks to everyone who is participating and keep up the awesome work!&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

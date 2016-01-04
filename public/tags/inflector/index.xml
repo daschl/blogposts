@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Inflector on daschl writes. sometimes.</title>
+    <link>http://nitschinger.at/tags/inflector/</link>
+    <description>Recent content in Inflector on daschl writes. sometimes.</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Thu, 16 Dec 2010 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://nitschinger.at/tags/inflector/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Understanding the Inflector</title>
+      <link>http://nitschinger.at/Understanding-the-Inflector/</link>
+      <pubDate>Thu, 16 Dec 2010 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/Understanding-the-Inflector/</guid>
+      <description>
+
+&lt;h3 id=&#34;introduction:80a65fb5d80eeadafeb3cbaa12fa2dd1&#34;&gt;Introduction&lt;/h3&gt;
+
+&lt;p&gt;The Inflector is one of many utility classes that ship with Lithium out of the box. Those classes are designed to assist you with common tasks that need to be done.&lt;/p&gt;
+
+&lt;p&gt;One of those tasks may be to pluralize, singularize, camel-case or humanize strings, database keys or other dynamic content. Let&amp;rsquo;s see how the class itself is described:&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;Utility for modifying format of words. Change singular to plural and vice versa. Under_score a CamelCased word and vice versa. Replace spaces and special characters. Create a human readable word from the others. Used when consistency in naming conventions must be enforced.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;The Inflector can be found in &lt;code&gt;lithium\util&lt;/code&gt; and you can get it into your namespace with &lt;code&gt;use lithium\util\Inflector&lt;/code&gt;. The documentation can be found online at &lt;a href=&#34;http://lithify.me/docs/lithium/util/Inflector&#34;&gt;lithify.me/docs&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h3 id=&#34;methods:80a65fb5d80eeadafeb3cbaa12fa2dd1&#34;&gt;Methods&lt;/h3&gt;
+
+&lt;p&gt;Here is a comprehensive list of the methods that the Inflector provides to you (the descriptions are quoted from their documentation):&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;pluralize&lt;/strong&gt;: changes the form of a word from singular to plural.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;singularize&lt;/strong&gt;: changes the form of a word from plural to singular.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;camelize&lt;/strong&gt;: takes a under_scored word and turns it into a CamelCased or camelBack word.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;underscore&lt;/strong&gt;: takes a CamelCased version of a word and turns it into an under_scored one.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;slug&lt;/strong&gt;: returns a string with all spaces converted to given replacement and non word characters removed.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;humanize&lt;/strong&gt;: takes an under_scored version of a word and turns it into an human- readable form by replacing underscores with a space, and by upper casing the initial character.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;tableize&lt;/strong&gt;: takes a CamelCased class name and returns corresponding under_scored table name.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;classify&lt;/strong&gt;: takes a under_scored table name and returns corresponding class name.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;There are more public methods in there, but we&amp;rsquo;ll get to those later on. Now that you have an idea what the Inflector can do for you, we&amp;rsquo;ll explore each of these methods in detail. One quick note: if you need more examples, the &lt;a href=&#34;http://rad-dev.org/lithium/source/libraries/lithium/tests/cases/util/InflectorTest.php#highlight&#34;&gt;tests&lt;/a&gt; are a great place to find some.&lt;/p&gt;
+
+&lt;h4 id=&#34;inflector-pluralize:80a65fb5d80eeadafeb3cbaa12fa2dd1&#34;&gt;Inflector::pluralize()&lt;/h4&gt;
+
+&lt;p&gt;The &lt;code&gt;pluralize()&lt;/code&gt; method takes a singular word (string) and returns you the pluralized version of it. Here are some examples:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;Inflector::pluralize(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;Apple&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;//&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;returns&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Apples&amp;quot;&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;Inflector::pluralize(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;Menu&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;//&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;returns&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Menus&amp;quot;&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;Inflector::pluralize(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;News&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;//&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;returns&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;News&amp;quot;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If you are not sure what the pluralized word will look like, take a look at the &lt;code&gt;lithium\util\Inflector::$_plural&lt;/code&gt; property.&lt;/p&gt;
+
+&lt;h4 id=&#34;inflector-singularize:80a65fb5d80eeadafeb3cbaa12fa2dd1&#34;&gt;Inflector::singularize()&lt;/h4&gt;
+
+&lt;p&gt;The &lt;code&gt;singularize()&lt;/code&gt; method takes a plural word (string) and returns you the singularized version of it. Here are some examples:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;Inflector::singularize(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;Houses&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;//&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;returns&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;House&amp;quot;&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;Inflector::singularize(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;Bananas&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;//&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;returns&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Banana&amp;quot;&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;Inflector::singularize(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;Men&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;//&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;returns&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Man&amp;quot;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If you are not sure what the pluralized word will look like, take a look at the &lt;code&gt;lithium\util\Inflector::$_singular&lt;/code&gt; property.&lt;/p&gt;
+
+&lt;h4 id=&#34;inflector-camelize:80a65fb5d80eeadafeb3cbaa12fa2dd1&#34;&gt;Inflector::camelize()&lt;/h4&gt;
+
+&lt;p&gt;You can hand the &lt;code&gt;camelize()&lt;/code&gt; method either a slugged or a under_scored word and it will return you this word CamelCased or camelBacked (if you provide &lt;code&gt;false&lt;/code&gt; as the second argument). Some examples:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;Inflector::camelize(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;foo_bar&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;//&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;returns&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;FooBar&amp;quot;&lt;/span&gt; 
+&lt;span style=&#34;color: #000000&#34;&gt;Inflector::camelize(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;foo_bar&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;false);&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;//&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;returns&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;fooBar&amp;quot;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h4 id=&#34;inflector-slug:80a65fb5d80eeadafeb3cbaa12fa2dd1&#34;&gt;Inflector::slug()&lt;/h4&gt;
+
+&lt;p&gt;The &lt;code&gt;slug()&lt;/code&gt; method takes a string and creates a &amp;ldquo;slugged&amp;rdquo; representation of it. This basically means that all spaces will be replaced with a given character (defaults to &amp;ldquo;-&amp;rdquo;), non-word characters will be removed and characters with accents like &amp;ldquo;ä&amp;rdquo; will be translated to their ASCII representation. Here are some examples:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;Inflector::slug(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;The truth - and- more- news&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;//&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;returns&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;The-truth-and-more-news&amp;quot;&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;Inflector::slug(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;!@$#exciting stuff! - what !@-# was that?&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;//&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;returns&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;exciting-stuff-what-was-that&amp;quot;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h4 id=&#34;inflector-underscore:80a65fb5d80eeadafeb3cbaa12fa2dd1&#34;&gt;Inflector::underscore()&lt;/h4&gt;
+
+&lt;p&gt;The &lt;code&gt;underscore()&lt;/code&gt; method basically takes a camel-cased word, slugs it and lowercases all characters.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;Inflector::underscore(&amp;#39;TestField&amp;#39;) // returns test_field
+Inflector::underscore(&amp;#39;FeineÄpfel&amp;#39;) // returns feine_aepfel
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Note here that characters with accents will be transliterated, because of the translation into a slug. I don&amp;rsquo;t know if this is the intended behavior so this may change in future releases.&lt;/p&gt;
+
+&lt;h4 id=&#34;inflector-humanize:80a65fb5d80eeadafeb3cbaa12fa2dd1&#34;&gt;Inflector::humanize()&lt;/h4&gt;
+
+&lt;p&gt;The &lt;code&gt;humanize()&lt;/code&gt; method takes an underscored word, removes a given seperator (defaults to &amp;ldquo;_&amp;ldquo;) and uppercases the first characters of the words. Some examples from the core tests:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;Inflector::humanize(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;posts&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;//&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;returns&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Posts&amp;quot;&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;Inflector::humanize(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;posts_tags&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;//&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;returns&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Posts Tags&amp;quot;&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;Inflector::humanize(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;file_systems&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;//&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;returns&lt;/span&gt;  &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;File Systems&amp;quot;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h4 id=&#34;inflector-tableize:80a65fb5d80eeadafeb3cbaa12fa2dd1&#34;&gt;Inflector::tableize()&lt;/h4&gt;
+
+&lt;p&gt;The &lt;code&gt;tableize()&lt;/code&gt; method takes your string, underscores (remember the slug?) and finally pluralizes it. As you can see, those methods use other low level methods provided to build exactly what you need. With this method, you can hand over a Model name and get the correct table name for it.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;Inflector::tableize(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;Post&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;//&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;returns&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;posts&amp;quot;&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;Inflector::tableize(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;ArtistsGenre&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;//&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;returns&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;artists_genres&amp;quot;&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;Inflector::tableize(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;FileSystem&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;//&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;returns&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;file_systems&amp;quot;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h4 id=&#34;inflector-classify:80a65fb5d80eeadafeb3cbaa12fa2dd1&#34;&gt;Inflector::classify()&lt;/h4&gt;
+
+&lt;p&gt;The &lt;code&gt;classify()&lt;/code&gt; method is basically the opposite to the &lt;code&gt;tabelize()&lt;/code&gt; method. You hand it over a table name and get the correct class (Model) name back. It singularizes and camelizes the given string.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;    &lt;span style=&#34;color: #000000&#34;&gt;Inflector::classify(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;artists_genres&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;//&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;returns&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;ArtistsGenre&amp;quot;&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;Inflector::classify(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;file_systems&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;//&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;returns&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;FileSystem&amp;quot;&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;Inflector::classify(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;news&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;//&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;returns&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;News&amp;quot;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h3 id=&#34;add-your-own-rules:80a65fb5d80eeadafeb3cbaa12fa2dd1&#34;&gt;Add your own rules&lt;/h3&gt;
+
+&lt;p&gt;If you need, you can add your own rules and/or override default rules. The &lt;code&gt;Inflector::rules()&lt;/code&gt; method is responsible for that and works as a setter or getter for all stored rules. The core tests provide an example:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;Inflector::rules(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;singular&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/rata/&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;\1ratus&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;));&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;You can also add transliterations that maps language specific or accented characters to ASCII ones (they are used to create slugs, for example). The core tests also provide a nice example:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertNotEqual(Inflector::slug(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;JØRGEN&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;),&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;JORGEN&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;Inflector::rules(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;transliteration&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/Ø/&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;O&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;));&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertEqual(Inflector::slug(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;JØRGEN&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;),&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;JORGEN&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Good practice is to store your custom rules in a bootstrap file, so that they are immediately available to your application when it is fully loaded. If you need to do that on-the-fly, be sure to read the next chapter about caching translation results.&lt;/p&gt;
+
+&lt;h3 id=&#34;caching:80a65fb5d80eeadafeb3cbaa12fa2dd1&#34;&gt;Caching&lt;/h3&gt;
+
+&lt;p&gt;You&amp;rsquo;ve probably heard or used the methods above previously. What you maybe don&amp;rsquo;t know is, that the Inflector caches your &lt;code&gt;singularize&lt;/code&gt;, &lt;code&gt;pluralize&lt;/code&gt;,&amp;hellip; calls and if you call the same method with the same word again it will be served directly out of an array.&lt;/p&gt;
+
+&lt;p&gt;That&amp;rsquo;s pretty neat and doesn&amp;rsquo;t do any harm when you properly define your custom rules in a bootstrap file. But you may run into issues when you call a translation method for word X, then add your own rules that affect X and then call the method again. It will be served straight out of the cache and your rules won&amp;rsquo;t match.&lt;/p&gt;
+
+&lt;p&gt;You can fix this by calling &lt;code&gt;Inflector::reset()&lt;/code&gt; before you apply your rules (this will empty the caches). The next call will then apply your custom rules.&lt;/p&gt;
+
+&lt;h3 id=&#34;conclusion:80a65fb5d80eeadafeb3cbaa12fa2dd1&#34;&gt;Conclusion&lt;/h3&gt;
+
+&lt;p&gt;The Inflector is a nice utility library that is used widely in the Lithium core and can easily be used by your application too. It&amp;rsquo;s a fast and extensible way of dealing with dynamic content that needs to be pluralized, singularized, slugged and so on.&lt;/p&gt;
+
+&lt;p&gt;Finally, it does not have any external dependencies so you can even use the Inflector in your own libraries or frameworks.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Write your own Helper with Lithium</title>
+      <link>http://nitschinger.at/Write-your-own-Helper-with-Lithium/</link>
+      <pubDate>Tue, 23 Nov 2010 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/Write-your-own-Helper-with-Lithium/</guid>
+      <description>&lt;p&gt;Lithium comes with two helpers out of the box. The Form-Helper and the Html-Helper. Both are great and help you to make your View-Code more flexible, maintainable and easier to read.&lt;/p&gt;
+
+&lt;p&gt;But what do you do when you need a functionality that they don&amp;rsquo;t provide? Right, you write your own. Let&amp;rsquo;s imagine you want to tell your blog-readers how many posts you have stored in your database. In our first iteration our code might look like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;We&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;have&lt;/span&gt; &lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;count&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$posts&lt;/span&gt;) &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;posts&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;stored&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;the&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;database&lt;/span&gt;.
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Looks great so far, but our code doesn&amp;rsquo;t cover the case when we have only one post stored. Let&amp;rsquo;s fix that:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;We&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;have&lt;/span&gt; &lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;count&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$posts&lt;/span&gt;) &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt; 
+&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;count&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$posts&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;)&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;posts&lt;/span&gt;
+&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;else&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;post&lt;/span&gt;
+&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;endif&lt;/span&gt;; &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;stored&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;the&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;database&lt;/span&gt;.
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This works, but looks ugly and makes our View more complicated and messy (leaving aside that the above code is a bit verbose). To fix that, we write a custom &lt;code&gt;Word-Helper&lt;/code&gt; that abstracts the count-stuff for our view.&lt;/p&gt;
+
+&lt;p&gt;Thankfully, the li3-developers thought about that and provide us with everything we need to get started. Lithium also automatically loads our helper if we want to access it. Let&amp;rsquo;s assume that we want to call the helper with &lt;code&gt;$this-&amp;gt;word-&amp;gt;pluralize(count($posts), &#39;post&#39;)&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;We all love tests, so let&amp;rsquo;s start with them first. We create a new &lt;code&gt;WordTest.php&lt;/code&gt; (in &lt;code&gt;app/tests/cases/extensions/helper&lt;/code&gt;) and add a some test cases.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;namespace&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;app\tests\cases\extensions\helper&lt;/span&gt;;
+&lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;app\extensions\helper\Word&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;WordTest&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;extends&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;\lithium\test\Unit&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;setUp&lt;/span&gt;() {
+        &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;word&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Word&lt;/span&gt;();
+    }
+
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;testPluralize&lt;/span&gt;() {
+        &lt;span style=&#34;color: #000000&#34;&gt;$singular&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;post&amp;#39;&lt;/span&gt;;
+
+        &lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;1 post&amp;#39;&lt;/span&gt;;
+        &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;assertEqual&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;word&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;pluralize&lt;/span&gt;(&lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$singular&lt;/span&gt;));
+
+        &lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;0 posts&amp;#39;&lt;/span&gt;;
+        &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;assertEqual&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;word&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;pluralize&lt;/span&gt;(&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$singular&lt;/span&gt;));
+
+        &lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;2 posts&amp;#39;&lt;/span&gt;;
+        &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;assertEqual&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;word&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;pluralize&lt;/span&gt;(&lt;span style=&#34;color: #1C01CE&#34;&gt;2&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$singular&lt;/span&gt;));
+    }
+}
+&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If we run the tests (&lt;code&gt;http://yourblog.com/test/app/tests/cases/extensions/helper/WordTest&lt;/code&gt;), they will fail (as expected). In the &lt;code&gt;setUp&lt;/code&gt;-method we try to instantiate the Word-Helper, but it doesn&amp;rsquo;t exist yet. The &lt;code&gt;testPluralize&lt;/code&gt;-method tests three different calls of our &lt;code&gt;Word::pluralize()&lt;/code&gt; Helper-Method. To make our tests go green, we finally create our &lt;code&gt;Word&lt;/code&gt;-Helper (in &lt;code&gt;app/extensions/helper/Word.php&lt;/code&gt;).&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;namespace&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;app\extensions\helper&lt;/span&gt;;
+&lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;lithium\util\Inflector&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;Word&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;extends&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;\lithium\template\Helper&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;pluralize&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$count&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$word&lt;/span&gt;) {      
+        &lt;span style=&#34;color: #000000&#34;&gt;$word&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;$count&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;?&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Inflector::&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;pluralize&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$word&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$word&lt;/span&gt;);
+        &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$count.&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot; &amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;.$word&lt;/span&gt;;
+    }
+}
+&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now re-run your tests - they should succeed. If they don&amp;rsquo;t, please check that your files are named correctly and you don&amp;rsquo;t have any typos in them.&lt;/p&gt;
+
+&lt;p&gt;Now it&amp;rsquo;s time to call our brand-new helper from our view. Thanks to the &lt;code&gt;autoloading&lt;/code&gt; feature, it&amp;rsquo;s dead easy:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;We&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;have&lt;/span&gt; &lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;word&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;pluralize&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;count&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$posts&lt;/span&gt;), &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;post&amp;#39;&lt;/span&gt;); &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;stored&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;the&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;database&lt;/span&gt;.
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;That&amp;rsquo;s it - you&amp;rsquo;ve just created your own View-Helper! If you have any questions or suggestions, feel free to comment below.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Model on daschl writes. sometimes.</title>
+    <link>http://nitschinger.at/tags/model/</link>
+    <description>Recent content in Model on daschl writes. sometimes.</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 03 Jun 2011 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://nitschinger.at/tags/model/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Custom Finders with Lithium</title>
+      <link>http://nitschinger.at/Custom-Finders-with-Lithium/</link>
+      <pubDate>Fri, 03 Jun 2011 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/Custom-Finders-with-Lithium/</guid>
+      <description>&lt;p&gt;Finders assist you with often-used database queries so you don&amp;rsquo;t have to write them over and over again. Out of the box, Lithium provides you with a bunch of them: &lt;code&gt;all&lt;/code&gt;, &lt;code&gt;first&lt;/code&gt;, &lt;code&gt;count&lt;/code&gt; &lt;code&gt;list&lt;/code&gt; and &amp;ldquo;magic finders like&amp;rdquo;
+&lt;code&gt;findById&lt;/code&gt; or &lt;code&gt;findFirstById&lt;/code&gt;. How these are constructed in the core is not
+relevant for now, but Lithium provides you with a mechanism to write your own finders easily.&lt;/p&gt;
+
+&lt;p&gt;To understand how we can implement our own finder, let&amp;rsquo;s take a look at the built-in &lt;code&gt;first&lt;/code&gt; one. If you want to dig deeper, look at the
+&lt;a href=&#34;http://lithify.me/docs/lithium/data/Model::_findFilters%28%29&#34;&gt;_findFilters()&lt;/a&gt; method. The &lt;code&gt;_findFilters()&lt;/code&gt; method constructs the default finders and returns them to the &lt;code&gt;Model::config()&lt;/code&gt; method so that they are loaded when your model is initialized.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #177500&#34;&gt;// ... some php code ...&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;first&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$self&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$chain&lt;/span&gt;) {
+    &lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;options&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;][&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;limit&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;;
+    &lt;span style=&#34;color: #000000&#34;&gt;$data&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$chain-&amp;gt;next&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$self&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$chain&lt;/span&gt;);
+    &lt;span style=&#34;color: #000000&#34;&gt;$data&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;is_object&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$data&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;?&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$data-&amp;gt;rewind&lt;/span&gt;() &lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$data&lt;/span&gt;;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$data&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;?:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;null&lt;/span&gt;;
+}
+&lt;span style=&#34;color: #177500&#34;&gt;// ... more finders ...&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Your custom finders will also take the same params, so they let&amp;rsquo;s investigate them:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;$self&lt;/code&gt; contains the current model as a string&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;$params&lt;/code&gt; contains the find options that you already know like &lt;code&gt;order&lt;/code&gt;
+or &lt;code&gt;conditions&lt;/code&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;$chain&lt;/code&gt; contains filter chain.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;As you may have recognized, this looks like our typical
+&lt;a href=&#34;http://rad-dev.org/drafts/source/en/02_lithium_basics/02_filters.wiki&#34;&gt;Filters&lt;/a&gt; pattern in Lithium! In fact, all finders run through the filter system and this is good news for us: we can also adapt the default ones if we need to.&lt;/p&gt;
+
+&lt;p&gt;Our code example first sets a &lt;code&gt;limit&lt;/code&gt; option and then lets the chain move on. At the end of the chain, it sets the returned data to the beginning if its an object or just returns the array. Now it&amp;rsquo;s time to write our own finder. To keep things simple at first, let&amp;rsquo;s say we want to find the first five datasets in our model. Just add it to your controller for now, we&amp;rsquo;ll see a bit later how to move it to your model.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;Tasks::finder&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;firstFive&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$self&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$chain&lt;/span&gt;) {
+    &lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;options&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;][&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;limit&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;5&lt;/span&gt;;
+    &lt;span style=&#34;color: #000000&#34;&gt;$data&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$chain-&amp;gt;next&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$self&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$chain&lt;/span&gt;);
+    &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$data&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;?:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;null&lt;/span&gt;;       
+});
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;In our example we have a &lt;code&gt;Tasks&lt;/code&gt; model who just has an &lt;code&gt;id&lt;/code&gt; and a task &lt;code&gt;name&lt;/code&gt; stored. Note that we use MySQL here so that noone can say I&amp;rsquo;m always using MongoDB ;). We can now run our finder with one of the following methods:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$tasks&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Tasks::find(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;firstFive&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;$tasks&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Tasks::firstFive();&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If you want to check the results immediately, you can use the handy &lt;code&gt;to(&#39;array&#39;)&lt;/code&gt; method on the result set:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;var_dump(Tasks::firstFive()-&amp;gt;to(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;array&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;));&lt;/span&gt;
+
+&lt;span style=&#34;color: #000000&#34;&gt;//&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Should&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;print&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;something&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;like&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;1&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; 
+        &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;id&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;1&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;(length=1)&lt;/span&gt;
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;title&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;first task&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;(length=10)&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;2&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; 
+        &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;id&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;2&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;(length=1)&lt;/span&gt;
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;title&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;second task&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;(length=11)&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;3&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; 
+        &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;id&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;3&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;(length=1)&lt;/span&gt;
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;title&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;third task&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;(length=10)&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;4&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; 
+        &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;id&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;4&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;(length=1)&lt;/span&gt;
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;title&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;fourth task&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;(length=11)&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;5&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; 
+        &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;id&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;5&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;(length=1)&lt;/span&gt;
+            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;title&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;string&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;fifth task&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;(length=10)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If you comment out the limit line in our filter, you can see that you get all results back from the database (just make sure you have more than five rows stored so you can see the difference).&lt;/p&gt;
+
+&lt;p&gt;Recently, a new functionality was added to make custom finders a bit more flexible. You can now just hand over an array of params and you don&amp;rsquo;t need to provide a full closure. This comes in handy when you just want to add a &lt;code&gt;limit&lt;/code&gt; or a fixed set of &lt;code&gt;conditions&lt;/code&gt;. Note that this is currently only available in the &lt;code&gt;x-relationships&lt;/code&gt; branch. Once the whole relationship-related code gets merged into master, this feature will also be available.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;Tasks::finder(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;myAwesomeFinder&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array(&lt;/span&gt;
+    &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;fields&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;id&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;),&lt;/span&gt;
+    &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;conditions&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;id&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;2)&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;));&lt;/span&gt;
+
+&lt;span style=&#34;color: #000000&#34;&gt;$tasks&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Tasks::myAwesomeFinder();&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;You can also add the custom finder in your model, so you don&amp;rsquo;t have to deal with it in the controller. According to the MVC pattern, I&amp;rsquo;d recomend you to place it there. You can override the &lt;code&gt;__init()&lt;/code&gt; method so that your finder will be loaded at runtime.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;__init&lt;/span&gt;() {
+    &lt;span style=&#34;color: #000000&#34;&gt;parent::__init&lt;/span&gt;();
+    &lt;span style=&#34;color: #A90D91&#34;&gt;static&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;::finder&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;firstFive&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$self&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$chain&lt;/span&gt;) {
+        &lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;options&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;][&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;limit&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;5&lt;/span&gt;;
+        &lt;span style=&#34;color: #000000&#34;&gt;$data&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$chain-&amp;gt;next&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$self&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$chain&lt;/span&gt;);
+        &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$data&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;?:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;null&lt;/span&gt;;
+    });
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;I think this is enough for a short introduction into custom finders, if you want to find out more you should check out the &lt;a href=&#34;http://lithify.me/docs/lithium/data/Model::finder%28%29&#34;&gt;Model::finder&lt;/a&gt;
+method and poke around in the &lt;a href=&#34;http://lithify.me/docs/lithium/data/Model::find%28%29&#34;&gt;Model::find&lt;/a&gt; source. Once the model part of the &lt;a href=&#34;http://rad-dev.org/drafts/source&#34;&gt;drafts&lt;/a&gt; is finished, you&amp;rsquo;ll finde more detailed documentation on this topic.&lt;/p&gt;
+
+&lt;p&gt;With this tool in mind, interesting possibilities start to pop up. You can now easily add logging during development to your finders, add caching mechanisms and so on. Please cast your vote in the comments if you want to read more on this topic. So now go ahead and &lt;a href=&#34;http://de.wikipedia.org/wiki/Don%E2%80%99t_repeat_yourself&#34;&gt;DRY&lt;/a&gt; up your controllers and models!&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

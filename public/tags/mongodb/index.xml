@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Mongodb on daschl writes. sometimes.</title>
+    <link>http://nitschinger.at/tags/mongodb/</link>
+    <description>Recent content in Mongodb on daschl writes. sometimes.</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 19 Nov 2010 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://nitschinger.at/tags/mongodb/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Lithium Routes And MongoDB</title>
+      <link>http://nitschinger.at/Lithium-Routes-And-Mongo-DB/</link>
+      <pubDate>Fri, 19 Nov 2010 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/Lithium-Routes-And-Mongo-DB/</guid>
+      <description>&lt;p&gt;Lithium comes with a powerful and flexible routing system. However, in its default configuration, you may encounter some problems with MongoDB-ObjectIDs and reverse routing. ObjectIDs are usually the &amp;ldquo;primary keys&amp;rdquo; of your Document in MongoDB, are 12 bytes long and consist of numbers and characters from &amp;lsquo;a&amp;rsquo; to &amp;lsquo;f&amp;rsquo;. A typical ObjectID would look similar to &lt;code&gt;4ce2d9f99436485e05000000&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;If you take a closer look at the default routes that ship with Lithium, you&amp;rsquo;ll maybe notice that the &lt;code&gt;:id&lt;/code&gt; part only matches numbers (and not characters).&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;Router::connect(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/{:controller}/{:action}/{:id:&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;9&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;]&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;+}.{:type}&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;id&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;null));&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;Router::connect(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/{:controller}/{:action}/{:id:&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;9&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;]&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;+}&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;Router::connect(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/{:controller}/{:action}/{:args}&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;With this setup a call to &lt;code&gt;$this-&amp;gt;html-&amp;gt;link()&lt;/code&gt; with an MongoDB-ObjectID set as &lt;code&gt;id&lt;/code&gt; won&amp;rsquo;t work because the router is not able to find a matching route (this is called reverse routing). The solution to this &amp;ldquo;problem&amp;rdquo; is, that we need to modify the &lt;code&gt;:id&lt;/code&gt;-part of the &lt;code&gt;Router::connect&lt;/code&gt;-calls. Replace your default routes with the following code:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;Router::connect(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/{:controller}/{:action}/{:id:&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;9&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;a&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;-f&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;]&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;{24}}.{:type}&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;id&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;null));&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;Router::connect(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/{:controller}/{:action}/{:id:&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;9&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;a&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;-f&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;]&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;{24}}&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;Router::connect(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/{:controller}/{:action}/{:args}&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now everything should work as expected with li3 and MongoDB ObjectIDs. A final note for the interested reader: if you leave out the &lt;code&gt;{24}&lt;/code&gt;-quantifier, then a route like &lt;code&gt;/posts/add&lt;/code&gt; won&amp;rsquo;t work because &lt;code&gt;add&lt;/code&gt; would also be a valid &lt;code&gt;id&lt;/code&gt; to the router.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

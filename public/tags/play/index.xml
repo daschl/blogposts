@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Play on daschl writes. sometimes.</title>
+    <link>http://nitschinger.at/tags/play/</link>
+    <description>Recent content in Play on daschl writes. sometimes.</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 17 Jul 2012 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://nitschinger.at/tags/play/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>A Real-Time chat with Play, Java and Couchbase - Part 1</title>
+      <link>http://nitschinger.at/A-Real-Time-chat-with-Play-Java-and-Couchbase-Part-1/</link>
+      <pubDate>Tue, 17 Jul 2012 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/A-Real-Time-chat-with-Play-Java-and-Couchbase-Part-1/</guid>
+      <description>
+
+&lt;h2 id=&#34;introduction:4ac8fdf5a97cdd95577718a445e97b6e&#34;&gt;Introduction&lt;/h2&gt;
+
+&lt;p&gt;I&amp;rsquo;ve been mostly blogging about PHP and &lt;a href=&#34;http://lithify.me&#34;&gt;Lithium&lt;/a&gt;, but recently I&amp;rsquo;ve also been looking into a very promising framework on the JVM - the &lt;a href=&#34;http://www.playframework.org/&#34;&gt;play! framework&lt;/a&gt;. The current version (2.0) brings lots of enhancements and features and is (at least to me) the first framework that really boosts developer productivity on the JVM (and that I would work with in my free time).&lt;/p&gt;
+
+&lt;p&gt;In this project, we&amp;rsquo;ll develop a chat application (called &lt;code&gt;couchplay&lt;/code&gt;) that allows people to login with a username and then talk to others in real-time. We&amp;rsquo;ll make use of the built-in &lt;a href=&#34;http://en.wikipedia.org/wiki/Comet_%28programming%29&#34;&gt;Comet&lt;/a&gt; functionality and also work with various other aspects of the whole stack. Our application will be powered by &lt;a href=&#34;http://www.couchbase.com/&#34;&gt;Couchbase&lt;/a&gt;, a very fast and flexible NoSQL database that is exactly suited for an application like this.&lt;/p&gt;
+
+&lt;p&gt;Note that this tutorial requires a reasonable amount of Java knowledge. Play! itself is mostly written in &lt;a href=&#34;http://www.scala-lang.org/&#34;&gt;Scala&lt;/a&gt; (and uses it for its templates), but I think it should be easy to grasp - at least for the part we&amp;rsquo;ll cover here.&lt;/p&gt;
+
+&lt;p&gt;I&amp;rsquo;ve also added the code to a &lt;a href=&#34;https://github.com/daschl/couchplay/&#34;&gt;repository&lt;/a&gt; on GitHub for your convenience. You can find a tag for every post I&amp;rsquo;ll publish so you can just clone the repository and checkout the appropriate tag to follow along.&lt;/p&gt;
+
+&lt;h2 id=&#34;about-the-stack:4ac8fdf5a97cdd95577718a445e97b6e&#34;&gt;About the stack&lt;/h2&gt;
+
+&lt;p&gt;Our language of choice will be Java. I first thought about writing it in Scala, but then I realized that with Java I could attract a larger group of readers. Also, I did most of my past explorations in Scala, so this is a great opportunity for me to use the framework from the Java-side as well. The good thing is that the framework allows you to use both languages in parallel, so you can start out with one and then evolve if you need to.&lt;/p&gt;
+
+&lt;p&gt;As I said, the play! framework is mostly written in Scala. As a result, the default template engine requires a bit of Scala knowledge, but for our examples here the concepts should not be too hard to learn.  If you come from a mostly servlet-oriented background I predict you a very refreshing look on how web applications can be built also (it is built on top of &lt;a href=&#34;http://netty.io/&#34;&gt;netty&lt;/a&gt; and &lt;a href=&#34;http://akka.io/&#34;&gt;akka&lt;/a&gt;). Once you get the hang of it, you think twice about going back. If you don&amp;rsquo;t believe me now, just follow along.&lt;/p&gt;
+
+&lt;p&gt;The framework provides support for relational databases out of the box, but to make things more interesting we&amp;rsquo;re going to use a different database. Couchbase is a high-performant and flexible &amp;ldquo;NoSQL&amp;rdquo; database that is mostly used in real-time analytics, session stores and in general where you need sub-millisecond response times. At the end of the blog series you should have a good idea how you can use it for your own projects. Note that I also wrote a blog post on getting started with Couchbase on either &lt;a href=&#34;http://nitschinger.at/Getting-Started-with-Couchbase-and-PHP&#34;&gt;PHP&lt;/a&gt; and &lt;a href=&#34;http://nitschinger.at/Accessing-Couchbase-from-Scala&#34;&gt;Scala&lt;/a&gt;, so you might want to check them out. For this tutorial, we&amp;rsquo;re going to use the &lt;a href=&#34;http://www.couchbase.com/develop/java/next&#34;&gt;Couchbase Java SDK&lt;/a&gt;, which has everything built-in that we need.&lt;/p&gt;
+
+&lt;p&gt;From here on I assume that you have Java 1.6 or later installed and included it in your &lt;code&gt;PATH&lt;/code&gt;. If you haven&amp;rsquo;t, there should be plenty of material available on the internet.&lt;/p&gt;
+
+&lt;h2 id=&#34;installing-couchbase:4ac8fdf5a97cdd95577718a445e97b6e&#34;&gt;Installing Couchbase&lt;/h2&gt;
+
+&lt;p&gt;Before we start digging into the framework, we need to stop for a second and install our backend database.&lt;/p&gt;
+
+&lt;p&gt;Depending on your operating system, you have different choices available. Couchbase provides installers for Windows and Mac OS X, for Linux-based systems I&amp;rsquo;d recommend the package-manager installations. You can find all packages &lt;a href=&#34;http://www.couchbase.com/download&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;We are going to use Couchbase 2.0, which is currently in developer preview (at the time of writing). Just download it, it is very stable and a beta release will be released soon. We are going to use this version because it includes a mechanism called &amp;ldquo;views&amp;rdquo; that allows us to query our data in a very flexible manner (if you&amp;rsquo;re familiar with the &lt;a href=&#34;http://en.wikipedia.org/wiki/MapReduce&#34;&gt;Map/Reduce-Pattern&lt;/a&gt;, this is the method we&amp;rsquo;re going to use here). We&amp;rsquo;ll cover all of those aspects in a later post.&lt;/p&gt;
+
+&lt;p&gt;After the installation has finished, open your browser, head over to &lt;code&gt;http://localhost:8091&lt;/code&gt; and click through the setup wizard. You can go with the default settings, just make sure to give it a reasonable amount of RAM. If you run into trouble, the official &lt;a href=&#34;http://www.couchbase.com/docs/couchbase-manual-2.0/couchbase-getting-started-install.html&#34;&gt;docs&lt;/a&gt; are there to help you out.&lt;/p&gt;
+
+&lt;h2 id=&#34;setting-up-our-play-project:4ac8fdf5a97cdd95577718a445e97b6e&#34;&gt;Setting up our play! project&lt;/h2&gt;
+
+&lt;p&gt;Now that we have our database installed, it&amp;rsquo;s time to set up the actual play! project. Go to &lt;a href=&#34;http://www.playframework.org/&#34;&gt;their official website&lt;/a&gt; and download the current stable release (2.0.2 at the time of writing).&lt;/p&gt;
+
+&lt;p&gt;After the download has finished, unpack the zipfile. Copy it over to a place where it doesn&amp;rsquo;t get accidentally deleted and add it to your &lt;code&gt;PATH&lt;/code&gt;. Adding it to the &lt;code&gt;PATH&lt;/code&gt; here is pure convenience as I don&amp;rsquo;t like to remember the full path everytime I need to run it.&lt;/p&gt;
+
+&lt;p&gt;Now we can use the &lt;code&gt;play new&lt;/code&gt; command to setup a new project. I&amp;rsquo;m using Ubuntu Linux here, but the command also works the same on Windows (I haven&amp;rsquo;t tried it on a Mac but it shouldn&amp;rsquo;t be much different).&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;michael@daschl:~$ play new couchplay
+    _            _
+_ __ | | __ _ _  _| |
+| &amp;#39;_ \| |/ _&amp;#39; | || |_|
+|  __/|_|\____|\__ (_)
+|_|            |__/
+
+play! 2.0.2, http://www.playframework.org
+
+The new application will be created in /home/michael/couchplay
+
+What is the application name?
+&amp;gt; couchplay
+
+Which template do you want to use for this new application?
+
+1 - Create a simple Scala application
+2 - Create a simple Java application
+3 - Create an empty project
+
+&amp;gt; 2
+
+OK, application couchplay is created.
+
+Have fun!
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The application generator asks you for an application name and if you want to either generate a Scala or Java application. You don&amp;rsquo;t have to choose the language for your final application here, it only wants to know in what language it should generats the sample controller for example.&lt;/p&gt;
+
+&lt;p&gt;To make sure it&amp;rsquo;s up and running, change into the directory and run the &lt;code&gt;play&lt;/code&gt; command again. This should bring up the play console. For now, just type &lt;code&gt;run&lt;/code&gt; and point your browser to &lt;code&gt;http://localhost:9000&lt;/code&gt;. You should see the default welcome page of the framework.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;michael@daschl:~/couchplay$ play
+Getting org.scala-sbt sbt_2.9.1 0.11.3 ...
+:: retrieving :: org.scala-sbt#boot-app
+    confs: [default]
+    37 artifacts copied, 0 already retrieved (7245kB/44ms)
+[info] Loading project definition from /home/michael/couchplay/project
+[info] Set current project to couchplay (in build file:/home/michael/couchplay/)
+    _            _
+_ __ | | __ _ _  _| |
+| &amp;#39;_ \| |/ _&amp;#39; | || |_|
+|  __/|_|\____|\__ (_)
+|_|            |__/
+
+play! 2.0.2, http://www.playframework.org
+
+&amp;gt; Type &amp;quot;help play&amp;quot; or &amp;quot;license&amp;quot; for more information.
+&amp;gt; Type &amp;quot;exit&amp;quot; or use Ctrl+D to leave this console.
+
+[couchplay] $ run
+
+[info] Updating {file:/home/michael/couchplay/}couchplay...
+[info] Resolving org.hibernate.javax.persistence#hibernate-jpa-2.0-api;1.0.1.Fin                                                                                [info] Done updating.
+--- (Running the application from SBT, auto-reloading is enabled) ---
+
+[info] play - Listening for HTTP on port 9000...
+
+(Server started, use Ctrl+D to stop and go back to the console...)
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;As you can see, the initial dependencies are resolved and loaded automatically. If you already have something running on port &lt;code&gt;9000&lt;/code&gt; (like &lt;a href=&#34;http://php-fpm.org/&#34;&gt;php-fpm&lt;/a&gt;), then you can use the &lt;code&gt;run [PORTNUM]&lt;/code&gt; command to specify a different port. There are lots of other possibilities here and we&amp;rsquo;ll cover some of them as we progress further. If you&amp;rsquo;re curious, you can type &lt;code&gt;help&lt;/code&gt; to see the available commands.&lt;/p&gt;
+
+&lt;p&gt;You may experience a large response time (a few seconds) when you open up the page for the first time. This is because in development mode, play! compiles everything for you on the fly. If you don&amp;rsquo;t change anything, the next reload should be pretty fast. Since we only modify short bits of code between every refresh, the compiling times should not be an issue. In production, everything is precompiled anyway. If you look on your console, you can see that the files have been compiled automatically for you:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;[info] Compiling 4 Scala sources and 2 Java sources to /home/michael/couchplay/target/scala-2.9.1/classes...
+[info] play - Application started (Dev)
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;One last tip here: if you use &lt;code&gt;~run&lt;/code&gt; instead of &lt;code&gt;run&lt;/code&gt;, the framework will detect code changes immediately (when you save your file) and compile it on the fly. If you use &lt;code&gt;run&lt;/code&gt;, it will start compiling when you reload the page. As a result, when using &lt;code&gt;~run&lt;/code&gt; the compile times should be even less noticable since you also need some time to switch back and forth between your IDE and the browser. Also keep in mind that all this is handled for you and you don&amp;rsquo;t need to setup tomcat in your IDE and make sure everything is pushed correctly. If you are like me and have spent hours and hours of configuring eclipse and tomcat, this is pretty awesome news. You can of course still use Eclipse (or any other IDE), but you can concentrate on writing code, the rest will be done for you in the background.&lt;/p&gt;
+
+&lt;h2 id=&#34;connecting-to-couchbase:4ac8fdf5a97cdd95577718a445e97b6e&#34;&gt;Connecting to Couchbase&lt;/h2&gt;
+
+&lt;p&gt;Currently, our application doesn&amp;rsquo;t know about our backend database. Since play! doesn&amp;rsquo;t have built-in support for Couchbase, we&amp;rsquo;re going to use the Couchbase Java SDK to fill the gap.&lt;/p&gt;
+
+&lt;p&gt;Couchbase thankfully provides a Maven repository, so we just need to define and load the dependency. Head over to the &lt;code&gt;project/Build.scala&lt;/code&gt; file and add the following:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;val appDependencies = Seq(
+    &amp;quot;couchbase&amp;quot; % &amp;quot;couchbase-client&amp;quot; % &amp;quot;1.1-dp&amp;quot;
+)
+
+val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
+    resolvers += &amp;quot;Couchbase Maven Repository&amp;quot; at &amp;quot;http://files.couchbase.com/maven2&amp;quot;
+)
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Back in the play console, hit &lt;code&gt;ctrl-d&lt;/code&gt; to stop the server and type &lt;code&gt;reload&lt;/code&gt; and &lt;code&gt;update&lt;/code&gt; to fetch the new dependencies. If everything finished without errors, type &amp;ldquo;~run&amp;rdquo; again.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;[couchplay] $ reload
+[info] Loading project definition from /home/michael/couchplay/project
+[info] Set current project to couchplay (in build file:/home/michael/couchplay/)
+[couchplay] $ update
+[info] Updating {file:/home/michael/couchplay/}couchplay...
+[info] Resolving org.hibernate.javax.persistence#hibernate-jpa-2.0-api;1.0.1.Fin                                                                                [info] downloading http://files.couchbase.com/maven2/couchbase/couchbase-client/1.1-dp/couchbase-client-1.1-dp.jar ...
+[info]  [SUCCESSFUL ] couchbase#couchbase-client;1.1-dp!couchbase-client.jar (1821ms)
+[info] downloading http://repo.typesafe.com/typesafe/releases/org/jboss/netty/netty/3.2.0.Final/netty-3.2.0.Final.jar ...
+[info]  [SUCCESSFUL ] org.jboss.netty#netty;3.2.0.Final!netty.jar(bundle) (3661ms)
+[info] downloading http://repo.typesafe.com/typesafe/releases/org/codehaus/jettison/jettison/1.1/jettison-1.1.jar ...
+[info]  [SUCCESSFUL ] org.codehaus.jettison#jettison;1.1!jettison.jar(bundle) (828ms)
+[info] downloading http://repo.typesafe.com/typesafe/releases/commons-codec/commons-codec/1.5/commons-codec-1.5.jar ...
+[info]  [SUCCESSFUL ] commons-codec#commons-codec;1.5!commons-codec.jar (835ms)
+[info] downloading http://repo.typesafe.com/typesafe/releases/spy/spymemcached/2.8.1/spymemcached-2.8.1.jar ...
+[info]  [SUCCESSFUL ] spy#spymemcached;2.8.1!spymemcached.jar (1446ms)
+[info] downloading http://repo.typesafe.com/typesafe/releases/org/apache/httpcomponents/httpcore/4.1.1/httpcore-4.1.1.jar ...
+[info]  [SUCCESSFUL ] org.apache.httpcomponents#httpcore;4.1.1!httpcore.jar (1059ms)
+[info] downloading http://repo.typesafe.com/typesafe/releases/org/apache/httpcomponents/httpcore-nio/4.1.1/httpcore-nio-4.1.1.jar ...
+[info]  [SUCCESSFUL ] org.apache.httpcomponents#httpcore-nio;4.1.1!httpcore-nio.jar (1062ms)
+[info] downloading http://repo.typesafe.com/typesafe/releases/stax/stax-api/1.0.1/stax-api-1.0.1.jar ...
+[info]  [SUCCESSFUL ] stax#stax-api;1.0.1!stax-api.jar (1556ms)
+[info] Done updating.
+[success] Total time: 39 s, completed Jul 7, 2012 9:25:52 AM
+[couchplay] $ ~run
+
+--- (Running the application from SBT, auto-reloading is enabled) ---
+
+[info] play - Listening for HTTP on port 9000...
+
+(Server started, use Ctrl+D to stop and go back to the console...)
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;I&amp;rsquo;m quite sure you wonder about the strange syntax we&amp;rsquo;ve been using to define our dependency. This is actually Scala code, since play! uses the awesome &lt;a href=&#34;http://www.scala-sbt.org/&#34;&gt;sbt&lt;/a&gt; to manage its dependencies (the play console also builds upon it). There is a good introduction &lt;a href=&#34;http://www.youtube.com/watch?v=V2rl62CZPVc&#34;&gt;video&lt;/a&gt; available if you want to learn more.&lt;/p&gt;
+
+&lt;p&gt;The dependency is now in place, but we also need to connect to the database when the application starts and disconnect from it when it stops. If we&amp;rsquo;d use the databases supported by the framework, this would be handled for us (but that&amp;rsquo;s half the fun, right?). Since this is not the case, we need to &amp;ldquo;hook&amp;rdquo; into some kind of &lt;code&gt;start&lt;/code&gt; and &lt;code&gt;stop&lt;/code&gt; events.&lt;/p&gt;
+
+&lt;p&gt;Play! provides us with something called the &lt;a href=&#34;http://www.playframework.org/documentation/2.0.2/JavaGlobal&#34;&gt;application Global object&lt;/a&gt; that has methods we can override. Create a new file called &lt;code&gt;Global.java&lt;/code&gt; inside the &lt;code&gt;app&lt;/code&gt; directory and insert the following.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;play.*&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;datasources.Couchbase&lt;/span&gt;;
+
+&lt;span style=&#34;color: #000000&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;Global&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;extends&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;GlobalSettings&lt;/span&gt; {
+
+    &lt;span style=&#34;color: #000000&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;onStart&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;Application&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;app&lt;/span&gt;) {
+        &lt;span style=&#34;color: #000000&#34;&gt;Logger.info&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Application started&amp;quot;&lt;/span&gt;);
+        &lt;span style=&#34;color: #000000&#34;&gt;Couchbase.connect&lt;/span&gt;();
+    }
+
+    &lt;span style=&#34;color: #000000&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;void&lt;/span&gt;  &lt;span style=&#34;color: #000000&#34;&gt;onStop&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;Application&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;app&lt;/span&gt;) {
+        &lt;span style=&#34;color: #000000&#34;&gt;Logger.info&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Application stopped&amp;quot;&lt;/span&gt;);
+        &lt;span style=&#34;color: #000000&#34;&gt;Couchbase.disconnect&lt;/span&gt;();
+    }
+
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We override the &lt;code&gt;onStart&lt;/code&gt; and &lt;code&gt;onStop&lt;/code&gt; methods to place our custom connect logic in there (and do some logging as well). We make use of a &lt;code&gt;Couchabase&lt;/code&gt; connection class to abstract our connection logic, so we&amp;rsquo;d better write that one too. Create a new file called &lt;code&gt;Couchbase.java&lt;/code&gt; inside the &lt;code&gt;app/datasources&lt;/code&gt; directory (which you also need to create).&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;package&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;datasources&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;java.net.URI&lt;/span&gt;;
+&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;java.util.LinkedList&lt;/span&gt;;
+&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;java.util.List&lt;/span&gt;;
+&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;java.io.IOException&lt;/span&gt;;
+&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;java.util.concurrent.TimeUnit&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;play.*&lt;/span&gt;;
+&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;com.couchbase.client.CouchbaseClient&lt;/span&gt;;
+
+&lt;span style=&#34;color: #000000&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;The&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;`Couchbase`&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;acts&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;a&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;simple&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;connection&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;manager&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;the&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;`CouchbaseClient`&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;and&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;makes&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;sure&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;that&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;only&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;one&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;connection&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;is&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;alive&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;throughout&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;the&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;application.&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;You&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;may&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;want&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;to&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;extend&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;and&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;harden&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;this&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;implementation&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;a&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;production&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;environment.&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;*/&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;final&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;Couchbase&lt;/span&gt; {
+
+    &lt;span style=&#34;color: #000000&#34;&gt;/**&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Holds&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;the&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;actual&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;`CouchbaseClient`&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;*/&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;private&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;CouchbaseClient&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;client&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;null&lt;/span&gt;;
+
+    &lt;span style=&#34;color: #000000&#34;&gt;/**&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Connects&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;to&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Couchbase&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;based&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;on&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;the&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;configuration&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;settings.&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;If&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;the&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;database&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;is&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;not&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;reachable&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;an&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;error&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;message&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;is&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;written&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;and&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;the&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;application&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;exits.&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;*/&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;boolean&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;connect&lt;/span&gt;() {
+        &lt;span style=&#34;color: #000000&#34;&gt;String&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hostname&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Play.application&lt;/span&gt;()&lt;span style=&#34;color: #000000&#34;&gt;.configuration&lt;/span&gt;()&lt;span style=&#34;color: #000000&#34;&gt;.getString&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;couchbase.hostname&amp;quot;&lt;/span&gt;);
+        &lt;span style=&#34;color: #000000&#34;&gt;String&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;port&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Play.application&lt;/span&gt;()&lt;span style=&#34;color: #000000&#34;&gt;.configuration&lt;/span&gt;()&lt;span style=&#34;color: #000000&#34;&gt;.getString&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;couchbase.port&amp;quot;&lt;/span&gt;);
+        &lt;span style=&#34;color: #000000&#34;&gt;String&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;bucket&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Play.application&lt;/span&gt;()&lt;span style=&#34;color: #000000&#34;&gt;.configuration&lt;/span&gt;()&lt;span style=&#34;color: #000000&#34;&gt;.getString&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;couchbase.bucket&amp;quot;&lt;/span&gt;);
+        &lt;span style=&#34;color: #000000&#34;&gt;String&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;password&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Play.application&lt;/span&gt;()&lt;span style=&#34;color: #000000&#34;&gt;.configuration&lt;/span&gt;()&lt;span style=&#34;color: #000000&#34;&gt;.getString&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;couchbase.password&amp;quot;&lt;/span&gt;);
+
+        &lt;span style=&#34;color: #000000&#34;&gt;List&amp;lt;URI&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;uris&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;LinkedList&amp;lt;URI&amp;gt;&lt;/span&gt;();
+        &lt;span style=&#34;color: #000000&#34;&gt;uris.add&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;URI.create&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;http://&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;+hostname+&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;:&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;+port+&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;/pools&amp;quot;&lt;/span&gt;));
+
+
+        &lt;span style=&#34;color: #A90D91&#34;&gt;try&lt;/span&gt; {
+            &lt;span style=&#34;color: #000000&#34;&gt;client&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;CouchbaseClient&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;uris&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;bucket&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;password&lt;/span&gt;);
+        } &lt;span style=&#34;color: #000000&#34;&gt;catch&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;IOException&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;) {
+            &lt;span style=&#34;color: #000000&#34;&gt;Logger.error&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Error connection to Couchbase: &amp;quot;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;e.getMessage&lt;/span&gt;());
+            &lt;span style=&#34;color: #000000&#34;&gt;System.exit&lt;/span&gt;(&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;);
+        }
+
+        &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;true&lt;/span&gt;;
+    }
+
+    &lt;span style=&#34;color: #000000&#34;&gt;/**&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Disconnect&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;from&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Couchbase.&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;*/&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;boolean&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;disconnect&lt;/span&gt;() {
+        &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;client&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;null&lt;/span&gt;) {
+            &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;false&lt;/span&gt;;
+        }
+
+        &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;client.shutdown&lt;/span&gt;(&lt;span style=&#34;color: #1C01CE&#34;&gt;3&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;TimeUnit.SECONDS&lt;/span&gt;);
+    }
+
+    &lt;span style=&#34;color: #000000&#34;&gt;/**&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Returns&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;the&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;actual&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;`CouchbaseClient`&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;connection&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;object&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;If&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;no&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;connection&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;is&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;established&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;yet&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;it&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;tries&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;to&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;connect.&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Note&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;that&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;this&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;is&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;just&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;place&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;pure&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;convenience&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;make&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;sure&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;to&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;connect&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;explicitly.&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;*/&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;CouchbaseClient&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;getConnection&lt;/span&gt;() {
+        &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;client&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;null&lt;/span&gt;) {
+            &lt;span style=&#34;color: #000000&#34;&gt;connect&lt;/span&gt;();
+        }
+
+        &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;client&lt;/span&gt;;
+    }
+
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We basically define a &lt;code&gt;connect&lt;/code&gt; and a &lt;code&gt;disconnect&lt;/code&gt; method, which get called from our &lt;code&gt;Gobal.java&lt;/code&gt; class. Inside the &lt;code&gt;connect&lt;/code&gt; method we read configuration settings (more on that shortly) and then try to open the Couchbase connection. The &lt;code&gt;disconnect&lt;/code&gt; method waits 3 seconds to finish any queued operations and then disconnects. Also, we provide a &lt;code&gt;getConnection()&lt;/code&gt; method that returns the actual instance of the client object (which we&amp;rsquo;ll use later in our models).&lt;/p&gt;
+
+&lt;p&gt;It is always a good idea to just open one connection for the whole lifecycle instead of opening a new connection every time a request comes in. This removes unneeded handshake-latency and should therefore improve the overall performance of the application.&lt;/p&gt;
+
+&lt;p&gt;You may have noticed the various &lt;code&gt;Play.application().configuration().getString();&lt;/code&gt; calls. With these method calls you can read the values from your &lt;code&gt;conf/application.conf&lt;/code&gt; configuration file. By defining your connection settings there instead of the actual implementation, you can easily swap the settings if you deploy your application into production. More on the configuration file can be found &lt;a href=&#34;http://www.playframework.org/documentation/2.0.2/Configuration&#34;&gt;here&lt;/a&gt;. To define the settings we need, open your &lt;code&gt;application.conf&lt;/code&gt; file and add the following to the end (or somewhere in between):&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;# Couchbase configuration
+# ~~~~~
+couchbase.hostname=&amp;quot;localhost&amp;quot;
+couchbase.port=8091
+couchbase.bucket=&amp;quot;default&amp;quot;
+couchbase.password=&amp;quot;&amp;quot;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now we have everything in place to configure the settings and connect to the database. If you start the server again and load the page for the first time, you can see the debug output of the Couchbase SDK:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;[&lt;span style=&#34;color: #000000&#34;&gt;info&lt;/span&gt;] &lt;span style=&#34;color: #000000&#34;&gt;application&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Application&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;started&lt;/span&gt;
+&lt;span style=&#34;color: #1C01CE&#34;&gt;2012&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;07&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;17&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;19&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;12&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;43.788&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;INFO&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;com&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;couchbase&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;client&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;CouchbaseConnection&lt;/span&gt;:  &lt;span style=&#34;color: #000000&#34;&gt;Added&lt;/span&gt; {&lt;span style=&#34;color: #000000&#34;&gt;QA&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;sa=/&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;127.0.0.1&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;11210&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;#Rops=&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;#Wops=&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;#iq=&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topRop=null&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topWop=null&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;toWrite=&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;interested=&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;} &lt;span style=&#34;color: #000000&#34;&gt;to&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;connect&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;queue&lt;/span&gt;
+&lt;span style=&#34;color: #1C01CE&#34;&gt;2012&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;07&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;17&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;19&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;12&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;43.789&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;INFO&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;com&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;couchbase&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;client&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;CouchbaseClient&lt;/span&gt;:  &lt;span style=&#34;color: #000000&#34;&gt;viewmode&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;property&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;isn&amp;#39;t&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;defined&lt;/span&gt;. &lt;span style=&#34;color: #000000&#34;&gt;Setting&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;viewmode&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;to&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;production&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;mode&lt;/span&gt;
+&lt;span style=&#34;color: #1C01CE&#34;&gt;2012&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;07&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;17&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;19&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;12&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;43.790&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;INFO&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;com&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;couchbase&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;client&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;ViewConnection&lt;/span&gt;:  &lt;span style=&#34;color: #000000&#34;&gt;Added&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;localhost/&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;127.0.0.1&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;8092&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;to&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;connect&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;queue&lt;/span&gt;
+&lt;span style=&#34;color: #1C01CE&#34;&gt;2012&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;07&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;17&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;19&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;12&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;43.794&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;INFO&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;com&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;couchbase&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;client&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;CouchbaseConnection&lt;/span&gt;:  &lt;span style=&#34;color: #000000&#34;&gt;Connection&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;state&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;changed&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;sun&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;nio&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;ch&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;SelectionKeyImpl&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;@1&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;d179fb&lt;/span&gt;
+[&lt;span style=&#34;color: #000000&#34;&gt;info&lt;/span&gt;] &lt;span style=&#34;color: #000000&#34;&gt;play&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Application&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;started&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;Dev&lt;/span&gt;)
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Note that since we haven&amp;rsquo;t defined a &lt;code&gt;viewmode&lt;/code&gt; setting, Couchbase assumes you&amp;rsquo;re running in production mode. You can change this setting, but I haven&amp;rsquo;t done this here (we&amp;rsquo;ll push our views into production before we use them inside the application).&lt;/p&gt;
+
+&lt;p&gt;If you press &lt;code&gt;ctrl+d&lt;/code&gt; to stop the application, you can see that Couchbase correctly closes the connection:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;[info] application - Application stopped
+2012-07-17 19:24:52.216 INFO com.couchbase.client.CouchbaseConnection:  Shut down Couchbase client
+2012-07-17 19:24:52.226 INFO com.couchbase.client.ViewConnection:  Shut down Couchbase client
+2012-07-17 19:24:52.226 INFO com.couchbase.client.ViewNode:  Couchbase I/O reactor terminated
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h2 id=&#34;wrapping-up:4ac8fdf5a97cdd95577718a445e97b6e&#34;&gt;Wrapping up&lt;/h2&gt;
+
+&lt;p&gt;This post hopefully gave you an overview of what we&amp;rsquo;re going to implement, namely a real-time web chat application. We&amp;rsquo;re going to use Java, the play! framework and Couchbase. Also we&amp;rsquo;ve set up the database, the project itself and connected both. In the next post we&amp;rsquo;ll build on this foundation and add session management to let users sign in and out.&lt;/p&gt;
+
+&lt;p&gt;As always, comment below if you have any thoughts on this!&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

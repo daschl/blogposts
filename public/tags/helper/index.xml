@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Helper on daschl writes. sometimes.</title>
+    <link>http://nitschinger.at/tags/helper/</link>
+    <description>Recent content in Helper on daschl writes. sometimes.</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 08 Jun 2011 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://nitschinger.at/tags/helper/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Securing Lithium Forms</title>
+      <link>http://nitschinger.at/Securing-Lithium-Forms/</link>
+      <pubDate>Wed, 08 Jun 2011 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/Securing-Lithium-Forms/</guid>
+      <description>&lt;p&gt;CSRF (Cross-Site-Request-Forgery) attacks work by sending arbitary (form) requests from a victim. Normally, the receiving site (in our case the &lt;code&gt;Controller&lt;/code&gt; who processes the form data) doesn&amp;rsquo;t know where the data comes from. The CSRF protection in Lithium aims to solve this problem in an elegant and secure way. You can read more about those attacks
+&lt;a href=&#34;http://shiflett.org/articles/cross-site-request-forgeries&#34;&gt;here&lt;/a&gt;. Note that
+you&amp;rsquo;ll need to clone the latest &lt;code&gt;master&lt;/code&gt; branch of Lithium if you want to
+try it out now.&lt;/p&gt;
+
+&lt;p&gt;CSRF protection in Lithium is twofold. First, you need to add a unique token to your forms and then check in your controller if the sent token is correct. As Lithium stores the generated &lt;code&gt;sessionKey&lt;/code&gt; in your session, make sure that you have session support enabled. If you don&amp;rsquo;t activate sessions, the &lt;code&gt;check&lt;/code&gt; method fails silently (which we&amp;rsquo;llsee later on). So uncomment the following line in &lt;code&gt;app/config/bootstrap.php&lt;/code&gt; (if you haven&amp;rsquo;t already):&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #177500&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #177500&#34;&gt; * This file contains configuration for session (and/or cookie) storage, and user or web service&lt;/span&gt;
+&lt;span style=&#34;color: #177500&#34;&gt; * authentication.&lt;/span&gt;
+&lt;span style=&#34;color: #177500&#34;&gt; *&lt;/span&gt;
+&lt;span style=&#34;color: #177500&#34;&gt; */&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;//&lt;/span&gt;require __DIR__ &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/bootstrap/session.php&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Let&amp;rsquo;s look at the view layer first with a very simple form:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;form&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;create&lt;/span&gt;(); &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;security&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;requestToken&lt;/span&gt;(); &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;form&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;field&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;title&amp;#39;&lt;/span&gt;); &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;form&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;submit&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;Submit&amp;#39;&lt;/span&gt;); &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;form&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;end&lt;/span&gt;(); &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Thanks to lazy loading, we don&amp;rsquo;t have to do anything special to
+include our new &lt;code&gt;Security&lt;/code&gt; helper. The helper provides the
+&lt;code&gt;requestToken()&lt;/code&gt; method that generates a unique token (a salted hash) and renders it in a hidden field. If you inspect your form, you should see
+something like this (note that i&amp;rsquo;ve shortened the value attribute for better
+readability):&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&amp;lt;input type=&amp;quot;hidden&amp;quot; value=&amp;quot;$2a$1...Ay62/W&amp;quot; name=&amp;quot;security[token]&amp;quot;&amp;gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now that we&amp;rsquo;ve adapted our form, we can work with it in our controller.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;namespace&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;app\controllers&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;lithium\security\validation\RequestToken&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;TasksController&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;extends&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;\lithium\action\Controller&lt;/span&gt; {
+
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;add&lt;/span&gt;() {
+        &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;request&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;data&lt;/span&gt;) {
+            &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;!RequestToken::&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;check&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;request&lt;/span&gt;)) {
+                &lt;span style=&#34;color: #000000&#34;&gt;RequestToken::&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;get&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;regenerate&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;));
+            } &lt;span style=&#34;color: #A90D91&#34;&gt;else&lt;/span&gt; {
+                &lt;span style=&#34;color: #177500&#34;&gt;// work with the request as usual&lt;/span&gt;
+            }
+        }
+    }
+
+}
+
+&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;There are many ways how to handle security checks, so the code snippet above shows only one of them. Let&amp;rsquo;s tackle the important parts one by one.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;use lithium\security\validation\RequestToken;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;You&amp;rsquo;ll need to import the &lt;code&gt;RequestToken&lt;/code&gt; class into your namespace, as it is the responsible class for dealing with the tokens.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;RequestToken::check($this-&amp;gt;request);&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The &lt;code&gt;check&lt;/code&gt; method reads the &lt;code&gt;sessionKey&lt;/code&gt; from your session and checks if it is identical to the requested one. You can also provide the key directly:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;request-&amp;gt;data&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;security&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;][&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;token&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;]&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;;&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;RequestToken::check($key);&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now you can modify the key manually (set it to &lt;code&gt;foobar&lt;/code&gt; or so) and then see if the &lt;code&gt;check&lt;/code&gt; method fails. How you may handle security errors depends heavily on your application. In our example, we regenerate the token with:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;RequestToken::get(array(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;regenerate&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;true));&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If you go down this route, you&amp;rsquo;ll also have to tell the user what happend in your view. A more secure route would be to raise an exception (or render a error template) and log what happened. In normal production environments this is clearly a exceptional behavior and therefore should be treated this way. If you need this more often in your controller, you can also move the checks to the &lt;code&gt;_init()&lt;/code&gt; method.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;TasksController&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;extends&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;\lithium\action\Controller&lt;/span&gt; {
+
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;_init&lt;/span&gt;() {
+        &lt;span style=&#34;color: #000000&#34;&gt;parent::_init&lt;/span&gt;();
+
+        &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;request-&amp;gt;data&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;!RequestToken::check&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;request&lt;/span&gt;)) {
+            &lt;span style=&#34;color: #000000&#34;&gt;$host&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;request-&amp;gt;env&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;HTTP_HOST&amp;#39;&lt;/span&gt;);
+            &lt;span style=&#34;color: #000000&#34;&gt;Logger::error&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Possible CSRF attack from host $host&amp;quot;&lt;/span&gt;);
+            &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;redirect&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/&amp;#39;&lt;/span&gt;);
+        }
+    }
+
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;add&lt;/span&gt;() {
+        &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;request-&amp;gt;data&lt;/span&gt;) {
+                &lt;span style=&#34;color: #177500&#34;&gt;// save your data as usual&lt;/span&gt;
+        }
+    }
+
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This should give you a good starting point on how to work with the new
+CSRF protection mechanisms. As of today, there is only one major feature left (namely MongoDB relationships) until Lithium reaches the &amp;ldquo;big one&amp;rdquo; so stay tuned for more announcements in the next weeks!&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Write your own Helper with Lithium</title>
+      <link>http://nitschinger.at/Write-your-own-Helper-with-Lithium/</link>
+      <pubDate>Tue, 23 Nov 2010 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/Write-your-own-Helper-with-Lithium/</guid>
+      <description>&lt;p&gt;Lithium comes with two helpers out of the box. The Form-Helper and the Html-Helper. Both are great and help you to make your View-Code more flexible, maintainable and easier to read.&lt;/p&gt;
+
+&lt;p&gt;But what do you do when you need a functionality that they don&amp;rsquo;t provide? Right, you write your own. Let&amp;rsquo;s imagine you want to tell your blog-readers how many posts you have stored in your database. In our first iteration our code might look like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;We&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;have&lt;/span&gt; &lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;count&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$posts&lt;/span&gt;) &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;posts&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;stored&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;the&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;database&lt;/span&gt;.
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Looks great so far, but our code doesn&amp;rsquo;t cover the case when we have only one post stored. Let&amp;rsquo;s fix that:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;We&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;have&lt;/span&gt; &lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;count&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$posts&lt;/span&gt;) &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt; 
+&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;count&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$posts&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;)&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;posts&lt;/span&gt;
+&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;else&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;post&lt;/span&gt;
+&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;endif&lt;/span&gt;; &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;stored&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;the&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;database&lt;/span&gt;.
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This works, but looks ugly and makes our View more complicated and messy (leaving aside that the above code is a bit verbose). To fix that, we write a custom &lt;code&gt;Word-Helper&lt;/code&gt; that abstracts the count-stuff for our view.&lt;/p&gt;
+
+&lt;p&gt;Thankfully, the li3-developers thought about that and provide us with everything we need to get started. Lithium also automatically loads our helper if we want to access it. Let&amp;rsquo;s assume that we want to call the helper with &lt;code&gt;$this-&amp;gt;word-&amp;gt;pluralize(count($posts), &#39;post&#39;)&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;We all love tests, so let&amp;rsquo;s start with them first. We create a new &lt;code&gt;WordTest.php&lt;/code&gt; (in &lt;code&gt;app/tests/cases/extensions/helper&lt;/code&gt;) and add a some test cases.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;namespace&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;app\tests\cases\extensions\helper&lt;/span&gt;;
+&lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;app\extensions\helper\Word&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;WordTest&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;extends&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;\lithium\test\Unit&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;setUp&lt;/span&gt;() {
+        &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;word&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Word&lt;/span&gt;();
+    }
+
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;testPluralize&lt;/span&gt;() {
+        &lt;span style=&#34;color: #000000&#34;&gt;$singular&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;post&amp;#39;&lt;/span&gt;;
+
+        &lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;1 post&amp;#39;&lt;/span&gt;;
+        &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;assertEqual&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;word&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;pluralize&lt;/span&gt;(&lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$singular&lt;/span&gt;));
+
+        &lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;0 posts&amp;#39;&lt;/span&gt;;
+        &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;assertEqual&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;word&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;pluralize&lt;/span&gt;(&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$singular&lt;/span&gt;));
+
+        &lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;2 posts&amp;#39;&lt;/span&gt;;
+        &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;assertEqual&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;word&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;pluralize&lt;/span&gt;(&lt;span style=&#34;color: #1C01CE&#34;&gt;2&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$singular&lt;/span&gt;));
+    }
+}
+&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If we run the tests (&lt;code&gt;http://yourblog.com/test/app/tests/cases/extensions/helper/WordTest&lt;/code&gt;), they will fail (as expected). In the &lt;code&gt;setUp&lt;/code&gt;-method we try to instantiate the Word-Helper, but it doesn&amp;rsquo;t exist yet. The &lt;code&gt;testPluralize&lt;/code&gt;-method tests three different calls of our &lt;code&gt;Word::pluralize()&lt;/code&gt; Helper-Method. To make our tests go green, we finally create our &lt;code&gt;Word&lt;/code&gt;-Helper (in &lt;code&gt;app/extensions/helper/Word.php&lt;/code&gt;).&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;namespace&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;app\extensions\helper&lt;/span&gt;;
+&lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;lithium\util\Inflector&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;Word&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;extends&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;\lithium\template\Helper&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;pluralize&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$count&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$word&lt;/span&gt;) {      
+        &lt;span style=&#34;color: #000000&#34;&gt;$word&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;$count&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;?&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Inflector::&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;pluralize&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$word&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$word&lt;/span&gt;);
+        &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$count.&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot; &amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;.$word&lt;/span&gt;;
+    }
+}
+&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now re-run your tests - they should succeed. If they don&amp;rsquo;t, please check that your files are named correctly and you don&amp;rsquo;t have any typos in them.&lt;/p&gt;
+
+&lt;p&gt;Now it&amp;rsquo;s time to call our brand-new helper from our view. Thanks to the &lt;code&gt;autoloading&lt;/code&gt; feature, it&amp;rsquo;s dead easy:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;We&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;have&lt;/span&gt; &lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;word&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;pluralize&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;count&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$posts&lt;/span&gt;), &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;post&amp;#39;&lt;/span&gt;); &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;stored&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;the&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;database&lt;/span&gt;.
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;That&amp;rsquo;s it - you&amp;rsquo;ve just created your own View-Helper! If you have any questions or suggestions, feel free to comment below.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

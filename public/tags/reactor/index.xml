@@ -1,0 +1,317 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Reactor on daschl writes. sometimes.</title>
+    <link>http://nitschinger.at/tags/reactor/</link>
+    <description>Recent content in Reactor on daschl writes. sometimes.</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 13 Aug 2013 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://nitschinger.at/tags/reactor/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Using the Reactor Processor for High-Performance TCP</title>
+      <link>http://nitschinger.at/Using-the-Reactor-Processor-for-High-Performance-TCP/</link>
+      <pubDate>Tue, 13 Aug 2013 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/Using-the-Reactor-Processor-for-High-Performance-TCP/</guid>
+      <description>
+
+&lt;p&gt;First, a disclaimer: the all-new &lt;a href=&#34;https://github.com/reactor/reactor&#34;&gt;Reactor&lt;/a&gt; framework is still under heavy development, but it already provides a very promising basement for applications and libraries that need high throughput and low latency. We at &lt;a href=&#34;http://www.couchbase.com/&#34;&gt;Couchbase&lt;/a&gt; aim to provide the highest throughput at the lowest latency, so it is very critical to build upon an infrastructure that can provide it. Current, we are performing early investigations for a possible &amp;ldquo;next generation Java SDK&amp;rdquo; and Reactor seems very promising so far.&lt;/p&gt;
+
+&lt;p&gt;This blog post shows you how to quickly set up a Processor (we&amp;rsquo;ll see in a minute what that is) that dispatches requests to Consumers (also a very common term in Reactor). In our case, the Consumer is actually a TCP socket. Please note that the actual numbers, while impressive, can&amp;rsquo;t be used for real world measurements. What you&amp;rsquo;ll see here is a raw throughput test to define a baseline what can be expected under ideal conditions. We are also using localhost here to avoid network latency (which is the bottleneck for most network applications).&lt;/p&gt;
+
+&lt;p&gt;I&amp;rsquo;m going to use a Couchbase server as an endpoint, but feel free to use whatever you want instead. The whole API is very generic and the consumers can be exchanged easily.&lt;/p&gt;
+
+&lt;h1 id=&#34;setup:d0fd33f9e81a57356bf42d8f49c136cf&#34;&gt;Setup&lt;/h1&gt;
+
+&lt;p&gt;Before we can get started, all we need to do is include the &lt;code&gt;reactor-tcp&lt;/code&gt; artifact from maven. Now you can do this through gradle, maven, ivy or what you want, but at this point, I would recommend you to check out the &lt;a href=&#34;https://github.com/reactor/reactor&#34;&gt;reactor&lt;/a&gt; project directly from github and build it on your own, so you&amp;rsquo;ll have the latest and greatest code in your local repository:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;git clone https://github.com/reactor/reactor.git
+&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;cd &lt;/span&gt;reactor
+&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;./gradlew install
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This will download and install everything you need. The next step is to create a maven or gradle project in your IDE, but I&amp;rsquo;ll leave that part up to the reader. The maven dependency you need to include is:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;dependency&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;groupId&amp;gt;&lt;/span&gt;org.projectreactor&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/groupId&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;artifactId&amp;gt;&lt;/span&gt;reactor-tcp&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/artifactId&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;version&amp;gt;&lt;/span&gt;1.0.0.BUILD-SNAPSHOT&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/version&amp;gt;&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/dependency&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Or, for all gradle folks:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;dependencies {
+    compile &amp;#39;org.projectreactor:reactor-tcp:1.0.0.BUILD-SNAPSHOT&amp;#39;
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h1 id=&#34;the-processor:d0fd33f9e81a57356bf42d8f49c136cf&#34;&gt;The Processor&lt;/h1&gt;
+
+&lt;p&gt;Now, let&amp;rsquo;s get to some actual code. The Processor is a very lightweight abstraction over the &lt;a href=&#34;https://github.com/LMAX-Exchange/disruptor&#34;&gt;LMAX Disruptor&lt;/a&gt; a high performant RingBuffer. A RingBuffer provides much better characteristics than a normal Queue, and the Disruptor is heavily optimized for dispatching tasks in the nanosecond area (which means millions of operations per second). I recommend you to read &lt;a href=&#34;https://github.com/LMAX-Exchange/disruptor/blob/master/docs/Disruptor.docx&#34;&gt;this paper&lt;/a&gt; and also check out talks by &lt;a href=&#34;http://mechanical-sympathy.blogspot.co.at/&#34;&gt;Martin Thompson&lt;/a&gt; if you are interested.&lt;/p&gt;
+
+&lt;p&gt;The basic idea is that we decouple consumers from producers, so that each of them can work on their own pace (not blocking each other) and also benefiting from batching if the producers are faster than the consumers. We&amp;rsquo;ll see why this is particularly important with TCP in a second.&lt;/p&gt;
+
+&lt;p&gt;A &lt;code&gt;Processor&lt;/code&gt; can be created by instantiating a &lt;code&gt;ProcessorSpec&lt;/code&gt; and defining some mandatory options. Then, the &lt;code&gt;Processor&lt;/code&gt; is built for us.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;ProcessorSpec&amp;lt;Event&amp;lt;Buffer&amp;gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;writeProcessor&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;ProcessorSpec&amp;lt;Event&amp;lt;Buffer&amp;gt;&amp;gt;()&lt;/span&gt;
+	&lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;dataSupplier&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Supplier&amp;lt;Event&amp;lt;Buffer&amp;gt;&amp;gt;()&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+		&lt;span style=&#34;color: #000000&#34;&gt;@Override&lt;/span&gt;
+		&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Event&amp;lt;Buffer&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;get()&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+		  &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Event&amp;lt;Buffer&amp;gt;(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Buffer());&lt;/span&gt;
+		&lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+	&lt;span style=&#34;color: #000000&#34;&gt;})&lt;/span&gt;
+	&lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;consume&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Node(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;127.0.0.1&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;environment))&lt;/span&gt;
+	&lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;get&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;();&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Note that this &lt;code&gt;Spec&lt;/code&gt; pattern is very common in reactor, as it allows for very easy and yet flexible object creation. There are a few things that we need to cover.&lt;/p&gt;
+
+&lt;p&gt;First, the generic type here is &lt;code&gt;Event&amp;lt;Buffer&amp;gt;&lt;/code&gt;. The producers will wrap the payload (here we use raw &lt;code&gt;Buffers&lt;/code&gt;) in an &lt;code&gt;Event&lt;/code&gt; and the consumers will unwrap and use it properly. The &lt;code&gt;Event&lt;/code&gt; type also allows for headers that can be used for custom routing, but we won&amp;rsquo;t cover that here.&lt;/p&gt;
+
+&lt;p&gt;Second, the &lt;code&gt;dataSupplier&lt;/code&gt; is a speciality of the Disruptor RingBuffer. In order to minimize garbage collection and make effective use of memory layout, we need to pre-allocate our container objects. They will be reused throughout the application and will never be garbage collected.&lt;/p&gt;
+
+&lt;p&gt;Third, through the &lt;code&gt;consume&lt;/code&gt; method we can tell the &lt;code&gt;Processor&lt;/code&gt; who will be notified when new data is added to the RingBuffer. In our case, the &lt;code&gt;Node&lt;/code&gt; represents the TCP client which we&amp;rsquo;ll build in a second.&lt;/p&gt;
+
+&lt;p&gt;Now, how do we write to the Processor? Let&amp;rsquo;s add a simple method that does it for us:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;write(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;final&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Buffer&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;data)&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+	&lt;span style=&#34;color: #A90D91&#34;&gt;final&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Operation&amp;lt;Event&amp;lt;Buffer&amp;gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;op&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;writeProcessor.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;get&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;();&lt;/span&gt;
+	&lt;span style=&#34;color: #000000&#34;&gt;op.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;get&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;().&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;setData&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(data);&lt;/span&gt;
+	&lt;span style=&#34;color: #000000&#34;&gt;op.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;commit&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;();&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Here, we get a &lt;code&gt;Operation&lt;/code&gt; out of the processor (that wraps our data) and override it with the data that we actually want to store this time. You can see that we are not allocating new objects in the RingBuffer, we just use the old one that has been provided for us. With the &lt;code&gt;commit&lt;/code&gt; method we put it back into the RingBuffer. Actually, behind the scenes, it makes use of Sequences and Barriers inside the RingBuffer, but this is completely hidden from us.&lt;/p&gt;
+
+&lt;p&gt;Here is the full code for the lazy reader:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;reactor.core.Environment;&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;reactor.core.processor.Operation;&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;reactor.core.processor.Processor;&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;reactor.core.processor.spec.ProcessorSpec;&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;reactor.event.Event;&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;reactor.function.Supplier;&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;reactor.io.Buffer;&lt;/span&gt;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;MessageDispatcher&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+
+  &lt;span style=&#34;color: #A90D91&#34;&gt;private&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;final&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Environment&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;environment;&lt;/span&gt;
+
+  &lt;span style=&#34;color: #A90D91&#34;&gt;private&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;final&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Processor&amp;lt;Event&amp;lt;Buffer&amp;gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;writeProcessor;&lt;/span&gt;
+
+  &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;MessageDispatcher()&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;this&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Environment());&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+
+  &lt;span style=&#34;color: #000000&#34;&gt;MessageDispatcher(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;final&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Environment&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;env)&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;environment&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;env;&lt;/span&gt;
+
+    &lt;span style=&#34;color: #000000&#34;&gt;writeProcessor&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;ProcessorSpec&amp;lt;Event&amp;lt;Buffer&amp;gt;&amp;gt;()&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;dataSupplier&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Supplier&amp;lt;Event&amp;lt;Buffer&amp;gt;&amp;gt;()&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+        &lt;span style=&#34;color: #000000&#34;&gt;@Override&lt;/span&gt;
+        &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Event&amp;lt;Buffer&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;get()&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+          &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Event&amp;lt;Buffer&amp;gt;(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Buffer());&lt;/span&gt;
+        &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;})&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;consume&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Node(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;127.0.0.1&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;environment))&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;get&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;();&lt;/span&gt;
+
+  &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+
+  &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;write(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;final&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Buffer&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;data)&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;final&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Operation&amp;lt;Event&amp;lt;Buffer&amp;gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;op&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;writeProcessor.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;get&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;();&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;op.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;get&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;().&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;setData&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(data);&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;op.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;commit&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;();&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+
+&lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;One final note before we move on: did you spot the &lt;code&gt;Environment&lt;/code&gt; here? This is also a common theme in the Reactor framework. The &lt;code&gt;Environment&lt;/code&gt; is used in many places to signal information about - who would have thought that - the JVM environment. The general recommendation is to create only one &lt;code&gt;Environment&lt;/code&gt; instance per JVM, so we happily pass it around in our small application.&lt;/p&gt;
+
+&lt;h1 id=&#34;the-consumer:d0fd33f9e81a57356bf42d8f49c136cf&#34;&gt;The Consumer&lt;/h1&gt;
+
+&lt;p&gt;Before we get into the nitty-gritty network details, let&amp;rsquo;s add a consumer that just prints out the data that he &amp;ldquo;sees&amp;rdquo;. If you want to try this sample, make sure to change the previous code temporarily from &lt;code&gt;.consume(new Node(...))&lt;/code&gt; to &lt;code&gt;.consume(new EchoConsumer())&lt;/code&gt;.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;EchoConsumer&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;implements&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Consumer&amp;lt;Event&amp;lt;Buffer&amp;gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+
+  &lt;span style=&#34;color: #000000&#34;&gt;@Override&lt;/span&gt;
+  &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;accept(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;final&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Event&amp;lt;Buffer&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;bufferEvent)&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;System.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;out&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(Arrays.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;toString&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(bufferEvent.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;getData&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;().&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;asBytes&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;()));&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+
+&lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The &lt;code&gt;accept&lt;/code&gt; method is always called once there is information available on the Processor. Let&amp;rsquo;s add a simple test case to verify that this works:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;org.junit.Test;&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;reactor.io.Buffer;&lt;/span&gt;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;MessageDispatcherTest&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+
+  &lt;span style=&#34;color: #000000&#34;&gt;@Test&lt;/span&gt;
+  &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;echoSomeGarbage()&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;MessageDispatcher&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;dispatcher&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;MessageDispatcher();&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;dispatcher.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;write&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(Buffer.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;wrap&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Hello World!&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;));&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+
+&lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now if we run this test, we should see &lt;code&gt;[72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100, 33]&lt;/code&gt; printed on the console - great! This is the byte array representation of our wrapped buffer. Of course we could make our lives easier and use &lt;code&gt;Strings&lt;/code&gt; instead of &lt;code&gt;Buffer&lt;/code&gt; in our implementation, but the &lt;code&gt;Buffer&lt;/code&gt; works much better with network communication.&lt;/p&gt;
+
+&lt;p&gt;The next step would be to send the data over the network. Let&amp;rsquo;s replace our Consumer with a more intelligent one. Be aware that the &lt;code&gt;TcpClient&lt;/code&gt; that you&amp;rsquo;ll see doesn&amp;rsquo;t communicate with Java NIO directly - it makes use of the excellent &lt;a href=&#34;http://netty.io/&#34;&gt;Netty&lt;/a&gt; project which provides a convenient and performant wrapper around NIO and OIO (we use NIO here).&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;Node&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;implements&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Consumer&amp;lt;Event&amp;lt;Buffer&amp;gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+
+  &lt;span style=&#34;color: #A90D91&#34;&gt;private&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;final&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;TcpClient&amp;lt;Buffer,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Buffer&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;client;&lt;/span&gt;
+  &lt;span style=&#34;color: #A90D91&#34;&gt;private&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;TcpConnection&amp;lt;Buffer,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Buffer&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;conn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;null&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;;&lt;/span&gt;
+
+  &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Node(String&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hostname,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Environment&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;env)&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;client&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;TcpClientSpec&amp;lt;Buffer,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Buffer&amp;gt;(NettyTcpClient.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;class&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;env&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(env)&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;connect&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(hostname,&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;11210&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;get&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;();&lt;/span&gt;
+
+    &lt;span style=&#34;color: #A90D91&#34;&gt;try&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;conn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;client.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;open&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;().&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;await&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;();&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;catch&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;(InterruptedException&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;e)&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;e.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;printStackTrace&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;();&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+
+  &lt;span style=&#34;color: #000000&#34;&gt;@Override&lt;/span&gt;
+  &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;accept(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;final&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Event&amp;lt;Buffer&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;bufferEvent)&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;Buffer&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;buf&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;bufferEvent.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;getData&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;();&lt;/span&gt;
+
+    &lt;span style=&#34;color: #A90D91&#34;&gt;final&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;CountDownLatch&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;latch&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;CountDownLatch(&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;conn.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;send&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(buf,&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Consumer&amp;lt;Boolean&amp;gt;()&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;@Override&lt;/span&gt;
+      &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;accept(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;final&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Boolean&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;success)&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+        &lt;span style=&#34;color: #000000&#34;&gt;latch.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;countDown&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;();&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;});&lt;/span&gt;
+
+    &lt;span style=&#34;color: #A90D91&#34;&gt;try&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;latch.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;await&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;TimeUnit.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;SECONDS&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;catch&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;final&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Exception&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;ex)&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+      &lt;span style=&#34;color: #A90D91&#34;&gt;throw&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;RuntimeException(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Something went wrong while waiting :(&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;ex);&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+
+  &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+
+&lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;While this might seem like a lot of code, it&amp;rsquo;s not so bad. We do two things here. During object construction, we create a new &lt;code&gt;TcpClient&lt;/code&gt; through the &lt;code&gt;TcpClientSpec&lt;/code&gt; (see the Spec again?) and pass it the environment and the socket to connect to. The next thing we need to do is actually open the connection and wait until finished.&lt;/p&gt;
+
+&lt;p&gt;Now that we have an open connection, we can write to it. Since everything is non-blocking in Reactor, so is socket writing. In order to not overwhelm the underlying infrastructure, we have to wait until it is actually finished before moving on to handle the next &lt;code&gt;Event&lt;/code&gt; in the Processor. We do this by using a &lt;code&gt;CountDownLatch&lt;/code&gt;, which will be counted down once the writing has finished. In our simple example we just fail if it took longer than one second. In a real application, one could report errors or retry with Backoff.&lt;/p&gt;
+
+&lt;p&gt;Before we can run that code, we need to add a test case to make it all work.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;Buffer[]&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;buffers&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Buffer[&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;10&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;];&lt;/span&gt;
+
+&lt;span style=&#34;color: #000000&#34;&gt;@Before&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;initBuffers()&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+	&lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;10&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;i++)&lt;/span&gt;  &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+		&lt;span style=&#34;color: #000000&#34;&gt;Buffer&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;buf&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Buffer(&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;30&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;false&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+		&lt;span style=&#34;color: #000000&#34;&gt;buf.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;((&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;byte&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0x80&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt; &lt;span style=&#34;color: #177500&#34;&gt;// Magic Byte&lt;/span&gt;
+		&lt;span style=&#34;color: #000000&#34;&gt;buf.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;((&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;byte&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0x09&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt; &lt;span style=&#34;color: #177500&#34;&gt;// GETQ Opcode&lt;/span&gt;
+		&lt;span style=&#34;color: #000000&#34;&gt;buf.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;byte&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;[]&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0x00&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0x03&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;});&lt;/span&gt; &lt;span style=&#34;color: #177500&#34;&gt;// 3 byte keylength (KEY)&lt;/span&gt;
+		&lt;span style=&#34;color: #000000&#34;&gt;buf.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;((&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;byte&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0x00&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt; &lt;span style=&#34;color: #177500&#34;&gt;// Extra Length&lt;/span&gt;
+		&lt;span style=&#34;color: #000000&#34;&gt;buf.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;((&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;byte&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0x00&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt; &lt;span style=&#34;color: #177500&#34;&gt;// data type&lt;/span&gt;
+		&lt;span style=&#34;color: #000000&#34;&gt;buf.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;byte&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;[]&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0x00&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0x00&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;});&lt;/span&gt; &lt;span style=&#34;color: #177500&#34;&gt;// reserved&lt;/span&gt;
+		&lt;span style=&#34;color: #000000&#34;&gt;buf.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;byte&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;[]&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0x00&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0x00&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0x00&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0x03&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;});&lt;/span&gt; &lt;span style=&#34;color: #177500&#34;&gt;// total body size&lt;/span&gt;
+		&lt;span style=&#34;color: #000000&#34;&gt;buf.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;byte&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;[]&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0x00&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0x00&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0x00&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0x00&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;});&lt;/span&gt; &lt;span style=&#34;color: #177500&#34;&gt;// Opaque&lt;/span&gt;
+		&lt;span style=&#34;color: #000000&#34;&gt;buf.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;byte&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;[]&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0x00&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0x00&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0x00&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0x00&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0x00&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0x00&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0x00&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0x00&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;});&lt;/span&gt; &lt;span style=&#34;color: #177500&#34;&gt;// CAS&lt;/span&gt;
+		&lt;span style=&#34;color: #000000&#34;&gt;buf.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;byte&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;[]&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0x65&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0x6F&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;byte&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;)(i&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;%&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;9&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;)});&lt;/span&gt;
+		&lt;span style=&#34;color: #000000&#34;&gt;buffers[i]&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;buf;&lt;/span&gt;
+	&lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+
+&lt;span style=&#34;color: #000000&#34;&gt;@Test&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;giveItSomeLoad()&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+	&lt;span style=&#34;color: #000000&#34;&gt;MessageDispatcher&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;dispatcher&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;MessageDispatcher();&lt;/span&gt;
+
+	&lt;span style=&#34;color: #A90D91&#34;&gt;long&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;amountOfOps&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;100000000&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;;&lt;/span&gt;
+	&lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;long&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;amountOfOps;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;i++)&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+		&lt;span style=&#34;color: #000000&#34;&gt;dispatcher.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;write&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Buffer(buffers[(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;)(i&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;%&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;9&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;)]).&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;flip&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;());&lt;/span&gt;
+	&lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;To actually simulate something real, this test creates ten buffer instances with Couchbase messages. Those familiar with the memcached binary protocol can identify it as a GETQ request. This means it does not return anything when the key is not found (which is what we want, because in this case we want to benchmark the upper limit for write throughput and not concern us with parsing of error responses). Once the data is created, we run a given amount of operations and call the &lt;code&gt;write&lt;/code&gt; method on the &lt;code&gt;MessageDispatcher&lt;/code&gt;.&lt;/p&gt;
+
+&lt;h1 id=&#34;batch-all-the-things:d0fd33f9e81a57356bf42d8f49c136cf&#34;&gt;Batch all the things!&lt;/h1&gt;
+
+&lt;p&gt;If we run this, we get a - very disappointing - number of only 50K ops/s. In addition, we get lots of CPU usage on the Java process (100% and more on a quad core processor here). Why is it so slow? The answer is: network overhead. In our case, we send out 27 byte chunks over the network. With all the TCP, IP and Ethernet headers, there is lots of unnecessary overhead involved that puts down our performance. The answer to that is batching! If our producers are faster than the consumers, we can batch the intermediate data up into a buffer and send it over the wire in one chunk. This will give us a much better goodput ratio.&lt;/p&gt;
+
+&lt;p&gt;To help us with batching the Disruptor and the Processor expose the start end end of a batching phase to our consumer. To get this information, we need to extend from the &lt;code&gt;BatchConsumer&lt;/code&gt; instead of the regular &lt;code&gt;Consumer&lt;/code&gt;. Let&amp;rsquo;s refactor our node and add some batching characteristics:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;BatchingNode&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;implements&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;BatchConsumer&amp;lt;Event&amp;lt;Buffer&amp;gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+
+  &lt;span style=&#34;color: #A90D91&#34;&gt;private&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;final&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;TcpClient&amp;lt;Buffer,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Buffer&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;client;&lt;/span&gt;
+  &lt;span style=&#34;color: #A90D91&#34;&gt;private&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;TcpConnection&amp;lt;Buffer,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Buffer&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;conn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;null&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;;&lt;/span&gt;
+  &lt;span style=&#34;color: #A90D91&#34;&gt;private&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Buffer&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;writeBuffer;&lt;/span&gt;
+
+  &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;BatchingNode(String&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hostname,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Environment&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;env)&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;client&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;TcpClientSpec&amp;lt;Buffer,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Buffer&amp;gt;(NettyTcpClient.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;class&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;env&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(env)&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;connect&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(hostname,&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;11210&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;get&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;();&lt;/span&gt;
+
+    &lt;span style=&#34;color: #A90D91&#34;&gt;try&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;conn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;client.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;open&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;().&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;await&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;();&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;catch&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;(InterruptedException&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;e)&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;e.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;printStackTrace&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;();&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+
+    &lt;span style=&#34;color: #000000&#34;&gt;writeBuffer&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Buffer(&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;1500&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+
+  &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+
+  &lt;span style=&#34;color: #000000&#34;&gt;@Override&lt;/span&gt;
+  &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;start()&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+
+  &lt;span style=&#34;color: #000000&#34;&gt;@Override&lt;/span&gt;
+  &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;end()&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;flush();&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+
+  &lt;span style=&#34;color: #000000&#34;&gt;@Override&lt;/span&gt;
+  &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;accept(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;final&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Event&amp;lt;Buffer&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;bufferEvent)&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;Buffer&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;buf&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;bufferEvent.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;getData&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;();&lt;/span&gt;
+
+    &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;(writeBuffer.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;remaining&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;buf.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;remaining&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;())&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;flush();&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+
+    &lt;span style=&#34;color: #000000&#34;&gt;writeBuffer.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;append&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(buf);&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+
+  &lt;span style=&#34;color: #A90D91&#34;&gt;private&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;flush()&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;final&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;CountDownLatch&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;latch&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;CountDownLatch(&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;writeBuffer.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;flip&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;();&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;conn.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;send&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(writeBuffer,&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Consumer&amp;lt;Boolean&amp;gt;()&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;@Override&lt;/span&gt;
+      &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;accept(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;final&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Boolean&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;success)&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+        &lt;span style=&#34;color: #000000&#34;&gt;latch.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;countDown&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;();&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;});&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;try&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;latch.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;await&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;TimeUnit.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;SECONDS&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;catch&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;final&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Exception&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;ex)&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+      &lt;span style=&#34;color: #A90D91&#34;&gt;throw&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;RuntimeException(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;got ex&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;ex);&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;writeBuffer.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;clear&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;();&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+
+&lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The code here is not much different. Note that we refactored the writing part out into the &lt;code&gt;flush&lt;/code&gt; method. In the &lt;code&gt;accept&lt;/code&gt; method, we write to the network if the buffer is full, otherwise we just add it to our write buffer. Note that we also need to &lt;code&gt;flush&lt;/code&gt; if the batching is over (notified through the &lt;code&gt;end&lt;/code&gt; method), otherwise we would potentially keep data around for a longer time than needed (and latency is still important to us).&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s run the test case again&amp;hellip; now we get 500k ops/s with only 40% CPU load on the java process! Now that&amp;rsquo;s what I call an improvement!&lt;/p&gt;
+
+&lt;h1 id=&#34;summary:d0fd33f9e81a57356bf42d8f49c136cf&#34;&gt;Summary&lt;/h1&gt;
+
+&lt;p&gt;This was a very quick introduction into the Processor, just one piece in the very promising Reactor framework. There is so much more to blog about in the future, so stay tuned!&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

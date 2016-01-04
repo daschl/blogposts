@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scala &middot; daschl writes. sometimes.</title>
+
+    <meta name="description" content="">
+
+    <meta name="generator" content="Hugo 0.15" />
+    <meta name="twitter:card" content="summary">
+    
+    <meta name="twitter:title" content="Scala &middot; daschl writes. sometimes.">
+    <meta name="twitter:description" content="">
+
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Scala &middot; daschl writes. sometimes.">
+    <meta property="og:description" content="">
+
+    <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Oxygen:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
+    <!--[if lte IE 8]>
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-old-ie-min.css">
+    <![endif]-->
+    <!--[if gt IE 8]><!-->
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
+    <!--<![endif]-->
+
+    <link rel="stylesheet" href="http://nitschinger.at//css/all.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <link rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." href="http://nitschinger.at//index.xml" />
+</head>
+<body>
+
+
+<div id="layout" class="pure-g">
+    <div class="sidebar pure-u-1 pure-u-md-1-4">
+    <div class="header">
+        <hgroup>
+            <h1 class="brand-title"><a href="http://nitschinger.at/">daschl writes. sometimes.</a></h1>
+            <h2 class="brand-tagline"></h2>
+        </hgroup>
+
+        <nav class="nav">
+            <ul class="nav-list">
+                
+                
+                <li class="nav-item">
+                    <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+
+    <div class="content pure-u-1 pure-u-md-3-4">
+        <div>
+            
+            <div class="posts">
+                
+                <h1 class="content-subhead">26 Apr 2012</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="http://nitschinger.at/Accessing-Couchbase-from-Scala/" class="post-title">Accessing Couchbase from Scala</a>
+
+                        <p class="post-meta">
+                            
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        <p>In my recent adventure on exploring both <a href="http://www.couchbase.com/">Couchbase</a> and <a href="http://www.scala-lang.org/">Scala</a>, I noticed that there are not
+many tutorials out there using both at the same time. We&rsquo;ll use the <a href="http://www.couchbase.com/develop/java/next">couchbase-java driver</a> in its latest
+version (1.1), because it provides support for views and Couchbase 2.0. Note that I won&rsquo;t cover installing Couchbase here, since there is plenty of
+material <a href="http://www.couchbase.com/docs/couchbase-manual-2.0/couchbase-getting-started-install.html">out there</a>. Also, I assume you have scala and
+<a href="https://github.com/harrah/xsbt">sbt</a> already installed. The <a href="http://typesafe.com/stack">typesafe stack</a> provides a convenient shortcut to get you
+up and running in minutes, so check it out if you haven&rsquo;t already. For the purpos of simplicity, I assume that your Couchbase instance runs on
+<code>localhost</code>. If it runs elswhere, just modify the URI string later accordingly.</p>
+
+<p>Let&rsquo;s create the standard directory structure for our project. We&rsquo;ll use sbt to manage our dependencies, so create a <code>build.sbt</code> file too.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">/couchbase-scala
+    /src
+        /main
+            /scala
+                Main.scala
+    build.sbt
+</pre></div>
+
+<p>Let&rsquo;s write the <code>build.sbt</code> first:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">name := &quot;couchbase-scala&quot;
+
+version := &quot;1.0&quot;
+
+scalaVersion := &quot;2.9.2&quot;
+
+resolvers += &quot;Couchbase Maven Repository&quot; at &quot;http://files.couchbase.com/maven2&quot;
+
+libraryDependencies += &quot;couchbase&quot; % &quot;couchbase-client&quot; % &quot;1.1-dp&quot;
+</pre></div>
+
+<p>We need to add the <a href="http://files.couchbase.com/maven2">Couchbase Maven Repository</a> to our resolvers list, since it contains the Couchbase package and all
+its dependencies. The last line adds the actual dependency. If you want the (older) stable release, use &ldquo;1.0.2&rdquo; instead of &ldquo;1.1-dp&rdquo;. Tip: you can browse the
+repository directly in your browser and see what versions are available.</p>
+
+<p>Let&rsquo;s add a simple <code>Main</code> object in <code>Main.scala</code>:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">object Main extends App {
+    println(&quot;Hello World&quot;)
+}
+</pre></div>
+
+<p>Now, start sbt and run the application for the first time:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">couchbase-scala$ sbt
+&gt; run
+** ((Omitting Fetch and Compile Output)) **
+[info] Running Main
+Hello World
+[success] Total time: 4 s, completed 24.04.2012 11:01:33
+</pre></div>
+
+<p>I&rsquo;ve omited the part where sbt resolves our dependencies and compiles the libraries, but the output should look like the one above. Now that we have all our
+dependencies in place, we can start talking to the Couchbase server. Here&rsquo;s a short example with synchronous set and get operations (note that no exception
+handling takes place here):</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">import</span> <span style="color: #000000">collection.JavaConversions._</span> 
+<span style="color: #A90D91">import</span> <span style="color: #000000">collection.mutable.ArrayBuffer</span>
+
+<span style="color: #A90D91">import</span> <span style="color: #000000">java.net.URI</span>;
+<span style="color: #A90D91">import</span> <span style="color: #000000">java.net.ConnectException</span>;
+
+<span style="color: #A90D91">import</span> <span style="color: #000000">com.couchbase.client.CouchbaseClient</span>;
+
+<span style="color: #A90D91">object</span> <span style="color: #000000">Main</span> <span style="color: #000000">extends</span> <span style="color: #000000">App</span> {
+    <span style="color: #000000">val</span> <span style="color: #000000">uris</span> <span style="color: #000000">=</span> <span style="color: #000000">ArrayBuffer</span>(<span style="color: #000000">URI.create</span>(<span style="color: #C41A16">&quot;http://127.0.0.1:8091/pools&quot;</span>))
+    <span style="color: #000000">val</span> <span style="color: #000000">client</span> <span style="color: #000000">=</span> <span style="color: #000000">new</span> <span style="color: #000000">CouchbaseClient</span>(<span style="color: #000000">uris</span>, <span style="color: #C41A16">&quot;default&quot;</span>, <span style="color: #C41A16">&quot;&quot;</span>)
+
+    <span style="color: #000000">client.set</span>(<span style="color: #C41A16">&quot;hello&quot;</span>, <span style="color: #1C01CE">0</span>, <span style="color: #C41A16">&quot;world&quot;</span>)
+    <span style="color: #000000">println</span>(<span style="color: #C41A16">&quot;Receiving -&gt; &quot;</span> <span style="color: #000000">+</span> <span style="color: #000000">client.get</span>(<span style="color: #C41A16">&quot;hello&quot;</span>))
+
+    <span style="color: #000000">client.shutdown</span>()
+    <span style="color: #000000">System.exit</span>(<span style="color: #1C01CE">0</span>)
+}
+</pre></div>
+
+<p>Save the file, type <code>run</code> again in sbt and you should get the following output (you only need to leave the REPL if you&rsquo;ve changed the <code>build.sbt</code> file):</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">[<span style="color: #000000">info</span>] <span style="color: #000000">Compiling</span> <span style="color: #1C01CE">1</span> <span style="color: #000000">Scala</span> <span style="color: #000000">source</span> <span style="color: #000000">to</span> <span style="color: #000000">&lt;Path\to\Sourcecode&gt;\couchbase-scala\target\scala-</span><span style="color: #1C01CE">2.9.2</span><span style="color: #000000">\classes</span>...
+[<span style="color: #000000">info</span>] <span style="color: #000000">Running</span> <span style="color: #000000">Main</span>
+<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">24</span> <span style="color: #1C01CE">11</span><span style="color: #000000">:</span><span style="color: #1C01CE">05</span><span style="color: #000000">:</span><span style="color: #1C01CE">11.850</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseConnection</span>:  <span style="color: #000000">Added</span> {<span style="color: #000000">QA</span> <span style="color: #000000">sa=/</span><span style="color: #1C01CE">127.0.0.1</span><span style="color: #000000">:</span><span style="color: #1C01CE">11210</span>, <span style="color: #000000">#Rops=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">#Wops=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">#iq=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">topRop=null</span>, <span style="color: #000000">topWop=null</span>, <span style="color: #000000">toWrite=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">interested=</span><span style="color: #1C01CE">0</span>} <span style="color: #000000">to</span> <span style="color: #000000">connect</span> <span style="color: #000000">queue</span>
+<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">24</span> <span style="color: #1C01CE">11</span><span style="color: #000000">:</span><span style="color: #1C01CE">05</span><span style="color: #000000">:</span><span style="color: #1C01CE">11.856</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseClient</span>:  <span style="color: #000000">viewmode</span> <span style="color: #000000">property</span> <span style="color: #000000">isn&#39;t</span> <span style="color: #000000">defined</span>. <span style="color: #000000">Setting</span> <span style="color: #000000">viewmode</span> <span style="color: #000000">to</span> <span style="color: #000000">production</span> <span style="color: #000000">mode</span>
+<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">24</span> <span style="color: #1C01CE">11</span><span style="color: #000000">:</span><span style="color: #1C01CE">05</span><span style="color: #000000">:</span><span style="color: #1C01CE">11.856</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseConnection</span>:  <span style="color: #000000">Connection</span> <span style="color: #000000">state</span> <span style="color: #000000">changed</span> <span style="color: #A90D91">for</span> <span style="color: #000000">sun</span>.<span style="color: #000000">nio</span>.<span style="color: #000000">ch</span>.<span style="color: #000000">SelectionKeyImpl</span><span style="color: #1C01CE">@10319</span><span style="color: #000000">d7</span>
+<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">24</span> <span style="color: #1C01CE">11</span><span style="color: #000000">:</span><span style="color: #1C01CE">05</span><span style="color: #000000">:</span><span style="color: #1C01CE">11.926</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">ViewConnection</span>:  <span style="color: #000000">Added</span> <span style="color: #000000">daschl-notebook/</span><span style="color: #1C01CE">127.0.0.1</span><span style="color: #000000">:</span><span style="color: #1C01CE">8092</span> <span style="color: #000000">to</span> <span style="color: #000000">connect</span> <span style="color: #000000">queue</span>
+<span style="color: #000000">Receiving</span> <span style="color: #000000">-&gt;</span> <span style="color: #000000">world</span>
+<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">24</span> <span style="color: #1C01CE">11</span><span style="color: #000000">:</span><span style="color: #1C01CE">05</span><span style="color: #000000">:</span><span style="color: #1C01CE">12.360</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseConnection</span>:  <span style="color: #000000">Shut</span> <span style="color: #000000">down</span> <span style="color: #000000">Couchbase</span> <span style="color: #000000">client</span>
+<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">24</span> <span style="color: #1C01CE">11</span><span style="color: #000000">:</span><span style="color: #1C01CE">05</span><span style="color: #000000">:</span><span style="color: #1C01CE">12.368</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">ViewConnection</span>:  <span style="color: #000000">Shut</span> <span style="color: #000000">down</span> <span style="color: #000000">Couchbase</span> <span style="color: #000000">client</span>
+<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">24</span> <span style="color: #1C01CE">11</span><span style="color: #000000">:</span><span style="color: #1C01CE">05</span><span style="color: #000000">:</span><span style="color: #1C01CE">12.374</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">ViewNode</span>:  <span style="color: #000000">Couchbase</span> <span style="color: #000000">I/O</span> <span style="color: #000000">reactor</span> <span style="color: #000000">terminated</span>
+[<span style="color: #000000">success</span>] <span style="color: #000000">Total</span> <span style="color: #000000">time</span>: <span style="color: #1C01CE">6</span> <span style="color: #000000">s</span>, <span style="color: #000000">completed</span> <span style="color: #1C01CE">24.04.2012</span> <span style="color: #1C01CE">11</span><span style="color: #000000">:</span><span style="color: #1C01CE">05</span><span style="color: #000000">:</span><span style="color: #1C01CE">12</span>
+</pre></div>
+
+<p>You see all the Couchbase log messages here, because the default logger logs directly to STDOUT. Right in the middle you can see the output of our synchronous <a href="http://www.couchbase.com/docs/couchbase-sdk-java-1.1/couchbase-sdk-java-retrieve-get.html#table-couchbase-sdk_java_get">get</a> operation. You should also see the
+created document in your Couchbase <a href="http://localhost:8091/index.html#sec=documents&amp;bucketName=default">default bucket</a>.</p>
+
+<p>Let&rsquo;s go through the main code line by line and see what&rsquo;s going on.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">val uris = ArrayBuffer(URI.create(&quot;http://127.0.0.1:8091/pools&quot;))   
+val client = new CouchbaseClient(uris, &quot;default&quot;, &quot;&quot;)
+</pre></div>
+
+<p>The <code>CouchbaseClient</code> accepts a list of URIs to communicate with as the first argument (you need to import <code>collection.JavaConversions._</code>, so that <code>ÀrrayBuffer</code> gets
+converted to a <code>java.util.List</code>). The second argument is the bucket name, the third one is an optional bucket password (which is always empty for the <code>default</code> one).</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">client.set(&quot;hello&quot;, 0, &quot;world&quot;)
+println(&quot;Receiving -&gt; &quot; + client.get(&quot;hello&quot;))
+</pre></div>
+
+<p>We can now throw all commands at the client, be it synchronous or asynchronous ones. You can find all supported methods <a href="http://www.couchbase.com/docs/couchbase-sdk-java-1.1/api-reference-summary.html">here</a>.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">client.shutdown()
+</pre></div>
+
+<p>Finally, we close the connection to the server. You can pass optional timeouts here, so that the client waits for the given amount of time before it finally closes the connection.
+This allows asynchronous commands to finish first.</p>
+
+<p>This post was a very basic introduction on using Couchbase from Scala. The next post will translate the <a href="http://www.couchbase.com/docs/couchbase-sdk-java-1.1/tutorial.html">tutorial</a> to Scala. As always, I&rsquo;m open to suggestions and
+improvements!</p>
+
+                    </div>
+                </section>
+                
+            </div>
+            
+
+            <div class="footer">
+    <div class="pure-menu pure-menu-horizontal pure-menu-open">
+        <ul>
+		<li>&copy; Michael Nitschinger 2010-2016</li>
+        </ul>
+    </div>
+</div>
+<script src="http://nitschinger.at//js/all.min.js"></script>
+
+        </div>
+    </div>
+</div>
+
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', '', 'auto');
+ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

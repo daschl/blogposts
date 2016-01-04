@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Lfl on daschl writes. sometimes.</title>
+    <link>http://nitschinger.at/tags/lfl/</link>
+    <description>Recent content in Lfl on daschl writes. sometimes.</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 05 Sep 2011 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://nitschinger.at/tags/lfl/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Letters from Lithium #2</title>
+      <link>http://nitschinger.at/Letters-from-Lithium-2/</link>
+      <pubDate>Mon, 05 Sep 2011 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/Letters-from-Lithium-2/</guid>
+      <description>
+
+&lt;h2 id=&#34;about:b4182e0f0db9b44aa8cf9721d0e799f0&#34;&gt;About&lt;/h2&gt;
+
+&lt;p&gt;Letters from Lithium keeps you up to date about what happens in the Lithium core and community. If you have interesting news to share, comment below or ping me on &lt;a href=&#34;http://twitter.com/daschl&#34;&gt;twitter&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h2 id=&#34;core-news:b4182e0f0db9b44aa8cf9721d0e799f0&#34;&gt;Core News&lt;/h2&gt;
+
+&lt;p&gt;Routing got a bit more awesome with &lt;a href=&#34;https://github.com/UnionOfRAD/lithium/commit/792b916249052b87c368e2e25798a93dceaa0154#L3R636&#34;&gt;route continuations&lt;/a&gt;. They allow you match more routes in one request, which is very useful in many cases. Take a look at this test case:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #177500&#34;&gt;/**&lt;/span&gt;
+&lt;span style=&#34;color: #177500&#34;&gt;* Tests that continuation routes properly fall through and aggregate multiple route parameters.&lt;/span&gt;
+&lt;span style=&#34;color: #177500&#34;&gt;*/&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;testRouteContinuations&lt;/span&gt;() {
+    &lt;span style=&#34;color: #000000&#34;&gt;Router::connect&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/{:locale:en|de|it|jp}/{:args}&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(), &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;continue&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;));
+    &lt;span style=&#34;color: #000000&#34;&gt;Router::connect&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/{:controller}/{:action}/{:id:&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;9&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;]&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;+}&amp;#39;&lt;/span&gt;);
+
+    &lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Request&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;url&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/en/posts/view/1138&amp;#39;&lt;/span&gt;));
+    &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Router::process&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt;)&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;params&lt;/span&gt;;
+    &lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt; (
+        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;controller&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;posts&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;action&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;view&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;id&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;1138&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;locale&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;en&amp;#39;&lt;/span&gt;
+    );
+    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertEqual&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt;);
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The data branch has been &lt;a href=&#34;https://github.com/UnionOfRAD/lithium/commit/107f596b3224b47cfe91a820bae5867a5e0aee6c&#34;&gt;merged&lt;/a&gt; recently, which should improve the overall stability of the model layer and add a few smaller features. Thanks to &lt;a href=&#34;https://github.com/vesln&#34;&gt;Veselin Todorov&lt;/a&gt;, you &lt;a href=&#34;https://github.com/UnionOfRAD/lithium/commit/0c35bef1a36f3ffd6baee3586bf8c3380dfabb81&#34;&gt;can now use&lt;/a&gt; the &amp;ldquo;last&amp;rdquo; option in validations. This lets you better control the validation stack.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/mackstar&#34;&gt;Richard McIntyre&lt;/a&gt; added &lt;a href=&#34;https://github.com/UnionOfRAD/lithium/commit/427ee643e0725cceb42d6f1ee66cf5668d18effa&#34;&gt;console environment detection&lt;/a&gt; and Nate Abele improved the application detection process.&lt;/p&gt;
+
+&lt;p&gt;Of course, various other bugs have been fixed (including the &lt;a href=&#34;https://github.com/UnionOfRAD/lithium/commit/cbd0c4d2c07837e2e5ea4f9e8ff8c6a0d1fa1c61&#34;&gt;HMAC bug&lt;/a&gt;) and small enhancements like &lt;a href=&#34;https://github.com/UnionOfRAD/lithium/commit/74514b870c13aac98236111c524ab5c1bc04656f&#34;&gt;collection sorting&lt;/a&gt; and &lt;a href=&#34;https://github.com/UnionOfRAD/lithium/commit/c0d4ff82b1b3bb662ed0e78ed9599437306ca068&#34;&gt;Form::error() filtering&lt;/a&gt; found their way into the core.&lt;/p&gt;
+
+&lt;h2 id=&#34;plugins:b4182e0f0db9b44aa8cf9721d0e799f0&#34;&gt;Plugins&lt;/h2&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/eLod&#34;&gt;eLod&lt;/a&gt; (also known as &amp;ldquo;smoking_kiddo&amp;rdquo; on IRC) created a plugin called &lt;a href=&#34;https://github.com/eLod/li3_console&#34;&gt;li3_console&lt;/a&gt; which provides a fully functional PHP &lt;a href=&#34;http://en.wikipedia.org/wiki/Read-eval-print_loop&#34;&gt;REPL&lt;/a&gt; and also lets you interact with your Lithium environment (like models) from the command line.&lt;/p&gt;
+
+&lt;p&gt;If you need to deploy your Lithium application to remote servers and are used to &lt;a href=&#34;https://github.com/capistrano/capistrano&#34;&gt;Capistrano&lt;/a&gt;, you should take a look at &lt;a href=&#34;https://github.com/mehlah/capium&#34;&gt;capium&lt;/a&gt;. It is a ruby gem that provides deploy recipes and rake tasks for Lithium.&lt;/p&gt;
+
+&lt;h2 id=&#34;blogs-and-media:b4182e0f0db9b44aa8cf9721d0e799f0&#34;&gt;Blogs and Media&lt;/h2&gt;
+
+&lt;p&gt;For those new to Lithium, &lt;a href=&#34;http://www.davidgolding.net/&#34;&gt;David Golding&lt;/a&gt; recently published a very informative introduction &lt;a href=&#34;http://www.scribd.com/doc/62146078/New-to-Lithium-Part-1&#34;&gt;here&lt;/a&gt;. It gets you up and running quickly and walks you through the creation of models, controllers and views.&lt;/p&gt;
+
+&lt;p&gt;Also, &lt;a href=&#34;http://www.jblotus.com/&#34;&gt;James Fuller&lt;/a&gt; released a few blog posts in the last weeks, covering various topics around Lithium. Head over to his blog and read about &lt;a href=&#34;http://www.jblotus.com/2011/08/17/adding-a-session-flash-message-to-your-site-in-lithium-php/&#34;&gt;Flash Messages&lt;/a&gt;, the &lt;a href=&#34;http://www.jblotus.com/2011/08/19/how-to-add-a-html-button-element-using-lithium-phps-formhelper/&#34;&gt;FormHelper&lt;/a&gt;, &lt;a href=&#34;http://www.jblotus.com/2011/08/20/super-simple-lithium-php-json-web-service-calls/&#34;&gt;Web Service Calls&lt;/a&gt;, &lt;a href=&#34;http://www.jblotus.com/2011/08/27/understanding-filters-in-lithium-php/&#34;&gt;Filters&lt;/a&gt; and &lt;a href=&#34;http://www.jblotus.com/2011/08/31/using-an-appcontroller-in-lithium-php-to-pass-data-to-the-layout/&#34;&gt;AppControllers&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h2 id=&#34;universe:b4182e0f0db9b44aa8cf9721d0e799f0&#34;&gt;Universe&lt;/h2&gt;
+
+&lt;p&gt;Recently, &lt;a href=&#34;http://www.engineyard.com/&#34;&gt;Engine Yard&lt;/a&gt; (mostly known for their knowledge and cloud platforms in the Ruby on Rails world) acquired &lt;a href=&#34;http://orchestra.io&#34;&gt;Orchestra&lt;/a&gt; to extend their language support. Orchestra is a great platform to deploy your PHP and Lithium applications on to, so give it a try (they also provide free accounts) if you haven&amp;rsquo;t already. The &lt;a href=&#34;http://lithify.me/docs/manual/cloud/readme.wiki&#34;&gt;manual&lt;/a&gt; also provides a short guide if you need help.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/Ciaro&#34;&gt;Ciaro Vermeire&lt;/a&gt; started a (unofficial) community forum for Lithium, which you can find &lt;a href=&#34;http://lithium-framework.com/&#34;&gt;here&lt;/a&gt;. If you like this type of communication, feel free to register, ask for help and - most importantly - share what you know.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Letters from Lithium #1</title>
+      <link>http://nitschinger.at/Letters-from-Lithium-1/</link>
+      <pubDate>Tue, 02 Aug 2011 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/Letters-from-Lithium-1/</guid>
+      <description>
+
+&lt;h2 id=&#34;about:ee82dedf484a67ec02efb082c30c3644&#34;&gt;About&lt;/h2&gt;
+
+&lt;p&gt;&amp;ldquo;Letters from Lithium&amp;rdquo; will be published on a regular basis to give you an update on what happens in the Lithium community. If you have interesting topics/plugins/stuff you want to read about, feel free to contact me through twitter or email.&lt;/p&gt;
+
+&lt;h2 id=&#34;core-news:ee82dedf484a67ec02efb082c30c3644&#34;&gt;Core News&lt;/h2&gt;
+
+&lt;p&gt;The &lt;a href=&#34;https://github.com/UnionOfRAD/lithium/wiki/Roadmap&#34;&gt;Roadmap&lt;/a&gt; to 1.0 is going pretty well so far, and relationship support for relational databases has been already merged into master. For the impatient, there is also some documentation for it underway which can be found &lt;a href=&#34;https://github.com/UnionOfRAD/manual/blob/master/en/working-with-data/relationships.wiki&#34;&gt;here&lt;/a&gt;. As the docs are not finished yet, you&amp;rsquo;ll have to clone the repository locally to view them in their full glory (don&amp;rsquo;t forget to clone &lt;code&gt;li3_docs&lt;/code&gt; too). The core team is also working on relationship support for MongoDB, which will also ship before 1.0. For those who come from CakePHP: there won&amp;rsquo;t be a &lt;code&gt;hasAndBelongsToMany&lt;/code&gt; relationship, because we&amp;rsquo;ll add support for nested relationships which can be used to achieve the same result in a better and cleaner way.&lt;/p&gt;
+
+&lt;p&gt;We&amp;rsquo;re very excited to see more and more people contributing code to the core. &lt;a href=&#34;https://github.com/doobry&#34;&gt;Chris Beswick&lt;/a&gt; did an awesome job recently and refactored a significant part of the routing system (&lt;a href=&#34;https://github.com/UnionOfRAD/lithium/commits/master?author=doobry&#34;&gt;commits&lt;/a&gt;) which makes compiling routes significantly faster. Also there&amp;rsquo;s a huge &lt;a href=&#34;https://github.com/UnionOfRAD/lithium/pull/45&#34;&gt;pull request&lt;/a&gt; open that brings &lt;a href=&#34;http://www.postgresql.org/&#34;&gt;PostgreSQL&lt;/a&gt; integration to the Lithium core.&lt;/p&gt;
+
+&lt;p&gt;Lithium wants to be a first-class citizen on Windows, so there&amp;rsquo;s a &lt;a href=&#34;https://github.com/UnionOfRAD/lithium/tree/windows&#34;&gt;branch&lt;/a&gt; open that tries to track, find and fix all bugs and test-cases on Windows. If you&amp;rsquo;re developing on Windows and have some spare time, contact one of the core members on IRC and we&amp;rsquo;ll get you started. We aim to make all test cases run on Windows before the 1.0 release.&lt;/p&gt;
+
+&lt;h2 id=&#34;plugins:ee82dedf484a67ec02efb082c30c3644&#34;&gt;Plugins&lt;/h2&gt;
+
+&lt;p&gt;I&amp;rsquo;ve recently &lt;a href=&#34;http://nitschinger.at/Lithium-plugin-roundup&#34;&gt;compiled a list of plugins&lt;/a&gt; and readers also posted their additions in the comments below. There are plans to bring the &lt;a href=&#34;http://lab.lithify.me&#34;&gt;Lithium Lab&lt;/a&gt; up to date and integrate it even better with the Lithium framework so in the future you should be able to install and share plugins right from there. I&amp;rsquo;ll cover this in greater detail in one of the next letters.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/alkemann&#34;&gt;Alexander Morland&lt;/a&gt; is developing a &lt;a href=&#34;https://github.com/alkemann/li3_zmq&#34;&gt;plugin&lt;/a&gt; for &lt;a href=&#34;http://www.zeromq.org/&#34;&gt;ZeroMQ&lt;/a&gt; and is always searching for feedback and contributions. If you need message passing in your application (like queues or pub/sub), then you should definitely check it out.&lt;/p&gt;
+
+&lt;p&gt;If you don&amp;rsquo;t know which plugins are available, try &lt;a href=&#34;https://github.com/search?langOverride=&amp;amp;language=PHP&amp;amp;q=li3_&amp;amp;repo=&amp;amp;start_value=1&amp;amp;type=Repositories&amp;amp;x=32&amp;amp;y=21&#34;&gt;this&lt;/a&gt; search on Github!&lt;/p&gt;
+
+&lt;h2 id=&#34;blogs-media:ee82dedf484a67ec02efb082c30c3644&#34;&gt;Blogs &amp;amp; Media&lt;/h2&gt;
+
+&lt;p&gt;For those who don&amp;rsquo;t know yet, &lt;a href=&#34;http://raymondjulin.com/&#34;&gt;Raymond Julin&lt;/a&gt; did compile a list of useful resources back in January which can be found &lt;a href=&#34;http://blog.raymondjulin.com/2011/01/06/list-of-useful-lithium-li3-resources/&#34;&gt;here&lt;/a&gt;. In addition to that, &lt;a href=&#34;http://www.shift8creative.com/about&#34;&gt;Tom Maiaroto&lt;/a&gt; wrote a &lt;a href=&#34;http://www.shift8creative.com/blog/getting-started-with-minerva&#34;&gt;blog post&lt;/a&gt; that helps you to get up and running with &lt;a href=&#34;https://github.com/tmaiaroto/minerva&#34;&gt;Minerva&lt;/a&gt;, his CMS based on Lithium.&lt;/p&gt;
+
+&lt;p&gt;Lithium now has &lt;a href=&#34;http://vimeo.com/channels/li3&#34;&gt;Vimeo Channel&lt;/a&gt; which also contains the &lt;a href=&#34;http://vimeo.com/26183322&#34;&gt;Introducing Lithium&lt;/a&gt; talk by Nate. You should definitely check that out if you&amp;rsquo;re new to Lithium and need a one-hour introduction.&lt;/p&gt;
+
+&lt;h2 id=&#34;universe:ee82dedf484a67ec02efb082c30c3644&#34;&gt;Universe&lt;/h2&gt;
+
+&lt;p&gt;As a side note, the &lt;a href=&#34;http://www.union-of-rad.com/&#34;&gt;UnionOfRAD&lt;/a&gt; is looking for client work (preferrably in the NY area), so if you need talented developers that know Lithium and its surroundings from the inside out please contact &lt;a href=&#34;http://www.nateabele.com&#34;&gt;Nate Abele&lt;/a&gt; on &lt;a href=&#34;http://www.twitter.com/nateabele&#34;&gt;twitter&lt;/a&gt; or IRC.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

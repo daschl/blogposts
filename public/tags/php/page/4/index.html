@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Php &middot; daschl writes. sometimes.</title>
+
+    <meta name="description" content="">
+
+    <meta name="generator" content="Hugo 0.15" />
+    <meta name="twitter:card" content="summary">
+    
+    <meta name="twitter:title" content="Php &middot; daschl writes. sometimes.">
+    <meta name="twitter:description" content="">
+
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Php &middot; daschl writes. sometimes.">
+    <meta property="og:description" content="">
+
+    <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Oxygen:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
+    <!--[if lte IE 8]>
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-old-ie-min.css">
+    <![endif]-->
+    <!--[if gt IE 8]><!-->
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
+    <!--<![endif]-->
+
+    <link rel="stylesheet" href="http://nitschinger.at//css/all.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <link rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." href="http://nitschinger.at//index.xml" />
+</head>
+<body>
+
+
+<div id="layout" class="pure-g">
+    <div class="sidebar pure-u-1 pure-u-md-1-4">
+    <div class="header">
+        <hgroup>
+            <h1 class="brand-title"><a href="http://nitschinger.at/">daschl writes. sometimes.</a></h1>
+            <h2 class="brand-tagline"></h2>
+        </hgroup>
+
+        <nav class="nav">
+            <ul class="nav-list">
+                
+                
+                <li class="nav-item">
+                    <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+
+    <div class="content pure-u-1 pure-u-md-3-4">
+        <div>
+            
+            <div class="posts">
+                
+                <h1 class="content-subhead">19 Nov 2010</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="http://nitschinger.at/Lithium-Routes-And-Mongo-DB/" class="post-title">Lithium Routes And MongoDB</a>
+
+                        <p class="post-meta">
+                            
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        <p>Lithium comes with a powerful and flexible routing system. However, in its default configuration, you may encounter some problems with MongoDB-ObjectIDs and reverse routing. ObjectIDs are usually the &ldquo;primary keys&rdquo; of your Document in MongoDB, are 12 bytes long and consist of numbers and characters from &lsquo;a&rsquo; to &lsquo;f&rsquo;. A typical ObjectID would look similar to <code>4ce2d9f99436485e05000000</code>.</p>
+
+<p>If you take a closer look at the default routes that ship with Lithium, you&rsquo;ll maybe notice that the <code>:id</code> part only matches numbers (and not characters).</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">Router::connect(</span><span style="color: #C41A16">&#39;/{:controller}/{:action}/{:id:</span><span style="color: #633820">[</span><span style="color: #1C01CE">0</span><span style="color: #000000">-</span><span style="color: #1C01CE">9</span><span style="color: #633820">]</span><span style="color: #C41A16">+}.{:type}&#39;</span><span style="color: #000000">,</span> <span style="color: #000000">array(</span><span style="color: #C41A16">&#39;id&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">null));</span>
+<span style="color: #000000">Router::connect(</span><span style="color: #C41A16">&#39;/{:controller}/{:action}/{:id:</span><span style="color: #633820">[</span><span style="color: #1C01CE">0</span><span style="color: #000000">-</span><span style="color: #1C01CE">9</span><span style="color: #633820">]</span><span style="color: #C41A16">+}&#39;</span><span style="color: #000000">);</span>
+<span style="color: #000000">Router::connect(</span><span style="color: #C41A16">&#39;/{:controller}/{:action}/{:args}&#39;</span><span style="color: #000000">);</span>
+</pre></div>
+
+<p>With this setup a call to <code>$this-&gt;html-&gt;link()</code> with an MongoDB-ObjectID set as <code>id</code> won&rsquo;t work because the router is not able to find a matching route (this is called reverse routing). The solution to this &ldquo;problem&rdquo; is, that we need to modify the <code>:id</code>-part of the <code>Router::connect</code>-calls. Replace your default routes with the following code:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">Router::connect(</span><span style="color: #C41A16">&#39;/{:controller}/{:action}/{:id:</span><span style="color: #633820">[</span><span style="color: #1C01CE">0</span><span style="color: #000000">-</span><span style="color: #1C01CE">9</span><span style="color: #000000">a</span><span style="color: #836C28">-f</span><span style="color: #633820">]</span><span style="color: #C41A16">{24}}.{:type}&#39;</span><span style="color: #000000">,</span> <span style="color: #000000">array(</span><span style="color: #C41A16">&#39;id&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">null));</span>
+<span style="color: #000000">Router::connect(</span><span style="color: #C41A16">&#39;/{:controller}/{:action}/{:id:</span><span style="color: #633820">[</span><span style="color: #1C01CE">0</span><span style="color: #000000">-</span><span style="color: #1C01CE">9</span><span style="color: #000000">a</span><span style="color: #836C28">-f</span><span style="color: #633820">]</span><span style="color: #C41A16">{24}}&#39;</span><span style="color: #000000">);</span>
+<span style="color: #000000">Router::connect(</span><span style="color: #C41A16">&#39;/{:controller}/{:action}/{:args}&#39;</span><span style="color: #000000">);</span>
+</pre></div>
+
+<p>Now everything should work as expected with li3 and MongoDB ObjectIDs. A final note for the interested reader: if you leave out the <code>{24}</code>-quantifier, then a route like <code>/posts/add</code> won&rsquo;t work because <code>add</code> would also be a valid <code>id</code> to the router.</p>
+
+                    </div>
+                </section>
+                
+            </div>
+            
+<div class="pagination">
+  <nav role="pagination" class="post-list-pagination">
+      
+      <a href="/tags/php/page/3/" class="post-list-pagination-item pure-button post-list-pagination-item-prev">
+        <i class="fa fa-angle-double-left"></i>&nbsp;Newer
+      </a>
+      
+    <span class="post-list-pagination-item post-list-pagination-item-current">Page 4 of 4</span>
+    
+  </nav>
+</div>
+
+
+            <div class="footer">
+    <div class="pure-menu pure-menu-horizontal pure-menu-open">
+        <ul>
+		<li>&copy; Michael Nitschinger 2010-2016</li>
+        </ul>
+    </div>
+</div>
+<script src="http://nitschinger.at//js/all.min.js"></script>
+
+        </div>
+    </div>
+</div>
+
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', '', 'auto');
+ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

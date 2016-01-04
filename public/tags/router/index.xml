@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Router on daschl writes. sometimes.</title>
+    <link>http://nitschinger.at/tags/router/</link>
+    <description>Recent content in Router on daschl writes. sometimes.</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 16 Sep 2011 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://nitschinger.at/tags/router/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Quick Tip: Lithium Redirect</title>
+      <link>http://nitschinger.at/Quick-Tip-Lithium-Redirect/</link>
+      <pubDate>Fri, 16 Sep 2011 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/Quick-Tip-Lithium-Redirect/</guid>
+      <description>&lt;p&gt;While migrating &lt;a href=&#34;https://github.com/UnionOfRAD/lithium_bin&#34;&gt;lithium_bin&lt;/a&gt; as part of research over to MongoDB (from CouchDB), I found the following snippet in the &lt;code&gt;routes.php&lt;/code&gt; file:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;Router::connect&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(), &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt;) {
+    &lt;span style=&#34;color: #000000&#34;&gt;$location&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;controller&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;pastes&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;action&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;add&amp;#39;&lt;/span&gt;);
+    &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Response&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;compact&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;location&amp;#39;&lt;/span&gt;));
+});
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This means that when the user enters the application via the root url (&lt;code&gt;/&lt;/code&gt;), he instantly gets redirected to &lt;code&gt;/pastes/add&lt;/code&gt; (or a different URL if you have custom routes configured).&lt;/p&gt;
+
+&lt;p&gt;This may seem ok at first, but there&amp;rsquo;s a problem. It doesn&amp;rsquo;t take URLs into account that don&amp;rsquo;t live directly under the document root. So if your application lives under &lt;code&gt;http://localhost/pastium/&lt;/code&gt;, it will redirect you to &lt;code&gt;http://localhost/pastes/add/&lt;/code&gt; which is not really what you want. Instead, do it like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;Router::connect&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(), &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt;) {
+    &lt;span style=&#34;color: #000000&#34;&gt;$location&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Router::match&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;Pastes::add&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt;);
+    &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Response&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;compact&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;location&amp;#39;&lt;/span&gt;));
+});
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;In this snippet, the &lt;code&gt;Router&lt;/code&gt; takes the current &lt;code&gt;Request&lt;/code&gt; into account and returns the correct location (based on the reverse routing information). Now it should redirect you correctly to &lt;code&gt;http://localhost/pastium/pastes/add/&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;By the way, this is extracted from the &lt;code&gt;Controller::redirect&lt;/code&gt; method, which is implemented in a similar way:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;redirect&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$url&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$options&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;()) {
+    &lt;span style=&#34;color: #177500&#34;&gt;//...&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;_filter&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;__METHOD__&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt;, &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$self&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;use&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;$router&lt;/span&gt;) {
+        &lt;span style=&#34;color: #000000&#34;&gt;$options&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;options&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;]&lt;/span&gt;;
+        &lt;span style=&#34;color: #000000&#34;&gt;$location&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$options&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;location&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;?:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$router::match&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;url&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;]&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$self-&amp;gt;request&lt;/span&gt;);
+        &lt;span style=&#34;color: #000000&#34;&gt;$self-&amp;gt;render&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;compact&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;location&amp;#39;&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$options&lt;/span&gt;);
+    });
+    &lt;span style=&#34;color: #177500&#34;&gt;//...&lt;/span&gt;
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If you have any ideas on how to improve this further, feel free to comment below!&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

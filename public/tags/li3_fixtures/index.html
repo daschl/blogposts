@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Li3_fixtures &middot; daschl writes. sometimes.</title>
+
+    <meta name="description" content="">
+
+    <meta name="generator" content="Hugo 0.15" />
+    <meta name="twitter:card" content="summary">
+    
+    <meta name="twitter:title" content="Li3_fixtures &middot; daschl writes. sometimes.">
+    <meta name="twitter:description" content="">
+
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Li3_fixtures &middot; daschl writes. sometimes.">
+    <meta property="og:description" content="">
+
+    <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Oxygen:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
+    <!--[if lte IE 8]>
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-old-ie-min.css">
+    <![endif]-->
+    <!--[if gt IE 8]><!-->
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
+    <!--<![endif]-->
+
+    <link rel="stylesheet" href="http://nitschinger.at//css/all.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <link rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." href="http://nitschinger.at//index.xml" />
+</head>
+<body>
+
+
+<div id="layout" class="pure-g">
+    <div class="sidebar pure-u-1 pure-u-md-1-4">
+    <div class="header">
+        <hgroup>
+            <h1 class="brand-title"><a href="http://nitschinger.at/">daschl writes. sometimes.</a></h1>
+            <h2 class="brand-tagline"></h2>
+        </hgroup>
+
+        <nav class="nav">
+            <ul class="nav-list">
+                
+                
+                <li class="nav-item">
+                    <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+
+    <div class="content pure-u-1 pure-u-md-3-4">
+        <div>
+            
+            <div class="posts">
+                
+                <h1 class="content-subhead">24 Feb 2012</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="http://nitschinger.at/RFC-li3_fixtures-Rewrite/" class="post-title">RFC: li3_fixtures Rewrite</a>
+
+                        <p class="post-meta">
+                            
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        
+
+<p>The <a href="https://github.com/daschl/li3_fixtures">li3_fixtures</a> plugin was my first Lithium plugin ever, and while it works okay, I feel there is a lot I can do to make it better and more flexible. In this post I want to share my ideas for a new fixture plugin and also want to gather feedback from the community to make it even more awesome.</p>
+
+<p>As far as I can see, there are three big use cases for fixtures:</p>
+
+<h2 id="unit-testing-models:6cff1db96cce95ed97eeab057e8d6618">Unit-Testing Models</h2>
+
+<p>This seems to be the most common use case. To test models effectively, you need a bunch of demo data on which your tests rely on. This data includes both valid and invalid data to test if validations work as expected and how the application can handle large batches of data. The database itself is not mocked, but fixture data is used to populate it before or during the actual tests.</p>
+
+<p>This can be done without fixtures too, but you need to reinvent the wheel and store your demo data either in external files or directly in your code. When you store it in external files, you need to mess around with file loading and parsing. If you store it directly in your code it gets bloated and makes your code unreadable (and your data is always bound to the test class and can&rsquo;t be reused). To make it as easy as possible, the <code>li3_fixtures</code> plugin needs to provide the following:</p>
+
+<ul>
+<li>centralized storage of fixture data.</li>
+<li>transparent support for various data types (JSON, XML and YAML).</li>
+<li>easy loading of fixture datasets into the database.</li>
+</ul>
+
+<h2 id="mocking-models:6cff1db96cce95ed97eeab057e8d6618">Mocking Models</h2>
+
+<p>When you test your controllers, you often need to work with data from your models. There are two different scenarios here: you can either write integration tests and populate your real database with data, or mock your models away and work with static data instead of touching the database (for unit-testing controller actions). This allows you to work independently on both layers and improves the performance of your tests.</p>
+
+<p>Lithium already uses Mocks extensively, so the plugin needs tight integration into them. It should be easy to load fixture data that acts like &ldquo;real&rdquo; data (like iterating over Document/RecordSets).</p>
+
+<h2 id="mocking-web-services-and-apis:6cff1db96cce95ed97eeab057e8d6618">Mocking Web-Services and APIs</h2>
+
+<p>The third use case is not really different from the two mentioned above, but works more with the <code>service</code> than the the <code>data</code> layer. As web services are often not inside the boundaries of the developer, the plugin should make it easy to provide demo data for mocks while testing web services.</p>
+
+<h2 id="additional-functionality:6cff1db96cce95ed97eeab057e8d6618">Additional Functionality</h2>
+
+<p>In terms of rapid application development, it would be great to generate fixture data automatically based on patterns or generation rules. There are great libraries like <a href="https://github.com/fzaninotto/Faker">Faker</a> out there, and it would be great to have a feature like this integrated (accessible from the command line). Also, fixture file generation should happen automatically when new models are created from the command line.</p>
+
+<h2 id="implementation-documentation:6cff1db96cce95ed97eeab057e8d6618">Implementation &amp; Documentation</h2>
+
+<p>I want to make extensive use of adapters and strategies, as they make a lot of sense in this context. I think it would be a good idea to use adapters for all input file types (JSON, XML and YAML) and strategies for their representation in the test classes (DocumentSets, RecordSets, Collections or plain arrays). This also makes it trivial to implement custom file types and representations.</p>
+
+<p>For documentation, I plan to use li3_docs for both the API docs and the actual manual. A current version of the manual will be found as a subdomain on my blog here (of course you&rsquo;ll also have it in your app when you use li3_docs).</p>
+
+<p>Finally, the plugin will be usable through composer and uses it too to manage external dependencies (I plan to use the Symfony parser for the YAML format).</p>
+
+<h2 id="next-steps:6cff1db96cce95ed97eeab057e8d6618">Next Steps</h2>
+
+<p>Now it&rsquo;s your turn! Comment below and tell me wheter you like the ideas presented here or not. I&rsquo;m open to every suggestion!</p>
+
+                    </div>
+                </section>
+                
+            </div>
+            
+
+            <div class="footer">
+    <div class="pure-menu pure-menu-horizontal pure-menu-open">
+        <ul>
+		<li>&copy; Michael Nitschinger 2010-2016</li>
+        </ul>
+    </div>
+</div>
+<script src="http://nitschinger.at//js/all.min.js"></script>
+
+        </div>
+    </div>
+</div>
+
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', '', 'auto');
+ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

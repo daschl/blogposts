@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Netty on daschl writes. sometimes.</title>
+    <link>http://nitschinger.at/tags/netty/</link>
+    <description>Recent content in Netty on daschl writes. sometimes.</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 05 Mar 2013 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://nitschinger.at/tags/netty/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Never awaitUninterruptibly() on Netty Channels</title>
+      <link>http://nitschinger.at/Never-await-Uninterruptibly-on-Netty-Channels/</link>
+      <pubDate>Tue, 05 Mar 2013 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/Never-await-Uninterruptibly-on-Netty-Channels/</guid>
+      <description>&lt;p&gt;TL:DR; When acquiring &lt;a href=&#34;http://netty.io/3.6/api/org/jboss/netty/channel/Channel.html&#34;&gt;Channels&lt;/a&gt; in &lt;a href=&#34;http://netty.io&#34;&gt;Netty&lt;/a&gt;, always use a &lt;a href=&#34;http://netty.io/3.6/api/org/jboss/netty/channel/ChannelFutureListener.html&#34;&gt;ChannelFutureListener&lt;/a&gt; and never &lt;a href=&#34;http://docs.jboss.org/netty/3.2/api/org/jboss/netty/channel/ChannelFuture.html#awaitUninterruptibly(&#34;&gt;awaitUninterruptibly()&lt;/a&gt;). Curious why? Read on.&lt;/p&gt;
+
+&lt;p&gt;In the &lt;a href=&#34;http://www.couchbase.com/develop/java/current&#34;&gt;Java SDK&lt;/a&gt; for &lt;a href=&#34;http://www.couchbase.com/&#34;&gt;Couchbase&lt;/a&gt;, we use Netty to establish and maintain a streaming connection to one of the cluster nodes in order to get notified when topology changes happen. This streaming connection needs to be established during the bootstrap process of the client and we need to block until the connection is established (actually we don&amp;rsquo;t need to, but the current implementation works that way). The old implementation to acquire the Channel looked like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;ClientBootstrap bootstrap = new ClientBootstrap(factory);
+bootstrap.setPipelineFactory(new BucketMonitorPipelineFactory());
+ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
+
+channel = future.awaitUninterruptibly().getChannel();
+if (!future.isSuccess()) {
+  bootstrap.releaseExternalResources();
+  throw new ConnectionException(&amp;quot;Something bad happened...&amp;quot;);
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This works great, but there is a problem associated that is not obvious in the first place. As long as you use this code only in a client side context, Netty will not complain and happily work with your code. When people started to use our client library inside a Netty based server framework (for example &lt;a href=&#34;http://www.playframework.com/&#34;&gt;Play&lt;/a&gt;), Netty complained like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;Unexpected exception[IllegalStateException: await*() in I/O thread causes a dead lock or sudden performance drop. Use addListener() instead or call await*() from a different thread.]
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The environment where this happens is clearly defined: we are bootstrapping a Netty client inside the I/O thread of a Netty server, so we basically have two Netty environments running and one is complaining about the other. Once you are aware of this situation, it is more or less easy to fix:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;bootstrap = new ClientBootstrap(factory);
+bootstrap.setPipelineFactory(new BucketMonitorPipelineFactory());
+ChannelFuture future =  bootstrap.connect(new InetSocketAddress(host, port));
+channelFuture.addListener(new ChannelFutureListener() {
+  @Override
+  public void operationComplete(ChannelFuture cf) throws Exception {
+    if(cf.isSuccess()) {
+      channel = cf.getChannel();
+    } else {
+      bootstrap.releaseExternalResources();
+      throw new ConnectionException(&amp;quot;Something bad happened...&amp;quot;);
+    }
+  }
+});
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now, instead of waiting on the caller thread, we move the waiting part to a separate thread managed by the Netty execution context. There&amp;rsquo;s only one problem left: we still need to block, because the code down the stack depends on a established Channel to work with. To solve this issue, we can use a &lt;a href=&#34;http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/CountDownLatch.html&#34;&gt;CountDownLatch&lt;/a&gt; like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;final CountDownLatch channelLatch = new CountDownLatch(1);
+channelFuture.addListener(new ChannelFutureListener() {
+  @Override
+  public void operationComplete(ChannelFuture cf) throws Exception {
+    if(cf.isSuccess()) {
+      channel = cf.getChannel();
+      channelLatch.countDown();
+    } else {
+      bootstrap.releaseExternalResources();
+      throw new ConnectionException(&amp;quot;Something bad happened...&amp;quot;);
+    }
+  }
+});
+
+try {
+  channelLatch.await();
+} catch(InterruptedException ex) {
+  throw new ConnectionException(&amp;quot;Interrupted while waiting for streaming &amp;quot;
+    + &amp;quot;connection to arrive.&amp;quot;);
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;In the end we still block on the caller thread, but we are compliant with Netty. The main takeaway for me is that you should never block on acquiring Channels in Netty, just because of the fact that your client side code may be used in a server side context as well. This is especially true for library developers like me.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

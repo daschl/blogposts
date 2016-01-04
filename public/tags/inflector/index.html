@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inflector &middot; daschl writes. sometimes.</title>
+
+    <meta name="description" content="">
+
+    <meta name="generator" content="Hugo 0.15" />
+    <meta name="twitter:card" content="summary">
+    
+    <meta name="twitter:title" content="Inflector &middot; daschl writes. sometimes.">
+    <meta name="twitter:description" content="">
+
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Inflector &middot; daschl writes. sometimes.">
+    <meta property="og:description" content="">
+
+    <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Oxygen:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
+    <!--[if lte IE 8]>
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-old-ie-min.css">
+    <![endif]-->
+    <!--[if gt IE 8]><!-->
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
+    <!--<![endif]-->
+
+    <link rel="stylesheet" href="http://nitschinger.at//css/all.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <link rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." href="http://nitschinger.at//index.xml" />
+</head>
+<body>
+
+
+<div id="layout" class="pure-g">
+    <div class="sidebar pure-u-1 pure-u-md-1-4">
+    <div class="header">
+        <hgroup>
+            <h1 class="brand-title"><a href="http://nitschinger.at/">daschl writes. sometimes.</a></h1>
+            <h2 class="brand-tagline"></h2>
+        </hgroup>
+
+        <nav class="nav">
+            <ul class="nav-list">
+                
+                
+                <li class="nav-item">
+                    <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+
+    <div class="content pure-u-1 pure-u-md-3-4">
+        <div>
+            
+            <div class="posts">
+                
+                <h1 class="content-subhead">16 Dec 2010</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="http://nitschinger.at/Understanding-the-Inflector/" class="post-title">Understanding the Inflector</a>
+
+                        <p class="post-meta">
+                            
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        
+
+<h3 id="introduction:80a65fb5d80eeadafeb3cbaa12fa2dd1">Introduction</h3>
+
+<p>The Inflector is one of many utility classes that ship with Lithium out of the box. Those classes are designed to assist you with common tasks that need to be done.</p>
+
+<p>One of those tasks may be to pluralize, singularize, camel-case or humanize strings, database keys or other dynamic content. Let&rsquo;s see how the class itself is described:</p>
+
+<blockquote>
+<p>Utility for modifying format of words. Change singular to plural and vice versa. Under_score a CamelCased word and vice versa. Replace spaces and special characters. Create a human readable word from the others. Used when consistency in naming conventions must be enforced.</p>
+</blockquote>
+
+<p>The Inflector can be found in <code>lithium\util</code> and you can get it into your namespace with <code>use lithium\util\Inflector</code>. The documentation can be found online at <a href="http://lithify.me/docs/lithium/util/Inflector">lithify.me/docs</a>.</p>
+
+<h3 id="methods:80a65fb5d80eeadafeb3cbaa12fa2dd1">Methods</h3>
+
+<p>Here is a comprehensive list of the methods that the Inflector provides to you (the descriptions are quoted from their documentation):</p>
+
+<ul>
+<li><strong>pluralize</strong>: changes the form of a word from singular to plural.</li>
+<li><strong>singularize</strong>: changes the form of a word from plural to singular.</li>
+<li><strong>camelize</strong>: takes a under_scored word and turns it into a CamelCased or camelBack word.</li>
+<li><strong>underscore</strong>: takes a CamelCased version of a word and turns it into an under_scored one.</li>
+<li><strong>slug</strong>: returns a string with all spaces converted to given replacement and non word characters removed.</li>
+<li><strong>humanize</strong>: takes an under_scored version of a word and turns it into an human- readable form by replacing underscores with a space, and by upper casing the initial character.</li>
+<li><strong>tableize</strong>: takes a CamelCased class name and returns corresponding under_scored table name.</li>
+<li><strong>classify</strong>: takes a under_scored table name and returns corresponding class name.</li>
+</ul>
+
+<p>There are more public methods in there, but we&rsquo;ll get to those later on. Now that you have an idea what the Inflector can do for you, we&rsquo;ll explore each of these methods in detail. One quick note: if you need more examples, the <a href="http://rad-dev.org/lithium/source/libraries/lithium/tests/cases/util/InflectorTest.php#highlight">tests</a> are a great place to find some.</p>
+
+<h4 id="inflector-pluralize:80a65fb5d80eeadafeb3cbaa12fa2dd1">Inflector::pluralize()</h4>
+
+<p>The <code>pluralize()</code> method takes a singular word (string) and returns you the pluralized version of it. Here are some examples:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">Inflector::pluralize(</span><span style="color: #C41A16">&#39;Apple&#39;</span><span style="color: #000000">);</span> <span style="color: #000000">//</span> <span style="color: #000000">returns</span> <span style="color: #C41A16">&quot;Apples&quot;</span>
+<span style="color: #000000">Inflector::pluralize(</span><span style="color: #C41A16">&#39;Menu&#39;</span><span style="color: #000000">);</span> <span style="color: #000000">//</span> <span style="color: #000000">returns</span> <span style="color: #C41A16">&quot;Menus&quot;</span>
+<span style="color: #000000">Inflector::pluralize(</span><span style="color: #C41A16">&#39;News&#39;</span><span style="color: #000000">);</span> <span style="color: #000000">//</span> <span style="color: #000000">returns</span> <span style="color: #C41A16">&quot;News&quot;</span>
+</pre></div>
+
+<p>If you are not sure what the pluralized word will look like, take a look at the <code>lithium\util\Inflector::$_plural</code> property.</p>
+
+<h4 id="inflector-singularize:80a65fb5d80eeadafeb3cbaa12fa2dd1">Inflector::singularize()</h4>
+
+<p>The <code>singularize()</code> method takes a plural word (string) and returns you the singularized version of it. Here are some examples:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">Inflector::singularize(</span><span style="color: #C41A16">&#39;Houses&#39;</span><span style="color: #000000">);</span> <span style="color: #000000">//</span> <span style="color: #000000">returns</span> <span style="color: #C41A16">&quot;House&quot;</span>
+<span style="color: #000000">Inflector::singularize(</span><span style="color: #C41A16">&#39;Bananas&#39;</span><span style="color: #000000">);</span> <span style="color: #000000">//</span> <span style="color: #000000">returns</span> <span style="color: #C41A16">&quot;Banana&quot;</span>
+<span style="color: #000000">Inflector::singularize(</span><span style="color: #C41A16">&#39;Men&#39;</span><span style="color: #000000">);</span> <span style="color: #000000">//</span> <span style="color: #000000">returns</span> <span style="color: #C41A16">&quot;Man&quot;</span>
+</pre></div>
+
+<p>If you are not sure what the pluralized word will look like, take a look at the <code>lithium\util\Inflector::$_singular</code> property.</p>
+
+<h4 id="inflector-camelize:80a65fb5d80eeadafeb3cbaa12fa2dd1">Inflector::camelize()</h4>
+
+<p>You can hand the <code>camelize()</code> method either a slugged or a under_scored word and it will return you this word CamelCased or camelBacked (if you provide <code>false</code> as the second argument). Some examples:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">Inflector::camelize(</span><span style="color: #C41A16">&#39;foo_bar&#39;</span><span style="color: #000000">);</span> <span style="color: #000000">//</span> <span style="color: #000000">returns</span> <span style="color: #C41A16">&quot;FooBar&quot;</span> 
+<span style="color: #000000">Inflector::camelize(</span><span style="color: #C41A16">&#39;foo_bar&#39;</span><span style="color: #000000">,</span> <span style="color: #000000">false);</span> <span style="color: #000000">//</span> <span style="color: #000000">returns</span> <span style="color: #C41A16">&quot;fooBar&quot;</span>
+</pre></div>
+
+<h4 id="inflector-slug:80a65fb5d80eeadafeb3cbaa12fa2dd1">Inflector::slug()</h4>
+
+<p>The <code>slug()</code> method takes a string and creates a &ldquo;slugged&rdquo; representation of it. This basically means that all spaces will be replaced with a given character (defaults to &ldquo;-&rdquo;), non-word characters will be removed and characters with accents like &ldquo;ä&rdquo; will be translated to their ASCII representation. Here are some examples:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">Inflector::slug(</span><span style="color: #C41A16">&#39;The truth - and- more- news&#39;</span><span style="color: #000000">);</span> <span style="color: #000000">//</span> <span style="color: #000000">returns</span> <span style="color: #C41A16">&quot;The-truth-and-more-news&quot;</span>
+<span style="color: #000000">Inflector::slug(</span><span style="color: #C41A16">&#39;!@$#exciting stuff! - what !@-# was that?&#39;</span><span style="color: #000000">);</span> <span style="color: #000000">//</span> <span style="color: #000000">returns</span> <span style="color: #C41A16">&quot;exciting-stuff-what-was-that&quot;</span>
+</pre></div>
+
+<h4 id="inflector-underscore:80a65fb5d80eeadafeb3cbaa12fa2dd1">Inflector::underscore()</h4>
+
+<p>The <code>underscore()</code> method basically takes a camel-cased word, slugs it and lowercases all characters.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">Inflector::underscore(&#39;TestField&#39;) // returns test_field
+Inflector::underscore(&#39;FeineÄpfel&#39;) // returns feine_aepfel
+</pre></div>
+
+<p>Note here that characters with accents will be transliterated, because of the translation into a slug. I don&rsquo;t know if this is the intended behavior so this may change in future releases.</p>
+
+<h4 id="inflector-humanize:80a65fb5d80eeadafeb3cbaa12fa2dd1">Inflector::humanize()</h4>
+
+<p>The <code>humanize()</code> method takes an underscored word, removes a given seperator (defaults to &ldquo;_&ldquo;) and uppercases the first characters of the words. Some examples from the core tests:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">Inflector::humanize(</span><span style="color: #C41A16">&#39;posts&#39;</span><span style="color: #000000">);</span> <span style="color: #000000">//</span> <span style="color: #000000">returns</span> <span style="color: #C41A16">&quot;Posts&quot;</span>
+<span style="color: #000000">Inflector::humanize(</span><span style="color: #C41A16">&#39;posts_tags&#39;</span><span style="color: #000000">);</span> <span style="color: #000000">//</span> <span style="color: #000000">returns</span> <span style="color: #C41A16">&quot;Posts Tags&quot;</span>
+<span style="color: #000000">Inflector::humanize(</span><span style="color: #C41A16">&#39;file_systems&#39;</span><span style="color: #000000">);</span> <span style="color: #000000">//</span> <span style="color: #000000">returns</span>  <span style="color: #C41A16">&quot;File Systems&quot;</span>
+</pre></div>
+
+<h4 id="inflector-tableize:80a65fb5d80eeadafeb3cbaa12fa2dd1">Inflector::tableize()</h4>
+
+<p>The <code>tableize()</code> method takes your string, underscores (remember the slug?) and finally pluralizes it. As you can see, those methods use other low level methods provided to build exactly what you need. With this method, you can hand over a Model name and get the correct table name for it.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">Inflector::tableize(</span><span style="color: #C41A16">&#39;Post&#39;</span><span style="color: #000000">);</span> <span style="color: #000000">//</span> <span style="color: #000000">returns</span> <span style="color: #C41A16">&quot;posts&quot;</span>
+<span style="color: #000000">Inflector::tableize(</span><span style="color: #C41A16">&#39;ArtistsGenre&#39;</span><span style="color: #000000">);</span> <span style="color: #000000">//</span> <span style="color: #000000">returns</span> <span style="color: #C41A16">&quot;artists_genres&quot;</span>
+<span style="color: #000000">Inflector::tableize(</span><span style="color: #C41A16">&#39;FileSystem&#39;</span><span style="color: #000000">);</span> <span style="color: #000000">//</span> <span style="color: #000000">returns</span> <span style="color: #C41A16">&quot;file_systems&quot;</span>
+</pre></div>
+
+<h4 id="inflector-classify:80a65fb5d80eeadafeb3cbaa12fa2dd1">Inflector::classify()</h4>
+
+<p>The <code>classify()</code> method is basically the opposite to the <code>tabelize()</code> method. You hand it over a table name and get the correct class (Model) name back. It singularizes and camelizes the given string.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">    <span style="color: #000000">Inflector::classify(</span><span style="color: #C41A16">&#39;artists_genres&#39;</span><span style="color: #000000">);</span> <span style="color: #000000">//</span> <span style="color: #000000">returns</span> <span style="color: #C41A16">&quot;ArtistsGenre&quot;</span>
+    <span style="color: #000000">Inflector::classify(</span><span style="color: #C41A16">&#39;file_systems&#39;</span><span style="color: #000000">);</span> <span style="color: #000000">//</span> <span style="color: #000000">returns</span> <span style="color: #C41A16">&quot;FileSystem&quot;</span>
+    <span style="color: #000000">Inflector::classify(</span><span style="color: #C41A16">&#39;news&#39;</span><span style="color: #000000">);</span> <span style="color: #000000">//</span> <span style="color: #000000">returns</span> <span style="color: #C41A16">&quot;News&quot;</span>
+</pre></div>
+
+<h3 id="add-your-own-rules:80a65fb5d80eeadafeb3cbaa12fa2dd1">Add your own rules</h3>
+
+<p>If you need, you can add your own rules and/or override default rules. The <code>Inflector::rules()</code> method is responsible for that and works as a setter or getter for all stored rules. The core tests provide an example:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">Inflector::rules(</span><span style="color: #C41A16">&#39;singular&#39;</span><span style="color: #000000">,</span> <span style="color: #000000">array(</span><span style="color: #C41A16">&#39;/rata/&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;\1ratus&#39;</span><span style="color: #000000">));</span>
+</pre></div>
+
+<p>You can also add transliterations that maps language specific or accented characters to ASCII ones (they are used to create slugs, for example). The core tests also provide a nice example:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$this-&gt;assertNotEqual(Inflector::slug(</span><span style="color: #C41A16">&#39;JØRGEN&#39;</span><span style="color: #000000">),</span> <span style="color: #C41A16">&#39;JORGEN&#39;</span><span style="color: #000000">);</span>
+<span style="color: #000000">Inflector::rules(</span><span style="color: #C41A16">&#39;transliteration&#39;</span><span style="color: #000000">,</span> <span style="color: #000000">array(</span><span style="color: #C41A16">&#39;/Ø/&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;O&#39;</span><span style="color: #000000">));</span>
+<span style="color: #000000">$this-&gt;assertEqual(Inflector::slug(</span><span style="color: #C41A16">&#39;JØRGEN&#39;</span><span style="color: #000000">),</span> <span style="color: #C41A16">&#39;JORGEN&#39;</span><span style="color: #000000">);</span>
+</pre></div>
+
+<p>Good practice is to store your custom rules in a bootstrap file, so that they are immediately available to your application when it is fully loaded. If you need to do that on-the-fly, be sure to read the next chapter about caching translation results.</p>
+
+<h3 id="caching:80a65fb5d80eeadafeb3cbaa12fa2dd1">Caching</h3>
+
+<p>You&rsquo;ve probably heard or used the methods above previously. What you maybe don&rsquo;t know is, that the Inflector caches your <code>singularize</code>, <code>pluralize</code>,&hellip; calls and if you call the same method with the same word again it will be served directly out of an array.</p>
+
+<p>That&rsquo;s pretty neat and doesn&rsquo;t do any harm when you properly define your custom rules in a bootstrap file. But you may run into issues when you call a translation method for word X, then add your own rules that affect X and then call the method again. It will be served straight out of the cache and your rules won&rsquo;t match.</p>
+
+<p>You can fix this by calling <code>Inflector::reset()</code> before you apply your rules (this will empty the caches). The next call will then apply your custom rules.</p>
+
+<h3 id="conclusion:80a65fb5d80eeadafeb3cbaa12fa2dd1">Conclusion</h3>
+
+<p>The Inflector is a nice utility library that is used widely in the Lithium core and can easily be used by your application too. It&rsquo;s a fast and extensible way of dealing with dynamic content that needs to be pluralized, singularized, slugged and so on.</p>
+
+<p>Finally, it does not have any external dependencies so you can even use the Inflector in your own libraries or frameworks.</p>
+
+                    </div>
+                </section>
+                
+                <h1 class="content-subhead">23 Nov 2010</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="http://nitschinger.at/Write-your-own-Helper-with-Lithium/" class="post-title">Write your own Helper with Lithium</a>
+
+                        <p class="post-meta">
+                            
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        <p>Lithium comes with two helpers out of the box. The Form-Helper and the Html-Helper. Both are great and help you to make your View-Code more flexible, maintainable and easier to read.</p>
+
+<p>But what do you do when you need a functionality that they don&rsquo;t provide? Right, you write your own. Let&rsquo;s imagine you want to tell your blog-readers how many posts you have stored in your database. In our first iteration our code might look like this:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">We</span> <span style="color: #000000">have</span> <span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #A90D91">count</span>(<span style="color: #000000">$posts</span>) <span style="color: #633820">?&gt;</span> <span style="color: #000000">posts</span> <span style="color: #000000">stored</span> <span style="color: #A90D91">in</span> <span style="color: #000000">the</span> <span style="color: #000000">database</span>.
+</pre></div>
+
+<p>Looks great so far, but our code doesn&rsquo;t cover the case when we have only one post stored. Let&rsquo;s fix that:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">We</span> <span style="color: #000000">have</span> <span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #A90D91">count</span>(<span style="color: #000000">$posts</span>) <span style="color: #633820">?&gt;</span> 
+<span style="color: #633820">&lt;?php</span> <span style="color: #A90D91">if</span>(<span style="color: #A90D91">count</span>(<span style="color: #000000">$posts</span>) <span style="color: #000000">!=</span> <span style="color: #1C01CE">1</span>)<span style="color: #000000">:</span> <span style="color: #633820">?&gt;</span>
+    <span style="color: #000000">posts</span>
+<span style="color: #633820">&lt;?php</span> <span style="color: #A90D91">else</span><span style="color: #000000">:</span> <span style="color: #633820">?&gt;</span>
+    <span style="color: #000000">post</span>
+<span style="color: #633820">&lt;?php</span> <span style="color: #A90D91">endif</span>; <span style="color: #633820">?&gt;</span>
+<span style="color: #000000">stored</span> <span style="color: #A90D91">in</span> <span style="color: #000000">the</span> <span style="color: #000000">database</span>.
+</pre></div>
+
+<p>This works, but looks ugly and makes our View more complicated and messy (leaving aside that the above code is a bit verbose). To fix that, we write a custom <code>Word-Helper</code> that abstracts the count-stuff for our view.</p>
+
+<p>Thankfully, the li3-developers thought about that and provide us with everything we need to get started. Lithium also automatically loads our helper if we want to access it. Let&rsquo;s assume that we want to call the helper with <code>$this-&gt;word-&gt;pluralize(count($posts), 'post')</code>.</p>
+
+<p>We all love tests, so let&rsquo;s start with them first. We create a new <code>WordTest.php</code> (in <code>app/tests/cases/extensions/helper</code>) and add a some test cases.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+<span style="color: #A90D91">namespace</span> <span style="color: #000000">app\tests\cases\extensions\helper</span>;
+<span style="color: #A90D91">use</span> <span style="color: #000000">app\extensions\helper\Word</span>;
+
+<span style="color: #A90D91">class</span> <span style="color: #3F6E75">WordTest</span> <span style="color: #A90D91">extends</span> <span style="color: #000000">\lithium\test\Unit</span> {
+    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">setUp</span>() {
+        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">word</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Word</span>();
+    }
+
+    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">testPluralize</span>() {
+        <span style="color: #000000">$singular</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;post&#39;</span>;
+
+        <span style="color: #000000">$expected</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;1 post&#39;</span>;
+        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">assertEqual</span>(<span style="color: #000000">$expected</span>, <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">word</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">pluralize</span>(<span style="color: #1C01CE">1</span>, <span style="color: #000000">$singular</span>));
+
+        <span style="color: #000000">$expected</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;0 posts&#39;</span>;
+        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">assertEqual</span>(<span style="color: #000000">$expected</span>, <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">word</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">pluralize</span>(<span style="color: #1C01CE">0</span>, <span style="color: #000000">$singular</span>));
+
+        <span style="color: #000000">$expected</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;2 posts&#39;</span>;
+        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">assertEqual</span>(<span style="color: #000000">$expected</span>, <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">word</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">pluralize</span>(<span style="color: #1C01CE">2</span>, <span style="color: #000000">$singular</span>));
+    }
+}
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>If we run the tests (<code>http://yourblog.com/test/app/tests/cases/extensions/helper/WordTest</code>), they will fail (as expected). In the <code>setUp</code>-method we try to instantiate the Word-Helper, but it doesn&rsquo;t exist yet. The <code>testPluralize</code>-method tests three different calls of our <code>Word::pluralize()</code> Helper-Method. To make our tests go green, we finally create our <code>Word</code>-Helper (in <code>app/extensions/helper/Word.php</code>).</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+<span style="color: #A90D91">namespace</span> <span style="color: #000000">app\extensions\helper</span>;
+<span style="color: #A90D91">use</span> <span style="color: #000000">lithium\util\Inflector</span>;
+
+<span style="color: #A90D91">class</span> <span style="color: #3F6E75">Word</span> <span style="color: #A90D91">extends</span> <span style="color: #000000">\lithium\template\Helper</span> {
+    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">pluralize</span>(<span style="color: #000000">$count</span>, <span style="color: #000000">$word</span>) {      
+        <span style="color: #000000">$word</span> <span style="color: #000000">=</span> (<span style="color: #000000">$count</span> <span style="color: #000000">!=</span> <span style="color: #1C01CE">1</span> <span style="color: #000000">?</span> <span style="color: #000000">Inflector::</span><span style="color: #836C28">pluralize</span>(<span style="color: #000000">$word</span>) <span style="color: #000000">:</span> <span style="color: #000000">$word</span>);
+        <span style="color: #A90D91">return</span> <span style="color: #000000">$count.</span><span style="color: #C41A16">&quot; &quot;</span><span style="color: #000000">.$word</span>;
+    }
+}
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>Now re-run your tests - they should succeed. If they don&rsquo;t, please check that your files are named correctly and you don&rsquo;t have any typos in them.</p>
+
+<p>Now it&rsquo;s time to call our brand-new helper from our view. Thanks to the <code>autoloading</code> feature, it&rsquo;s dead easy:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">We</span> <span style="color: #000000">have</span> <span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">word</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">pluralize</span>(<span style="color: #A90D91">count</span>(<span style="color: #000000">$posts</span>), <span style="color: #C41A16">&#39;post&#39;</span>); <span style="color: #633820">?&gt;</span> <span style="color: #000000">stored</span> <span style="color: #A90D91">in</span> <span style="color: #000000">the</span> <span style="color: #000000">database</span>.
+</pre></div>
+
+<p>That&rsquo;s it - you&rsquo;ve just created your own View-Helper! If you have any questions or suggestions, feel free to comment below.</p>
+
+                    </div>
+                </section>
+                
+            </div>
+            
+
+            <div class="footer">
+    <div class="pure-menu pure-menu-horizontal pure-menu-open">
+        <ul>
+		<li>&copy; Michael Nitschinger 2010-2016</li>
+        </ul>
+    </div>
+</div>
+<script src="http://nitschinger.at//js/all.min.js"></script>
+
+        </div>
+    </div>
+</div>
+
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', '', 'auto');
+ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

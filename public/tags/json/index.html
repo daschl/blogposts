@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Json &middot; daschl writes. sometimes.</title>
+
+    <meta name="description" content="">
+
+    <meta name="generator" content="Hugo 0.15" />
+    <meta name="twitter:card" content="summary">
+    
+    <meta name="twitter:title" content="Json &middot; daschl writes. sometimes.">
+    <meta name="twitter:description" content="">
+
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Json &middot; daschl writes. sometimes.">
+    <meta property="og:description" content="">
+
+    <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Oxygen:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
+    <!--[if lte IE 8]>
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-old-ie-min.css">
+    <![endif]-->
+    <!--[if gt IE 8]><!-->
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
+    <!--<![endif]-->
+
+    <link rel="stylesheet" href="http://nitschinger.at//css/all.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <link rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." href="http://nitschinger.at//index.xml" />
+</head>
+<body>
+
+
+<div id="layout" class="pure-g">
+    <div class="sidebar pure-u-1 pure-u-md-1-4">
+    <div class="header">
+        <hgroup>
+            <h1 class="brand-title"><a href="http://nitschinger.at/">daschl writes. sometimes.</a></h1>
+            <h2 class="brand-tagline"></h2>
+        </hgroup>
+
+        <nav class="nav">
+            <ul class="nav-list">
+                
+                
+                <li class="nav-item">
+                    <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+
+    <div class="content pure-u-1 pure-u-md-3-4">
+        <div>
+            
+            <div class="posts">
+                
+                <h1 class="content-subhead">30 Jan 2013</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="http://nitschinger.at/Benchmarking-Cache-Transcoders-in-PHP/" class="post-title">Benchmarking Cache Transcoders in PHP</a>
+
+                        <p class="post-meta">
+                            
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        
+
+<h2 id="motivation:1588be44ecdc8dc6ecb17e0152c89754">Motivation</h2>
+
+<p>Storing PHP objects (or simpler data types like arrays) in caches always requires some kind of transformation. You need a way of encoding/decoding data so that it can be stored and loaded properly. In most languages, this process is known as object <a href="http://en.wikipedia.org/wiki/Serialization">serialization</a>. PHP provides a mechanism for this out of the box, but in this article we&rsquo;ll also look at <a href="http://pecl.php.net/package/igbinary">igbinary</a> as a drop-in replacement for the default serializer. We also compare the results to object transcoding based on <a href="http://json.org/">JSON</a>, which is not really an object serialization mechanism but commonly used as a data chache structure which has its own benefits and drawbacks.</p>
+
+<p>As always, please take this benchmarks with a grain of salt. Don&rsquo;t take the absolute numbers as a reference, look at the differences and run the benchmarks in your environment to get accurate results that apply to your scenarios. If you spot any flaws in what is shown here, please point it out in the comments. This blog post is not some kind of &ldquo;advertising&rdquo; for a special mechanism and all different transcoders are discussed with their benefits and drawbacks.</p>
+
+<p>If you want to compare your results to mine, I&rsquo;m using a MacBook Pro on Mac OS X 10.8.2 with the 2.3 GHz i7 and 16GB RAM. I&rsquo;m using PHP 5.4.11 (through <a href="https://github.com/josegonzalez/homebrew-php">homebrew-php</a>) instead of the shipped 5.3.</p>
+
+<h2 id="the-php-serializer:1588be44ecdc8dc6ecb17e0152c89754">The PHP Serializer</h2>
+
+<p>Out of the box, PHP provides a serialization mechanism on top of the <a href="http://php.net/manual/de/function.serialize.php">serialize</a> and <a href="http://www.php.net/manual/de/function.unserialize.php">unserialize</a> methods. By applying this method on a variable, it gets encoded to a byte stream and neither the type nor the structure gets lost (you can&rsquo;t store <a href="http://www.php.net/manual/en/language.types.resource.php">resources</a>).</p>
+
+<p>So, let&rsquo;s look at a simple and a more complex example on how the transformation looks like:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+
+<span style="color: #A90D91">class</span> <span style="color: #3F6E75">Person</span> {
+    <span style="color: #A90D91">private</span> <span style="color: #000000">$name</span>;
+
+    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">__construct</span>(<span style="color: #000000">$name</span>) {
+        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">name</span> <span style="color: #000000">=</span> <span style="color: #000000">$name</span>;
+    }
+
+    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">getName</span>() {
+        <span style="color: #A90D91">return</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">name</span>;
+    }
+}
+
+<span style="color: #000000">$simple</span> <span style="color: #000000">=</span> <span style="color: #A90D91">array</span>(<span style="color: #C41A16">&quot;key&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;value&quot;</span>);
+<span style="color: #000000">$complex</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Person</span>(<span style="color: #C41A16">&quot;Michael&quot;</span>);
+
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>If we&rsquo;re calling <code>serialize()</code> on both variables, the output (as a string representation) looks like this:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+<span style="color: #000000">$simpleSerialized</span> <span style="color: #000000">=</span> <span style="color: #A90D91">serialize</span>(<span style="color: #000000">$simple</span>);
+<span style="color: #000000">$complexSerialized</span> <span style="color: #000000">=</span> <span style="color: #A90D91">serialize</span>(<span style="color: #000000">$complex</span>);
+
+<span style="color: #177500">// string(28) &quot;a:1:{s:3:&quot;key&quot;;s:5:&quot;value&quot;;}&quot;</span>
+<span style="color: #A90D91">var_dump</span>(<span style="color: #A90D91">serialize</span>(<span style="color: #000000">$simple</span>));
+
+<span style="color: #177500">// string(51) &quot;O:6:&quot;Person&quot;:1:{s:12:&quot;\000Person\000name&quot;;s:7:&quot;Michael&quot;;}&quot;</span>
+<span style="color: #A90D91">var_dump</span>(<span style="color: #A90D91">serialize</span>(<span style="color: #000000">$complex</span>));
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>While the resulting string is not designed for readability, you can clearly see that some metadata is added in order to make the unserialization possible. For example, the <code>key</code> string is serialized to <code>s:3:&quot;key&quot;</code> where the <code>s</code> means <code>string</code> and <code>3</code> is the string length. Also, <code>a</code> points to an <code>array</code> and <code>O</code> to an <code>object</code>.</p>
+
+<p>We can now <code>unserialize()</code> the values and work with them as if they&rsquo;ve never been stored somewhere else:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+<span style="color: #000000">$simpleUnserialized</span> <span style="color: #000000">=</span> <span style="color: #A90D91">unserialize</span>(<span style="color: #000000">$simpleSerialized</span>);
+<span style="color: #000000">$complexUnserialized</span> <span style="color: #000000">=</span> <span style="color: #A90D91">unserialize</span>(<span style="color: #000000">$complexSerialized</span>);
+
+<span style="color: #177500">// array(1) {&#39;key&#39; =&gt; string(5) &quot;value&quot;}</span>
+<span style="color: #A90D91">var_dump</span>(<span style="color: #000000">$simpleUnserialized</span>);
+
+<span style="color: #177500">// string(7) &quot;Michael&quot;</span>
+<span style="color: #A90D91">var_dump</span>(<span style="color: #000000">$complexUnserialized-&gt;</span><span style="color: #836C28">getName</span>());
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>In practice, two characteristics are important: size of the serialized value and performance. While from a developer perspective performance is fun to explore, the size of the serialized object is what matters most. Performance differences are only measurable when running it in a loop with lots of iterations, while in practice you may only work with a few objects at a time per request.</p>
+
+<p>Let&rsquo;s use a common caching scenario: imagine we&rsquo;re caching entity responses from an ORM framework like <a href="http://www.doctrine-project.org/">Doctrine</a>. Here is a blog post class that will be filled with life:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+<span style="color: #A90D91">class</span> <span style="color: #3F6E75">BlogPost</span> {
+
+    <span style="color: #A90D91">private</span> <span style="color: #000000">$title</span>;
+    <span style="color: #A90D91">private</span> <span style="color: #000000">$teaser</span>;
+    <span style="color: #A90D91">private</span> <span style="color: #000000">$author</span>;
+    <span style="color: #A90D91">private</span> <span style="color: #000000">$body</span>;
+
+    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">__construct</span>(<span style="color: #000000">$title</span>, <span style="color: #000000">$teaser</span>, <span style="color: #000000">$author</span>, <span style="color: #000000">$body</span>) {
+        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">title</span> <span style="color: #000000">=</span> <span style="color: #000000">$title</span>;
+        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">teaser</span> <span style="color: #000000">=</span> <span style="color: #000000">$teaser</span>;
+        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">author</span> <span style="color: #000000">=</span> <span style="color: #000000">$author</span>;
+        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">body</span> <span style="color: #000000">=</span> <span style="color: #000000">$body</span>;
+    }
+
+    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">getTitle</span>() { <span style="color: #A90D91">return</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">title</span>; }
+    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">getTeaser</span>() { <span style="color: #A90D91">return</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">teaser</span>; }
+    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">getAuthor</span>() { <span style="color: #A90D91">return</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">author</span>; }
+    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">getBody</span>() { <span style="color: #A90D91">return</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">body</span>; }
+
+}
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>Please take this with a grain of salt, because since JSON transcoding is not able to store a 1:1 representation like <code>serialize</code>, we need to work around that a bit. More details and discussion will be provided in the JSON section.</p>
+
+<p>Assume that a blog post with content has around 10k characters and about 10kb in size, lets create a crafted blog post:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+<span style="color: #000000">$randomString</span> <span style="color: #000000">=</span> <span style="color: #A90D91">function</span> (<span style="color: #000000">$length</span>) {
+    <span style="color: #000000">$chars</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .&quot;</span>;    
+    <span style="color: #000000">$str</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;&quot;</span>;
+    <span style="color: #A90D91">for</span>( <span style="color: #000000">$i</span> <span style="color: #000000">=</span> <span style="color: #1C01CE">0</span>; <span style="color: #000000">$i</span> <span style="color: #000000">&lt;</span> <span style="color: #000000">$length</span>; <span style="color: #000000">$i++</span> ) {
+        <span style="color: #000000">$str</span> <span style="color: #000000">.=</span> <span style="color: #000000">$chars</span>[<span style="color: #A90D91">rand</span>(<span style="color: #1C01CE">0</span>, <span style="color: #A90D91">strlen</span>(<span style="color: #000000">$chars</span>)<span style="color: #000000">-</span><span style="color: #1C01CE">1</span>)];
+    }
+    <span style="color: #A90D91">return</span> <span style="color: #000000">$str</span>;
+};
+
+<span style="color: #000000">$title</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;How to measure caching transcoders&quot;</span>;
+<span style="color: #000000">$teaser</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;This is a much longer introduction on how to measure caching transcoders. Feel free to post your own findings.&quot;</span>;
+<span style="color: #000000">$author</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;daschl&quot;</span>;
+<span style="color: #000000">$body</span> <span style="color: #000000">=</span> <span style="color: #000000">$randomString</span>(<span style="color: #1C01CE">10000</span>);
+
+<span style="color: #000000">$post</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">BlogPost</span>(<span style="color: #000000">$title</span>, <span style="color: #000000">$teaser</span>, <span style="color: #000000">$author</span>, <span style="color: #000000">$body</span>);
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>Now run <code>serialize</code> and <code>unserialize</code> in loops to measure performance as well as determine the resulting size of the object:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+<span style="color: #000000">$iterations</span> <span style="color: #000000">=</span> <span style="color: #1C01CE">10000</span>;
+<span style="color: #000000">$start</span> <span style="color: #000000">=</span> <span style="color: #A90D91">microtime</span>(<span style="color: #A90D91">true</span>);
+<span style="color: #A90D91">for</span>(<span style="color: #000000">$i=</span><span style="color: #1C01CE">0</span>;<span style="color: #000000">$i&lt;$iterations</span>;<span style="color: #000000">$i++</span>) {
+    <span style="color: #000000">$serialized</span> <span style="color: #000000">=</span> <span style="color: #A90D91">serialize</span>(<span style="color: #000000">$post</span>);
+}
+<span style="color: #000000">$end</span> <span style="color: #000000">=</span> <span style="color: #A90D91">microtime</span>(<span style="color: #A90D91">true</span>);
+
+<span style="color: #A90D91">echo</span> <span style="color: #C41A16">&quot;Size: &quot;</span> <span style="color: #000000">.</span> <span style="color: #A90D91">strlen</span>(<span style="color: #000000">$serialized</span>) <span style="color: #000000">.</span> <span style="color: #C41A16">&quot;\n&quot;</span>;
+<span style="color: #A90D91">echo</span> (<span style="color: #000000">$end</span> <span style="color: #000000">-</span> <span style="color: #000000">$start</span>) <span style="color: #000000">*</span> <span style="color: #1C01CE">1000</span> <span style="color: #000000">.</span> <span style="color: #C41A16">&quot;Milliseconds\n&quot;</span>;
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>On my machine, to serialize 10000 objects it took about 33 milliseconds. The length of the resulting object (its string representation) is 10297 characters. This is kind of expected because the bulk of the object is the long article body. Before start comparing, we can already make one observation: its pretty fast. Now, let&rsquo;s move on to igbinary serialization and see how these results compare.</p>
+
+<h2 id="serializing-with-igbinary:1588be44ecdc8dc6ecb17e0152c89754">Serializing with igbinary</h2>
+
+<p>The <a href="http://pecl.php.net/package/igbinary">igbinary</a> extension was developed as a drop-in replacement for the default PHP serializer. Instead of storing the serialized object as a text, it is stored as binary data. You can install it either through PECL or compile it from source, either way before running the tests make sure you have the <code>igbinary</code> extension enabled:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">michael@daschlbook ~ $ php -m | grep igbinary
+igbinary
+</pre></div>
+
+<p>Instead of using <code>serialize</code> or <code>unserialize</code>, igbinary provides us with appropriate <code>igbinary_serialize</code> and <code>igbinary_unserialize</code> functions. Now we can apply the same microbenchmark and see the results:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+<span style="color: #000000">$iterations</span> <span style="color: #000000">=</span> <span style="color: #1C01CE">10000</span>;
+<span style="color: #000000">$start</span> <span style="color: #000000">=</span> <span style="color: #A90D91">microtime</span>(<span style="color: #A90D91">true</span>);
+<span style="color: #A90D91">for</span>(<span style="color: #000000">$i=</span><span style="color: #1C01CE">0</span>;<span style="color: #000000">$i&lt;$iterations</span>;<span style="color: #000000">$i++</span>) {
+    <span style="color: #000000">$serialized</span> <span style="color: #000000">=</span> <span style="color: #000000">igbinary_serialize</span>(<span style="color: #000000">$post</span>);
+}
+<span style="color: #000000">$end</span> <span style="color: #000000">=</span> <span style="color: #A90D91">microtime</span>(<span style="color: #A90D91">true</span>);
+
+<span style="color: #A90D91">echo</span> <span style="color: #C41A16">&quot;Size: &quot;</span> <span style="color: #000000">.</span> <span style="color: #A90D91">strlen</span>(<span style="color: #000000">$serialized</span>) <span style="color: #000000">.</span> <span style="color: #C41A16">&quot;\n&quot;</span>;
+<span style="color: #A90D91">echo</span> (<span style="color: #000000">$end</span> <span style="color: #000000">-</span> <span style="color: #000000">$start</span>) <span style="color: #000000">*</span> <span style="color: #1C01CE">1000</span> <span style="color: #000000">.</span> <span style="color: #C41A16">&quot;Milliseconds\n&quot;</span>;
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>With default settings, to serialize 10000 objects with igbinary it took 678 milliseconds. The length of the resulting object is 10244 characters. If you compare it with the default serialization mechanism, that is 20 times slower and the resulting object isn&rsquo;t much smaller either. Bummer - or not? Let&rsquo;s look at why this is happening.</p>
+
+<p>Let&rsquo;s look at a different workload. Let&rsquo;s create a data structure which consist of 30 smaller blog posts and measure the statistics for both again (only doing 1000 iterations instead of 10000):</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+<span style="color: #000000">$posts</span> <span style="color: #000000">=</span> <span style="color: #A90D91">array</span>();
+<span style="color: #A90D91">for</span>(<span style="color: #000000">$i=</span><span style="color: #1C01CE">0</span>;<span style="color: #000000">$i&lt;</span><span style="color: #1C01CE">30</span>;<span style="color: #000000">$i++</span>) {
+    <span style="color: #000000">$posts</span>[] <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">BlogPost</span>(<span style="color: #000000">$title</span>, <span style="color: #000000">$teaser</span>, <span style="color: #000000">$author</span>, <span style="color: #000000">$randomString</span>(<span style="color: #1C01CE">50</span>));
+}
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>The results are more interesting: on my machine igbinary takes about 95 milliseconds while serialize needs only 41 milliseconds. Now it&rsquo;s just 2 times slower. But here comes the important part: the resulting size of igbinary is 2385 characters, while serialize is 10467 characters! That&rsquo;s about 5 times smaller. Note that this gap increases the larger your PHP object gets (not in terms of long character strings but speaking of complexity like methods).</p>
+
+<p>Note that the igbinary docs say you should set <code>igbinary.compact_strings</code> to <code>Off</code> to increase performance, but there was no real measurable difference in my testings.</p>
+
+<p>There is one more thing we haven&rsquo;t compared: deserializing of previously serialized objects. We can take the same code from above, use the serialized part as input and measure the timings once again (not that we don&rsquo;t need to measure the size of the resulting object because we&rsquo;re creating a &ldquo;live&rdquo; object again):</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+<span style="color: #000000">$posts</span> <span style="color: #000000">=</span> <span style="color: #A90D91">array</span>();
+<span style="color: #A90D91">for</span>(<span style="color: #000000">$i=</span><span style="color: #1C01CE">0</span>;<span style="color: #000000">$i&lt;</span><span style="color: #1C01CE">30</span>;<span style="color: #000000">$i++</span>) {
+    <span style="color: #000000">$posts</span>[] <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">BlogPost</span>(<span style="color: #000000">$title</span>, <span style="color: #000000">$teaser</span>, <span style="color: #000000">$author</span>, <span style="color: #000000">$randomString</span>(<span style="color: #1C01CE">50</span>));
+}
+
+<span style="color: #000000">$serializedIgbinary</span> <span style="color: #000000">=</span> <span style="color: #000000">igbinary_serialize</span>(<span style="color: #000000">$posts</span>);
+<span style="color: #000000">$serializedClassic</span> <span style="color: #000000">=</span> <span style="color: #A90D91">serialize</span>(<span style="color: #000000">$posts</span>);
+
+<span style="color: #000000">$iterations</span> <span style="color: #000000">=</span> <span style="color: #1C01CE">1000</span>;
+<span style="color: #000000">$start</span> <span style="color: #000000">=</span> <span style="color: #A90D91">microtime</span>(<span style="color: #A90D91">true</span>);
+<span style="color: #A90D91">for</span>(<span style="color: #000000">$i=</span><span style="color: #1C01CE">0</span>;<span style="color: #000000">$i&lt;$iterations</span>;<span style="color: #000000">$i++</span>) {
+    <span style="color: #000000">$unserialized</span> <span style="color: #000000">=</span> <span style="color: #000000">igbinary_unserialize</span>(<span style="color: #000000">$serializedIgbinary</span>);
+}
+<span style="color: #000000">$end</span> <span style="color: #000000">=</span> <span style="color: #A90D91">microtime</span>(<span style="color: #A90D91">true</span>);
+
+<span style="color: #A90D91">echo</span> (<span style="color: #000000">$end</span> <span style="color: #000000">-</span> <span style="color: #000000">$start</span>) <span style="color: #000000">*</span> <span style="color: #1C01CE">1000</span> <span style="color: #000000">.</span> <span style="color: #C41A16">&quot;Milliseconds\n&quot;</span>;
+
+<span style="color: #000000">$start</span> <span style="color: #000000">=</span> <span style="color: #A90D91">microtime</span>(<span style="color: #A90D91">true</span>);
+<span style="color: #A90D91">for</span>(<span style="color: #000000">$i=</span><span style="color: #1C01CE">0</span>;<span style="color: #000000">$i&lt;$iterations</span>;<span style="color: #000000">$i++</span>) {
+    <span style="color: #000000">$unserialized</span> <span style="color: #000000">=</span> <span style="color: #A90D91">unserialize</span>(<span style="color: #000000">$serializedClassic</span>);
+}
+<span style="color: #000000">$end</span> <span style="color: #000000">=</span> <span style="color: #A90D91">microtime</span>(<span style="color: #A90D91">true</span>);
+
+<span style="color: #A90D91">echo</span> (<span style="color: #000000">$end</span> <span style="color: #000000">-</span> <span style="color: #000000">$start</span>) <span style="color: #000000">*</span> <span style="color: #1C01CE">1000</span> <span style="color: #000000">.</span> <span style="color: #C41A16">&quot;Milliseconds\n&quot;</span>;
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>This is giving us very interesting results: igbinary takes 65 milliseconds while classic unserialize needs 82 milliseconds! So igbinary is faster here. This is pretty good news, because in practice you will need to unserialize (speak &ldquo;fetch from cache&rdquo;) much more often than to serialize (speak &ldquo;store in cache&rdquo;). That&rsquo;s the whole point of a cache.</p>
+
+<p>Before we move on to JSON, I think it&rsquo;s fair to say that igbinary wins this comparison. Most of the time you want to store complex PHP objects and fetch them out fast and quickly. Of course it has the overhead of installing it as an extension, but since it&rsquo;s a drop-in replacement you can change your mind later (but take this with a grain of salt because you can only unserialize what was serialized with igbinary and vice versa - so you&rsquo;d need to fetch and restore them).</p>
+
+<p>Finally, when you are storing very long strings in objects, both have pretty much the same overhead (because you can&rsquo;t &ldquo;compact&rdquo; this long string very well). One workaround may be to compress and decompress the string as needed, using a mixture of gzip and base64 encoding. When serializing PHP objects, you can use the <a href="http://www.php.net/manual/en/language.oop5.magic.php#object.sleep">__sleep</a> and <a href="http://www.php.net/manual/en/language.oop5.magic.php#object.wakeup">__wakeup</a> methods to perform these kind of transformations.</p>
+
+<p>Adding these two methods to our <code>BlogPost</code> class results in a 20% saving when using the 10k random string again:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+<span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">__sleep</span>() {
+    <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">body</span> <span style="color: #000000">=</span> <span style="color: #A90D91">gzdeflate</span>(<span style="color: #000000">$this-&gt;</span><span style="color: #836C28">body</span>, <span style="color: #1C01CE">9</span>);
+    <span style="color: #A90D91">return</span> <span style="color: #A90D91">array</span>(<span style="color: #C41A16">&#39;title&#39;</span>, <span style="color: #C41A16">&#39;teaser&#39;</span>, <span style="color: #C41A16">&#39;author&#39;</span>, <span style="color: #C41A16">&#39;body&#39;</span>);
+}
+
+<span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">__wakeup</span>() {
+    <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">body</span> <span style="color: #000000">=</span> <span style="color: #A90D91">gzinflate</span>(<span style="color: #000000">$this-&gt;</span><span style="color: #836C28">body</span>);
+}
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>Note that compressing takes time too, so measure if it makes sense in your case and the space savings are good enough. You also need the <code>zblib</code> extension to make this work properly.</p>
+
+<h2 id="transcoding-on-top-of-json:1588be44ecdc8dc6ecb17e0152c89754">Transcoding on top of JSON</h2>
+
+<p>First of all, JSON has not the same characteristics as serialization. This is just because JSON only supports a subset of the available data types that PHP supports and therefore encoding/decoding takes some extra steps on the application side. So why are we comparing it here? Well, JSON is used very often for storing data in caches. Not only is it human readable, it can also be used in combination with other languages and applications. Using JSON allows you to store cache information from a Java backend and use it in your PHP application. That doesn&rsquo;t work with traditional serialization approaches.</p>
+
+<p>If you need a primer on JSON and PHP, <a href="http://nitschinger.at/Handling-JSON-like-a-boss-in-PHP">read</a> my other article first. PHP allows you to transcode all objects (except resources) through the <a href="http://www.php.net/manual/en/function.json-encode.php">json_encode</a> and <a href="http://www.php.net/manual/en/function.json-decode.php">json_decode</a> functions. Private and protected variables are not converted, so we either need to make them public or provide a custom method that exports a storable object structure. While we&rsquo;re at it, we can provide a static factory method that initializes our BlogPost from the returned JSON string:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+<span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">toJson</span>() {
+    <span style="color: #A90D91">return</span> <span style="color: #A90D91">array</span>(
+        <span style="color: #C41A16">&#39;title&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">title</span>,
+        <span style="color: #C41A16">&#39;teaser&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">teaser</span>,
+        <span style="color: #C41A16">&#39;author&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">author</span>,
+        <span style="color: #C41A16">&#39;body&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">body</span>
+    );
+}
+
+<span style="color: #A90D91">public</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">function</span> <span style="color: #000000">fromJson</span>(<span style="color: #000000">$json</span>) {
+    <span style="color: #000000">$d</span> <span style="color: #000000">=</span> <span style="color: #A90D91">json_decode</span>(<span style="color: #000000">$json</span>, <span style="color: #A90D91">true</span>);
+    <span style="color: #A90D91">return</span> <span style="color: #A90D91">new</span> <span style="color: #000000">BlogPost</span>(<span style="color: #000000">$d</span>[<span style="color: #C41A16">&#39;title&#39;</span>], <span style="color: #000000">$d</span>[<span style="color: #C41A16">&#39;teaser&#39;</span>], <span style="color: #000000">$d</span>[<span style="color: #C41A16">&#39;author&#39;</span>], <span style="color: #000000">$d</span>[<span style="color: #C41A16">&#39;body&#39;</span>]);
+}
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>Note that the <code>toJson()</code> method returns a simple representation of the object, which is much less complicated than a full serialization approach. Let&rsquo;s run our benchmark again:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+<span style="color: #000000">$post</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">BlogPost</span>(<span style="color: #000000">$title</span>, <span style="color: #000000">$teaser</span>, <span style="color: #000000">$author</span>, <span style="color: #000000">$randomString</span>(<span style="color: #1C01CE">10000</span>));
+<span style="color: #000000">$post</span> <span style="color: #000000">=</span> <span style="color: #000000">$post-&gt;</span><span style="color: #836C28">toJson</span>();
+
+<span style="color: #000000">$iterations</span> <span style="color: #000000">=</span> <span style="color: #1C01CE">10000</span>;
+<span style="color: #000000">$start</span> <span style="color: #000000">=</span> <span style="color: #A90D91">microtime</span>(<span style="color: #A90D91">true</span>);
+<span style="color: #A90D91">for</span>(<span style="color: #000000">$i=</span><span style="color: #1C01CE">0</span>;<span style="color: #000000">$i&lt;$iterations</span>;<span style="color: #000000">$i++</span>) {
+    <span style="color: #000000">$encoded</span> <span style="color: #000000">=</span> <span style="color: #A90D91">json_encode</span>(<span style="color: #000000">$post</span>);
+}
+<span style="color: #A90D91">echo</span> <span style="color: #C41A16">&quot;Size: &quot;</span> <span style="color: #000000">.</span> <span style="color: #A90D91">strlen</span>(<span style="color: #000000">$serialized</span>) <span style="color: #000000">.</span> <span style="color: #C41A16">&quot;\n&quot;</span>;
+<span style="color: #000000">$end</span> <span style="color: #000000">=</span> <span style="color: #A90D91">microtime</span>(<span style="color: #A90D91">true</span>);
+
+<span style="color: #A90D91">echo</span> (<span style="color: #000000">$end</span> <span style="color: #000000">-</span> <span style="color: #000000">$start</span>) <span style="color: #000000">*</span> <span style="color: #1C01CE">1000</span> <span style="color: #000000">.</span> <span style="color: #C41A16">&quot;Milliseconds\n&quot;</span>;
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>On my machine it takes 1.7 seconds (!) to complete the encoding. The resulting object size is 10196 bytes which is comparable to our earlier measurements (again, the large value dominates here). Testing it against complex objects is not interesting because we can&rsquo;t restore them anyway without further modifications. Running <code>json_decode</code> on the encoded object also takes around 1.5 seconds, so there is no major difference here.</p>
+
+<p>Personally, I&rsquo;d expected to have JSON transcoding to perform better, but again normally you don&rsquo;t run 10k iterations in a row. When you break it down to 10 encodings they take about 1 millisecond which is okay for most scenarios (given we encode a really large objects with a few kb here). Smaller objects like user sessions will encode much faster.</p>
+
+<p>Edit: a friendly reader on <a href="http://www.reddit.com/r/PHP/comments/17kcy3/benchmarking_cache_transcoders_in_php/">reddit</a> pointed out that you can (and should) use the <a href="http://www.php.net/manual/en/class.jsonserializable.php">JsonSerializable interface</a> instead of rolling your own method name like <code>toJson()</code>. Thanks!</p>
+
+<p>Edit2: another reader pointed out that naming a method <code>toJson()</code> which does not return JSON but an array is misleading. I agree, so if you adapt this approach in your environment choose a better name like <code>prepareForJson()</code>, <code>toArray()</code> or use the <code>JsonSerializable</code> Interface as shown above.</p>
+
+<h2 id="conclusion:1588be44ecdc8dc6ecb17e0152c89754">Conclusion</h2>
+
+<p>After running these microbenchmarks, my conclusion is that when you need object serialization, go with igbinary. It provides good enough serialization performance and huge wins on object sizes. Decoding performance is also much better than out-ouf-the-box serialization. If you need interoperability with other applications or if you don&rsquo;t want to limit yourself to serialized PHP blobs, go with JSON. JSON requires much more hand wiring but you&rsquo;ll gain a lot of flexibility.</p>
+
+                    </div>
+                </section>
+                
+                <h1 class="content-subhead">06 Jun 2012</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="http://nitschinger.at/Handling-JSON-like-a-boss-in-PHP/" class="post-title">Handling JSON like a boss in PHP</a>
+
+                        <p class="post-meta">
+                            
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        
+
+<p>There are already lots of tutorials out there on handling JSON with PHP, but most of them don&rsquo;t go much deeper than throwing an array against <a href="http://php.net/manual/en/function.json-encode.php">json_encode</a> and hoping for the best. This article aims to be a solid introduction into JSON and how to handle it correctly in combination with PHP. Also, readers who don&rsquo;t use PHP as their programming language can benefit from the first part that acts as a general overview on JSON.</p>
+
+<p>JSON (JavaScript Object Notation) is a data exchange format that is both lightweight and human-readable (like XML, but without the bunch of markup around your actual payload). Its syntax is a subset of the JavaScript language that was standardized in <a href="http://www.ecma-international.org/publications/files/ECMA-ST/Ecma-262.pdf">1999</a>. If you want to find out more, visit the <a href="http://www.json.org/">official website</a>.</p>
+
+<p>The cool thing about JSON is that you can handle it natively in JavaScript, so it acts as the perfect glue between server- and client-side application logic. Also, since the syntactical overhead (compared to XML) is very low, you need to transfer less bytes of ther wire. In modern web stacks, JSON has pretty much replaced <a href="http://en.wikipedia.org/wiki/XML">XML</a> as the de-factor payload format (aside from the Java world I suppose) and client side application frameworks like <a href="http://backbonejs.org/">backbone.js</a> make heavy use of it inside the model layer.</p>
+
+<p>Before we start handling JSON in PHP, we need to take a short look at the JSON specification to understand how it is implemented and what&rsquo;s possible.</p>
+
+<h2 id="introducing-json:a3d5483349c0d950e081bf899405ed60">Introducing JSON</h2>
+
+<p>Since JSON is a subset of the JavaScript language, it shares all of its language constructs with its parent. In JSON, you can store unordered key/value combinations in objects or use arrays to preserve the order of values. This makes it easy to parse and to read, but also has some limitations. Since JSON only defines a small amount of data types, you can&rsquo;t transmit types like dates natively (you can, but you need to transform them into a string or a unix timestamp as an integer).</p>
+
+<p>So, what datatypes does JSON support? It all boils down to strings, numbers, booleans and null. Of course, you can also supply objects or arrays as values.</p>
+
+<p>Here&rsquo;s a example JSON document:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">{
+    &quot;title&quot;: &quot;A cool blog post&quot;,
+    &quot;clicks&quot;: 4000,
+    &quot;children&quot;: null,
+    &quot;published&quot;: true,
+    &quot;comments&quot;: [
+        {
+            &quot;author&quot;: &quot;Mister X&quot;,
+            &quot;message&quot;: &quot;A really cool posting&quot;
+        },
+        {
+            &quot;author&quot;: &quot;Misrer Y&quot;,
+            &quot;message&quot;: &quot;It&#39;s me again!&quot;
+        }
+    ]
+}
+</pre></div>
+
+<p>It contains basically everything that you can express through JSON. As you can see no dates, regexes or something like that. Also, you need to make sure that your whole JSON document is encoded in <a href="http://en.wikipedia.org/wiki/UTF-8">UTF-8</a>. We&rsquo;ll see later how to ensure that in PHP. Due to this shortcomings (and for other good reasons) <a href="http://bsonspec.org/">BSON</a>(Binary JSON) was developed. It was designed to be more space-efficient and provides traversability and extensions like the date type. Its most prominent use case is <a href="http://www.mongodb.org/">MongoDB</a>, but honestly I never came across it somewhere else. I recommend you to take a short look at the specification if you have some time left, since I find it very educating.</p>
+
+<p>Since PHP has a richer type handling than JSON, you need to prepare yourself to write some code on both ends to transform the correct information apart from the obligatory encoding/decoding step. For example, if you want to transport date objects, you need to think if you can just send a unix timestamp over the wire or maybe use a preformatted date string (like <a href="http://php.net/manual/en/function.strftime.php">strftime</a>).</p>
+
+<h2 id="encoding-json-in-php:a3d5483349c0d950e081bf899405ed60">Encoding JSON in PHP</h2>
+
+<p>Some years ago, JSON support was provided through the <a href="http://pecl.php.net/package/json">json pecl extension</a>. Since PHP 5.2, it is included in the core directly, so if you use a recent PHP version you should have no trouble using it.</p>
+
+<p>Note: If you run an older version of PHP than 5.3, I recommend you to upgrade anyway. PHP 5.3 is the oldest version that is currently supported and with the latest PHP <a href="http://www.php.net/archive/2012.php#id2012-02-02-1">security bugs</a> found I would consider it critical to upgrade as soon as possible.</p>
+
+<p>Back to JSON. With <a href="http://php.net/manual/en/function.json-encode.php">json_encode</a>, you can translate anything that is UTF-8 encoded (except resources) from PHP into a JSON string. As a rule of thumb, everything except pure arrays (in PHP this means arrays with an ordered, numerical index) is converted into an object with keys and values.</p>
+
+<p>The method call is easy and looks like the following:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">    json_encode(mixed $<span style="color: #000000">value</span>, int $<span style="color: #000000">options</span> = 0);
+</pre></div>
+
+<p>An integer for options you might ask? Yup, that&rsquo;s called a <a href="http://en.wikipedia.org/wiki/Mask_(computing">bitmask</a>). We&rsquo;ll cover them in a separate part a little bit later. Since these bitmask options change the way the data is encoded, for the following examples assume that we use defaults and don&rsquo;t provide custom params.</p>
+
+<p>Let&rsquo;s start with the basic types first. Since its so easy to grasp, here&rsquo;s the code with short comments on what was translated:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+<span style="color: #177500">// Returns: [&quot;Apple&quot;,&quot;Banana&quot;,&quot;Pear&quot;]</span>
+<span style="color: #A90D91">json_encode</span>(<span style="color: #A90D91">array</span>(<span style="color: #C41A16">&quot;Apple&quot;</span>, <span style="color: #C41A16">&quot;Banana&quot;</span>, <span style="color: #C41A16">&quot;Pear&quot;</span>));
+
+<span style="color: #177500">// Returns: {&quot;4&quot;:&quot;four&quot;,&quot;8&quot;:&quot;eight&quot;}</span>
+<span style="color: #A90D91">json_encode</span>(<span style="color: #A90D91">array</span>(<span style="color: #1C01CE">4</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;four&quot;</span>, <span style="color: #1C01CE">8</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;eight&quot;</span>));
+
+<span style="color: #177500">// Returns: {&quot;apples&quot;:true,&quot;bananas&quot;:null}</span>
+<span style="color: #A90D91">json_encode</span>(<span style="color: #A90D91">array</span>(<span style="color: #C41A16">&quot;apples&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">true</span>, <span style="color: #C41A16">&quot;bananas&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">null</span>));
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>How your arrays are translated depends on your indexes used. You can also see that <code>json_encode</code> takes care of the correct type conversion, so <code>booleans</code> and <code>null</code> are not transformed into strings but use their correct type. Let&rsquo;s now look into objects:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+<span style="color: #A90D91">class</span> <span style="color: #3F6E75">User</span> {
+    <span style="color: #A90D91">public</span> <span style="color: #000000">$firstname</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;&quot;</span>;
+    <span style="color: #A90D91">public</span> <span style="color: #000000">$lastname</span>  <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;&quot;</span>;
+    <span style="color: #A90D91">public</span> <span style="color: #000000">$birthdate</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;&quot;</span>;
+}
+
+<span style="color: #000000">$user</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">User</span>();
+<span style="color: #000000">$user-&gt;</span><span style="color: #836C28">firstname</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;foo&quot;</span>;
+<span style="color: #000000">$user-&gt;</span><span style="color: #836C28">lastname</span>  <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;bar&quot;</span>;
+
+<span style="color: #177500">// Returns: {&quot;firstname&quot;:&quot;foo&quot;,&quot;lastname&quot;:&quot;bar&quot;}</span>
+<span style="color: #A90D91">json_encode</span>(<span style="color: #000000">$user</span>);
+
+<span style="color: #000000">$user-&gt;</span><span style="color: #836C28">birthdate</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">DateTime</span>();
+
+<span style="color: #177500">/* Returns:</span>
+<span style="color: #177500">    {</span>
+<span style="color: #177500">        &quot;firstname&quot;:&quot;foo&quot;,</span>
+<span style="color: #177500">        &quot;lastname&quot;:&quot;bar&quot;,</span>
+<span style="color: #177500">        &quot;birthdate&quot;: {</span>
+<span style="color: #177500">            &quot;date&quot;:&quot;2012-06-06 08:46:58&quot;,</span>
+<span style="color: #177500">            &quot;timezone_type&quot;:3,</span>
+<span style="color: #177500">            &quot;timezone&quot;:&quot;Europe\/Berlin&quot;</span>
+<span style="color: #177500">        }</span>
+<span style="color: #177500">    }</span>
+<span style="color: #177500">*/</span>
+<span style="color: #A90D91">json_encode</span>(<span style="color: #000000">$user</span>);
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>Objects are inspected and their public attributes are converted. This happens recursively, so in the example above the public attributes of the <a href="http://at2.php.net/manual/en/datetime.construct.php">DateTime</a> object are also translated into JSON. This is a handy trick if you want to easly transmit datetimes over JSON, since the client-side can then operate on both the actual time and the timezone.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+<span style="color: #A90D91">class</span> <span style="color: #3F6E75">User</span> {
+    <span style="color: #A90D91">public</span> <span style="color: #000000">$pub</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;Mister X.&quot;</span>;
+    <span style="color: #A90D91">protected</span> <span style="color: #000000">$pro</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;hidden&quot;</span>;
+    <span style="color: #A90D91">private</span> <span style="color: #000000">$priv</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;hidden too&quot;</span>;
+
+    <span style="color: #A90D91">public</span> <span style="color: #000000">$func</span>;
+    <span style="color: #A90D91">public</span> <span style="color: #000000">$notUsed</span>;
+
+    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">__construct</span>() {
+        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">func</span> <span style="color: #000000">=</span> <span style="color: #A90D91">function</span>() {
+            <span style="color: #A90D91">return</span> <span style="color: #C41A16">&quot;Foo&quot;</span>;
+        };
+    }
+}
+
+<span style="color: #000000">$user</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">User</span>();
+
+<span style="color: #177500">// Returns: {&quot;pub&quot;:&quot;Mister X.&quot;,&quot;func&quot;:{},&quot;notUsed&quot;:null}</span>
+<span style="color: #A90D91">echo</span> <span style="color: #A90D91">json_encode</span>(<span style="color: #000000">$user</span>);
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>Here, you can see that only public attributes are used. Not initialized variables are translated to <code>null</code> while closures that are bound to a public attribute are encoded with an empty object (as of PHP 5.4, there is no option to prevent public closures to be translated).</p>
+
+<h3 id="the-option-bitmasks:a3d5483349c0d950e081bf899405ed60">The $option bitmasks</h3>
+
+<p>Bitmasks are used to set certain flags on or off in a function call. This language pattern is commonly used in C and since PHP is written in C this concept made it up to some PHP function arguments as well. It&rsquo;s easy to use: if you want to set an option, just pass the constant as an argument. If you want to combine two or more options, combine them with the bitwise OR operation <code>|</code>. So, a call to json_encode may look like this:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+<span style="color: #177500">// Returns: {&quot;0&quot;:&quot;Starsky &amp; Hutch&quot;,&quot;1&quot;:123456}</span>
+<span style="color: #A90D91">json_encode</span>(<span style="color: #A90D91">array</span>(<span style="color: #C41A16">&quot;Starsky &amp; Hutch&quot;</span>, <span style="color: #C41A16">&quot;123456&quot;</span>), <span style="color: #000000">JSON_NUMERIC_CHECK</span> <span style="color: #000000">|</span> <span style="color: #000000">JSON_FORCE_OBJECT</span>);
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p><code>JSON_FORCE_OBJECT</code> forces the array to be translated into an object and <code>JSON_NUMERIC_CHECK</code> converts string-formatted numbers to actual numbers. You can find all bitmasks (constants) <a href="http://php.net/manual/en/json.constants.php">here</a>. Note that most of the constants are available since PHP 5.3 and some of them were added in 5.4. Most of them deal with how to convert characters like <code>&lt; &gt;</code>, <code>&amp;</code> or <code>&quot;&quot;</code>. PHP 5.4 provides a <code>JSON_PRETTY_PRINT</code> constant that may you help during development since it uses whitespace to format the output (since it adds character overhead, I won&rsquo;t enable it in production of course).</p>
+
+<h2 id="decoding-json-in-php:a3d5483349c0d950e081bf899405ed60">Decoding JSON in PHP</h2>
+
+<p>Decoding JSON is as simple as encoding it. PHP provides you a handy <a href="http://php.net/manual/de/function.json-decode.php">json_decode</a> function that handles everything for you. If you just pass a valid JSON string into the method, you get an object of type <code>stdClass</code> back. Here&rsquo;s a short example:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+<span style="color: #000000">$string</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;{&quot;foo&quot;: &quot;bar&quot;, &quot;cool&quot;: &quot;attr&quot;}&#39;</span>;
+<span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #A90D91">json_decode</span>(<span style="color: #000000">$string</span>);
+
+<span style="color: #177500">// Result: object(stdClass)#1 (2) { [&quot;foo&quot;]=&gt; string(3) &quot;bar&quot; [&quot;cool&quot;]=&gt; string(4) &quot;attr&quot; }</span>
+<span style="color: #A90D91">var_dump</span>(<span style="color: #000000">$result</span>);
+
+<span style="color: #177500">// Prints &quot;bar&quot;</span>
+<span style="color: #A90D91">echo</span> <span style="color: #000000">$result-&gt;</span><span style="color: #836C28">foo</span>;
+
+<span style="color: #177500">// Prints &quot;attr&quot;</span>
+<span style="color: #A90D91">echo</span> <span style="color: #000000">$result-&gt;</span><span style="color: #836C28">cool</span>;
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>If you want to get an associative array back instead, set the second parameter to true:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+<span style="color: #000000">$string</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;{&quot;foo&quot;: &quot;bar&quot;, &quot;cool&quot;: &quot;attr&quot;}&#39;</span>;
+<span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #A90D91">json_decode</span>(<span style="color: #000000">$string</span>, <span style="color: #A90D91">true</span>);
+
+<span style="color: #177500">// Result: array(2) { [&quot;foo&quot;]=&gt; string(3) &quot;bar&quot; [&quot;cool&quot;]=&gt; string(4) &quot;attr&quot; }</span>
+<span style="color: #A90D91">var_dump</span>(<span style="color: #000000">$result</span>);
+
+<span style="color: #177500">// Prints &quot;bar&quot;</span>
+<span style="color: #A90D91">echo</span> <span style="color: #000000">$result</span>[<span style="color: #C41A16">&#39;foo&#39;</span>];
+
+<span style="color: #177500">// Prints &quot;attr&quot;</span>
+<span style="color: #A90D91">echo</span> <span style="color: #000000">$result</span>[<span style="color: #C41A16">&#39;cool&#39;</span>];
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>If you expect a very large nested JSON document, you can limit the recursion depth to a certain level. The function will return <code>null</code> and stops parsing if the document is deeper than the given depth.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+<span style="color: #000000">$string</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;{&quot;foo&quot;: {&quot;bar&quot;: {&quot;cool&quot;: &quot;value&quot;}}}&#39;</span>;
+<span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #A90D91">json_decode</span>(<span style="color: #000000">$string</span>, <span style="color: #A90D91">true</span>, <span style="color: #1C01CE">2</span>);
+
+<span style="color: #177500">// Result: null</span>
+<span style="color: #A90D91">var_dump</span>(<span style="color: #000000">$result</span>);
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>The last argument works the same as in json_encode, but there is only one bitmask supported currently (which allows you to convert bigints to strings and is only available from PHP 5.4 upwards).We&rsquo;ve been working with valid JSON strings until now (aside fromt the <code>null</code> depth error). The next part shows you how to deal with errors.</p>
+
+<h2 id="error-handling-and-testing:a3d5483349c0d950e081bf899405ed60">Error-Handling and Testing</h2>
+
+<p>If the JSON value could not be parsed or a nesting level deeper than the given (or default) depth is found, NULL is returned from json_decode. This means that no exception is raised by json_encode/json_deocde directly.</p>
+
+<p>So how can we identify the cause of the error? The json_last_error function helps here. <a href="http://at2.php.net/manual/en/function.json-last-error.php">json_last_error</a> returns an integer error code that can be one of the following constants (taken from <a href="http://at2.php.net/manual/en/function.json-last-error.php">here</a>):</p>
+
+<ul>
+<li>JSON_ERROR_NONE: No error has occurred.</li>
+<li>JSON_ERROR_DEPTH: The maximum stack depth has been exceeded.</li>
+<li>JSON_ERROR_STATE_MISMATCH: Invalid or malformed JSON.</li>
+<li>JSON_ERROR_CTRL_CHAR: Control character error, possibly incorrectly encoded.</li>
+<li>JSON_ERROR_SYNTAX: Syntax error.</li>
+<li>JSON_ERROR_UTF8: Malformed UTF-8 characters, possibly incorrectly encoded (since PHP 5.3.3).</li>
+</ul>
+
+<p>With those information at hand, we can write a quick parsing helper method that raises a descriptive exception when an error is found.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+<span style="color: #A90D91">class</span> <span style="color: #3F6E75">JsonHandler</span> {
+
+    <span style="color: #A90D91">protected</span> <span style="color: #A90D91">static</span> <span style="color: #000000">$_messages</span> <span style="color: #000000">=</span> <span style="color: #A90D91">array</span>(
+        <span style="color: #000000">JSON_ERROR_NONE</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;No error has occurred&#39;</span>,
+        <span style="color: #000000">JSON_ERROR_DEPTH</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;The maximum stack depth has been exceeded&#39;</span>,
+        <span style="color: #000000">JSON_ERROR_STATE_MISMATCH</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;Invalid or malformed JSON&#39;</span>,
+        <span style="color: #000000">JSON_ERROR_CTRL_CHAR</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;Control character error, possibly incorrectly encoded&#39;</span>,
+        <span style="color: #000000">JSON_ERROR_SYNTAX</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;Syntax error&#39;</span>,
+        <span style="color: #000000">JSON_ERROR_UTF8</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;Malformed UTF-8 characters, possibly incorrectly encoded&#39;</span>
+    );
+
+    <span style="color: #A90D91">public</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">function</span> <span style="color: #000000">encode</span>(<span style="color: #000000">$value</span>, <span style="color: #000000">$options</span> <span style="color: #000000">=</span> <span style="color: #1C01CE">0</span>) {
+        <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #A90D91">json_encode</span>(<span style="color: #000000">$value</span>, <span style="color: #000000">$options</span>);
+
+        <span style="color: #A90D91">if</span>(<span style="color: #000000">$result</span>)  {
+            <span style="color: #A90D91">return</span> <span style="color: #000000">$result</span>;
+        }
+
+        <span style="color: #A90D91">throw</span> <span style="color: #A90D91">new</span> <span style="color: #000000">RuntimeException</span>(<span style="color: #A90D91">static</span><span style="color: #000000">::$_messages</span>[<span style="color: #A90D91">json_last_error</span>()]);
+    }
+
+    <span style="color: #A90D91">public</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">function</span> <span style="color: #000000">decode</span>(<span style="color: #000000">$json</span>, <span style="color: #000000">$assoc</span> <span style="color: #000000">=</span> <span style="color: #A90D91">false</span>) {
+        <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #A90D91">json_decode</span>(<span style="color: #000000">$json</span>, <span style="color: #000000">$assoc</span>);
+
+        <span style="color: #A90D91">if</span>(<span style="color: #000000">$result</span>) {
+            <span style="color: #A90D91">return</span> <span style="color: #000000">$result</span>;
+        }
+
+        <span style="color: #A90D91">throw</span> <span style="color: #A90D91">new</span> <span style="color: #000000">RuntimeException</span>(<span style="color: #A90D91">static</span><span style="color: #000000">::$_messages</span>[<span style="color: #A90D91">json_last_error</span>()]);
+    }
+
+}
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>We can now use the exception testing function <a href="http://nitschinger.at/A-primer-on-PHP-exceptions">from the last post about exception handling</a> to test if our exception works correctly.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">// Returns &quot;Correctly thrown&quot;</span>
+<span style="color: #000000">assertException</span>(<span style="color: #C41A16">&quot;Syntax error&quot;</span>, <span style="color: #A90D91">function</span>() {
+    <span style="color: #000000">$string</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;{&quot;foo&quot;: {&quot;bar&quot;: {&quot;cool&quot;: NONUMBER}}}&#39;</span>;
+    <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">JsonHandler::decode</span>(<span style="color: #000000">$string</span>);
+});
+</pre></div>
+
+<p>Note that since PHP 5.3.3, there is a <code>JSON_ERROR_UTF8</code> error returned when an invalid UTF-8 character is found in the string. This is a strong indication that a different charset than UTF-8 is used. If the incoming string is not under your control, you can use the <a href="http://at2.php.net/manual/en/function.utf8-encode.php">utf8_encode</a> function to convert it into utf8.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span> <span style="color: #A90D91">echo</span> <span style="color: #A90D91">utf8_encode</span>(<span style="color: #A90D91">json_encode</span>(<span style="color: #000000">$payload</span>)); <span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>I&rsquo;ve been using this in the past to convert data loaded from a legacy MSSQL database that didn&rsquo;t use UTF-8.</p>
+
+<h2 id="summary:a3d5483349c0d950e081bf899405ed60">Summary</h2>
+
+<p>JSON is a convenient, readable and easy to use data exchange format that seems to replace XML as the de-facto standard on the web. PHP has everything you need already built in and provides various configuration options if you use a recent version (&gt; 5.3).</p>
+
+<p>You should now be able to understand JSON, how to interact with it through PHP and how to handle possible errors. Happy encoding!</p>
+
+<p>(By the way, you may also want to check out my primer about <a href="http://nitschinger.at/A-primer-on-PHP-exceptions">Exceptions in PHP</a>!)</p>
+
+                    </div>
+                </section>
+                
+            </div>
+            
+
+            <div class="footer">
+    <div class="pure-menu pure-menu-horizontal pure-menu-open">
+        <ul>
+		<li>&copy; Michael Nitschinger 2010-2016</li>
+        </ul>
+    </div>
+</div>
+<script src="http://nitschinger.at//js/all.min.js"></script>
+
+        </div>
+    </div>
+</div>
+
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', '', 'auto');
+ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

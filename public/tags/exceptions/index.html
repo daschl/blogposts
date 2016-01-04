@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exceptions &middot; daschl writes. sometimes.</title>
+
+    <meta name="description" content="">
+
+    <meta name="generator" content="Hugo 0.15" />
+    <meta name="twitter:card" content="summary">
+    
+    <meta name="twitter:title" content="Exceptions &middot; daschl writes. sometimes.">
+    <meta name="twitter:description" content="">
+
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Exceptions &middot; daschl writes. sometimes.">
+    <meta property="og:description" content="">
+
+    <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Oxygen:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
+    <!--[if lte IE 8]>
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-old-ie-min.css">
+    <![endif]-->
+    <!--[if gt IE 8]><!-->
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
+    <!--<![endif]-->
+
+    <link rel="stylesheet" href="http://nitschinger.at//css/all.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <link rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." href="http://nitschinger.at//index.xml" />
+</head>
+<body>
+
+
+<div id="layout" class="pure-g">
+    <div class="sidebar pure-u-1 pure-u-md-1-4">
+    <div class="header">
+        <hgroup>
+            <h1 class="brand-title"><a href="http://nitschinger.at/">daschl writes. sometimes.</a></h1>
+            <h2 class="brand-tagline"></h2>
+        </hgroup>
+
+        <nav class="nav">
+            <ul class="nav-list">
+                
+                
+                <li class="nav-item">
+                    <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+
+    <div class="content pure-u-1 pure-u-md-3-4">
+        <div>
+            
+            <div class="posts">
+                
+                <h1 class="content-subhead">22 May 2012</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="http://nitschinger.at/A-primer-on-PHP-exceptions/" class="post-title">A primer on PHP exceptions</a>
+
+                        <p class="post-meta">
+                            
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        
+
+<h1 id="preface:461468f58b117b97d7e43b7161cf60a9">Preface</h1>
+
+<p>Exceptions are and should be an integral part of any general purpose programming language. PHP introduced them long ago (with the release of PHP 5 or 5.1), but it still seems that many of the concepts are not fully understood or ignored by the community. This post aims to be a solid introduction to exception architecture, handling and testing. At the end of the post you should be able to know when to raise an exception and how it should look like.</p>
+
+<p>Of course, there are many opinions on a topic like this. If you have constructive feedback, feel free to comment below. Let&rsquo;s get started!</p>
+
+<h1 id="architecture-best-practices:461468f58b117b97d7e43b7161cf60a9">Architecture &amp; Best-Practices</h1>
+
+<p>Here&rsquo;s a golden rule: use exceptions for what their name says: exceptional situations. Don&rsquo;t use exceptions to control the flow of your application logic (like substituting if-statements or to control loops). This not only leads to confusion, but also my slow down your code.</p>
+
+<p>Edit: Due to some confusions on <a href="http://www.reddit.com/r/PHP/comments/tz5jw/a_primer_on_php_exceptions/">reddit</a>, I think I need to clarify what exceptional situations are. When they occur, your code/request normally can&rsquo;t continue correctly. So, if your database is not ready and you rely on it, you can&rsquo;t continue. If you validate a form and a validation for the &ldquo;username&rdquo; field fails, you can continue and present the user with an error message tied to that form field. This depends heavily on your use case, but I hope you get the point.</p>
+
+<p>In PHP, you have no way of finding out what exceptions the called method may throw if it isn&rsquo;t documented somewhere or you can look at the code (in contrast, Java provides an explicit &ldquo;throws&rdquo; notation in the method definiton). So if you want to make sure that your code catches everything, you need to catch exceptions from the &ldquo;Exception&rdquo; class (in PHP, all exceptions need to have the &ldquo;Exception&rdquo; class or a descendant of it).</p>
+
+<p>Here&rsquo;s another tip that might come in handy if you develop code that includes third-party libraries: make sure to &ldquo;normalize&rdquo; your exceptions as soon as possible. This allows you to handle them better up the stack. What do I mean by that? Consider the following example:</p>
+
+<p>You are writing a database abstraction layer (not that there aren&rsquo;t already enough&hellip;) and you need to integrate third party extensions that handle the lowlevel/protocol stuff. We want to implement two databases: &ldquo;Foobase&rdquo; and &ldquo;BarSQL&rdquo;. When each driver fails to open a connection (for example, we&rsquo;ve provided an invalid hostname), it raises an exception. Foobase raises an  &ldquo;FoobaseConnectionException&rdquo; and BarSQL raises an &ldquo;InvalidHostnameException&rdquo;. This is a nightmare to handle up the stack if we want to log them accordingly or write those exceptions to a third-party logging service. Here&rsquo;s what you can do: catch them early and raise a &ldquo;normalized&rdquo; exception like &ldquo;NetworkException&rdquo; with the actual exception as the message. We&rsquo;ll see later how to do this.</p>
+
+<p>While providing different exception classes for different situations is fine, make sure not to over engineer it. In my opinion, you should plan your exception classes like you plan the overall architecture of your library. This way, you&rsquo;re also forced to think about all possible exceptional situations that may occur and give you a hint or two where you should be careful. Also, it is often a good idea to refactor dangerous code in their own helper methods so they can be better tested and don&rsquo;t mess up the rest of your code.</p>
+
+<p>After a bit of theory, let&rsquo;s get to something more practical. How does the exception class hierarchy in PHP look like?</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">- Exception
+    - ErrorException
+    - LogicException
+        - BadFunctionCallException
+            - BadMethodCallException
+        - DomainException
+        - InvalidArgumentException
+        - LengthException
+        - OutOfRangeException
+    - RuntimeException
+        - OutOfBoundsException
+        - OverflowException
+        - RangeException
+        - UnderflowException
+        - UnexpectedValueException
+</pre></div>
+
+<p>At the root of the class hierachy, we have the <a href="http://us.php.net/manual/en/class.exception.php">Exception</a> class. All exceptions have to inherit from it (or a subclass), otherwise you can&rsquo;t throw it. Down the hierachy, we have the <a href="http://us.php.net/manual/en/class.errorexception.php">ErrorException</a>, the <a href="http://us.php.net/manual/en/class.logicexception.php">LogicException</a> and the <a href="http://us.php.net/manual/en/class.runtimeexception.php">RuntimeException</a>. The <code>ErrorException</code> is used to transform errors into exceptions (we&rsquo;ll see later how). The other ones are the top two exception objects in the <a href="http://us.php.net/manual/en/book.spl.php">SPL</a> hierachy. All other built-in exceptions inhiert from one of them. I won&rsquo;t describe them here, since their names are pretty expressive. Just make sure to throw one of them if they fit your needs. Don&rsquo;t try to invent similar ones when they are already defined. This helps you to keep your exception architecture clean and focused.</p>
+
+<p>All built-in exception classes don&rsquo;t use a specific namespace (most of them were introduced before PHP 5.3), but you can namespace them similar to normal classes. You&rsquo;re forced to do this if you use a standard like <a href="https://github.com/php-fig/fig-standards/blob/master/accepted/PSR-0.md">PSR-0</a>. For example, <a href="http://lithify.me">Lithium</a> has the following exception defined:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+<span style="color: #A90D91">namespace</span> <span style="color: #000000">lithium\net\http</span>;
+
+<span style="color: #A90D91">class</span> <span style="color: #3F6E75">RoutingException</span> <span style="color: #A90D91">extends</span> <span style="color: #000000">\RuntimeException</span> {
+    <span style="color: #A90D91">protected</span> <span style="color: #000000">$code</span> <span style="color: #000000">=</span> <span style="color: #1C01CE">500</span>;
+}
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>You can infer from the context that it has something to do with a <code>Router</code> and is thrown during runtime. The <code>Router</code> class who throws it is placed in the same namespace. Notice how the <code>RuntimeException</code> is prefixed with a backslash - this indicates that we want to use a class from the &ldquo;root&rdquo; namespace. The method who uses is looks like this:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+<span style="color: #A90D91">namespace</span> <span style="color: #000000">lithium\net\http</span>;
+<span style="color: #A90D91">use</span> <span style="color: #000000">lithium\net\http\RoutingException</span>;
+
+<span style="color: #A90D91">class</span> <span style="color: #3F6E75">Router</span> <span style="color: #A90D91">extends</span> <span style="color: #000000">\lithium\core\StaticObject</span> {   
+    <span style="color: #A90D91">public</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">function</span> <span style="color: #000000">match</span>(<span style="color: #000000">$url</span> <span style="color: #000000">=</span> <span style="color: #A90D91">array</span>(), <span style="color: #000000">$context</span> <span style="color: #000000">=</span> <span style="color: #A90D91">null</span>, <span style="color: #A90D91">array</span> <span style="color: #000000">$options</span> <span style="color: #000000">=</span> <span style="color: #A90D91">array</span>()) {
+        <span style="color: #177500">// ...</span>
+        <span style="color: #177500">// code that handles url matching...</span>
+        <span style="color: #177500">// ...</span>
+        <span style="color: #A90D91">throw</span> <span style="color: #A90D91">new</span> <span style="color: #000000">RoutingException</span>(<span style="color: #C41A16">&quot;No parameter match found for URL `{</span><span style="color: #000000">$url</span><span style="color: #C41A16">}`.&quot;</span>);
+    }
+}
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>PHP doesn&rsquo;t provide a way to define what kind exceptions may be thrown, so make sure to document them correctly. Most documentation tools like <a href="http://www.phpdoc.org/">phpDocumentor</a> provide a <code>@throws</code> annotation. For example:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+<span style="color: #A90D91">class</span> <span style="color: #3F6E75">MyClass</span> {
+
+    <span style="color: #C41A16">/**</span>
+<span style="color: #C41A16">     * This method just throws an exception.</span>
+<span style="color: #C41A16">     *</span>
+<span style="color: #C41A16">     * @throws RuntimeException</span>
+<span style="color: #C41A16">     */</span>
+    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">foo</span>() {
+        <span style="color: #A90D91">throw</span> <span style="color: #A90D91">new</span> <span style="color: #000000">RuntimeException</span>(<span style="color: #C41A16">&quot;Ooops...&quot;</span>);
+    }
+
+}
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<h1 id="php-syntax:461468f58b117b97d7e43b7161cf60a9">PHP Syntax</h1>
+
+<p>We&rsquo;ve already seen the basic syntax of throwing exceptions, but here is the formal method definition:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">throw new Exception($<span style="color: #000000">message</span>, $<span style="color: #000000">code</span>, $<span style="color: #000000">previous</span>);
+</pre></div>
+
+<p>All arguments are optional, but you should at least provide a descriptive message. The <code>code</code> argument is an arbitary error code that you can provide. For example, you can define your own codes or use them with HTTP status codes. If you are rethrowing a exception, you can also provide the instance through the <code>previous</code> argument. This way, both exceptions get raised to the calling method.</p>
+
+<p>After throwing it, you need to catch it somewhere. PHP provides the familiar try/catch construct, but without a <code>finally</code> block like in Java.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">try <span style="color: #000000">{</span>
+    $<span style="color: #000000">object</span> = new IThrowExceptions();
+} catch(Exception $<span style="color: #000000">e</span>) <span style="color: #000000">{</span>
+    echo &quot;Caught &quot; . $<span style="color: #000000">e</span>-&gt;getMessage();
+}
+</pre></div>
+
+<p>The code inside the <code>try</code> block is evaluated, and if an exception is thrown the <code>catch</code> block tries to handle it. If the exception can&rsquo;t be handled, it bubbles up the stack. If the exception doesn&rsquo;t get handled in your code, PHP terminates. If you expect different exceptions to be thrown, you can catch more than one at the same time:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">try <span style="color: #000000">{</span>
+    $<span style="color: #000000">foo</span> = new Foo();
+    $<span style="color: #000000">foo</span>-&gt;bar();
+} catch(InvalidArgumentException $<span style="color: #000000">e</span>) <span style="color: #000000">{</span>
+    echo &quot;Just InvalidArgumentExceptions&quot;;
+} catch(RuntimeException $<span style="color: #000000">e</span>) <span style="color: #000000">{</span>
+    echo &quot;Just RuntimeExceptions&quot;;
+} catch(Exception $<span style="color: #000000">e</span>) <span style="color: #000000">{</span>
+    echo &quot;I catch everything&quot;;
+}
+</pre></div>
+
+<p>The last <code>catch(Exception $e)</code> is used when no previous catch succeeded. Make sure to go from special to general, because when you move the <code>Exception</code> block to the top, the exception would never sink down to the <code>RuntimeException</code>.</p>
+
+<p>Alright, let&rsquo;s get back to our example from the beginning. Imagine we get a lot of custom exceptions that all have the same meaning. We want to normalize them, so that only one specific type bubbles up the stack. In our example, no matter what kind of exception we receive during <code>_connect</code>, we want to throw a <code>NetworkException</code>. It&rsquo;s pretty easy to rethrow the exception:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+<span style="color: #C41A16">/**</span>
+<span style="color: #C41A16"> * Our custom Exceptions.</span>
+<span style="color: #C41A16"> */</span>
+<span style="color: #A90D91">class</span> <span style="color: #3F6E75">FoobaseConnectException</span> <span style="color: #A90D91">extends</span> <span style="color: #000000">Exception</span> {}
+<span style="color: #A90D91">class</span> <span style="color: #3F6E75">BarSQLException</span> <span style="color: #A90D91">extends</span> <span style="color: #000000">Exception</span> {}
+<span style="color: #A90D91">class</span> <span style="color: #3F6E75">NetworkException</span> <span style="color: #A90D91">extends</span> <span style="color: #000000">Exception</span> {}
+
+<span style="color: #C41A16">/**</span>
+<span style="color: #C41A16"> * A sample parent datasource.</span>
+<span style="color: #C41A16"> */</span> 
+<span style="color: #A90D91">abstract</span> <span style="color: #A90D91">class</span> <span style="color: #3F6E75">Datasource</span> {
+    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">connect</span>() {
+        <span style="color: #A90D91">try</span> {
+            <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">_connect</span>();
+        } <span style="color: #A90D91">catch</span>(<span style="color: #000000">Exception</span> <span style="color: #000000">$e</span>) {
+            <span style="color: #000000">$message</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;Could not connect: &quot;</span> <span style="color: #000000">.</span> <span style="color: #000000">$e-&gt;</span><span style="color: #836C28">getMessage</span>();
+            <span style="color: #A90D91">throw</span> <span style="color: #A90D91">new</span> <span style="color: #000000">NetworkException</span>(<span style="color: #000000">$message</span>, <span style="color: #000000">$e-&gt;</span><span style="color: #836C28">getCode</span>());
+        }
+    }
+    <span style="color: #A90D91">abstract</span> <span style="color: #A90D91">protected</span> <span style="color: #A90D91">function</span> <span style="color: #000000">_connect</span>();
+}
+
+<span style="color: #C41A16">/**</span>
+<span style="color: #C41A16"> * Foobase datasource.</span>
+<span style="color: #C41A16"> */</span>
+<span style="color: #A90D91">class</span> <span style="color: #3F6E75">Foobase</span> <span style="color: #A90D91">extends</span> <span style="color: #000000">Datasource</span> {
+    <span style="color: #A90D91">protected</span> <span style="color: #A90D91">function</span> <span style="color: #000000">_connect</span>() {
+            <span style="color: #A90D91">throw</span> <span style="color: #A90D91">new</span> <span style="color: #000000">FoobaseConnectException</span>(<span style="color: #C41A16">&quot;Holy moly, no DB available&quot;</span>);
+    }
+}
+
+<span style="color: #C41A16">/**</span>
+<span style="color: #C41A16"> * BarSQL datasource.</span>
+<span style="color: #C41A16"> */</span>
+<span style="color: #A90D91">class</span> <span style="color: #3F6E75">BarSQL</span> <span style="color: #A90D91">extends</span> <span style="color: #000000">Datasource</span> {
+    <span style="color: #A90D91">protected</span> <span style="color: #A90D91">function</span> <span style="color: #000000">_connect</span>() {
+            <span style="color: #A90D91">throw</span> <span style="color: #A90D91">new</span> <span style="color: #000000">BarSQLException</span>(<span style="color: #C41A16">&quot;Y U NO SQL SERVICE?&quot;</span>);
+    }
+}
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>If you execute the following code, a <code>'NetworkException' with message 'Could not connect: Holy moly, no DB available'</code> is raised:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+<span style="color: #000000">$foobase</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Foobase</span>();
+<span style="color: #000000">$foobase-&gt;</span><span style="color: #836C28">connect</span>();
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>We not only rethrow a different exception, but also incorporate the original message to provide a more detailed error report.</p>
+
+<p>The exception classes provide more accessor-methods like reading the current line or file, check out the docs <a href="http://php.net/manual/de/class.exception.php">here</a>. In our example above we also added our own exception classes. If you like, you can also add methods and call them later (maybe you need custom stack traces or want to add more information to the exception).</p>
+
+<p>The last thing that comes in very handy are error handlers. Recall the <code>ErrorException</code> from the beginning? Here&rsquo;s what you can do with it (taken from <a href="http://us.php.net/manual/en/class.errorexception.php">here</a>):</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">function</span> <span style="color: #000000">exception_error_handler</span>(<span style="color: #000000">$errno</span>, <span style="color: #000000">$errstr</span>, <span style="color: #000000">$errfile</span>, <span style="color: #000000">$errline</span> ) {
+    <span style="color: #A90D91">throw</span> <span style="color: #A90D91">new</span> <span style="color: #000000">ErrorException</span>(<span style="color: #000000">$errstr</span>, <span style="color: #1C01CE">0</span>, <span style="color: #000000">$errno</span>, <span style="color: #000000">$errfile</span>, <span style="color: #000000">$errline</span>);
+}
+<span style="color: #000000">set_error_handler</span>(<span style="color: #C41A16">&quot;exception_error_handler&quot;</span>);
+
+<span style="color: #177500">/* Trigger exception */</span>
+<span style="color: #000000">strpos</span>();
+</pre></div>
+
+<p>PHP throws lots of errors and warnings from built-in methods like <code>strpos</code>. The problem is that you can&rsquo;t do anything with them in your code until you translate them into exceptions. That&rsquo;s
+why the <code>ErrorException</code> was implemented. Notice how different the constructor is to the <code>Exception</code> class, because it mirrors all variables that are passed to the error handler. This allows
+you to capture and handle everything that happens during code execution in a uniform way, being it exceptions or errors.</p>
+
+<h1 id="testing-exceptions:461468f58b117b97d7e43b7161cf60a9">Testing Exceptions</h1>
+
+<p>Testing exceptions may seem daunting at first, since you need to verfiy that your code fails. This usually means that you need to write unit tests with try/catch blocks and then do
+some kind of assertion inside the catch-block like this (just assume we have some arbitary <code>assert</code> functions defined):</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+
+<span style="color: #A90D91">class</span> <span style="color: #3F6E75">Foo</span> {
+    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">bar</span>() {
+        <span style="color: #A90D91">throw</span> <span style="color: #A90D91">new</span> <span style="color: #000000">RuntimeException</span>(<span style="color: #C41A16">&quot;My Message&quot;</span>, <span style="color: #1C01CE">123</span>);
+    }
+}
+
+<span style="color: #000000">$foo</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Foo</span>();
+<span style="color: #A90D91">try</span> {
+    <span style="color: #000000">$foo-&gt;</span><span style="color: #836C28">bar</span>();
+} <span style="color: #A90D91">catch</span>(<span style="color: #000000">RuntimeException</span> <span style="color: #000000">$e</span>) {
+    <span style="color: #000000">assertEqual</span>(<span style="color: #000000">$e-&gt;</span><span style="color: #836C28">getMessage</span>(), <span style="color: #C41A16">&quot;My Message&quot;</span>);
+    <span style="color: #000000">assertEqual</span>(<span style="color: #000000">$e-&gt;</span><span style="color: #836C28">getCode</span>(), <span style="color: #1C01CE">123</span>);
+}
+
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>PHP 5.3 provides us with a very nice addition to the language: <a href="http://php.net/manual/en/functions.anonymous.php">closures</a>. We can write a handy method that lets us test this kind of code very elegantly. Here&rsquo;s a simple helper method:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">function</span> <span style="color: #000000">assertException</span>(<span style="color: #000000">$expected</span>, <span style="color: #000000">$closure</span>) {
+    <span style="color: #A90D91">try</span> {
+        <span style="color: #000000">$closure</span>();
+        <span style="color: #000000">echo</span> <span style="color: #C41A16">&quot;Exception expected, but not thrown&quot;</span>;
+    } <span style="color: #A90D91">catch</span> (<span style="color: #000000">Exception</span> <span style="color: #000000">$e</span>) {
+        <span style="color: #A90D91">if</span>(<span style="color: #000000">$e-&gt;getMessage</span>() <span style="color: #000000">==</span> <span style="color: #000000">$expected</span>) {
+            <span style="color: #000000">echo</span> <span style="color: #C41A16">&quot;Correctly thrown&quot;</span>;
+        } <span style="color: #A90D91">else</span> {
+            <span style="color: #000000">echo</span> <span style="color: #C41A16">&quot;Exception thrown, but with a different message.&quot;</span>;
+        }
+    }
+}
+</pre></div>
+
+<p>We run the closure inside the try/catch block and check if the correct message is raised. Now we can test a code snippet like this:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+    <span style="color: #A90D91">class</span> <span style="color: #3F6E75">Foo</span> {
+        <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">bar</span>() {
+            <span style="color: #A90D91">throw</span> <span style="color: #A90D91">new</span> <span style="color: #000000">RuntimeException</span>(<span style="color: #C41A16">&quot;My Message&quot;</span>, <span style="color: #1C01CE">123</span>);
+        }
+    }
+
+    <span style="color: #177500">// prints &quot;Correctly Thrown&quot;</span>
+    <span style="color: #000000">assertException</span>(<span style="color: #C41A16">&quot;My Message&quot;</span>, <span style="color: #A90D91">function</span>() {
+        <span style="color: #000000">$foo</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Foo</span>();
+        <span style="color: #000000">$foo-&gt;</span><span style="color: #836C28">bar</span>();
+    });
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>Of course, in a real test suite you want to replace the <code>echo</code> statements with debug output and add more intelligence. Look <a href="https://github.com/UnionOfRAD/lithium/blob/master/test/Unit.php#L521">here</a> for a practical implementation. This allows you to test exceptions in a natural and convenient way. Here&rsquo;s a real unit test from a <a href="https://github.com/daschl/li3_couchbase">Couchbase datasource for Lithium</a>:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">testConnect</span>() {
+    <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Couchbase</span>(<span style="color: #000000">$this-&gt;_dbConfig</span>);
+    <span style="color: #000000">$this-&gt;assertTrue</span>(<span style="color: #000000">$result-&gt;isConnected</span>());
+    <span style="color: #000000">$this-&gt;assertTrue</span>(<span style="color: #000000">is_string</span>(<span style="color: #000000">$result-&gt;connection-&gt;getVersion</span>()));
+
+    <span style="color: #000000">$this-&gt;assertException</span>(<span style="color: #C41A16">&#39;/Unknown host/&#39;</span>, <span style="color: #A90D91">function</span>() {
+        <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Couchbase</span>(<span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;host&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;invalidHostname&#39;</span>));
+    });
+}
+</pre></div>
+
+<p>You can see that the exception assertion is integrated tightly after the normal tests and no try/catch blocks are used. Pretty neat, right?</p>
+
+<p>Edit: David Thalmann thankfully pointed out that you can also test exceptions through annotations on your test methods. <a href="http://www.phpunit.de/manual/3.7/en/writing-tests-for-phpunit.html#writing-tests-for-phpunit.exceptions">Here&rsquo;s</a> how to do that in <a href="http://www.phpunit.de">PHPUnit</a>.</p>
+
+<h1 id="wrapping-up:461468f58b117b97d7e43b7161cf60a9">Wrapping Up</h1>
+
+<p>While exceptions are part of nearly every language, using them correctly and not throwing something just for the sake of it is not easy and requires some thought. Make sure to think of your exceptions while you design the API, test and document them correctly. A lot of frameworks do a very good job on this, so keep your eyes open and prepare yourself to learn something new.</p>
+
+<p>Remember: You gotta catch em&rsquo; all!</p>
+
+                    </div>
+                </section>
+                
+            </div>
+            
+
+            <div class="footer">
+    <div class="pure-menu pure-menu-horizontal pure-menu-open">
+        <ul>
+		<li>&copy; Michael Nitschinger 2010-2016</li>
+        </ul>
+    </div>
+</div>
+<script src="http://nitschinger.at//js/all.min.js"></script>
+
+        </div>
+    </div>
+</div>
+
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', '', 'auto');
+ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

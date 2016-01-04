@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Li3_fixtures on daschl writes. sometimes.</title>
+    <link>http://nitschinger.at/tags/li3_fixtures/</link>
+    <description>Recent content in Li3_fixtures on daschl writes. sometimes.</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 24 Feb 2012 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://nitschinger.at/tags/li3_fixtures/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>RFC: li3_fixtures Rewrite</title>
+      <link>http://nitschinger.at/RFC-li3_fixtures-Rewrite/</link>
+      <pubDate>Fri, 24 Feb 2012 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/RFC-li3_fixtures-Rewrite/</guid>
+      <description>
+
+&lt;p&gt;The &lt;a href=&#34;https://github.com/daschl/li3_fixtures&#34;&gt;li3_fixtures&lt;/a&gt; plugin was my first Lithium plugin ever, and while it works okay, I feel there is a lot I can do to make it better and more flexible. In this post I want to share my ideas for a new fixture plugin and also want to gather feedback from the community to make it even more awesome.&lt;/p&gt;
+
+&lt;p&gt;As far as I can see, there are three big use cases for fixtures:&lt;/p&gt;
+
+&lt;h2 id=&#34;unit-testing-models:6cff1db96cce95ed97eeab057e8d6618&#34;&gt;Unit-Testing Models&lt;/h2&gt;
+
+&lt;p&gt;This seems to be the most common use case. To test models effectively, you need a bunch of demo data on which your tests rely on. This data includes both valid and invalid data to test if validations work as expected and how the application can handle large batches of data. The database itself is not mocked, but fixture data is used to populate it before or during the actual tests.&lt;/p&gt;
+
+&lt;p&gt;This can be done without fixtures too, but you need to reinvent the wheel and store your demo data either in external files or directly in your code. When you store it in external files, you need to mess around with file loading and parsing. If you store it directly in your code it gets bloated and makes your code unreadable (and your data is always bound to the test class and can&amp;rsquo;t be reused). To make it as easy as possible, the &lt;code&gt;li3_fixtures&lt;/code&gt; plugin needs to provide the following:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;centralized storage of fixture data.&lt;/li&gt;
+&lt;li&gt;transparent support for various data types (JSON, XML and YAML).&lt;/li&gt;
+&lt;li&gt;easy loading of fixture datasets into the database.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&#34;mocking-models:6cff1db96cce95ed97eeab057e8d6618&#34;&gt;Mocking Models&lt;/h2&gt;
+
+&lt;p&gt;When you test your controllers, you often need to work with data from your models. There are two different scenarios here: you can either write integration tests and populate your real database with data, or mock your models away and work with static data instead of touching the database (for unit-testing controller actions). This allows you to work independently on both layers and improves the performance of your tests.&lt;/p&gt;
+
+&lt;p&gt;Lithium already uses Mocks extensively, so the plugin needs tight integration into them. It should be easy to load fixture data that acts like &amp;ldquo;real&amp;rdquo; data (like iterating over Document/RecordSets).&lt;/p&gt;
+
+&lt;h2 id=&#34;mocking-web-services-and-apis:6cff1db96cce95ed97eeab057e8d6618&#34;&gt;Mocking Web-Services and APIs&lt;/h2&gt;
+
+&lt;p&gt;The third use case is not really different from the two mentioned above, but works more with the &lt;code&gt;service&lt;/code&gt; than the the &lt;code&gt;data&lt;/code&gt; layer. As web services are often not inside the boundaries of the developer, the plugin should make it easy to provide demo data for mocks while testing web services.&lt;/p&gt;
+
+&lt;h2 id=&#34;additional-functionality:6cff1db96cce95ed97eeab057e8d6618&#34;&gt;Additional Functionality&lt;/h2&gt;
+
+&lt;p&gt;In terms of rapid application development, it would be great to generate fixture data automatically based on patterns or generation rules. There are great libraries like &lt;a href=&#34;https://github.com/fzaninotto/Faker&#34;&gt;Faker&lt;/a&gt; out there, and it would be great to have a feature like this integrated (accessible from the command line). Also, fixture file generation should happen automatically when new models are created from the command line.&lt;/p&gt;
+
+&lt;h2 id=&#34;implementation-documentation:6cff1db96cce95ed97eeab057e8d6618&#34;&gt;Implementation &amp;amp; Documentation&lt;/h2&gt;
+
+&lt;p&gt;I want to make extensive use of adapters and strategies, as they make a lot of sense in this context. I think it would be a good idea to use adapters for all input file types (JSON, XML and YAML) and strategies for their representation in the test classes (DocumentSets, RecordSets, Collections or plain arrays). This also makes it trivial to implement custom file types and representations.&lt;/p&gt;
+
+&lt;p&gt;For documentation, I plan to use li3_docs for both the API docs and the actual manual. A current version of the manual will be found as a subdomain on my blog here (of course you&amp;rsquo;ll also have it in your app when you use li3_docs).&lt;/p&gt;
+
+&lt;p&gt;Finally, the plugin will be usable through composer and uses it too to manage external dependencies (I plan to use the Symfony parser for the YAML format).&lt;/p&gt;
+
+&lt;h2 id=&#34;next-steps:6cff1db96cce95ed97eeab057e8d6618&#34;&gt;Next Steps&lt;/h2&gt;
+
+&lt;p&gt;Now it&amp;rsquo;s your turn! Comment below and tell me wheter you like the ideas presented here or not. I&amp;rsquo;m open to every suggestion!&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

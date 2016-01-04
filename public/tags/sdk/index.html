@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sdk &middot; daschl writes. sometimes.</title>
+
+    <meta name="description" content="">
+
+    <meta name="generator" content="Hugo 0.15" />
+    <meta name="twitter:card" content="summary">
+    
+    <meta name="twitter:title" content="Sdk &middot; daschl writes. sometimes.">
+    <meta name="twitter:description" content="">
+
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Sdk &middot; daschl writes. sometimes.">
+    <meta property="og:description" content="">
+
+    <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Oxygen:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
+    <!--[if lte IE 8]>
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-old-ie-min.css">
+    <![endif]-->
+    <!--[if gt IE 8]><!-->
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
+    <!--<![endif]-->
+
+    <link rel="stylesheet" href="http://nitschinger.at//css/all.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <link rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." href="http://nitschinger.at//index.xml" />
+</head>
+<body>
+
+
+<div id="layout" class="pure-g">
+    <div class="sidebar pure-u-1 pure-u-md-1-4">
+    <div class="header">
+        <hgroup>
+            <h1 class="brand-title"><a href="http://nitschinger.at/">daschl writes. sometimes.</a></h1>
+            <h2 class="brand-tagline"></h2>
+        </hgroup>
+
+        <nav class="nav">
+            <ul class="nav-list">
+                
+                
+                <li class="nav-item">
+                    <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+
+    <div class="content pure-u-1 pure-u-md-3-4">
+        <div>
+            
+            <div class="posts">
+                
+                <h1 class="content-subhead">07 Nov 2012</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="http://nitschinger.at/New-Features-in-the-Couchbase-Java-Client-1-1-dp4/" class="post-title">New Features in the Couchbase Java Client 1.1-dp4</a>
+
+                        <p class="post-meta">
+                            
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        
+
+<h2 id="introduction:ce2158c13cb07928acc4bd887e624d2c">Introduction</h2>
+
+<p>The latest <a href="http://www.couchbase.com/develop/java/next">Java Developer Preview (dp4)</a> is hot off the press, and therefore I thought it would be a good idea to show you how to use some of the brand-new features that are now available. This post will show you how to use the new <code>ComplexKey</code> class for view queries and also how to create and delete buckets directly from your SDK.</p>
+
+<p>First, we added a very flexible way of providing parameters to view queries. The idea is that, instead of having to deal with JSON strings on your own, you can pass in Java objects and the appropriate JSON string will be created for you. While it may not sound like a big deal first, this also frees you from the worries about encoding it properly so that it can be transferred over HTTP. Before we dig into the inner workings, lets first start with a basic example on how to create a view query.</p>
+
+<p>Every time you query a view, you need to create a <code>Query</code> and a <code>View</code> object. The <code>View</code> both  object defines the name of the design document and the view, and the <code>Query</code> object allows you to control the params that you can supply with the query.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">View myview = client.getView(&quot;designdoc&quot;, &quot;viewname&quot;);
+</pre></div>
+
+<p>Instead of creating the <code>View</code> object directly, you use the <code>getView()</code> method on the client object. It is important to know that the SDK actually fetches view information from the server and will throw an exception if either the design document name or the view name are not found. An exception typically looks like this:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">com.couchbase.client.protocol.views.InvalidViewException: Could not load view &quot;viewname&quot; for design doc &quot;designdoc&quot;
+</pre></div>
+
+<p>Now that we have our view created, let&rsquo;s instantiate a query object:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">Query myquery = new Query();
+</pre></div>
+
+<p>If you don&rsquo;t specify anything else, the query object will work with the default settings. This means that no reduce function will be used and the full documents are not included. If you want to change these settings (or others), the <code>Query</code> instance provides setter methods for all of them. If you want to find out more, look at the SDK documentation or at the <a href="http://www.couchbase.com/docs/couchbase-manual-2.0/couchbase-views-querying-rest-api.html">Couchbase Server manual</a>. Basically, you can control everything that you could too while querying a view from the Couchbase UI. Here are some examples:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">// Include the full documents as well</span>
+<span style="color: #000000">myquery</span>.<span style="color: #000000">setIncludeDocs</span>(<span style="color: #A90D91">true</span>);
+
+<span style="color: #177500">// Enable the reduce function</span>
+<span style="color: #000000">myquery</span>.<span style="color: #000000">setReduce</span>(<span style="color: #A90D91">true</span>);
+
+<span style="color: #177500">// Set the group level</span>
+<span style="color: #000000">myquery</span>.<span style="color: #000000">setGroupLevel</span>(<span style="color: #1C01CE">2</span>);
+</pre></div>
+
+<p>Note that it doesn&rsquo;t make sense to include the full documents and run the reduce phase, since you don&rsquo;t have document references left after the reduce phase. If you try to set both to true, the SDK complains with the following exception:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// query.setReduce(true); query.setIncludeDocs(true);
+java.lang.UnsupportedOperationException: Reduced views don&#39;t contain documents
+</pre></div>
+
+<p>Also, if your view doesn&rsquo;t contain a reduce function and you set <code>reduce</code> to <code>true</code>, you&rsquo;ll see the following:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">// query.setReduce(true); on a view with no reduce function defined.</span>
+<span style="color: #000000">java</span>.<span style="color: #000000">lang</span>.<span style="color: #000000">RuntimeException:</span> <span style="color: #000000">This</span> <span style="color: #000000">view</span> <span style="color: #000000">doesn&#39;t</span> <span style="color: #000000">contain</span> <span style="color: #000000">a</span> <span style="color: #000000">reduce</span> <span style="color: #A90D91">function</span>
+</pre></div>
+
+<h2 id="querying-with-complexkeys:ce2158c13cb07928acc4bd887e624d2c">Querying with ComplexKeys</h2>
+
+<p>Enough with exceptions, here comes the fun part: some query setter methods not only accept boolean or string arguments, they also allow instances of <code>ComplexKey</code>. <code>ComplexKey</code> takes care of translating your Java objects (or primitives) to their appropriate <a href="http://json.org/">JSON</a> representation. Here is a list of the query methods who support it:</p>
+
+<ul>
+<li>setKey(ComplexKey): Return only documents that match the specified key.</li>
+<li>setKeys(ComplexKey): Return only documents that match each of keys specified within the given array.</li>
+<li>setRange(ComplexKey, ComplexKey): Returns records in the given key range.</li>
+<li>setRangeStart(ComplexKey): Return records with a value equal to or greater than the specified key.</li>
+<li>setRangeEnd(ComplexKey): Stop returning records when the specified key is reached.</li>
+</ul>
+
+<p>An instance of a <code>ComplexKey</code> object is obtained through the static <code>of</code> factory method. When the query object is accessed during the view query, the <code>toJSON()</code> method is called on it and as a result the JSON string is generated. Here are some examples:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// JSON Result: 100
+ComplexKey.of(100);
+
+// JSON Result: &quot;Hello&quot;
+ComplexKey.of(&quot;Hello&quot;);
+
+// JSON Result: [&quot;Hello&quot;, &quot;World&quot;]
+ComplexKey.of(&quot;Hello&quot;, &quot;World&quot;);
+
+// JSON Result: [1349360771542,1]
+ComplexKey.of(new Date().getTime(), 1);
+</pre></div>
+
+<p>This means that you don&rsquo;t have to deal with building the proper JSON strings for yourself (and make sure the escaping is correct). All methods except <code>setRange()</code> expect exactly one instance of ComplexKey. For example, if you emit keys with a unix timestamp and you want to fetch all records until now, you could do it like so:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">Query query = new Query();
+query.setRangeEnd(ComplexKey.of(new Date().getTime()));
+</pre></div>
+
+<p>When converted to a string to send it over the wire, it would look like this: <code>?endkey=1349361137738</code>. This makes it also very easy to create a full range query:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">long now = new Date().getTime();
+long tomorrow = now + 86400;
+Query query = new Query();
+query.setRange(ComplexKey.of(now), ComplexKey.of(tomorrow));
+</pre></div>
+
+<p>This converts to <code>?startkey=1349362647742&amp;endkey=1349362734142</code> on the wire.</p>
+
+<h2 id="bucket-management-through-the-clustermanager:ce2158c13cb07928acc4bd887e624d2c">Bucket management through the ClusterManager</h2>
+
+<p>Until now, you&rsquo;d have to <a href="http://www.couchbase.com/docs/couchbase-manual-2.0/couchbase-admin-web-console-data-buckets.html">create and delete buckets</a> either manually through the Couchbase UI or by using the REST API directly. With the addition of the <code>ClusterManager</code>, it is now possible to mange your buckets directly through the SDK, be it for testing purposes or to automatically create them when your code is deployed to a new environment. This can be especially useful if you want to automate bucket management in a staging or CI environment.</p>
+
+<p>The management API is not accessible through <code>CouchbaseClient</code>, but through the <code>ClusterManager</code> class. This is because the <code>CouchbaseClient</code> is bound to a specific bucket and was not designed for management purposes like this. Instead, you create a new instance of the <code>ClusterManager</code> class and pass it a list of URIs and the admin user name and password.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">List&lt;URI&gt;</span> <span style="color: #000000">uris</span> <span style="color: #000000">=</span> <span style="color: #000000">new</span> <span style="color: #000000">LinkedList&lt;URI&gt;();</span>
+<span style="color: #000000">uris</span><span style="color: #3F6E75">.add</span><span style="color: #000000">(URI</span><span style="color: #3F6E75">.create</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;http://127.0.0.1:8091/pools&quot;</span><span style="color: #000000">));</span>
+<span style="color: #000000">ClusterManager</span> <span style="color: #000000">manager</span> <span style="color: #000000">=</span> <span style="color: #000000">new</span> <span style="color: #000000">ClusterManager(uris,</span> <span style="color: #C41A16">&quot;Administrator&quot;</span><span style="color: #000000">,</span> <span style="color: #C41A16">&quot;password&quot;</span><span style="color: #000000">);</span>
+
+<span style="color: #000000">//</span> <span style="color: #000000">..</span> <span style="color: #000000">your</span> <span style="color: #000000">code</span>
+
+<span style="color: #000000">manager</span><span style="color: #3F6E75">.shutdown</span><span style="color: #000000">();</span>
+</pre></div>
+
+<p>You can now create and delete buckets (of type <code>Couchbase</code> or <code>Memcached</code>). You can also list all available buckets in the Couchbase cluster or flush the bucket (if flush is enabled). Here are some examples:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// Create the default bucket with a 100MB memory limit and 0 replicas.
+manager.createDefaultBucket(BucketType.COUCHBASE, 100, 0);
+
+// Create a bucket with authentication.
+manager.createSaslBucket(BucketType.COUCHBASE, &quot;saslbucket&quot;, 100, 0, &quot;password&quot;);
+
+// Get a list of all buckets in the cluster.
+List&lt;String&gt; buckets = manager.listBuckets();
+
+// Delete a bucket
+manager.deleteBucket(&quot;saslbucket&quot;);
+
+// Check if a bucket named &quot;mybucket&quot; exists in the cluster:
+List&lt;String&gt; buckets = manager.listBuckets();
+assertTrue(buckets.contains(&quot;mybucket&quot;));
+
+// Flush the &quot;default&quot; bucket if flush is enabled
+manager.flushBucket(&quot;default&quot;);
+</pre></div>
+
+<p>Note that creating, deleting and flushing may take some time (from milliseconds to seconds, depending on the cluster load). You can either wait a few seconds before you move on (with a Thread.sleep()), or you can wait until <code>listBuckets()</code> contains your created bucket. There is also a callback-approach (which the client library uses internally to minimize waiting times during tests), but this involves more code on the application side.</p>
+
+<h2 id="wrapping-up:ce2158c13cb07928acc4bd887e624d2c">Wrapping up</h2>
+
+<p>This post showed you two brand-new features shipped with the 1.1-dp4 release.</p>
+
+<p>While you can still use string-based keys to run range or key queries, the <code>ComplexKey</code> class hopefully provides a convenient addition to your tool belt. While also useful for primitives and single objects, it makes it much more convenient to create JSON arrays or objects since you don&rsquo;t have to deal with brackets and escaping yourself.</p>
+
+<p>The <code>ClusterManager</code> gives you the flexibility to manage your buckets directly from the SDK to avoid separate HTTP calls or even manual interaction through the UI.</p>
+
+<p>The full release notes are available <a href="http://www.couchbase.com/docs/couchbase-sdk-java-1.1/couchbase-sdk-java-rn_1-1-0d.html">here</a>. As always, we&rsquo;re curious what you say about this and if you encounter bugs or know how to enhance it even more, feel free to comment below, create a ticket or post in the forums!</p>
+
+                    </div>
+                </section>
+                
+                <h1 class="content-subhead">12 Mar 2012</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="http://nitschinger.at/Getting-Started-with-Couchbase-and-PHP/" class="post-title">Getting Started with Couchbase and PHP</a>
+
+                        <p class="post-meta">
+                            
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        
+
+<p><a href="http://www.couchbase.com/">Couchbase</a> is a simple, fast and elastic document-oriented database. It is the product of a merge between the companies behind Memcached (Membase) and CouchDB. The current version is 1.8 and the 2.0 version is already in a developer preview release. If you haven&rsquo;t heard much about Couchbase yet, start at the <a href="http://www.couchbase.com/webinar/couchbase-server-2.0-overview">Couchbase Webinar Series</a>, which will get you up to speed. The full manual is available <a href="http://www.couchbase.com/docs/couchbase-manual-2.0/index.html">here</a>.</p>
+
+<p>As there were a lot of merges, renamings and releases, it was pretty hard to follow up with the current/best database version and SDK to use for your project. Now as the dust has settled a bit, here&rsquo;s what I&rsquo;ve come up with:</p>
+
+<p>Couchbase 2.0 will be the next major version and is already pretty stable, so I&rsquo;ll jump straight onto it and skip 1.8. When it comes to PHP SDKs, you should either use the more feature-complete <a href="https://github.com/couchbaselabs/php-couchbase">php-couchbase</a> SDK (which is based on pecl/memcached) or work the brand new <a href="https://github.com/couchbaselabs/php-ext-couchbase">php-ext-couchbase</a> extension. Note that it doesn&rsquo;t support working with views currently, but according to <a href="https://twitter.com/#!/janl">janl</a> this will be available in a few days. He also mentioned that this extension is the
+future way of interacting with Couchbase, so it is definitely worth a look.</p>
+
+<p>The rest of this post guides you through the installation process of both Couchbase and the PHP SDKs.</p>
+
+<h2 id="installing-couchbase:ca12db3f5f62aaf868a124e77d2583ea">Installing Couchbase</h2>
+
+<p>The easiest way to install Couchbase is through a precompiled binary for Ubuntu, RedHat, Windows or Mac OS X. You can find all of them
+<a href="http://www.couchbase.com/download">here</a>. The installation process is really straightforward: you first need to install the binary and
+then configure Couchbase from a web interface. I recommend you to watch the webinar starting from minute 7 <a href="http://www.couchbase.com/webinar/couchbase-server-2.0-overview">here</a>, where Perry Krug describes the necessary steps in detail. For the purpose of this post, you can just stick with the default settings.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>sudo dpkg -i couchbase-server-community_x86_2.0.0-dev-preview-3.deb
+</pre></div>
+
+<p>After the installation, you should have a Couchbase instance listening on <code>127.0.0.1:8091</code>.</p>
+
+<h2 id="installing-php-ext-couchbase:ca12db3f5f62aaf868a124e77d2583ea">Installing php-ext-couchbase</h2>
+
+<p>The new PHP SDK ships as a PHP extension, so we need to compile it. Make sure you have both the build tools (like <code>build-essentials</code>) and the PHP development packages (<code>php5-dev php-pear</code>) installed. You also need to install <code>libssl0.9.8</code>. On Ubuntu it looks like this:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>sudo aptitude install libssl0.9.8 php5-dev php-pear
+</pre></div>
+
+<p>The extension also depends on the <code>libcouchbase</code> library, which can be installed through the Couchbase repository (for more information on this, look <a href="http://www.couchbase.com/develop/c/current">here</a>).</p>
+
+<p>Add this to your <code>/etc/apt/sources.list</code>:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500"># Ubuntu 11.10 Oneiric Ocelot (Debian unstable)</span>
+<span style="color: #A90D91">deb</span> <span style="color: #C41A16">http://packages.couchbase.com/ubuntu</span> <span style="color: #A90D91">oneiric</span> <span style="color: #A90D91">oneiric/main</span>
+</pre></div>
+
+<p>Then, import the key, update your repositories and install the package:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>wget -O- http://packages.couchbase.com/ubuntu/couchbase.key | sudo apt-key add -
+<span style="color: #000000">$ </span>sudo aptitude update <span style="color: #000000">&amp;&amp;</span> sudo aptitude install libcouchbase-dev
+</pre></div>
+
+<p>Now, we need to <a href="https://github.com/couchbaselabs/php-ext-couchbase/zipball/master">download</a> the extension and build it.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>unzip couchbaselabs-php-ext-couchbase-2680b64.zip
+<span style="color: #000000">$ </span><span style="color: #A90D91">cd </span>couchbaselabs-php-ext-couchbase-2680b64
+
+<span style="color: #000000">$ </span>phpize
+<span style="color: #000000">$ </span>./configure
+<span style="color: #000000">$ </span>make
+<span style="color: #000000">$ </span>sudo make install
+  Installing shared extensions:     /usr/lib/php5/20090626+lfs/
+</pre></div>
+
+<p>The last thing we need to do is create a new <code>couchbase.ini</code> file in <code>/etc/php5/conf.d</code> with the following content:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">extension=couchbase.so
+</pre></div>
+
+<p>Now we can see that the couchbase extension is installed correctly:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>php -m | grep couch
+couchbase
+</pre></div>
+
+<p>Of course you&rsquo;ll need to restart your webserver or your fastcgi processes too.</p>
+
+<h2 id="installing-php-couchbase:ca12db3f5f62aaf868a124e77d2583ea">Installing php-couchbase</h2>
+
+<p>If you want to work with the current stable SDK, you need to download the code from the <a href="https://github.com/couchbaselabs/php-couchbase">php-couchbase</a> repository. This SDK extends the <code>memcached</code> extension, which you can install directly through apt:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>sudo aptitude install php5-memcached
+</pre></div>
+
+<p>Documentation for the PHP 1.1 SDK can be found <a href="http://www.couchbase.com/docs/couchbase-sdk-php-1.1/getting-started.html">here</a>.</p>
+
+<p>Note that for the rest of this post I&rsquo;ll use the API provided by the <code>php-ext-couchbase</code> extension, but the one for <code>php-couchbase</code> shouldn&rsquo;t be much different.</p>
+
+<h2 id="basic-usage:ca12db3f5f62aaf868a124e77d2583ea">Basic Usage</h2>
+
+<p>Historically, communication with CouchDB was done over pure HTTP while memcached provided a custom protocol. Couchbase uses both methods, depending on the task you want to accomplish. Create, update and delete actions are done through the <code>memcached</code> protocol. If you want to read data, you can do that either based on the key (through the memcached protocol) or on a view (through HTTP). Thankfully, the SDK abstracts this away from you, but its always good if you know whats going on under the hood.</p>
+
+<p>You can access the API through an object-oriented interface or directly through their exported functions. I couldn&rsquo;t find any online documentation for now, but here&rsquo;s the function list from the source-code:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">/* {{{ couchbase_functions</span><span style="color: #633820">[]</span><span style="color: #177500"></span>
+<span style="color: #177500">*/</span>
+<span style="color: #A90D91">static</span> <span style="color: #000000">zend_function_entry</span> <span style="color: #000000">couchbase_functions</span><span style="color: #633820">[]</span> <span style="color: #000000">=</span> {
+    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_connect</span>, <span style="color: #000000">arginfo_connect</span>)
+    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_add</span>, <span style="color: #000000">arginfo_add</span>)
+    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_set</span>, <span style="color: #000000">arginfo_set</span>)
+    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_set_multi</span>, <span style="color: #000000">arginfo_set_multi</span>)
+    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_replace</span>, <span style="color: #000000">arginfo_replace</span>)
+    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_prepend</span>, <span style="color: #000000">arginfo_prepend</span>)
+    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_append</span>, <span style="color: #000000">arginfo_append</span>)
+    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_cas</span>, <span style="color: #000000">arginfo_cas</span>)
+    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_get</span>, <span style="color: #000000">arginfo_get</span>)
+    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_get_multi</span>, <span style="color: #000000">arginfo_get_multi</span>)
+    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_get_delayed</span>, <span style="color: #000000">arginfo_get_delayed</span>)
+    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_fetch</span>, <span style="color: #000000">arginfo_fetch</span>)
+    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_fetch_all</span>, <span style="color: #000000">arginfo_fetch_all</span>)
+    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_increment</span>, <span style="color: #000000">arginfo_increment</span>)
+    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_decrement</span>, <span style="color: #000000">arginfo_decrement</span>)
+    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_get_stats</span>, <span style="color: #000000">arginfo_get_stats</span>)
+    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_delete</span>, <span style="color: #000000">arginfo_delete</span>)
+    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_flush</span>, <span style="color: #000000">arginfo_flush</span>)
+    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_get_result_code</span>, <span style="color: #000000">arginfo_result_code</span>)
+    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_set_option</span>, <span style="color: #000000">arginfo_set_option</span>)
+    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_get_option</span>, <span style="color: #000000">arginfo_get_option</span>)
+    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_version</span>, <span style="color: #000000">arginfo_version</span>)
+    {<span style="color: #000000">NULL</span>, <span style="color: #000000">NULL</span>, <span style="color: #000000">NULL</span>}
+};
+</pre></div>
+
+<p>The <a href="https://github.com/couchbaselabs/php-ext-couchbase/tree/master/tests">test cases</a> also provide vital information on how to use the API.</p>
+
+<p>Let&rsquo;s create 10 JSON documents and store them in Couchbase:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+
+<span style="color: #000000">$connection</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Couchbase</span>(<span style="color: #C41A16">&quot;127.0.0.1:8091&quot;</span>);
+
+<span style="color: #A90D91">for</span>(<span style="color: #000000">$i=</span><span style="color: #1C01CE">0</span>;<span style="color: #000000">$i&lt;</span><span style="color: #1C01CE">10</span>;<span style="color: #000000">$i++</span>) {
+    <span style="color: #000000">$doc</span> <span style="color: #000000">=</span> <span style="color: #A90D91">array</span>(
+        <span style="color: #C41A16">&#39;title&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;This is Post $i&quot;</span>
+    );
+    <span style="color: #000000">$connection-&gt;</span><span style="color: #836C28">set</span>(<span style="color: #C41A16">&quot;post_$i&quot;</span>, <span style="color: #A90D91">json_encode</span>(<span style="color: #000000">$doc</span>));
+}
+
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>You can view your stored documents instantly through the GUI (<a href="http://localhost:8091/index.html#sec=documents&amp;bucketName=default">http://localhost:8091/index.html#sec=documents&amp;bucketName=default</a>). Now we can retrieve all documents again by their keys:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
+
+<span style="color: #000000">$connection</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Couchbase</span>(<span style="color: #C41A16">&quot;127.0.0.1:8091&quot;</span>);
+
+<span style="color: #A90D91">echo</span> <span style="color: #C41A16">&quot;&lt;ul&gt;&quot;</span>;
+<span style="color: #A90D91">for</span>(<span style="color: #000000">$i=</span><span style="color: #1C01CE">0</span>;<span style="color: #000000">$i&lt;</span><span style="color: #1C01CE">10</span>;<span style="color: #000000">$i++</span>) {
+    <span style="color: #000000">$post</span> <span style="color: #000000">=</span> <span style="color: #A90D91">json_decode</span>(<span style="color: #000000">$connection-&gt;</span><span style="color: #836C28">get</span>(<span style="color: #C41A16">&quot;post_$i&quot;</span>));
+    <span style="color: #A90D91">echo</span> <span style="color: #C41A16">&quot;&lt;li&gt;&quot;</span> <span style="color: #000000">.</span> <span style="color: #000000">$post-&gt;</span><span style="color: #836C28">title</span> <span style="color: #000000">.</span>  <span style="color: #C41A16">&quot;&lt;/li&gt;&quot;</span>;
+}
+<span style="color: #A90D91">echo</span> <span style="color: #C41A16">&quot;&lt;/ul&gt;&quot;</span>;
+
+<span style="color: #633820">?&gt;</span>
+</pre></div>
+
+<p>Note that we need to encode/decode our JSON documents by hand, because in Couchbase you can store pretty much what you want in a document.</p>
+
+<p>There are lots of other things that can be explored, but for now you should have a Couchbase instance up and running and you can start to explore it on your own!</p>
+
+<p>&rdquo;&lsquo;Edit 1:&ldquo;&rsquo;
+Jan <a href="https://twitter.com/#!/janl/status/179166150205259776">pointed out</a> that they don&rsquo;t recommend php-couchbase at this point as the extension will gain all functionality soon. Thanks!</p>
+
+                    </div>
+                </section>
+                
+            </div>
+            
+
+            <div class="footer">
+    <div class="pure-menu pure-menu-horizontal pure-menu-open">
+        <ul>
+		<li>&copy; Michael Nitschinger 2010-2016</li>
+        </ul>
+    </div>
+</div>
+<script src="http://nitschinger.at//js/all.min.js"></script>
+
+        </div>
+    </div>
+</div>
+
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', '', 'auto');
+ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

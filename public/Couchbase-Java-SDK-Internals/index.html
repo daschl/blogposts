@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Couchbase Java SDK Internals &middot; daschl writes. sometimes.</title>
+
+    <meta name="description" content="Learn about how the Java SDK works internally!">
+
+    <meta name="generator" content="Hugo 0.15" />
+    <meta name="twitter:card" content="summary">
+    
+    <meta name="twitter:title" content="Couchbase Java SDK Internals &middot; daschl writes. sometimes.">
+    <meta name="twitter:description" content="Learn about how the Java SDK works internally!">
+
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Couchbase Java SDK Internals &middot; daschl writes. sometimes.">
+    <meta property="og:description" content="Learn about how the Java SDK works internally!">
+
+    <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Oxygen:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
+    <!--[if lte IE 8]>
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-old-ie-min.css">
+    <![endif]-->
+    <!--[if gt IE 8]><!-->
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
+    <!--<![endif]-->
+
+    <link rel="stylesheet" href="http://nitschinger.at//css/all.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <link rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." href="http://nitschinger.at//index.xml" />
+</head>
+<body>
+
+
+<div id="layout" class="pure-g">
+    <div class="sidebar pure-u-1 pure-u-md-1-4">
+    <div class="header">
+        <hgroup>
+            <h1 class="brand-title"><a href="http://nitschinger.at/">daschl writes. sometimes.</a></h1>
+            <h2 class="brand-tagline"></h2>
+        </hgroup>
+
+        <nav class="nav">
+            <ul class="nav-list">
+                
+                
+                <li class="nav-item">
+                    <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+
+    <div class="content pure-u-1 pure-u-md-3-4">
+        <div>
+            
+            <div class="posts">
+                <h1 class="content-subhead">17 Apr 2013</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="http://nitschinger.at/Couchbase-Java-SDK-Internals/" class="post-title">Couchbase Java SDK Internals</a>
+
+                        <p class="post-meta">
+                            
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        
+
+<h2 id="motivation:f4c99843a42b04990eb26b7efcc5c5c2">Motivation</h2>
+
+<p>This blog post is intended to be a very detailed and informative article for those who already have used the Couchbase Java SDK and want to know how the internals work. This is not a introduction on how to use the Java SDK and we&rsquo;ll cover some fairly advanced topics on the way.</p>
+
+<p>Normally, when talking about the SDK we mean everything that is needed to get you going (Client library, documentation, release notes,&hellip;). In this article though, the SDK refers to the Client library (code) unless stated otherwise.</p>
+
+<p>As always, if you have feedback please let me/us know!</p>
+
+<h2 id="introduction:f4c99843a42b04990eb26b7efcc5c5c2">Introduction</h2>
+
+<p>First and foremost, it is important to understand that the SDK wraps and extends the functionality of the <a href="https://github.com/couchbase/spymemcached">spymemcached</a> (called &ldquo;spy&rdquo;) memcached library. One of the protocols used internally is the memcached protocol, and a lot of functionality can be reused. On the other hand, once you start to peel off the first layers of the SDK you will notice that some components are somewhat more complex because of the fact that spy provides more features than the SDK needs in the first place. The other part is to remember that a lot of the components are interwoven, so you always need to get the dependency right. Most of the time, we release a new spy version at the same date with a new SDK, because new stuff has been added or fixed.</p>
+
+<p>So, aside from reusing the functionality provided by spy, the SDK mainly adds two blocks of functionality: automatic cluster topology management and since 1.1 (and 2.0 server) support for Views. Aside from that it also provides administrative facilities like bucket and design document management.</p>
+
+<p>To understand how the client operates, we&rsquo;ll dissect the whole process in different life cycle phases of the client. After we go through all three phases (bootstrap, operation and shutdown) you should have a clear picture of whats going on under the hood. Note that there is a separate blog post in the making about error handling, so we won&rsquo;t cover that here in greater detail (which will be published a few weeks later on the same blog here).</p>
+
+<h2 id="phase-1-bootstrap:f4c99843a42b04990eb26b7efcc5c5c2">Phase 1: Bootstrap</h2>
+
+<p>Before we can actually start serving operations like <code>get()</code> and <code>set()</code>, we need to bootstrap the <code>CouchbaseClient</code> object. The important part that we need to accomplish here is to initially get a cluster configuration (which contains the nodes and vBucket map), but also to establish a streaming connection to receive cluster updates in (near) real-time.</p>
+
+<p>We take the list of nodes passing during bootstrap and iterate over it. The first node in the list that can be contacted on port 8091 is used to walk the RESTful interface on the server. If it is not available, the next one will be tried. This means that going from the provided <code>http://host:port/pools</code> URI we eventually follow the links to the bucket entity. All this happens inside a <code>ConfigurationProvider</code>, which is in this case the <code>com.couchbase.client.vbucket.ConfigurationProviderHTTP</code>. If you want to poke around on the internals, look for <code>getBucketConfiguration</code> and <code>readPools</code> methods.</p>
+
+<p>A (successful) walk can be illustrated like this:</p>
+
+<ul>
+<li>GET /pools</li>
+<li>look for the &ldquo;default&rdquo; pools</li>
+<li>GET /pools/default</li>
+<li>look for the &ldquo;buckets&rdquo; hash which contains the bucket list</li>
+<li>GET /pools/default/buckets</li>
+<li>parse the list of buckets and extract the one provided by the application</li>
+<li>GET /pools/default/buckets/<bucketname></li>
+</ul>
+
+<p>Now we are at the REST endpoint we need. Inside this JSON response, you&rsquo;ll find all useful details that gets also be used by SDK internally (for example <code>stre  amingUri</code>, <code>nodes</code> and <code>vBucketServerMap</code>). The config gets parsed and stored. Before we move on, let&rsquo;s quickly discuss the strange <code>pools</code> part inside our REST walk:</p>
+
+<p>The concept of a resource pool to group buckets was designed for Couchbase Server, but is currently not implemented. Still, the REST API is implemented that way and therefore all SDKs support it. That said, while we could theoretically just go directly to <code>/pools/default/buckets</code> and skip the first few queries, the current behaviour is future proof so you won&rsquo;t have to change the bootstrap code once the server implements it.</p>
+
+<p>Back to our bootstrap phase. Now that we have a valid cluster config which contains all the nodes (and their hostnames or ip addresses), we can establish connections to them. Aside from establishing the data connections, we also need to instantiate a streaming connection to one of them. For simplicity reasons, we just establish the streaming connection to the node from the list where we got our initial configuration.</p>
+
+<p>This gets us to an important point to keep in mind: if you have lots of CouchbaseClient objects running on many nodes and they all get bootstrapped with the same list, they may end up connecting to the same node for the streaming connection and create a possible bottleneck. Therefore, to distribute the load a little better I recommend shuffling the array before it gets passed in to the CouchbaseClient object. When you only have a few CouchbaseClient objects connected to your cluster, that won&rsquo;t be a problem at all.</p>
+
+<p>The streaming connection URI is taken from the config we got previously, and normally looks like this:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">streamingUri: &quot;/pools/default/bucketsStreaming/default?bucket_uuid=88cae4a609eea500d8ad072fe71a7290&quot;
+</pre></div>
+
+<p>If you point your browser to this address, you will also get the cluster topology updates streamed in real-time. Since the streaming connection needs to be established all the time and potentially blocks a thread, this is done in the background handled by different threads. We are using the NIO framework <a href="http://netty.io">Netty</a> for this task, which provides a very handy way of dealing with asynchronous operations. If you want to start digging into this part, keep in mind that all read operations are completely separate from write operations, so you need to deal with handlers that take care of what comes back from the server. Aside from some wiring needed for Netty, the business logic can be found in <code>com.couchbase.client.vbucket.BucketMonitor</code> and <code>com.couchbase.client.vbucket.BucketUpdateResponseHandler</code>. We also try to reestablish this streaming connection if the socket gets closed (for example if this node gets rebalanced out of the cluster).</p>
+
+<p>To actually shuffle data to the cluster nodes, we need to open various sockets to them. Note that there is absolutely no connection pooling needed inside the client, because we manage all sockets proactively. Aside from the special streaming connection to one of the severs (which is opened against port 8091), we need to open the following connections:</p>
+
+<ul>
+<li>Memcached Socket: Port 11210</li>
+<li>View Socket: Port 8092</li>
+</ul>
+
+<p>Note that port 11211 is not used inside the client SDKs, but used to connect generic memcached clients that are not cluster aware. This means that these generic clients do not get updated cluster topologies.</p>
+
+<p>So as a rule of thumb, if you have a 10 node cluster running, one CouchbaseClient object open about 21 (2*10 + 1) client sockets. These are directly managed, so if a node gets removed or added the numbers will change accordingly.</p>
+
+<p>Now that all sockets have been opened, we are ready to perform regular cluster operations. As you can see, there is a lot of overhead involved when the CouchbaseClient object gets bootstrapped. Because of this fact, we strongly discourage you from either creating a new object on every request or running a lot of CouchbaseClient objects in one application server. This only adds unnecessary overhead and load on the application server and adds on the total sockets opened against the cluster (resulting in a possible performance problem).</p>
+
+<p>As a point of reference, with regular INFO level logging enabled this is how connecting and disconnecting to a 1-node cluster (Couchbase bucket) should look like:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">Apr</span> <span style="color: #1C01CE">17</span>, <span style="color: #1C01CE">2013</span> <span style="color: #1C01CE">3</span><span style="color: #000000">:</span><span style="color: #1C01CE">14</span><span style="color: #000000">:</span><span style="color: #1C01CE">49</span> <span style="color: #000000">PM</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseProperties</span> <span style="color: #000000">setPropertyFile</span>
+<span style="color: #000000">INFO</span>: <span style="color: #000000">Could</span> <span style="color: #000000">not</span> <span style="color: #000000">load</span> <span style="color: #000000">properties</span> <span style="color: #000000">file</span> <span style="color: #C41A16">&quot;cbclient.properties&quot;</span> <span style="color: #000000">because</span>: <span style="color: #000000">File</span> <span style="color: #000000">not</span> <span style="color: #000000">found</span> <span style="color: #000000">with</span> <span style="color: #000000">system</span> <span style="color: #000000">classloader</span>.
+<span style="color: #1C01CE">2013</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">15</span><span style="color: #000000">:</span><span style="color: #1C01CE">14</span><span style="color: #000000">:</span><span style="color: #1C01CE">49.656</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseConnection</span>:  <span style="color: #000000">Added</span> {<span style="color: #000000">QA</span> <span style="color: #000000">sa=/</span><span style="color: #1C01CE">127.0.0.1</span><span style="color: #000000">:</span><span style="color: #1C01CE">11210</span>, <span style="color: #000000">#Rops=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">#Wops=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">#iq=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">topRop=null</span>, <span style="color: #000000">topWop=null</span>, <span style="color: #000000">toWrite=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">interested=</span><span style="color: #1C01CE">0</span>} <span style="color: #000000">to</span> <span style="color: #000000">connect</span> <span style="color: #000000">queue</span>
+<span style="color: #1C01CE">2013</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">15</span><span style="color: #000000">:</span><span style="color: #1C01CE">14</span><span style="color: #000000">:</span><span style="color: #1C01CE">49.673</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseConnection</span>:  <span style="color: #000000">Connection</span> <span style="color: #000000">state</span> <span style="color: #000000">changed</span> <span style="color: #A90D91">for</span> <span style="color: #000000">sun</span>.<span style="color: #000000">nio</span>.<span style="color: #000000">ch</span>.<span style="color: #000000">SelectionKeyImpl</span><span style="color: #1C01CE">@2</span><span style="color: #000000">adb1d4</span>
+<span style="color: #1C01CE">2013</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">15</span><span style="color: #000000">:</span><span style="color: #1C01CE">14</span><span style="color: #000000">:</span><span style="color: #1C01CE">49.718</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">ViewConnection</span>:  <span style="color: #000000">Added</span> <span style="color: #000000">localhost</span> <span style="color: #000000">to</span> <span style="color: #000000">connect</span> <span style="color: #000000">queue</span>
+<span style="color: #1C01CE">2013</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">15</span><span style="color: #000000">:</span><span style="color: #1C01CE">14</span><span style="color: #000000">:</span><span style="color: #1C01CE">49.720</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseClient</span>:  <span style="color: #000000">viewmode</span> <span style="color: #000000">property</span> <span style="color: #000000">isn&#39;t</span> <span style="color: #000000">defined</span>. <span style="color: #000000">Setting</span> <span style="color: #000000">viewmode</span> <span style="color: #000000">to</span> <span style="color: #000000">production</span> <span style="color: #000000">mode</span>
+<span style="color: #1C01CE">2013</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">15</span><span style="color: #000000">:</span><span style="color: #1C01CE">14</span><span style="color: #000000">:</span><span style="color: #1C01CE">49.856</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseConnection</span>:  <span style="color: #000000">Shut</span> <span style="color: #000000">down</span> <span style="color: #000000">Couchbase</span> <span style="color: #000000">client</span>
+<span style="color: #1C01CE">2013</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">15</span><span style="color: #000000">:</span><span style="color: #1C01CE">14</span><span style="color: #000000">:</span><span style="color: #1C01CE">49.861</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">ViewConnection</span>:  <span style="color: #000000">Node</span> <span style="color: #000000">localhost</span> <span style="color: #000000">has</span> <span style="color: #000000">no</span> <span style="color: #000000">ops</span> <span style="color: #A90D91">in</span> <span style="color: #000000">the</span> <span style="color: #000000">queue</span>
+<span style="color: #1C01CE">2013</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">15</span><span style="color: #000000">:</span><span style="color: #1C01CE">14</span><span style="color: #000000">:</span><span style="color: #1C01CE">49.861</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">ViewNode</span>:  <span style="color: #000000">I/O</span> <span style="color: #000000">reactor</span> <span style="color: #000000">terminated</span> <span style="color: #A90D91">for</span> <span style="color: #000000">localhost</span>
+</pre></div>
+
+<p>If you are connecting to a Couchbase Server 1.8 or against a Memcache-Bucket you won&rsquo;t see View connections getting established:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">INFO</span>: <span style="color: #000000">Could</span> <span style="color: #000000">not</span> <span style="color: #000000">load</span> <span style="color: #000000">properties</span> <span style="color: #000000">file</span> <span style="color: #C41A16">&quot;cbclient.properties&quot;</span> <span style="color: #000000">because</span>: <span style="color: #000000">File</span> <span style="color: #000000">not</span> <span style="color: #000000">found</span> <span style="color: #000000">with</span> <span style="color: #000000">system</span> <span style="color: #000000">classloader</span>.
+<span style="color: #1C01CE">2013</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">15</span><span style="color: #000000">:</span><span style="color: #1C01CE">16</span><span style="color: #000000">:</span><span style="color: #1C01CE">44.295</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseConnection</span>:  <span style="color: #000000">Added</span> {<span style="color: #000000">QA</span> <span style="color: #000000">sa=/</span><span style="color: #1C01CE">192.168.56.101</span><span style="color: #000000">:</span><span style="color: #1C01CE">11210</span>, <span style="color: #000000">#Rops=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">#Wops=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">#iq=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">topRop=null</span>, <span style="color: #000000">topWop=null</span>, <span style="color: #000000">toWrite=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">interested=</span><span style="color: #1C01CE">0</span>} <span style="color: #000000">to</span> <span style="color: #000000">connect</span> <span style="color: #000000">queue</span>
+<span style="color: #1C01CE">2013</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">15</span><span style="color: #000000">:</span><span style="color: #1C01CE">16</span><span style="color: #000000">:</span><span style="color: #1C01CE">44.297</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseConnection</span>:  <span style="color: #000000">Added</span> {<span style="color: #000000">QA</span> <span style="color: #000000">sa=/</span><span style="color: #1C01CE">192.168.56.102</span><span style="color: #000000">:</span><span style="color: #1C01CE">11210</span>, <span style="color: #000000">#Rops=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">#Wops=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">#iq=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">topRop=null</span>, <span style="color: #000000">topWop=null</span>, <span style="color: #000000">toWrite=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">interested=</span><span style="color: #1C01CE">0</span>} <span style="color: #000000">to</span> <span style="color: #000000">connect</span> <span style="color: #000000">queue</span>
+<span style="color: #1C01CE">2013</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">15</span><span style="color: #000000">:</span><span style="color: #1C01CE">16</span><span style="color: #000000">:</span><span style="color: #1C01CE">44.298</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseConnection</span>:  <span style="color: #000000">Added</span> {<span style="color: #000000">QA</span> <span style="color: #000000">sa=/</span><span style="color: #1C01CE">192.168.56.103</span><span style="color: #000000">:</span><span style="color: #1C01CE">11210</span>, <span style="color: #000000">#Rops=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">#Wops=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">#iq=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">topRop=null</span>, <span style="color: #000000">topWop=null</span>, <span style="color: #000000">toWrite=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">interested=</span><span style="color: #1C01CE">0</span>} <span style="color: #000000">to</span> <span style="color: #000000">connect</span> <span style="color: #000000">queue</span>
+<span style="color: #1C01CE">2013</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">15</span><span style="color: #000000">:</span><span style="color: #1C01CE">16</span><span style="color: #000000">:</span><span style="color: #1C01CE">44.298</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseConnection</span>:  <span style="color: #000000">Added</span> {<span style="color: #000000">QA</span> <span style="color: #000000">sa=/</span><span style="color: #1C01CE">192.168.56.104</span><span style="color: #000000">:</span><span style="color: #1C01CE">11210</span>, <span style="color: #000000">#Rops=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">#Wops=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">#iq=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">topRop=null</span>, <span style="color: #000000">topWop=null</span>, <span style="color: #000000">toWrite=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">interested=</span><span style="color: #1C01CE">0</span>} <span style="color: #000000">to</span> <span style="color: #000000">connect</span> <span style="color: #000000">queue</span>
+<span style="color: #1C01CE">2013</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">15</span><span style="color: #000000">:</span><span style="color: #1C01CE">16</span><span style="color: #000000">:</span><span style="color: #1C01CE">44.306</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseConnection</span>:  <span style="color: #000000">Connection</span> <span style="color: #000000">state</span> <span style="color: #000000">changed</span> <span style="color: #A90D91">for</span> <span style="color: #000000">sun</span>.<span style="color: #000000">nio</span>.<span style="color: #000000">ch</span>.<span style="color: #000000">SelectionKeyImpl</span><span style="color: #1C01CE">@38</span><span style="color: #000000">b5dac4</span>
+<span style="color: #1C01CE">2013</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">15</span><span style="color: #000000">:</span><span style="color: #1C01CE">16</span><span style="color: #000000">:</span><span style="color: #1C01CE">44.313</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseClient</span>:  <span style="color: #000000">viewmode</span> <span style="color: #000000">property</span> <span style="color: #000000">isn&#39;t</span> <span style="color: #000000">defined</span>. <span style="color: #000000">Setting</span> <span style="color: #000000">viewmode</span> <span style="color: #000000">to</span> <span style="color: #000000">production</span> <span style="color: #000000">mode</span>
+<span style="color: #1C01CE">2013</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">15</span><span style="color: #000000">:</span><span style="color: #1C01CE">16</span><span style="color: #000000">:</span><span style="color: #1C01CE">44.332</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseConnection</span>:  <span style="color: #000000">Connection</span> <span style="color: #000000">state</span> <span style="color: #000000">changed</span> <span style="color: #A90D91">for</span> <span style="color: #000000">sun</span>.<span style="color: #000000">nio</span>.<span style="color: #000000">ch</span>.<span style="color: #000000">SelectionKeyImpl</span><span style="color: #1C01CE">@69945</span><span style="color: #000000">ce</span>
+<span style="color: #1C01CE">2013</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">15</span><span style="color: #000000">:</span><span style="color: #1C01CE">16</span><span style="color: #000000">:</span><span style="color: #1C01CE">44.333</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseConnection</span>:  <span style="color: #000000">Connection</span> <span style="color: #000000">state</span> <span style="color: #000000">changed</span> <span style="color: #A90D91">for</span> <span style="color: #000000">sun</span>.<span style="color: #000000">nio</span>.<span style="color: #000000">ch</span>.<span style="color: #000000">SelectionKeyImpl</span><span style="color: #1C01CE">@6766</span><span style="color: #000000">afb3</span>
+<span style="color: #1C01CE">2013</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">15</span><span style="color: #000000">:</span><span style="color: #1C01CE">16</span><span style="color: #000000">:</span><span style="color: #1C01CE">44.334</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseConnection</span>:  <span style="color: #000000">Connection</span> <span style="color: #000000">state</span> <span style="color: #000000">changed</span> <span style="color: #A90D91">for</span> <span style="color: #000000">sun</span>.<span style="color: #000000">nio</span>.<span style="color: #000000">ch</span>.<span style="color: #000000">SelectionKeyImpl</span><span style="color: #1C01CE">@2</span><span style="color: #000000">b2d96f2</span>
+<span style="color: #1C01CE">2013</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">15</span><span style="color: #000000">:</span><span style="color: #1C01CE">16</span><span style="color: #000000">:</span><span style="color: #1C01CE">44.368</span> <span style="color: #000000">INFO</span> <span style="color: #000000">net</span>.<span style="color: #000000">spy</span>.<span style="color: #000000">memcached</span>.<span style="color: #000000">auth</span>.<span style="color: #000000">AuthThread</span>:  <span style="color: #000000">Authenticated</span> <span style="color: #000000">to</span> <span style="color: #1C01CE">192.168.56.103</span><span style="color: #000000">/</span><span style="color: #1C01CE">192.168.56.103</span><span style="color: #000000">:</span><span style="color: #1C01CE">11210</span>
+<span style="color: #1C01CE">2013</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">15</span><span style="color: #000000">:</span><span style="color: #1C01CE">16</span><span style="color: #000000">:</span><span style="color: #1C01CE">44.368</span> <span style="color: #000000">INFO</span> <span style="color: #000000">net</span>.<span style="color: #000000">spy</span>.<span style="color: #000000">memcached</span>.<span style="color: #000000">auth</span>.<span style="color: #000000">AuthThread</span>:  <span style="color: #000000">Authenticated</span> <span style="color: #000000">to</span> <span style="color: #1C01CE">192.168.56.102</span><span style="color: #000000">/</span><span style="color: #1C01CE">192.168.56.102</span><span style="color: #000000">:</span><span style="color: #1C01CE">11210</span>
+<span style="color: #1C01CE">2013</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">15</span><span style="color: #000000">:</span><span style="color: #1C01CE">16</span><span style="color: #000000">:</span><span style="color: #1C01CE">44.369</span> <span style="color: #000000">INFO</span> <span style="color: #000000">net</span>.<span style="color: #000000">spy</span>.<span style="color: #000000">memcached</span>.<span style="color: #000000">auth</span>.<span style="color: #000000">AuthThread</span>:  <span style="color: #000000">Authenticated</span> <span style="color: #000000">to</span> <span style="color: #1C01CE">192.168.56.101</span><span style="color: #000000">/</span><span style="color: #1C01CE">192.168.56.101</span><span style="color: #000000">:</span><span style="color: #1C01CE">11210</span>
+<span style="color: #1C01CE">2013</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">15</span><span style="color: #000000">:</span><span style="color: #1C01CE">16</span><span style="color: #000000">:</span><span style="color: #1C01CE">44.369</span> <span style="color: #000000">INFO</span> <span style="color: #000000">net</span>.<span style="color: #000000">spy</span>.<span style="color: #000000">memcached</span>.<span style="color: #000000">auth</span>.<span style="color: #000000">AuthThread</span>:  <span style="color: #000000">Authenticated</span> <span style="color: #000000">to</span> <span style="color: #1C01CE">192.168.56.104</span><span style="color: #000000">/</span><span style="color: #1C01CE">192.168.56.104</span><span style="color: #000000">:</span><span style="color: #1C01CE">11210</span>
+<span style="color: #1C01CE">2013</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">15</span><span style="color: #000000">:</span><span style="color: #1C01CE">16</span><span style="color: #000000">:</span><span style="color: #1C01CE">44.490</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseConnection</span>:  <span style="color: #000000">Shut</span> <span style="color: #000000">down</span> <span style="color: #000000">Couchbase</span> <span style="color: #000000">client</span>
+</pre></div>
+
+<h2 id="phase-2-operations:f4c99843a42b04990eb26b7efcc5c5c2">Phase 2: Operations</h2>
+
+<p>When the SDK is bootstrapped, it enables your application to run operations against the attached cluster. For the purpose of this blog post, we need to distinguish between operations that get executed against a stable cluster and operations on a cluster that is currently experiencing some form of topology change (be it planned because of adding nodes or unplanned because of a node failure). Let&rsquo;s tackle the regular operations first.</p>
+
+<h3 id="operations-against-a-stable-cluster:f4c99843a42b04990eb26b7efcc5c5c2">Operations against a stable cluster</h3>
+
+<p>While not directly visible in the first place, inside the SDK we need to distinguish between memcached operations and View operations. All operations that have a unique key in their method signature can be treaded as memcached operations. All of them eventually end up getting funneled through spy. View operations on the other hand are implemented completely inside the SDK itself.</p>
+
+<p>Both View and memcached operations are asynchronous. Inside spy, there is one thread (call the I/O thread) dedicated to deal with IO operations. Note that in high-traffic environments, its not unusual that this thread is always active. It uses the non-blocking Java NIO mechanisms to deal with traffic, and loops around &ldquo;selectors&rdquo; that get notified when data can either be written or read. If you profile your application you&rsquo;ll see that this thread spends most of its time waiting on a <code>select</code> method, it means that it is idling there waiting to be notified for new traffic. The concepts used inside spy to deal with this are common Java NIO knowledge, so you may want to look into the <a href="https://www.ibm.com/developerworks/java/tutorials/j-nio/">NIO internals</a> first before digging into that code path. Good starting points are the <code>net.spy.memcached.MemcachedConnection</code> and <code>net.spy.memcached.protocol.TCPMemcachedNodeImpl</code> classes. Note that inside the SDK, we override the <code>MemcachedConnection</code> to hook in our own reconfiguration logic. This class can be found inside the SDK at <code>com.couchbase.client.CouchbaseConnection</code> and for memcached-type buckets in <code>com.couchbase.client.CouchbaseMemcachedConnection</code>.</p>
+
+<p>So if a memcached operations (like <code>get()</code>) gets issued, it gets passed down until it reaches the IO thread. The IO thread will then put it on a write queue towards its target node. It gets written eventually and then the IO thread adds information to a read queue so the responses can be mapped accordingly. This approach is based on futures, so when the result actually arrives, the Future is marked as completed, the result gets parsed and attached as Object.</p>
+
+<p>The SDK only uses the memcached binary protocol, although spy would also support ASCII. The binary format is much more efficient and some of the advanced operations are only implemented there.</p>
+
+<p>You may wonder how the SDK knows where to send the operation? Since we already have the up-to-date cluster map, we can hash the key and then based on the node list and vBucketMap determine which node to access. The vBucketMap not only contains the information for the master node of the array, but also the information for zero to three replica nodes. Look at this (shortened) example:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">vBucketServerMap: {
+hashAlgorithm: &quot;CRC&quot;,
+numReplicas: 1,
+serverList: [
+    &quot;192.168.56.101:11210&quot;,
+    &quot;192.168.56.102:11210&quot;
+],
+vBucketMap: [
+[0,1],
+[0,1],
+[0,1],
+[1,0],
+[1,0],
+[1,0]
+//.....
+},
+</pre></div>
+
+<p>The <code>serverList</code> contains our nodes, and the <code>vBucketMap</code> has pointers to the <code>serverList</code> array. We have 1024 vBuckets, so only some of them are shown here. You can see from looking at it that all keys that has into the first vBucket have its master node at index 0 (so the <code>.101</code> node) and its replica at index 1 (so the <code>.102</code> node). Once the cluster map changes and the vBuckets move around, we just need to update our config and know all the time where to point our operations towards.</p>
+
+<p>View operations are handled differently. Since views can&rsquo;t be sent to a specific node (because we don&rsquo;t have a way to hash a key or something), we round-robin between the connected nodes. The operation gets assigned to a <a href="http://www.couchbase.com/autodocs/couchbase-java-client-1.1.5/com/couchbase/client/ViewNode.html">com.couchbase.client.ViewNode</a> once it has free connections and then executed. The result is also handled through futures. To implement this functionality, the SDK uses the third party Apache HTTP Commons (NIO) library.</p>
+
+<p>The whole View API hides behind port 8092 on every node and is very similar to <a href="http://couchdb.apache.org/">CouchDB</a>. It also contains a RESTful API, but the structure is a little bit different. For example, you can reach a design document at <code>/&lt;bucketname&gt;/_design/&lt;designname&gt;</code>. It contains the View definitions in JSON:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">{
+    <span style="color: #000000">language:</span> <span style="color: #C41A16">&quot;javascript&quot;</span>,
+    <span style="color: #000000">views:</span> {
+        <span style="color: #000000">all:</span> {
+            <span style="color: #000000">map:</span> <span style="color: #C41A16">&quot;function (doc) { if(doc.type == &quot;</span><span style="color: #000000">city</span><span style="color: #C41A16">&quot;) {emit(</span><span style="color: #633820">[</span><span style="color: #000000">doc.continent</span>, <span style="color: #000000">doc.country</span>, <span style="color: #000000">doc.name</span><span style="color: #633820">]</span><span style="color: #C41A16">, 1)}}&quot;</span>,
+            <span style="color: #000000">reduce:</span> <span style="color: #C41A16">&quot;_sum&quot;</span>
+        }
+    }
+}
+</pre></div>
+
+<p>You can then reach down one level further like <code>/&lt;bucketname&gt;/_design/&lt;designname&gt;/_view/&lt;viewname&gt;</code> to actually query it:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">{&quot;total_rows&quot;:9,&quot;rows&quot;:[
+{&quot;id&quot;:&quot;city:shanghai&quot;,&quot;key&quot;:[&quot;asia&quot;,&quot;china&quot;,&quot;shanghai&quot;],&quot;value&quot;:1},
+{&quot;id&quot;:&quot;city:tokyo&quot;,&quot;key&quot;:[&quot;asia&quot;,&quot;japan&quot;,&quot;tokyo&quot;],&quot;value&quot;:1},
+{&quot;id&quot;:&quot;city:moscow&quot;,&quot;key&quot;:[&quot;asia&quot;,&quot;russia&quot;,&quot;moscow&quot;],&quot;value&quot;:1},
+{&quot;id&quot;:&quot;city:vienna&quot;,&quot;key&quot;:[&quot;europe&quot;,&quot;austria&quot;,&quot;vienna&quot;],&quot;value&quot;:1},
+{&quot;id&quot;:&quot;city:paris&quot;,&quot;key&quot;:[&quot;europe&quot;,&quot;france&quot;,&quot;paris&quot;],&quot;value&quot;:1},
+{&quot;id&quot;:&quot;city:rome&quot;,&quot;key&quot;:[&quot;europe&quot;,&quot;italy&quot;,&quot;rome&quot;],&quot;value&quot;:1},
+{&quot;id&quot;:&quot;city:amsterdam&quot;,&quot;key&quot;:[&quot;europe&quot;,&quot;netherlands&quot;,&quot;amsterdam&quot;],&quot;value&quot;:1},
+{&quot;id&quot;:&quot;city:new_york&quot;,&quot;key&quot;:[&quot;north_america&quot;,&quot;usa&quot;,&quot;new_york&quot;],&quot;value&quot;:1},
+{&quot;id&quot;:&quot;city:san_francisco&quot;,&quot;key&quot;:[&quot;north_america&quot;,&quot;usa&quot;,&quot;san_francisco&quot;],&quot;value&quot;:1}
+]
+}
+</pre></div>
+
+<p>Once the request is sent and a response gets back, it depends on the type of View request to determine on how the response gets parsed. It makes a difference, because reduced View queries look different than non-reduced. The SDK also includes support for spatial Views and they need to be handled differently as well.</p>
+
+<p>The whole View response parsing implementation can be found inside the <a href="http://www.couchbase.com/autodocs/couchbase-java-client-1.1.5/com/couchbase/client/protocol/views/package-frame.html">com.couchbase.client.protocol.views</a> namespace. You&rsquo;ll find abstract classes and interfaces like <code>ViewResponse</code> in there, and then their special implementations like <code>ViewResponseNoDocs</code>, <code>ViewResponseWithDocs</code> or <code>ViewResponseReduced</code>. It also makes a different if <code>setIncludeDocs()</code> is used on the Query object, because the SDK also needs to load the full documents using the memcached protocol behind the scenes. This is also done while parsing the Views.</p>
+
+<p>Now that you have a basic understanding on how the SDK distributes its operations under stable conditions, we need to cover an important topic: how the SDK deals with cluster topology changes.</p>
+
+<h3 id="operations-against-a-rebalancing-cluster:f4c99843a42b04990eb26b7efcc5c5c2">Operations against a rebalancing cluster</h3>
+
+<p>Note that there is a separate blog post upcoming dealing with all the scenarios that may come up when something goes wrong on the SDK. Since rebalancing and failover are crucial parts of the SDK, this post deals more with the general process on how this is handled.</p>
+
+<p>As mentioned earlier, the SDK receives topology updates through the streaming connection. Leaving the special case aside where this node actually gets removed or fails, all updates will stream in near real-time (in a eventually consistent architecture, it may take some time until the cluster updates get populated to that node). The chunks that come in over the stream look exactly like the ones we&rsquo;ve seen when reading the initial configuration. After those chunks have been parsed, we need to check if the changes really affect the SDK (since there are many more parameters than the SDK needs, it won&rsquo;t make sense to listen to all of them). All changes that affect the topology and/or vBucket map are considered as important. If nodes get added or removed (be it either through failure or planned), we need to open or close the sockets. This process is called &ldquo;reconfiguration&rdquo;.</p>
+
+<p>Once such a reconfiguration is triggered, lots of actions need to happen in various places. Spymemcached needs to handle its sockets, View nodes need to be managed and new configuration needs to be updated. The SDK makes sure that only one reconfiguration can happen at the same time through locks so we don&rsquo;t have any race conditions going on.</p>
+
+<p>The Netty-based <code>BucketUpdateResponseHandler</code> triggers the <code>CouchbaseClient#reconfigure</code> method, which then starts to dispatch everything. Depending on the bucket type used (i.e. memcached type buckets don&rsquo;t have Views and therefore no ViewNodes), configs are updated and sockets closed. Once the reconfiguration is done, it can receive new ones. During planned changes, everything should be pretty much controlled and no operations should fail. If a node is actually down and cannot be reached, those operations will be cancelled. Reconfiguration is tricky because the topology changes while operations are flowing through the system.</p>
+
+<p>Finally, let&rsquo;s cover some differences between Couchbase and Memcache type buckets. All the information hat you&rsquo;ve been reading previously only applies to Couchbase buckets. Memcache buckets are pretty basic and do not have the concept of vBuckets. Since you don&rsquo;t have vBuckets, all that the Client has to do is to manage the nodes and their corresponding sockets. Also, a different hashing algorithm is used (mostly Ketama) to determine the target node for each key. Also, memcache buckets don&rsquo;t have views, so you can&rsquo;t use the View API and it doesn&rsquo;t make much sense to keep View sockets around. So to clarify the previous statement, if you are running against a memcache bucket, for a 10 node cluster you&rsquo;ll only have 11 open connections.</p>
+
+<h2 id="phase-3-shutdown:f4c99843a42b04990eb26b7efcc5c5c2">Phase 3: Shutdown</h2>
+
+<p>Once the <code>CouchbaseClient#shutdown()</code> method is called, no more operations are allowed to be added onto the <code>CouchbaseConnection</code>. Until the timeout is reached, the client wants to make sure that all operations went through accordingly. All sockets for both memcached and View connections are shut down once there are no more operations in the queue (or they get dropped). Note that that the <code>shutdown</code> methods on those sockets are also used when a node gets removed from the cluster during normal operations, so it&rsquo;s basically the same, but just for all attached nodes at the same time.</p>
+
+<h2 id="summary:f4c99843a42b04990eb26b7efcc5c5c2">Summary</h2>
+
+<p>After reading this blog post, you should have a much more clear picture on how the client SDK works and why it is designed the way it is. We have lots of enhancements planned for future releases, mostly enhancing the direct API experience. Note that this blog post didn&rsquo;t cover how errors are handled inside the SDK; this will be published in a separate blog post because there is also lots of information to cover.</p>
+
+                    </div>
+                    <div id="disqus_thread"></div>
+<script type="text/javascript">
+    var disqus_shortname = 'daschl';
+    var disqus_identifier = 'http:\/\/nitschinger.at\/Couchbase-Java-SDK-Internals\/';
+    var disqus_title = 'Couchbase Java SDK Internals';
+    var disqus_url = 'http:\/\/nitschinger.at\/Couchbase-Java-SDK-Internals\/';
+
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+                </section>
+            </div>
+            <div class="footer">
+    <div class="pure-menu pure-menu-horizontal pure-menu-open">
+        <ul>
+		<li>&copy; Michael Nitschinger 2010-2016</li>
+        </ul>
+    </div>
+</div>
+<script src="http://nitschinger.at//js/all.min.js"></script>
+
+        </div>
+    </div>
+</div>
+
+
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', '', 'auto');
+ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>
