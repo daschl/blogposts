@@ -3,8 +3,13 @@
   
   <url>
     <loc>http://nitschinger.at/</loc>
-    <lastmod>2014-05-27T00:00:00+00:00</lastmod>
+    <lastmod>2016-01-08T00:00:00+00:00</lastmod>
     <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>http://nitschinger.at/Discovering-Hardware-Topology-in-Rust/</loc>
+    <lastmod>2016-01-08T00:00:00+00:00</lastmod>
   </url>
   
   <url>

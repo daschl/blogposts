@@ -6,3 +6,5 @@ theme = "purehugo"
 PygmentsCodeFences = true
 pygmentsStyle = "xcode"
 disqusShortname = "daschl"
+twitterName = "daschl"
+githubName = "daschl"

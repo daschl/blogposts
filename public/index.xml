@@ -6,8 +6,405 @@
     <description>Recent content on daschl writes. sometimes.</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Tue, 27 May 2014 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Fri, 08 Jan 2016 00:00:00 +0000</lastBuildDate>
     <atom:link href="http://nitschinger.at/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Discovering Hardware Topology in Rust</title>
+      <link>http://nitschinger.at/Discovering-Hardware-Topology-in-Rust/</link>
+      <pubDate>Fri, 08 Jan 2016 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/Discovering-Hardware-Topology-in-Rust/</guid>
+      <description>
+
+&lt;p&gt;Todays programming languages and operation systems provide a bunch of abstraction layers over our hardware. Most of the time this is great, since we can write code quickly and make it run on lots of different machines. The opportunity cost with abstraction is (most of the time) performance and a lack of understanding.&lt;/p&gt;
+
+&lt;p&gt;To get the best performance out of hour hardware, it is important to understand it. Concepts like cache locality matter a lot, especially in modern NUMA architectures. Modern hardware is complex, so understanding it is not easy - and making matters worse its even harder to take advantage of this in our software stacks. For example binding threads or processes to specific cores is different in every operating system, some don&amp;rsquo;t even support it.&lt;/p&gt;
+
+&lt;p&gt;One library which helps with hardware topology discovery and management is &lt;a href=&#34;https://www.open-mpi.org/projects/hwloc/&#34;&gt;hwloc&lt;/a&gt;. The description on the website gives a nice overview:&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;&lt;em&gt;The Portable Hardware Locality (hwloc) software package provides a portable abstraction (across OS, versions,
+architectures,&amp;hellip;) of the hierarchical topology of modern architectures, including NUMA memory nodes, sockets, shared
+caches, cores and simultaneous multithreading. It also gathers various system attributes such as cache and memory
+information as well as the locality of I/O devices such as network interfaces, InfiniBand HCAs or GPUs. It primarily aims
+at helping applications with gathering information about modern computing hardware so as to exploit it accordingly and
+efficiently.&lt;/em&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;As a side project I&amp;rsquo;m working on a &lt;a href=&#34;https://github.com/daschl/hwloc-rs&#34;&gt;Rust Binding for hwloc&lt;/a&gt; which you&amp;rsquo;ll get to see in this blogpost. It already supports topology discovery and CPU binding, but only the discovery bit will be covered in this post.&lt;/p&gt;
+
+&lt;p&gt;I assume that you have basic rust skills, if not you want to check out &lt;a href=&#34;https://doc.rust-lang.org/stable/book/&#34;&gt;the book&lt;/a&gt; first. All the examples shown here should work on Linux and OSX, I never tested rust binding on windows (hwloc itself supports windows). If you want to help out adding support for it, that would be awesome!&lt;/p&gt;
+
+&lt;h2 id=&#34;setup:59d60ae1f01cc6eb214b28fbb3277422&#34;&gt;Setup&lt;/h2&gt;
+
+&lt;p&gt;You need to have rust (for example 1.5.0) installed, as well as the &lt;code&gt;hwloc&lt;/code&gt; C library. Please refer to the &lt;a href=&#34;https://github.com/daschl/hwloc-rs#install-hwloc-on-os-x&#34;&gt;README&lt;/a&gt; for detailed instructions on how to install it. On linux, most of the time you can find recent packages in your package manager, on OSX you want to install it from source. For example, here is all you need to do on OSX:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://www.open-mpi.org/software/hwloc/v1.11/downloads/hwloc-1.11.2.tar.gz&#34;&gt;Download&lt;/a&gt; the artifact.&lt;/li&gt;
+&lt;li&gt;tar -xvzpf hwloc-1.11.2.tar.gz&lt;/li&gt;
+&lt;li&gt;cd hwloc-1.11.2&lt;/li&gt;
+&lt;li&gt;./configure &amp;amp;&amp;amp; make &amp;amp;&amp;amp; sudo make install&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;The next step is to create a rust project which will be runnable from the command line:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;~/rust $ cargo new hwloc-playground --bin
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Go modify your &lt;code&gt;Cargo.toml&lt;/code&gt; and add &lt;code&gt;hwloc&lt;/code&gt; as a dependency:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;[dependencies]&lt;/span&gt;
+&lt;span style=&#34;color: #836C28&#34;&gt;hwloc&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;0.2.0&amp;quot;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Execute &lt;code&gt;cargo run&lt;/code&gt; to make sure the dependency compiles correctly before we move on:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;~/rust/hwloc-playground $ cargo run
+   Compiling winapi-build v0.1.1
+   Compiling libc v0.2.4
+   Compiling rustc-serialize v0.3.16
+   Compiling bitflags v0.3.3
+   Compiling pkg-config v0.3.6
+   Compiling winapi v0.2.5
+   Compiling advapi32-sys v0.1.2
+   Compiling kernel32-sys v0.2.1
+   Compiling rand v0.3.12
+   Compiling errno v0.1.5
+   Compiling hwloc v0.2.0
+   Compiling num v0.1.29
+   Compiling hwloc-playground v0.1.0 (file:///Users/michael/rust/hwloc-playground)
+     Running `target/debug/hwloc-playground`
+Hello, world!
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;code&gt;hwloc-rs&lt;/code&gt; also provides rustdoc which you can find &lt;a href=&#34;http://nitschinger.at/hwloc-rs/rustdoc&#34;&gt;here&lt;/a&gt; for the different versions.&lt;/p&gt;
+
+&lt;h3 id=&#34;cores-and-processing-units:59d60ae1f01cc6eb214b28fbb3277422&#34;&gt;Cores and Processing Units&lt;/h3&gt;
+
+&lt;p&gt;As a first simple example, we&amp;rsquo;ll find out how many physical cores we have on the machine. This introduces some basic concepts of &lt;code&gt;hwloc&lt;/code&gt;. The full code sample looks like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc::&lt;/span&gt;{&lt;span style=&#34;color: #000000&#34;&gt;Topology&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;ObjectType&lt;/span&gt;};
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;main&lt;/span&gt;() {
+    &lt;span style=&#34;color: #177500&#34;&gt;// Create a new Topology&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Topology::new&lt;/span&gt;();
+
+    &lt;span style=&#34;color: #177500&#34;&gt;// Get all objects with type &amp;quot;Core&amp;quot;&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cores&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;objects_with_type&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;ObjectType::Core&lt;/span&gt;);
+
+    &lt;span style=&#34;color: #177500&#34;&gt;// Match on the returned Result and print the length if successful.&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;match&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cores&lt;/span&gt; {
+        &lt;span style=&#34;color: #A90D91&#34;&gt;Ok&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;There are {} cores on this machine.&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;len&lt;/span&gt;()),
+        &lt;span style=&#34;color: #A90D91&#34;&gt;Err&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;panic!&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;format!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Could not load cores because of: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;))
+    }
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Let&amp;rsquo;s break the code apart a bit. The first thing you always need to do is create a &lt;a href=&#34;http://nitschinger.at/hwloc-rs/rustdoc/0.2.0/hwloc/struct.Topology.html&#34;&gt;Topology&lt;/a&gt;. The &lt;code&gt;Topology&lt;/code&gt; is your logical representation of the actual mapped hardware.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Topology::new&lt;/span&gt;();
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now that we have the &lt;code&gt;Topology&lt;/code&gt;, we can ask it to return all &lt;a href=&#34;http://nitschinger.at/hwloc-rs/rustdoc/0.2.0/hwloc/struct.TopologyObject.html&#34;&gt;TopologyObjects&lt;/a&gt; with a specific &lt;a href=&#34;http://nitschinger.at/hwloc-rs/rustdoc/0.2.0/hwloc/enum.ObjectType.html&#34;&gt;ObjectType&lt;/a&gt;. One type is &lt;code&gt;Core&lt;/code&gt; which maps to a computation unit on the physical hardware (most of the time a CPU Core).&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cores&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;objects_with_type&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;ObjectType::Core&lt;/span&gt;);
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Since not every ObjectType is available on every hardware, it might not be possible to figure out the actual objects. Because of this, the &lt;code&gt;objects_with_type&lt;/code&gt; method returns a &lt;code&gt;Result&amp;lt;Vec&amp;lt;&amp;amp;TopologyObject&amp;gt;, TypeDepthError&amp;gt;&lt;/code&gt;. We can now utilize pattern matching to distinguish between success and error, and if it is successful print out the length of the &lt;a href=&#34;https://doc.rust-lang.org/std/vec/struct.Vec.html#method.len&#34;&gt;Vector&lt;/a&gt;:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;match&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cores&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;Ok&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;There are {} cores on this machine.&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;len&lt;/span&gt;()),
+    &lt;span style=&#34;color: #A90D91&#34;&gt;Err&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;panic!&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;format!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Could not load cores because of: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;))
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If you run the code you should see an output like this (My machine is equipped with an i7 quadcore):&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;~/rust/hwloc-playground $ cargo run
+   Compiling hwloc-playground v0.1.0 (file:///Users/michael/rust/hwloc-playground)
+     Running `target/debug/hwloc-playground`
+There are 4 cores on this machine.
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Hwloc allows you to differentiate between cores and actual processing units. For example if your CPU has hyperthreading enabled, you&amp;rsquo;ll end up with more logical processing units than physical cores. Let&amp;rsquo;s modify the code to print the number of logical processing units instead:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #177500&#34;&gt;// Get all objects with type &amp;quot;PU&amp;quot;&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cores&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;objects_with_type&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;ObjectType::PU&lt;/span&gt;);
+
+&lt;span style=&#34;color: #177500&#34;&gt;// Match on the returned Result and print the length if successful.&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;match&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cores&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;Ok&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;There are {} processing units on this machine.&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;len&lt;/span&gt;()),
+    &lt;span style=&#34;color: #A90D91&#34;&gt;Err&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;panic!&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;format!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Could not load processing units because of: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;))
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;My i7 indeed has hyperthreading enabled, so this prints:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;~/rust/hwloc-playground $ cargo run
+   Compiling hwloc-playground v0.1.0 (file:///Users/michael/rust/hwloc-playground)
+     Running `target/debug/hwloc-playground`
+There are 8 processing units on this machine.
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The library also allows us to walk the topology in tree form, so the logical processing units (&amp;ldquo;PU&amp;rdquo;) are &amp;ldquo;below&amp;rdquo; the actual cores. If we want to determine how many PUs every core has, we can print that as well:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc::&lt;/span&gt;{&lt;span style=&#34;color: #000000&#34;&gt;Topology&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;ObjectType&lt;/span&gt;};
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;main&lt;/span&gt;() {
+    &lt;span style=&#34;color: #177500&#34;&gt;// Create a new Topology&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Topology::new&lt;/span&gt;();
+
+    &lt;span style=&#34;color: #177500&#34;&gt;// Get all objects with type &amp;quot;PU&amp;quot;&amp;quot;&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;pus&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;objects_with_type&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;ObjectType::PU&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;ok&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;expect&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Could not load PUs!&amp;quot;&lt;/span&gt;);
+
+    &lt;span style=&#34;color: #177500&#34;&gt;// Iterate through each PU&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;pu&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;pus&lt;/span&gt; {
+        &lt;span style=&#34;color: #177500&#34;&gt;// Print the PU&amp;#39;s logical index.&lt;/span&gt;
+        &lt;span style=&#34;color: #A90D91&#34;&gt;print&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;PU #{} is on Core &amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;pu&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;logical_index&lt;/span&gt;());
+
+        &lt;span style=&#34;color: #177500&#34;&gt;// Walk up the parent chain until the Core is found and print its id.&lt;/span&gt;
+        &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;pu&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt;();
+        &lt;span style=&#34;color: #A90D91&#34;&gt;while&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;Some&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; {
+            &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;object_type&lt;/span&gt;() &lt;span style=&#34;color: #000000&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;ObjectType::Core&lt;/span&gt; {
+                &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;{}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;logical_index&lt;/span&gt;());
+                &lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;None&lt;/span&gt;;
+            } &lt;span style=&#34;color: #A90D91&#34;&gt;else&lt;/span&gt; {
+                &lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt;();
+            }
+        }
+    }
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;First, we load all the processing units:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;pus&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;objects_with_type&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;ObjectType::PU&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;ok&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;expect&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Could not load PUs!&amp;quot;&lt;/span&gt;);
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Next up, we iterate through each unit and print its logical index:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #177500&#34;&gt;// Iterate through each PU&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;pu&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;pus&lt;/span&gt; {
+    &lt;span style=&#34;color: #177500&#34;&gt;// Print the PU&amp;#39;s logical index.&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;print&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;PU #{} is on Core &amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;pu&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;logical_index&lt;/span&gt;());
+
+    &lt;span style=&#34;color: #177500&#34;&gt;// ...&lt;/span&gt;
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Finally, we can walk up the tree of parents for each unit until we arrive at the Core level and print out its logical index as well. Notice how easy the walking is with the &lt;code&gt;while let&lt;/code&gt; construct. This works because &lt;code&gt;TopologyObject#parent()&lt;/code&gt; returns an &lt;code&gt;Option&amp;lt;&amp;amp;TopologyOption&amp;gt;&lt;/code&gt;.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #177500&#34;&gt;// Walk up the parent chain until the Core is found and print its id.&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;pu&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt;();
+&lt;span style=&#34;color: #A90D91&#34;&gt;while&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;Some&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;object_type&lt;/span&gt;() &lt;span style=&#34;color: #000000&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;ObjectType::Core&lt;/span&gt; {
+        &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;{}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;logical_index&lt;/span&gt;());
+        &lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;None&lt;/span&gt;;
+    } &lt;span style=&#34;color: #A90D91&#34;&gt;else&lt;/span&gt; {
+        &lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt;();
+    }
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;On my machine this prints:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt; ~/rust/hwloc-playground $ cargo run
+   Compiling hwloc-playground v0.1.0 (file:///Users/michael/rust/hwloc-playground)
+     Running `target/debug/hwloc-playground`
+PU #0 is on Core 0
+PU #1 is on Core 0
+PU #2 is on Core 1
+PU #3 is on Core 1
+PU #4 is on Core 2
+PU #5 is on Core 2
+PU #6 is on Core 3
+PU #7 is on Core 3
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;You can see that each Core has two PUs attached to it.&lt;/p&gt;
+
+&lt;h2 id=&#34;walking-the-tree:59d60ae1f01cc6eb214b28fbb3277422&#34;&gt;Walking The Tree&lt;/h2&gt;
+
+&lt;p&gt;If you want to understand the topology as a whole, you can walk it in two ways: either level by level (by depth) or in tree form. Here is a full example to walk it by level:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc::Topology&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;main&lt;/span&gt;() {
+    &lt;span style=&#34;color: #177500&#34;&gt;// Create a new Topology&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Topology::new&lt;/span&gt;();
+
+    &lt;span style=&#34;color: #177500&#34;&gt;// Loop through the complete topology depth.&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0.&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;depth&lt;/span&gt;() {
+		&lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;*** Objects at level {}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt;);
+
+        &lt;span style=&#34;color: #177500&#34;&gt;// Print each object at each level.&lt;/span&gt;
+		&lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;idx&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;object&lt;/span&gt;) &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;objects_at_depth&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;iter&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;enumerate&lt;/span&gt;() {
+			&lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;{}: {}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;idx&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;object&lt;/span&gt;);
+		}
+	}
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The code iterates through each level until the final topology depth is reached and on each level it prints all the TopologyObjects. This is the result on my machine:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;*** Objects at level 0
+0: Machine ()
+*** Objects at level 1
+0: NUMANode16GB (16GB)
+*** Objects at level 2
+0: L3 (6144KB)
+*** Objects at level 3
+0: L2 (256KB)
+1: L2 (256KB)
+2: L2 (256KB)
+3: L2 (256KB)
+*** Objects at level 4
+0: L1d (32KB)
+1: L1d (32KB)
+2: L1d (32KB)
+3: L1d (32KB)
+*** Objects at level 5
+0: Core ()
+1: Core ()
+2: Core ()
+3: Core ()
+*** Objects at level 6
+0: PU ()
+1: PU ()
+2: PU ()
+3: PU ()
+4: PU ()
+5: PU ()
+6: PU ()
+7: PU ()
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Here you can see new ObjectTypes in action. My machine has one NUMANode with 16GB of RAM. Then you can see the L3, L2 and L1 caches, as well as the individual Cores and logical processing units.&lt;/p&gt;
+
+&lt;p&gt;A different way to visualize it is through a tree representation:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc::&lt;/span&gt;{&lt;span style=&#34;color: #000000&#34;&gt;Topology&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;TopologyObject&lt;/span&gt;};
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;main&lt;/span&gt;() {
+    &lt;span style=&#34;color: #177500&#34;&gt;// Create a new Topology&lt;/span&gt;
+	&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Topology::new&lt;/span&gt;();
+
+    &lt;span style=&#34;color: #177500&#34;&gt;// Print the tree and start at the root&lt;/span&gt;
+	&lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;*** Printing overall tree&amp;quot;&lt;/span&gt;);
+	&lt;span style=&#34;color: #000000&#34;&gt;print_children&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;topo&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;object_at_root&lt;/span&gt;(), &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;);
+}
+
+&lt;span style=&#34;color: #177500&#34;&gt;// Print children recursively&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;print_children&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;topo:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;Topology&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;obj:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;TopologyObject&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;depth:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;usize&lt;/span&gt;) {
+    &lt;span style=&#34;color: #177500&#34;&gt;// some padding for the tree print&lt;/span&gt;
+	&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;padding&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;std::iter::repeat&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot; &amp;quot;&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;take&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;depth&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;collect::&amp;lt;String&amp;gt;&lt;/span&gt;();
+	&lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;{}{}: #{}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;padding&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;obj&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;obj&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;os_index&lt;/span&gt;());
+
+	&lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0.&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;obj&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;arity&lt;/span&gt;() {
+		&lt;span style=&#34;color: #000000&#34;&gt;print_children&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;obj&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;children&lt;/span&gt;()[&lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;as&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;usize&lt;/span&gt;], &lt;span style=&#34;color: #000000&#34;&gt;depth&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;);
+	}
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We define a method called &lt;code&gt;print_children&lt;/code&gt; which is called recursively:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;print_children&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;topo:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;Topology&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;obj:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;TopologyObject&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;depth:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;usize&lt;/span&gt;)
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Note the funky padding variable is just there to create a left-padding for the tree view:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;padding&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;std::iter::repeat&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot; &amp;quot;&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;take&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;depth&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;collect::&amp;lt;String&amp;gt;&lt;/span&gt;();
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Running the code above gives the same information but in a different style:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt; &lt;span style=&#34;color: #000000&#34;&gt;~/rust/hwloc-playground&lt;/span&gt; &lt;span style=&#34;color: #633820&#34;&gt;$&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cargo&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;run&lt;/span&gt;
+   &lt;span style=&#34;color: #000000&#34;&gt;Compiling&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc-playground&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;v0&lt;/span&gt;.&lt;span style=&#34;color: #1C01CE&#34;&gt;1.0&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;file:&lt;/span&gt;&lt;span style=&#34;color: #177500&#34;&gt;///Users/michael/rust/hwloc-playground)&lt;/span&gt;
+     &lt;span style=&#34;color: #000000&#34;&gt;Running&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;`target/debug/hwloc-playground`&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;***&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Printing&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;overall&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;tree&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;Machine&lt;/span&gt; ()&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;
+ &lt;span style=&#34;color: #000000&#34;&gt;NUMANode16GB&lt;/span&gt; (&lt;span style=&#34;color: #1C01CE&#34;&gt;16&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;GB&lt;/span&gt;)&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;L3&lt;/span&gt; (&lt;span style=&#34;color: #1C01CE&#34;&gt;6144&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;KB&lt;/span&gt;)&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;
+   &lt;span style=&#34;color: #000000&#34;&gt;L2&lt;/span&gt; (&lt;span style=&#34;color: #1C01CE&#34;&gt;256&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;KB&lt;/span&gt;)&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;L1d&lt;/span&gt; (&lt;span style=&#34;color: #1C01CE&#34;&gt;32&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;KB&lt;/span&gt;)&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;
+     &lt;span style=&#34;color: #000000&#34;&gt;Core&lt;/span&gt; ()&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;PU&lt;/span&gt; ()&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;PU&lt;/span&gt; ()&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;
+   &lt;span style=&#34;color: #000000&#34;&gt;L2&lt;/span&gt; (&lt;span style=&#34;color: #1C01CE&#34;&gt;256&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;KB&lt;/span&gt;)&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;L1d&lt;/span&gt; (&lt;span style=&#34;color: #1C01CE&#34;&gt;32&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;KB&lt;/span&gt;)&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;
+     &lt;span style=&#34;color: #000000&#34;&gt;Core&lt;/span&gt; ()&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;PU&lt;/span&gt; ()&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;2&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;PU&lt;/span&gt; ()&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;3&lt;/span&gt;
+   &lt;span style=&#34;color: #000000&#34;&gt;L2&lt;/span&gt; (&lt;span style=&#34;color: #1C01CE&#34;&gt;256&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;KB&lt;/span&gt;)&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;2&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;L1d&lt;/span&gt; (&lt;span style=&#34;color: #1C01CE&#34;&gt;32&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;KB&lt;/span&gt;)&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;2&lt;/span&gt;
+     &lt;span style=&#34;color: #000000&#34;&gt;Core&lt;/span&gt; ()&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;2&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;PU&lt;/span&gt; ()&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;4&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;PU&lt;/span&gt; ()&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;5&lt;/span&gt;
+   &lt;span style=&#34;color: #000000&#34;&gt;L2&lt;/span&gt; (&lt;span style=&#34;color: #1C01CE&#34;&gt;256&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;KB&lt;/span&gt;)&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;3&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;L1d&lt;/span&gt; (&lt;span style=&#34;color: #1C01CE&#34;&gt;32&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;KB&lt;/span&gt;)&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;3&lt;/span&gt;
+     &lt;span style=&#34;color: #000000&#34;&gt;Core&lt;/span&gt; ()&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;3&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;PU&lt;/span&gt; ()&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;6&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;PU&lt;/span&gt; ()&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;7&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;What you can spot here immediately is that each core has its own L2 cache (as well as a L1 data cache) while at the same time they all share the same L3 cache.&lt;/p&gt;
+
+&lt;h2 id=&#34;cpu-caches:59d60ae1f01cc6eb214b28fbb3277422&#34;&gt;CPU Caches&lt;/h2&gt;
+
+&lt;p&gt;Speaking of caches, it is often quite helpful to know how much memory and cache is available to each core/processing unit. This can be used to aid cpu and memory binding decisions which are concerned with data locality.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s say we want to know how much cache our first logical processing unit has available:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc::&lt;/span&gt;{&lt;span style=&#34;color: #000000&#34;&gt;Topology&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;ObjectType&lt;/span&gt;};
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;main&lt;/span&gt;() {
+    &lt;span style=&#34;color: #177500&#34;&gt;// Create a new Topology&lt;/span&gt;
+	&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Topology::new&lt;/span&gt;();
+
+    &lt;span style=&#34;color: #177500&#34;&gt;// Get the first Logical Processing Unit&lt;/span&gt;
+	&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;pu&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;objects_with_type&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;ObjectType::PU&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;()[&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;];
+
+	&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;pu&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt;();
+	&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;levels&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;;
+	&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;size&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;;
+
+    &lt;span style=&#34;color: #177500&#34;&gt;// Walk up the parents and if it is a cache, add up its capacity&lt;/span&gt;
+	&lt;span style=&#34;color: #A90D91&#34;&gt;while&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;Some&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; {
+		&lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;object_type&lt;/span&gt;() &lt;span style=&#34;color: #000000&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;ObjectType::Cache&lt;/span&gt; {
+			&lt;span style=&#34;color: #000000&#34;&gt;levels&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;;
+			&lt;span style=&#34;color: #000000&#34;&gt;size&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;cache_attributes&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;size&lt;/span&gt;;
+		}
+		&lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt;();
+	}
+
+    &lt;span style=&#34;color: #177500&#34;&gt;// Print out the result&lt;/span&gt;
+	&lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;*** Logical processor 0 has {} caches totalling {} KB&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;levels&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;size&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;/&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1024&lt;/span&gt;);
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We are using a similar technique as in the examples above, but this time we just add up all the capacity for each cache and then print it out.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt; ~/rust/hwloc-playground $ cargo run
+     Running `target/debug/hwloc-playground`
+*** Logical processor 0 has 3 caches totalling 6432 KB
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This output is not surprising given we have seen the topology before:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;...
+  L3 (6144KB): #0
+   L2 (256KB): #0
+    L1d (32KB): #0
+     Core (): #0
+      PU (): #0 &amp;lt;----
+      PU (): #1
+...
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;For a quick crosscheck, this is what OSX shows in its &lt;code&gt;System Report&lt;/code&gt;:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;Processor Name:	Intel Core i7
+Processor Speed:	2,3 GHz
+Number of Processors:	1
+Total Number of Cores:	4
+L2 Cache (per Core):	256 KB
+L3 Cache:	6 MB
+Memory:	16 GB
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h2 id=&#34;conclusion:59d60ae1f01cc6eb214b28fbb3277422&#34;&gt;Conclusion&lt;/h2&gt;
+
+&lt;p&gt;Hwloc and the rust binding provide a very convenient way to identify hardware topology characteristics. While hwloc has much more to offer, this post should have given you an easy introduction and should motivate you discovering your own topologies. In a followup post I&amp;rsquo;ll show you how you can utilize the binding API to perform CPU binding if your OS supports it.&lt;/p&gt;
+
+&lt;p&gt;The rust binding is still in the works and I appreciate all kinds of input. Bug reports, API enhancements or just questions in general are more than welcome!&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Debugging Concurrency Issues with OpenJDK Jcstress</title>
@@ -2932,239 +3329,6 @@ igbinary
 &lt;h2 id=&#34;conclusion:1588be44ecdc8dc6ecb17e0152c89754&#34;&gt;Conclusion&lt;/h2&gt;
 
 &lt;p&gt;After running these microbenchmarks, my conclusion is that when you need object serialization, go with igbinary. It provides good enough serialization performance and huge wins on object sizes. Decoding performance is also much better than out-ouf-the-box serialization. If you need interoperability with other applications or if you don&amp;rsquo;t want to limit yourself to serialized PHP blobs, go with JSON. JSON requires much more hand wiring but you&amp;rsquo;ll gain a lot of flexibility.&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>Caching Doctrine Entities with Couchbase</title>
-      <link>http://nitschinger.at/Caching-Doctrine-Entities-with-Couchbase/</link>
-      <pubDate>Tue, 08 Jan 2013 00:00:00 +0000</pubDate>
-      
-      <guid>http://nitschinger.at/Caching-Doctrine-Entities-with-Couchbase/</guid>
-      <description>
-
-&lt;h2 id=&#34;motivation:cf67ea8c1c378f2ec2474b9e0692d877&#34;&gt;Motivation&lt;/h2&gt;
-
-&lt;p&gt;As part of our ongoing efforts to make Couchbase more integrated with frameworks and libraries, we added caching support for the &lt;a href=&#34;http://www.doctrine-project.org/&#34;&gt;Doctrine ORM&lt;/a&gt;. Recently, the pull request has been merged into the master branch and is scheduled to be published along with the &lt;a href=&#34;http://doctrine-project.org/jira/browse/DCOM/fixforversion/10327&#34;&gt;2.4&lt;/a&gt; release.&lt;/p&gt;
-
-&lt;p&gt;Caching can either be used standalone (through the API provided by &lt;a href=&#34;http://www.doctrine-project.org/projects/common.html&#34;&gt;doctrine/common&lt;/a&gt;) or integrated with the ORM functionality. We&amp;rsquo;ll look at both variants through simple examples, a good documentation can also be found &lt;a href=&#34;http://docs.doctrine-project.org/en/latest/reference/caching.html&#34;&gt;here&lt;/a&gt;. Note that at the time of writing, the CouchbaseCache is not mentioned as a caching driver because the documentation still needs to be updated.&lt;/p&gt;
-
-&lt;p&gt;Since 2.4 has not been released yet, we need to work against the &lt;code&gt;2.4.x-dev&lt;/code&gt; branch. We&amp;rsquo;ll be using &lt;a href=&#34;http://getcomposer.org/&#34;&gt;Composer&lt;/a&gt; to fetch our dependencies, so just need change the version number if you want to pin it down to 2.4 later.&lt;/p&gt;
-
-&lt;h2 id=&#34;simple-caching:cf67ea8c1c378f2ec2474b9e0692d877&#34;&gt;Simple Caching&lt;/h2&gt;
-
-&lt;p&gt;Our first example shows how the caching API can be used directly. If you are familiar with the Couchbase API, you may think that it&amp;rsquo;s more or less just a different API with the same (and maybe less) semantics, but the point is that it uses the Doctrine Cache API interface and as a result you can switch between different caching implementations very easily.&lt;/p&gt;
-
-&lt;p&gt;Create a directory called &lt;code&gt;couchbase-doctrine-simple&lt;/code&gt; with the following &lt;code&gt;composer.json&lt;/code&gt; inside:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;{
-    &amp;quot;require&amp;quot;: {
-        &amp;quot;doctrine/common&amp;quot;: &amp;quot;2.4.x-dev&amp;quot;,
-        &amp;quot;ext-couchbase&amp;quot;: &amp;quot;1.1.x&amp;quot;
-    }
-}
-&lt;/pre&gt;&lt;/div&gt;
-
-&lt;p&gt;This installs the &lt;a href=&#34;https://packagist.org/packages/doctrine/common&#34;&gt;doctrine/common&lt;/a&gt; package and also makes sure that we have the &lt;code&gt;couchbase.so&lt;/code&gt; extension in place. If you haven&amp;rsquo;t installed the Couchbase PHP extension already, head over to the &lt;a href=&#34;http://www.couchbase.com/develop/php/current&#34;&gt;official website&lt;/a&gt; and install it based on the tutorial and the docs.&lt;/p&gt;
-
-&lt;p&gt;Create a &lt;code&gt;index.php&lt;/code&gt; with the following content (we&amp;rsquo;ll break up the code afterwards):&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
-&lt;span style=&#34;color: #177500&#34;&gt;// 0: Composer Autoloader&lt;/span&gt;
-&lt;span style=&#34;color: #A90D91&#34;&gt;require&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;vendor/autoload.php&amp;#39;&lt;/span&gt;;
-
-&lt;span style=&#34;color: #177500&#34;&gt;// 1: Open the Couchbase Connection&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$couchbase&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Couchbase&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;127.0.0.1&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;default&amp;quot;&lt;/span&gt;);
-
-&lt;span style=&#34;color: #177500&#34;&gt;// 2: Instantiate the Driver &amp;amp; Inject the Connection&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$cacheDriver&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;\Doctrine\Common\Cache\CouchbaseCache&lt;/span&gt;();
-&lt;span style=&#34;color: #000000&#34;&gt;$cacheDriver-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;setCouchbase&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$couchbase&lt;/span&gt;);
-
-&lt;span style=&#34;color: #177500&#34;&gt;// 3: Execute your commands!&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;my-cache-item&amp;quot;&lt;/span&gt;;
-
-&lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;!$cacheDriver-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;contains&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt;)) {
-    &lt;span style=&#34;color: #000000&#34;&gt;$cacheDriver-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;save&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;my_data&amp;quot;&lt;/span&gt;);
-} &lt;span style=&#34;color: #A90D91&#34;&gt;else&lt;/span&gt; {
-    &lt;span style=&#34;color: #A90D91&#34;&gt;echo&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$cacheDriver-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;fetch&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt;);
-}
-&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
-
-&lt;p&gt;First, we need to bootstrap the composer autoloader so we don&amp;rsquo;t have to write all &lt;code&gt;require&lt;/code&gt; statements on our own. The next thing we need to do is actually connect to the Couchbase cluster:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;// 1: Open the Couchbase Connection
-$&lt;span style=&#34;color: #000000&#34;&gt;couchbase&lt;/span&gt; = new Couchbase(&amp;quot;127.0.0.1&amp;quot;, &amp;quot;&amp;quot;, &amp;quot;&amp;quot;, &amp;quot;default&amp;quot;);
-&lt;/pre&gt;&lt;/div&gt;
-
-&lt;p&gt;Here, we&amp;rsquo;re connecting to a node in the cluster which points at &lt;code&gt;localhost&lt;/code&gt;, but you can pass in an array of nodes as well. We connect to the &lt;code&gt;default&lt;/code&gt; bucket, which has no password. Now that we have our connection established, we can instantiate the cache driver and inject our Couchbase client:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;// 2: Instantiate the Driver &amp;amp; Inject the Connection
-$&lt;span style=&#34;color: #000000&#34;&gt;cacheDriver&lt;/span&gt; = new \Doctrine\Common\Cache\CouchbaseCache();
-$&lt;span style=&#34;color: #000000&#34;&gt;cacheDriver&lt;/span&gt;-&amp;gt;setCouchbase($&lt;span style=&#34;color: #000000&#34;&gt;couchbase&lt;/span&gt;);
-&lt;/pre&gt;&lt;/div&gt;
-
-&lt;p&gt;From here on, the API is the same for all cache drivers. The following code checks if the cache contains a key. If it is present, it prints out the document but if it isn&amp;rsquo;t it creates a new one. This is a very simple example but shows how you can start to use Couchbase caching in your own projects with just a few lines of bootstrapping!&lt;/p&gt;
-
-&lt;p&gt;Aside from these three methods, there is also a &lt;code&gt;delete&lt;/code&gt; method available. Finally, you can pass an optional third param on &lt;code&gt;save&lt;/code&gt; with a &lt;code&gt;$lifeTime&lt;/code&gt; so that the cache item vanishes automatically.&lt;/p&gt;
-
-&lt;p&gt;Since Couchbase Server doesn&amp;rsquo;t care what you store, you can also save and fetch any kind of datatype (aside from resources):&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;$&lt;span style=&#34;color: #000000&#34;&gt;cacheDriver&lt;/span&gt;-&amp;gt;save($&lt;span style=&#34;color: #000000&#34;&gt;key&lt;/span&gt;, array(&amp;#39;foo&amp;#39; =&amp;gt; &amp;#39;bar&amp;#39;));
-var_dump($&lt;span style=&#34;color: #000000&#34;&gt;cacheDriver&lt;/span&gt;-&amp;gt;fetch($&lt;span style=&#34;color: #000000&#34;&gt;key&lt;/span&gt;));
-&lt;/pre&gt;&lt;/div&gt;
-
-&lt;p&gt;Note that when you use the driver at this level, try to store JSON strings when you can (use &lt;code&gt;json_encode&lt;/code&gt;/&lt;code&gt;json_decode&lt;/code&gt; on your datastructures) This way you can take advantage of the brand new view engine inside Couchbase Server 2.0. You can always just store serialized objects as well (like we need to do with ORM integration) since for Couchbase Server it&amp;rsquo;s just a byte stream.&lt;/p&gt;
-
-&lt;p&gt;We can now build on this foundation and see how this works with ORM integration.&lt;/p&gt;
-
-&lt;h2 id=&#34;orm-integration:cf67ea8c1c378f2ec2474b9e0692d877&#34;&gt;ORM Integration&lt;/h2&gt;
-
-&lt;p&gt;Create a new directory called &lt;code&gt;couchbase-doctrine-orm&lt;/code&gt; with the following &lt;code&gt;composer.json&lt;/code&gt;:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;{
-    &amp;quot;require&amp;quot;: {
-        &amp;quot;doctrine/orm&amp;quot;: &amp;quot;2.4.x-dev&amp;quot;,
-        &amp;quot;doctrine/dbal&amp;quot;: &amp;quot;2.4.x-dev&amp;quot;,
-        &amp;quot;doctrine/common&amp;quot;: &amp;quot;2.4.x-dev&amp;quot;,
-        &amp;quot;ext-couchbase&amp;quot;: &amp;quot;1.1.x&amp;quot;
-    },
-    &amp;quot;autoload&amp;quot;: {
-        &amp;quot;psr-0&amp;quot;: {
-            &amp;quot;Entities&amp;quot;: &amp;quot;src/&amp;quot;
-        }
-    }
-}
-&lt;/pre&gt;&lt;/div&gt;
-
-&lt;p&gt;This time our &lt;code&gt;composer.json&lt;/code&gt; file is a little bit longer, because we need to define all of our dependencies by hand (since we don&amp;rsquo;t want to work against the stable release). Since we need to define Doctrine Entities we pass the composer autoloader the custom directory (&lt;code&gt;src/&lt;/code&gt;).&lt;/p&gt;
-
-&lt;p&gt;The next thing we need is our actual entity that we want to manage through Doctrine. Go ahead and create a &lt;code&gt;Person.php&lt;/code&gt; file inside the &lt;code&gt;src/Entities&lt;/code&gt; directory with the following content:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
-
-&lt;span style=&#34;color: #A90D91&#34;&gt;namespace&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Entities&lt;/span&gt;;
-
-&lt;span style=&#34;color: #C41A16&#34;&gt;/** @Entity */&lt;/span&gt;
-&lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;Person&lt;/span&gt; {
-
-    &lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
-&lt;span style=&#34;color: #C41A16&#34;&gt;     * @Id @Column(type=&amp;quot;integer&amp;quot;) @GeneratedValue(strategy=&amp;quot;AUTO&amp;quot;)&lt;/span&gt;
-&lt;span style=&#34;color: #C41A16&#34;&gt;     */&lt;/span&gt;
-    &lt;span style=&#34;color: #A90D91&#34;&gt;private&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$id&lt;/span&gt;;
-
-    &lt;span style=&#34;color: #C41A16&#34;&gt;/** @Column(type=&amp;quot;string&amp;quot;) */&lt;/span&gt;
-    &lt;span style=&#34;color: #A90D91&#34;&gt;private&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$firstname&lt;/span&gt;;
-
-    &lt;span style=&#34;color: #C41A16&#34;&gt;/** @Column(type=&amp;quot;string&amp;quot;) */&lt;/span&gt;
-    &lt;span style=&#34;color: #A90D91&#34;&gt;private&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$lastname&lt;/span&gt;;
-
-    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;setFirstname&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$firstname&lt;/span&gt;) {
-        &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;firstname&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$firstname&lt;/span&gt;;
-    }
-
-    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;getFirstname&lt;/span&gt;() {
-        &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;firstname&lt;/span&gt;;
-    }
-
-    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;setLastname&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$lastname&lt;/span&gt;) {
-        &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;lastname&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$lastname&lt;/span&gt;;
-    }
-
-    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;getLastname&lt;/span&gt;() {
-        &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;lastname&lt;/span&gt;;
-    }
-
-}
-
-&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
-
-&lt;p&gt;This is a very simple Doctrine Entity that has some properties and also a autogenerated &lt;code&gt;ID&lt;/code&gt; field. I&amp;rsquo;m going to use &lt;a href=&#34;http://www.sqlite.org/&#34;&gt;SQLite&lt;/a&gt; in the following example, but feel free to use MySQL or any other relational database that you have available.&lt;/p&gt;
-
-&lt;p&gt;To wire everything together, we&amp;rsquo;re going to create a &lt;code&gt;index.php&lt;/code&gt; file in the root directory of the project. Again, here is the full content and we&amp;rsquo;re going to break it apart afterwards:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
-&lt;span style=&#34;color: #177500&#34;&gt;// Composer autoloader.&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$loader&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;require&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;vendor/autoload.php&amp;#39;&lt;/span&gt;;
-
-&lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
-&lt;span style=&#34;color: #C41A16&#34;&gt; * Initialize Couchbase &amp;amp; the Cache.&lt;/span&gt;
-&lt;span style=&#34;color: #C41A16&#34;&gt; */&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$couchbase&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Couchbase&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;127.0.0.1&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;default&amp;quot;&lt;/span&gt;);
-&lt;span style=&#34;color: #000000&#34;&gt;$cacheDriver&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;\Doctrine\Common\Cache\CouchbaseCache&lt;/span&gt;();
-&lt;span style=&#34;color: #000000&#34;&gt;$cacheDriver-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;setCouchbase&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$couchbase&lt;/span&gt;);
-
-
-&lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
-&lt;span style=&#34;color: #C41A16&#34;&gt; * Initialize the Entity Manager.&lt;/span&gt;
-&lt;span style=&#34;color: #C41A16&#34;&gt; */&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$paths&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;__DIR__&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/src/Entities/&amp;#39;&lt;/span&gt;);
-&lt;span style=&#34;color: #000000&#34;&gt;$isDevMode&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;;
-&lt;span style=&#34;color: #000000&#34;&gt;$dbParams&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;array&lt;/span&gt;(
-    &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;driver&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;pdo_sqlite&amp;#39;&lt;/span&gt;,
-    &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;user&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;root&amp;#39;&lt;/span&gt;,
-    &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;password&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;&amp;#39;&lt;/span&gt;,
-    &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;path&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;__DIR__&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/cbexample.sqlite&amp;#39;&lt;/span&gt;
-);
-
-&lt;span style=&#34;color: #000000&#34;&gt;$config&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;\Doctrine\ORM\Tools\Setup::&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;createAnnotationMetadataConfiguration&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$paths&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$isDevMode&lt;/span&gt;, &lt;span style=&#34;color: #A90D91&#34;&gt;null&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$cacheDriver&lt;/span&gt;);
-&lt;span style=&#34;color: #000000&#34;&gt;$em&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;\Doctrine\ORM\EntityManager::&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;create&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$dbParams&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$config&lt;/span&gt;);
-
-&lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
-&lt;span style=&#34;color: #C41A16&#34;&gt; * Work with our Entities.&lt;/span&gt;
-&lt;span style=&#34;color: #C41A16&#34;&gt; */&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$person&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;\Entities\Person&lt;/span&gt;();
-&lt;span style=&#34;color: #000000&#34;&gt;$person-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;setFirstname&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Michael&amp;quot;&lt;/span&gt;);
-&lt;span style=&#34;color: #000000&#34;&gt;$person-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;setLastname&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Nitschinger&amp;quot;&lt;/span&gt;);
-
-&lt;span style=&#34;color: #000000&#34;&gt;$em-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;persist&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$person&lt;/span&gt;);
-&lt;span style=&#34;color: #000000&#34;&gt;$em-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;flush&lt;/span&gt;();
-
-&lt;span style=&#34;color: #177500&#34;&gt;// Query with Result Cache&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$query&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$em-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;createQuery&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;select p from Entities\Person p&amp;#39;&lt;/span&gt;);
-&lt;span style=&#34;color: #000000&#34;&gt;$query-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;useResultCache&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;);
-&lt;span style=&#34;color: #000000&#34;&gt;$results&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$query-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;getResult&lt;/span&gt;();
-
-&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
-
-&lt;p&gt;Since this may be a lot to grasp, let&amp;rsquo;s break it into smaller sized chunks.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;$&lt;span style=&#34;color: #000000&#34;&gt;couchbase&lt;/span&gt; = new Couchbase(&amp;quot;127.0.0.1&amp;quot;, &amp;quot;&amp;quot;, &amp;quot;&amp;quot;, &amp;quot;default&amp;quot;);
-$&lt;span style=&#34;color: #000000&#34;&gt;cacheDriver&lt;/span&gt; = new \Doctrine\Common\Cache\CouchbaseCache();
-$&lt;span style=&#34;color: #000000&#34;&gt;cacheDriver&lt;/span&gt;-&amp;gt;setCouchbase($&lt;span style=&#34;color: #000000&#34;&gt;couchbase&lt;/span&gt;);
-&lt;/pre&gt;&lt;/div&gt;
-
-&lt;p&gt;After our bootstrapping the autoloader, we&amp;rsquo;re initializing the cache driver. You already know what this means because we&amp;rsquo;ve used the same code in the simple example before.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$paths&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array(__DIR__&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/src/Entities/&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$isDevMode&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;true;&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$dbParams&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array(&lt;/span&gt;
-    &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;driver&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;pdo_sqlite&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt;
-    &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;user&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;root&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt;
-    &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;password&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt;
-    &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;path&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;__DIR__&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/cbexample.sqlite&amp;#39;&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
-
-&lt;span style=&#34;color: #000000&#34;&gt;$config&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;\Doctrine\ORM\Tools\Setup::createAnnotationMetadataConfiguration($paths,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$isDevMode,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;null,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$cacheDriver);&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$em&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;\Doctrine\ORM\EntityManager::create($dbParams,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$config);&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
-
-&lt;p&gt;The &lt;code&gt;\Doctrine\ORM\EntityManager&lt;/code&gt; is one of the major building blocks inside Doctrine and needs to be initialized accordingly. Therefore, we need to provide it a valid configuration. Here we&amp;rsquo;re going to use annotations (as seen on the Doctrine Entity, but you can also do it through XML or YAML). We also need to provide our database connection and the path to the entities. The important part here is that we pass the &lt;code&gt;$cacheDriver&lt;/code&gt; to the factory method. This automatically initializes our &lt;code&gt;CouchbaseCache&lt;/code&gt; to be used for all kinds of caching (Query, Metadata and Result caching).&lt;/p&gt;
-
-&lt;p&gt;Now we can go ahead and create a record:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;$&lt;span style=&#34;color: #000000&#34;&gt;person&lt;/span&gt; = new \Entities\Person();
-$&lt;span style=&#34;color: #000000&#34;&gt;person&lt;/span&gt;-&amp;gt;setFirstname(&amp;quot;Michael&amp;quot;);
-$&lt;span style=&#34;color: #000000&#34;&gt;person&lt;/span&gt;-&amp;gt;setLastname(&amp;quot;Nitschinger&amp;quot;);
-
-$&lt;span style=&#34;color: #000000&#34;&gt;em&lt;/span&gt;-&amp;gt;persist($&lt;span style=&#34;color: #000000&#34;&gt;person&lt;/span&gt;);
-$&lt;span style=&#34;color: #000000&#34;&gt;em&lt;/span&gt;-&amp;gt;flush();
-&lt;/pre&gt;&lt;/div&gt;
-
-&lt;p&gt;Afterwards, we can fetch it back through a query:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;$&lt;span style=&#34;color: #000000&#34;&gt;query&lt;/span&gt; = $&lt;span style=&#34;color: #000000&#34;&gt;em&lt;/span&gt;-&amp;gt;createQuery(&amp;#39;select p from Entities\Person p&amp;#39;);
-$&lt;span style=&#34;color: #000000&#34;&gt;query&lt;/span&gt;-&amp;gt;useResultCache(true);
-$&lt;span style=&#34;color: #000000&#34;&gt;results&lt;/span&gt; = $&lt;span style=&#34;color: #000000&#34;&gt;query&lt;/span&gt;-&amp;gt;getResult();
-&lt;/pre&gt;&lt;/div&gt;
-
-&lt;p&gt;Note that we explicitely tell it to cache this query result for us (by default, result caching won&amp;rsquo;t be used). If open the browser and point it to your Couchbase Server 2.0 management UI, you can see that Doctrine did create lots of documents behind the scenes. These are subsequently used to boost your application performance.&lt;/p&gt;
-
-&lt;h2 id=&#34;summary:cf67ea8c1c378f2ec2474b9e0692d877&#34;&gt;Summary&lt;/h2&gt;
-
-&lt;p&gt;As you can see, using Couchbase as a Cache for Doctrine is not hard. You just need to initialize it and pass it into the configuration. From this point on, everything happens behind the scenes. And don&amp;rsquo;t forget that you not only get exceptional performance, but also persistence, scalability and all the cool stuff that Couchbase Server provides out of the box.&lt;/p&gt;
-
-&lt;p&gt;If you have any questions or input, please let me know in the comments! Finally, thanks to &lt;a href=&#34;https://twitter.com/Ocramius&#34;&gt;Marco Pivetta&lt;/a&gt; for helping me debug an &lt;a href=&#34;https://github.com/doctrine/common/pull/240&#34;&gt;issue&lt;/a&gt; with ORM integration!&lt;/p&gt;
 </description>
     </item>
     

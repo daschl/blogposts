@@ -1,0 +1,410 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Rust on daschl writes. sometimes.</title>
+    <link>http://nitschinger.at/tags/rust/</link>
+    <description>Recent content in Rust on daschl writes. sometimes.</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 08 Jan 2016 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://nitschinger.at/tags/rust/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Discovering Hardware Topology in Rust</title>
+      <link>http://nitschinger.at/Discovering-Hardware-Topology-in-Rust/</link>
+      <pubDate>Fri, 08 Jan 2016 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/Discovering-Hardware-Topology-in-Rust/</guid>
+      <description>
+
+&lt;p&gt;Todays programming languages and operation systems provide a bunch of abstraction layers over our hardware. Most of the time this is great, since we can write code quickly and make it run on lots of different machines. The opportunity cost with abstraction is (most of the time) performance and a lack of understanding.&lt;/p&gt;
+
+&lt;p&gt;To get the best performance out of hour hardware, it is important to understand it. Concepts like cache locality matter a lot, especially in modern NUMA architectures. Modern hardware is complex, so understanding it is not easy - and making matters worse its even harder to take advantage of this in our software stacks. For example binding threads or processes to specific cores is different in every operating system, some don&amp;rsquo;t even support it.&lt;/p&gt;
+
+&lt;p&gt;One library which helps with hardware topology discovery and management is &lt;a href=&#34;https://www.open-mpi.org/projects/hwloc/&#34;&gt;hwloc&lt;/a&gt;. The description on the website gives a nice overview:&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;&lt;em&gt;The Portable Hardware Locality (hwloc) software package provides a portable abstraction (across OS, versions,
+architectures,&amp;hellip;) of the hierarchical topology of modern architectures, including NUMA memory nodes, sockets, shared
+caches, cores and simultaneous multithreading. It also gathers various system attributes such as cache and memory
+information as well as the locality of I/O devices such as network interfaces, InfiniBand HCAs or GPUs. It primarily aims
+at helping applications with gathering information about modern computing hardware so as to exploit it accordingly and
+efficiently.&lt;/em&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;As a side project I&amp;rsquo;m working on a &lt;a href=&#34;https://github.com/daschl/hwloc-rs&#34;&gt;Rust Binding for hwloc&lt;/a&gt; which you&amp;rsquo;ll get to see in this blogpost. It already supports topology discovery and CPU binding, but only the discovery bit will be covered in this post.&lt;/p&gt;
+
+&lt;p&gt;I assume that you have basic rust skills, if not you want to check out &lt;a href=&#34;https://doc.rust-lang.org/stable/book/&#34;&gt;the book&lt;/a&gt; first. All the examples shown here should work on Linux and OSX, I never tested rust binding on windows (hwloc itself supports windows). If you want to help out adding support for it, that would be awesome!&lt;/p&gt;
+
+&lt;h2 id=&#34;setup:59d60ae1f01cc6eb214b28fbb3277422&#34;&gt;Setup&lt;/h2&gt;
+
+&lt;p&gt;You need to have rust (for example 1.5.0) installed, as well as the &lt;code&gt;hwloc&lt;/code&gt; C library. Please refer to the &lt;a href=&#34;https://github.com/daschl/hwloc-rs#install-hwloc-on-os-x&#34;&gt;README&lt;/a&gt; for detailed instructions on how to install it. On linux, most of the time you can find recent packages in your package manager, on OSX you want to install it from source. For example, here is all you need to do on OSX:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://www.open-mpi.org/software/hwloc/v1.11/downloads/hwloc-1.11.2.tar.gz&#34;&gt;Download&lt;/a&gt; the artifact.&lt;/li&gt;
+&lt;li&gt;tar -xvzpf hwloc-1.11.2.tar.gz&lt;/li&gt;
+&lt;li&gt;cd hwloc-1.11.2&lt;/li&gt;
+&lt;li&gt;./configure &amp;amp;&amp;amp; make &amp;amp;&amp;amp; sudo make install&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;The next step is to create a rust project which will be runnable from the command line:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;~/rust $ cargo new hwloc-playground --bin
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Go modify your &lt;code&gt;Cargo.toml&lt;/code&gt; and add &lt;code&gt;hwloc&lt;/code&gt; as a dependency:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;[dependencies]&lt;/span&gt;
+&lt;span style=&#34;color: #836C28&#34;&gt;hwloc&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;0.2.0&amp;quot;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Execute &lt;code&gt;cargo run&lt;/code&gt; to make sure the dependency compiles correctly before we move on:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;~/rust/hwloc-playground $ cargo run
+   Compiling winapi-build v0.1.1
+   Compiling libc v0.2.4
+   Compiling rustc-serialize v0.3.16
+   Compiling bitflags v0.3.3
+   Compiling pkg-config v0.3.6
+   Compiling winapi v0.2.5
+   Compiling advapi32-sys v0.1.2
+   Compiling kernel32-sys v0.2.1
+   Compiling rand v0.3.12
+   Compiling errno v0.1.5
+   Compiling hwloc v0.2.0
+   Compiling num v0.1.29
+   Compiling hwloc-playground v0.1.0 (file:///Users/michael/rust/hwloc-playground)
+     Running `target/debug/hwloc-playground`
+Hello, world!
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;code&gt;hwloc-rs&lt;/code&gt; also provides rustdoc which you can find &lt;a href=&#34;http://nitschinger.at/hwloc-rs/rustdoc&#34;&gt;here&lt;/a&gt; for the different versions.&lt;/p&gt;
+
+&lt;h3 id=&#34;cores-and-processing-units:59d60ae1f01cc6eb214b28fbb3277422&#34;&gt;Cores and Processing Units&lt;/h3&gt;
+
+&lt;p&gt;As a first simple example, we&amp;rsquo;ll find out how many physical cores we have on the machine. This introduces some basic concepts of &lt;code&gt;hwloc&lt;/code&gt;. The full code sample looks like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc::&lt;/span&gt;{&lt;span style=&#34;color: #000000&#34;&gt;Topology&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;ObjectType&lt;/span&gt;};
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;main&lt;/span&gt;() {
+    &lt;span style=&#34;color: #177500&#34;&gt;// Create a new Topology&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Topology::new&lt;/span&gt;();
+
+    &lt;span style=&#34;color: #177500&#34;&gt;// Get all objects with type &amp;quot;Core&amp;quot;&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cores&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;objects_with_type&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;ObjectType::Core&lt;/span&gt;);
+
+    &lt;span style=&#34;color: #177500&#34;&gt;// Match on the returned Result and print the length if successful.&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;match&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cores&lt;/span&gt; {
+        &lt;span style=&#34;color: #A90D91&#34;&gt;Ok&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;There are {} cores on this machine.&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;len&lt;/span&gt;()),
+        &lt;span style=&#34;color: #A90D91&#34;&gt;Err&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;panic!&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;format!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Could not load cores because of: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;))
+    }
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Let&amp;rsquo;s break the code apart a bit. The first thing you always need to do is create a &lt;a href=&#34;http://nitschinger.at/hwloc-rs/rustdoc/0.2.0/hwloc/struct.Topology.html&#34;&gt;Topology&lt;/a&gt;. The &lt;code&gt;Topology&lt;/code&gt; is your logical representation of the actual mapped hardware.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Topology::new&lt;/span&gt;();
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now that we have the &lt;code&gt;Topology&lt;/code&gt;, we can ask it to return all &lt;a href=&#34;http://nitschinger.at/hwloc-rs/rustdoc/0.2.0/hwloc/struct.TopologyObject.html&#34;&gt;TopologyObjects&lt;/a&gt; with a specific &lt;a href=&#34;http://nitschinger.at/hwloc-rs/rustdoc/0.2.0/hwloc/enum.ObjectType.html&#34;&gt;ObjectType&lt;/a&gt;. One type is &lt;code&gt;Core&lt;/code&gt; which maps to a computation unit on the physical hardware (most of the time a CPU Core).&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cores&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;objects_with_type&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;ObjectType::Core&lt;/span&gt;);
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Since not every ObjectType is available on every hardware, it might not be possible to figure out the actual objects. Because of this, the &lt;code&gt;objects_with_type&lt;/code&gt; method returns a &lt;code&gt;Result&amp;lt;Vec&amp;lt;&amp;amp;TopologyObject&amp;gt;, TypeDepthError&amp;gt;&lt;/code&gt;. We can now utilize pattern matching to distinguish between success and error, and if it is successful print out the length of the &lt;a href=&#34;https://doc.rust-lang.org/std/vec/struct.Vec.html#method.len&#34;&gt;Vector&lt;/a&gt;:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;match&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cores&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;Ok&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;There are {} cores on this machine.&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;len&lt;/span&gt;()),
+    &lt;span style=&#34;color: #A90D91&#34;&gt;Err&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;panic!&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;format!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Could not load cores because of: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;))
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If you run the code you should see an output like this (My machine is equipped with an i7 quadcore):&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;~/rust/hwloc-playground $ cargo run
+   Compiling hwloc-playground v0.1.0 (file:///Users/michael/rust/hwloc-playground)
+     Running `target/debug/hwloc-playground`
+There are 4 cores on this machine.
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Hwloc allows you to differentiate between cores and actual processing units. For example if your CPU has hyperthreading enabled, you&amp;rsquo;ll end up with more logical processing units than physical cores. Let&amp;rsquo;s modify the code to print the number of logical processing units instead:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #177500&#34;&gt;// Get all objects with type &amp;quot;PU&amp;quot;&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cores&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;objects_with_type&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;ObjectType::PU&lt;/span&gt;);
+
+&lt;span style=&#34;color: #177500&#34;&gt;// Match on the returned Result and print the length if successful.&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;match&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cores&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;Ok&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;There are {} processing units on this machine.&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;len&lt;/span&gt;()),
+    &lt;span style=&#34;color: #A90D91&#34;&gt;Err&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;panic!&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;format!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Could not load processing units because of: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;))
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;My i7 indeed has hyperthreading enabled, so this prints:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;~/rust/hwloc-playground $ cargo run
+   Compiling hwloc-playground v0.1.0 (file:///Users/michael/rust/hwloc-playground)
+     Running `target/debug/hwloc-playground`
+There are 8 processing units on this machine.
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The library also allows us to walk the topology in tree form, so the logical processing units (&amp;ldquo;PU&amp;rdquo;) are &amp;ldquo;below&amp;rdquo; the actual cores. If we want to determine how many PUs every core has, we can print that as well:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc::&lt;/span&gt;{&lt;span style=&#34;color: #000000&#34;&gt;Topology&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;ObjectType&lt;/span&gt;};
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;main&lt;/span&gt;() {
+    &lt;span style=&#34;color: #177500&#34;&gt;// Create a new Topology&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Topology::new&lt;/span&gt;();
+
+    &lt;span style=&#34;color: #177500&#34;&gt;// Get all objects with type &amp;quot;PU&amp;quot;&amp;quot;&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;pus&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;objects_with_type&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;ObjectType::PU&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;ok&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;expect&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Could not load PUs!&amp;quot;&lt;/span&gt;);
+
+    &lt;span style=&#34;color: #177500&#34;&gt;// Iterate through each PU&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;pu&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;pus&lt;/span&gt; {
+        &lt;span style=&#34;color: #177500&#34;&gt;// Print the PU&amp;#39;s logical index.&lt;/span&gt;
+        &lt;span style=&#34;color: #A90D91&#34;&gt;print&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;PU #{} is on Core &amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;pu&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;logical_index&lt;/span&gt;());
+
+        &lt;span style=&#34;color: #177500&#34;&gt;// Walk up the parent chain until the Core is found and print its id.&lt;/span&gt;
+        &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;pu&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt;();
+        &lt;span style=&#34;color: #A90D91&#34;&gt;while&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;Some&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; {
+            &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;object_type&lt;/span&gt;() &lt;span style=&#34;color: #000000&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;ObjectType::Core&lt;/span&gt; {
+                &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;{}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;logical_index&lt;/span&gt;());
+                &lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;None&lt;/span&gt;;
+            } &lt;span style=&#34;color: #A90D91&#34;&gt;else&lt;/span&gt; {
+                &lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt;();
+            }
+        }
+    }
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;First, we load all the processing units:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;pus&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;objects_with_type&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;ObjectType::PU&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;ok&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;expect&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Could not load PUs!&amp;quot;&lt;/span&gt;);
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Next up, we iterate through each unit and print its logical index:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #177500&#34;&gt;// Iterate through each PU&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;pu&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;pus&lt;/span&gt; {
+    &lt;span style=&#34;color: #177500&#34;&gt;// Print the PU&amp;#39;s logical index.&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;print&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;PU #{} is on Core &amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;pu&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;logical_index&lt;/span&gt;());
+
+    &lt;span style=&#34;color: #177500&#34;&gt;// ...&lt;/span&gt;
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Finally, we can walk up the tree of parents for each unit until we arrive at the Core level and print out its logical index as well. Notice how easy the walking is with the &lt;code&gt;while let&lt;/code&gt; construct. This works because &lt;code&gt;TopologyObject#parent()&lt;/code&gt; returns an &lt;code&gt;Option&amp;lt;&amp;amp;TopologyOption&amp;gt;&lt;/code&gt;.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #177500&#34;&gt;// Walk up the parent chain until the Core is found and print its id.&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;pu&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt;();
+&lt;span style=&#34;color: #A90D91&#34;&gt;while&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;Some&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;object_type&lt;/span&gt;() &lt;span style=&#34;color: #000000&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;ObjectType::Core&lt;/span&gt; {
+        &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;{}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;logical_index&lt;/span&gt;());
+        &lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;None&lt;/span&gt;;
+    } &lt;span style=&#34;color: #A90D91&#34;&gt;else&lt;/span&gt; {
+        &lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt;();
+    }
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;On my machine this prints:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt; ~/rust/hwloc-playground $ cargo run
+   Compiling hwloc-playground v0.1.0 (file:///Users/michael/rust/hwloc-playground)
+     Running `target/debug/hwloc-playground`
+PU #0 is on Core 0
+PU #1 is on Core 0
+PU #2 is on Core 1
+PU #3 is on Core 1
+PU #4 is on Core 2
+PU #5 is on Core 2
+PU #6 is on Core 3
+PU #7 is on Core 3
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;You can see that each Core has two PUs attached to it.&lt;/p&gt;
+
+&lt;h2 id=&#34;walking-the-tree:59d60ae1f01cc6eb214b28fbb3277422&#34;&gt;Walking The Tree&lt;/h2&gt;
+
+&lt;p&gt;If you want to understand the topology as a whole, you can walk it in two ways: either level by level (by depth) or in tree form. Here is a full example to walk it by level:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc::Topology&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;main&lt;/span&gt;() {
+    &lt;span style=&#34;color: #177500&#34;&gt;// Create a new Topology&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Topology::new&lt;/span&gt;();
+
+    &lt;span style=&#34;color: #177500&#34;&gt;// Loop through the complete topology depth.&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0.&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;depth&lt;/span&gt;() {
+		&lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;*** Objects at level {}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt;);
+
+        &lt;span style=&#34;color: #177500&#34;&gt;// Print each object at each level.&lt;/span&gt;
+		&lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;idx&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;object&lt;/span&gt;) &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;objects_at_depth&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;iter&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;enumerate&lt;/span&gt;() {
+			&lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;{}: {}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;idx&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;object&lt;/span&gt;);
+		}
+	}
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The code iterates through each level until the final topology depth is reached and on each level it prints all the TopologyObjects. This is the result on my machine:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;*** Objects at level 0
+0: Machine ()
+*** Objects at level 1
+0: NUMANode16GB (16GB)
+*** Objects at level 2
+0: L3 (6144KB)
+*** Objects at level 3
+0: L2 (256KB)
+1: L2 (256KB)
+2: L2 (256KB)
+3: L2 (256KB)
+*** Objects at level 4
+0: L1d (32KB)
+1: L1d (32KB)
+2: L1d (32KB)
+3: L1d (32KB)
+*** Objects at level 5
+0: Core ()
+1: Core ()
+2: Core ()
+3: Core ()
+*** Objects at level 6
+0: PU ()
+1: PU ()
+2: PU ()
+3: PU ()
+4: PU ()
+5: PU ()
+6: PU ()
+7: PU ()
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Here you can see new ObjectTypes in action. My machine has one NUMANode with 16GB of RAM. Then you can see the L3, L2 and L1 caches, as well as the individual Cores and logical processing units.&lt;/p&gt;
+
+&lt;p&gt;A different way to visualize it is through a tree representation:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc::&lt;/span&gt;{&lt;span style=&#34;color: #000000&#34;&gt;Topology&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;TopologyObject&lt;/span&gt;};
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;main&lt;/span&gt;() {
+    &lt;span style=&#34;color: #177500&#34;&gt;// Create a new Topology&lt;/span&gt;
+	&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Topology::new&lt;/span&gt;();
+
+    &lt;span style=&#34;color: #177500&#34;&gt;// Print the tree and start at the root&lt;/span&gt;
+	&lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;*** Printing overall tree&amp;quot;&lt;/span&gt;);
+	&lt;span style=&#34;color: #000000&#34;&gt;print_children&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;topo&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;object_at_root&lt;/span&gt;(), &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;);
+}
+
+&lt;span style=&#34;color: #177500&#34;&gt;// Print children recursively&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;print_children&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;topo:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;Topology&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;obj:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;TopologyObject&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;depth:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;usize&lt;/span&gt;) {
+    &lt;span style=&#34;color: #177500&#34;&gt;// some padding for the tree print&lt;/span&gt;
+	&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;padding&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;std::iter::repeat&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot; &amp;quot;&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;take&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;depth&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;collect::&amp;lt;String&amp;gt;&lt;/span&gt;();
+	&lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;{}{}: #{}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;padding&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;obj&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;obj&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;os_index&lt;/span&gt;());
+
+	&lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0.&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;obj&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;arity&lt;/span&gt;() {
+		&lt;span style=&#34;color: #000000&#34;&gt;print_children&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;obj&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;children&lt;/span&gt;()[&lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;as&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;usize&lt;/span&gt;], &lt;span style=&#34;color: #000000&#34;&gt;depth&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;);
+	}
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We define a method called &lt;code&gt;print_children&lt;/code&gt; which is called recursively:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;print_children&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;topo:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;Topology&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;obj:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;TopologyObject&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;depth:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;usize&lt;/span&gt;)
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Note the funky padding variable is just there to create a left-padding for the tree view:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;padding&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;std::iter::repeat&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot; &amp;quot;&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;take&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;depth&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;collect::&amp;lt;String&amp;gt;&lt;/span&gt;();
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Running the code above gives the same information but in a different style:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt; &lt;span style=&#34;color: #000000&#34;&gt;~/rust/hwloc-playground&lt;/span&gt; &lt;span style=&#34;color: #633820&#34;&gt;$&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cargo&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;run&lt;/span&gt;
+   &lt;span style=&#34;color: #000000&#34;&gt;Compiling&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc-playground&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;v0&lt;/span&gt;.&lt;span style=&#34;color: #1C01CE&#34;&gt;1.0&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;file:&lt;/span&gt;&lt;span style=&#34;color: #177500&#34;&gt;///Users/michael/rust/hwloc-playground)&lt;/span&gt;
+     &lt;span style=&#34;color: #000000&#34;&gt;Running&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;`target/debug/hwloc-playground`&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;***&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Printing&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;overall&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;tree&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;Machine&lt;/span&gt; ()&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;
+ &lt;span style=&#34;color: #000000&#34;&gt;NUMANode16GB&lt;/span&gt; (&lt;span style=&#34;color: #1C01CE&#34;&gt;16&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;GB&lt;/span&gt;)&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;
+  &lt;span style=&#34;color: #000000&#34;&gt;L3&lt;/span&gt; (&lt;span style=&#34;color: #1C01CE&#34;&gt;6144&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;KB&lt;/span&gt;)&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;
+   &lt;span style=&#34;color: #000000&#34;&gt;L2&lt;/span&gt; (&lt;span style=&#34;color: #1C01CE&#34;&gt;256&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;KB&lt;/span&gt;)&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;L1d&lt;/span&gt; (&lt;span style=&#34;color: #1C01CE&#34;&gt;32&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;KB&lt;/span&gt;)&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;
+     &lt;span style=&#34;color: #000000&#34;&gt;Core&lt;/span&gt; ()&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;PU&lt;/span&gt; ()&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;PU&lt;/span&gt; ()&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;
+   &lt;span style=&#34;color: #000000&#34;&gt;L2&lt;/span&gt; (&lt;span style=&#34;color: #1C01CE&#34;&gt;256&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;KB&lt;/span&gt;)&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;L1d&lt;/span&gt; (&lt;span style=&#34;color: #1C01CE&#34;&gt;32&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;KB&lt;/span&gt;)&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;
+     &lt;span style=&#34;color: #000000&#34;&gt;Core&lt;/span&gt; ()&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;PU&lt;/span&gt; ()&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;2&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;PU&lt;/span&gt; ()&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;3&lt;/span&gt;
+   &lt;span style=&#34;color: #000000&#34;&gt;L2&lt;/span&gt; (&lt;span style=&#34;color: #1C01CE&#34;&gt;256&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;KB&lt;/span&gt;)&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;2&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;L1d&lt;/span&gt; (&lt;span style=&#34;color: #1C01CE&#34;&gt;32&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;KB&lt;/span&gt;)&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;2&lt;/span&gt;
+     &lt;span style=&#34;color: #000000&#34;&gt;Core&lt;/span&gt; ()&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;2&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;PU&lt;/span&gt; ()&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;4&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;PU&lt;/span&gt; ()&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;5&lt;/span&gt;
+   &lt;span style=&#34;color: #000000&#34;&gt;L2&lt;/span&gt; (&lt;span style=&#34;color: #1C01CE&#34;&gt;256&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;KB&lt;/span&gt;)&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;3&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;L1d&lt;/span&gt; (&lt;span style=&#34;color: #1C01CE&#34;&gt;32&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;KB&lt;/span&gt;)&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;3&lt;/span&gt;
+     &lt;span style=&#34;color: #000000&#34;&gt;Core&lt;/span&gt; ()&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;3&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;PU&lt;/span&gt; ()&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;6&lt;/span&gt;
+      &lt;span style=&#34;color: #000000&#34;&gt;PU&lt;/span&gt; ()&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;7&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;What you can spot here immediately is that each core has its own L2 cache (as well as a L1 data cache) while at the same time they all share the same L3 cache.&lt;/p&gt;
+
+&lt;h2 id=&#34;cpu-caches:59d60ae1f01cc6eb214b28fbb3277422&#34;&gt;CPU Caches&lt;/h2&gt;
+
+&lt;p&gt;Speaking of caches, it is often quite helpful to know how much memory and cache is available to each core/processing unit. This can be used to aid cpu and memory binding decisions which are concerned with data locality.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s say we want to know how much cache our first logical processing unit has available:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc::&lt;/span&gt;{&lt;span style=&#34;color: #000000&#34;&gt;Topology&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;ObjectType&lt;/span&gt;};
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;main&lt;/span&gt;() {
+    &lt;span style=&#34;color: #177500&#34;&gt;// Create a new Topology&lt;/span&gt;
+	&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Topology::new&lt;/span&gt;();
+
+    &lt;span style=&#34;color: #177500&#34;&gt;// Get the first Logical Processing Unit&lt;/span&gt;
+	&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;pu&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;objects_with_type&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;ObjectType::PU&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;()[&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;];
+
+	&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;pu&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt;();
+	&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;levels&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;;
+	&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;size&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;;
+
+    &lt;span style=&#34;color: #177500&#34;&gt;// Walk up the parents and if it is a cache, add up its capacity&lt;/span&gt;
+	&lt;span style=&#34;color: #A90D91&#34;&gt;while&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;Some&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; {
+		&lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;object_type&lt;/span&gt;() &lt;span style=&#34;color: #000000&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;ObjectType::Cache&lt;/span&gt; {
+			&lt;span style=&#34;color: #000000&#34;&gt;levels&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;;
+			&lt;span style=&#34;color: #000000&#34;&gt;size&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;cache_attributes&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;size&lt;/span&gt;;
+		}
+		&lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt;();
+	}
+
+    &lt;span style=&#34;color: #177500&#34;&gt;// Print out the result&lt;/span&gt;
+	&lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;*** Logical processor 0 has {} caches totalling {} KB&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;levels&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;size&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;/&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1024&lt;/span&gt;);
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We are using a similar technique as in the examples above, but this time we just add up all the capacity for each cache and then print it out.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt; ~/rust/hwloc-playground $ cargo run
+     Running `target/debug/hwloc-playground`
+*** Logical processor 0 has 3 caches totalling 6432 KB
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This output is not surprising given we have seen the topology before:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;...
+  L3 (6144KB): #0
+   L2 (256KB): #0
+    L1d (32KB): #0
+     Core (): #0
+      PU (): #0 &amp;lt;----
+      PU (): #1
+...
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;For a quick crosscheck, this is what OSX shows in its &lt;code&gt;System Report&lt;/code&gt;:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;Processor Name:	Intel Core i7
+Processor Speed:	2,3 GHz
+Number of Processors:	1
+Total Number of Cores:	4
+L2 Cache (per Core):	256 KB
+L3 Cache:	6 MB
+Memory:	16 GB
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h2 id=&#34;conclusion:59d60ae1f01cc6eb214b28fbb3277422&#34;&gt;Conclusion&lt;/h2&gt;
+
+&lt;p&gt;Hwloc and the rust binding provide a very convenient way to identify hardware topology characteristics. While hwloc has much more to offer, this post should have given you an easy introduction and should motivate you discovering your own topologies. In a followup post I&amp;rsquo;ll show you how you can utilize the binding API to perform CPU binding if your OS supports it.&lt;/p&gt;
+
+&lt;p&gt;The rust binding is still in the works and I appreciate all kinds of input. Bug reports, API enhancements or just questions in general are more than welcome!&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>
