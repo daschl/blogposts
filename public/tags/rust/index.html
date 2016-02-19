@@ -64,6 +64,203 @@
             
             <div class="posts">
                 
+                <h1 class="content-subhead">19 Feb 2016</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="http://nitschinger.at/First-Steps-with-Rust-and-JNI/" class="post-title">First Steps with Rust and JNI</a>
+
+                        <p class="post-meta">
+                            
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        <p>The first steps are always the hardest, at least thats how the saying goes. But it turns out that calling into <a href="http://rust-lang.org/">Rust</a> from Java is easier than I originally thought.</p>
+
+<p>The following blog post shows you how to setup and compile a Rust library which can be called from Java userland. Note that everything you see in this post, while being functional, is very simplistic. Real world JNI has lots of nitty gritty details and pitfalls, but we need to start somewhere right?</p>
+
+<p>Recently on Hacker News there has been rumor that <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">adding two integers is slow in java</a>, so lets try to offload this complex operation into Rust.</p>
+
+<p>Note that all steps performed in this blog post were done on OSX, but with little adaption they should also work on Linux. Maybe even on Windows, but I&rsquo;m not so sure there since my experience with Windows is very limited. Any recent Rust version should suffice, I&rsquo;m using 1.6.0 stable.</p>
+
+<p>The first step is to create a <code>cargo</code> library project:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">~/rust $ cargo new highperf-adder
+</pre></div>
+
+<p>Open the generated <code>Cargo.toml</code> and add <code>libc</code> as a dependency. When interacting with <a href="https://docs.oracle.com/javase/8/docs/technotes/guides/jni/spec/jniTOC.html">JNI</a>, Rust needs to dress up a bit to look like C, and <code>libc</code> helps with that.</p>
+
+<p>While you&rsquo;re in there, tell <code>cargo</code> that you want to build the crate as a <code>dylib</code> and also give it an explicit name:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">[lib]</span>
+<span style="color: #836C28">name</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;hpa&quot;</span>
+<span style="color: #836C28">crate-type</span> <span style="color: #000000">=</span> <span style="color: #C41A16">[&quot;dylib&quot;]</span>
+
+<span style="color: #A90D91">[dependencies]</span>
+<span style="color: #836C28">libc</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;0.2.7&quot;</span>
+</pre></div>
+
+<p>If you don&rsquo;t specify that you want a <code>dylib</code>, it will build a <code>rlib</code> which is not intended for external use. Also don&rsquo;t use <code>staticlib</code>, since this fail to link as well.</p>
+
+<p>To make sure all is well so far we can build the project:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>cargo build
+Updating registry <span style="color: #C41A16">`</span>https://github.com/rust-lang/crates.io-index<span style="color: #C41A16">`</span>
+Compiling libc v0.2.7
+Compiling highperf-adder v0.1.0 <span style="color: #000000">(</span>file:///Users/michael/rust/highperf-adder<span style="color: #000000">)</span>
+</pre></div>
+
+<p>Instead of diving straight into Rust code, let&rsquo;s work on the Java code first. To keep it simple, create a <code>Adder.java</code> file in the root of the project directory and add the following code:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">import</span> <span style="color: #000000">java.nio.file.Path;</span>
+<span style="color: #A90D91">import</span> <span style="color: #000000">java.nio.file.Paths;</span>
+
+<span style="color: #A90D91">class</span> <span style="color: #3F6E75">Adder</span> <span style="color: #000000">{</span>
+
+  <span style="color: #A90D91">static</span> <span style="color: #000000">{</span>
+    <span style="color: #000000">Path</span> <span style="color: #000000">p</span> <span style="color: #000000">=</span> <span style="color: #000000">Paths.</span><span style="color: #836C28">get</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;target/debug/libhpa.dylib&quot;</span><span style="color: #000000">);</span>
+    <span style="color: #000000">System.</span><span style="color: #836C28">load</span><span style="color: #000000">(p.</span><span style="color: #836C28">toAbsolutePath</span><span style="color: #000000">().</span><span style="color: #836C28">toString</span><span style="color: #000000">());</span>
+  <span style="color: #000000">}</span>
+
+  <span style="color: #A90D91">public</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">native</span> <span style="color: #A90D91">int</span> <span style="color: #000000">add(</span><span style="color: #A90D91">int</span> <span style="color: #000000">v1,</span> <span style="color: #A90D91">int</span> <span style="color: #000000">v2);</span>
+
+  <span style="color: #A90D91">public</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">void</span> <span style="color: #000000">main(String...</span> <span style="color: #000000">args)</span> <span style="color: #000000">{</span>
+    <span style="color: #000000">System.</span><span style="color: #836C28">out</span><span style="color: #000000">.</span><span style="color: #836C28">println</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;2 + 3 = &quot;</span> <span style="color: #000000">+</span> <span style="color: #000000">Adder.</span><span style="color: #836C28">add</span><span style="color: #000000">(</span><span style="color: #1C01CE">2</span><span style="color: #000000">,</span> <span style="color: #1C01CE">3</span><span style="color: #000000">));</span>
+  <span style="color: #000000">}</span>
+
+<span style="color: #000000">}</span>
+</pre></div>
+
+<p>Let&rsquo;s break the code up into digestible chunks.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">static</span> <span style="color: #000000">{</span>
+    <span style="color: #000000">Path</span> <span style="color: #000000">p</span> <span style="color: #000000">=</span> <span style="color: #000000">Paths.</span><span style="color: #836C28">get</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;target/debug/libhpa.dylib&quot;</span><span style="color: #000000">);</span>
+    <span style="color: #000000">System.</span><span style="color: #836C28">load</span><span style="color: #000000">(p.</span><span style="color: #836C28">toAbsolutePath</span><span style="color: #000000">().</span><span style="color: #836C28">toString</span><span style="color: #000000">());</span>
+<span style="color: #000000">}</span>
+</pre></div>
+
+<p>We need to tell the JVM to pick up our shared library that got built by Rust. If you are running <code>cargo build</code> with the <code>--release</code> flag to optimize, make sure to point it towards <code>target/release/libhpa.dylib</code> instead.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">public</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">native</span> <span style="color: #A90D91">int</span> <span style="color: #000000">add(</span><span style="color: #A90D91">int</span> <span style="color: #000000">v1,</span> <span style="color: #A90D91">int</span> <span style="color: #000000">v2);</span>
+</pre></div>
+
+<p>Next up we define all our native methods that we want to call through JNI. It works a little bit like implementing an abstract class, but you are implementing the actual code in Rust intead of Java userland. The name of the method and its calling class will become important in a bit, so if you want to follow along make sure you keep the same names.</p>
+
+<p>In our case we define one <code>add</code> method which takes two integers as arguments and returns the result as an integer.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">public</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">void</span> <span style="color: #000000">main(String...</span> <span style="color: #000000">args)</span> <span style="color: #000000">{</span>
+    <span style="color: #000000">System.</span><span style="color: #836C28">out</span><span style="color: #000000">.</span><span style="color: #836C28">println</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;2 + 3 = &quot;</span> <span style="color: #000000">+</span> <span style="color: #000000">Adder.</span><span style="color: #836C28">add</span><span style="color: #000000">(</span><span style="color: #1C01CE">2</span><span style="color: #000000">,</span> <span style="color: #1C01CE">3</span><span style="color: #000000">));</span>
+<span style="color: #000000">}</span>
+</pre></div>
+
+<p>The <code>main</code> method calls our static JNI method and prints the result to <code>stdout</code>.</p>
+
+<p>Let&rsquo;s run it straight away:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>javac Adder.java 
+<span style="color: #000000">$ </span>java Adder
+Exception in thread <span style="color: #C41A16">&quot;main&quot;</span> java.lang.UnsatisfiedLinkError: Adder.add<span style="color: #000000">(</span>II<span style="color: #000000">)</span>I
+    at Adder.add<span style="color: #000000">(</span>Native Method<span style="color: #000000">)</span>
+    at Adder.main<span style="color: #000000">(</span>Adder.java:14<span style="color: #000000">)</span>
+</pre></div>
+
+<p>It compiles without errors, but at runtime it breaks apart. This doesn&rsquo;t come as a huge surprise since we didn&rsquo;t write a single line of Rust code yet. The JVM just tells us it can&rsquo;t link the method we&rsquo;re looking for.</p>
+
+<p>To fix that, open the <code>src/lib.rs</code> file and insert the following Rust code:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">extern</span> <span style="color: #000000">crate</span> <span style="color: #000000">libc</span>;
+
+<span style="color: #A90D91">use</span> <span style="color: #000000">libc::</span>{<span style="color: #000000">c_void</span>, <span style="color: #000000">c_int</span>};
+
+<span style="color: #633820">#[repr(C)]</span>
+<span style="color: #A90D91">pub</span> <span style="color: #A90D91">struct</span> <span style="color: #000000">JNINativeInterface</span> {
+    <span style="color: #000000">reserved0:</span> <span style="color: #000000">*</span><span style="color: #A90D91">mut</span> <span style="color: #000000">c_void</span>,
+    <span style="color: #000000">reserved1:</span> <span style="color: #000000">*</span><span style="color: #A90D91">mut</span> <span style="color: #000000">c_void</span>,
+    <span style="color: #000000">reserved2:</span> <span style="color: #000000">*</span><span style="color: #A90D91">mut</span> <span style="color: #000000">c_void</span>,
+    <span style="color: #000000">reserved3:</span> <span style="color: #000000">*</span><span style="color: #A90D91">mut</span> <span style="color: #000000">c_void</span>,
+    <span style="color: #177500">// much more actually in here for practical JNI code, but not</span>
+    <span style="color: #177500">// relevant for this very simple example...</span>
+}
+
+<span style="color: #A90D91">pub</span> <span style="color: #A90D91">type</span> <span style="color: #000000">JNIEnv</span> <span style="color: #000000">=</span> <span style="color: #000000">*</span><span style="color: #A90D91">const</span> <span style="color: #000000">JNINativeInterface</span>;
+
+<span style="color: #633820">#[no_mangle]</span>
+<span style="color: #A90D91">pub</span> <span style="color: #A90D91">extern</span> <span style="color: #A90D91">fn</span> <span style="color: #000000">Java_Adder_add</span>(<span style="color: #000000">jre:</span> <span style="color: #000000">*</span><span style="color: #A90D91">mut</span> <span style="color: #000000">JNIEnv</span>, <span style="color: #000000">class:</span> <span style="color: #000000">*</span><span style="color: #A90D91">const</span> <span style="color: #000000">c_void</span>, <span style="color: #000000">v1:</span> <span style="color: #000000">c_int</span>, <span style="color: #000000">v2:</span> <span style="color: #000000">c_int</span>) <span style="color: #000000">-&gt;</span> <span style="color: #000000">c_int</span> {
+    <span style="color: #000000">v1</span> <span style="color: #000000">+</span> <span style="color: #000000">v2</span>
+}
+</pre></div>
+
+<p>Alright, so what&rsquo;s going on here?</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">#[repr(C)]</span>
+<span style="color: #A90D91">pub</span> <span style="color: #A90D91">struct</span> <span style="color: #000000">JNINativeInterface</span> {
+    <span style="color: #000000">reserved0:</span> <span style="color: #000000">*</span><span style="color: #A90D91">mut</span> <span style="color: #000000">c_void</span>,
+    <span style="color: #000000">reserved1:</span> <span style="color: #000000">*</span><span style="color: #A90D91">mut</span> <span style="color: #000000">c_void</span>,
+    <span style="color: #000000">reserved2:</span> <span style="color: #000000">*</span><span style="color: #A90D91">mut</span> <span style="color: #000000">c_void</span>,
+    <span style="color: #000000">reserved3:</span> <span style="color: #000000">*</span><span style="color: #A90D91">mut</span> <span style="color: #000000">c_void</span>,
+    <span style="color: #177500">// ...</span>
+}
+
+<span style="color: #A90D91">pub</span> <span style="color: #A90D91">type</span> <span style="color: #000000">JNIEnv</span> <span style="color: #000000">=</span> <span style="color: #000000">*</span><span style="color: #A90D91">const</span> <span style="color: #000000">JNINativeInterface</span>;
+</pre></div>
+
+<p>The JVM exports a <code>jni.h</code> header file which contains its primary interfaces when interacting through JNI. Normally we&rsquo;d write a proper Rust C FFI binding here and keep our code idiomatic, but for now all we need is a pointer to the <code>JNIEnv</code> (even if we don&rsquo;t actually use it, it gets passed in to our <code>add</code> method as an argument). If you take a look at the <a href="http://hg.openjdk.java.net/jdk8/jdk8/jdk/file/687fd7c7986d/src/share/javavm/export/jni.h#l214">actual jni.h</a> you can see that we get away with lots of handwaving for now.</p>
+
+<p>Btw, how on earth did we know that the JVM expects a method with the signature of <code>fn Java_Adder_add(jre: *mut JNIEnv, class: *const c_void, v1: c_int, v2: c_int) -&gt; c_int</code>? The answer lies in the <code>javah</code> command and some conversion of C to Rust. If you run <code>javah Adder</code> you get a <code>Adder.h</code> file which looks like:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">/* DO NOT EDIT THIS FILE - it is machine generated */</span>
+<span style="color: #633820">#include &lt;jni.h&gt;</span>
+<span style="color: #177500">/* Header for class Adder */</span>
+
+<span style="color: #633820">#ifndef _Included_Adder</span>
+<span style="color: #633820">#define _Included_Adder</span>
+<span style="color: #633820">#ifdef __cplusplus</span>
+<span style="color: #A90D91">extern</span> <span style="color: #C41A16">&quot;C&quot;</span> {
+<span style="color: #633820">#endif</span>
+<span style="color: #177500">/*</span>
+<span style="color: #177500"> * Class:     Adder</span>
+<span style="color: #177500"> * Method:    add</span>
+<span style="color: #177500"> * Signature: (II)I</span>
+<span style="color: #177500"> */</span>
+<span style="color: #000000">JNIEXPORT</span> <span style="color: #000000">jint</span> <span style="color: #000000">JNICALL</span> <span style="color: #000000">Java_Adder_add</span>
+  (<span style="color: #000000">JNIEnv</span> <span style="color: #000000">*</span>, <span style="color: #000000">jclass</span>, <span style="color: #000000">jint</span>, <span style="color: #000000">jint</span>);
+
+<span style="color: #633820">#ifdef __cplusplus</span>
+}
+<span style="color: #633820">#endif</span>
+<span style="color: #633820">#endif</span>
+</pre></div>
+
+<p>The important part is this:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">JNIEXPORT</span> <span style="color: #000000">jint</span> <span style="color: #000000">JNICALL</span> <span style="color: #000000">Java_Adder_add</span>(<span style="color: #000000">JNIEnv</span> <span style="color: #000000">*</span>, <span style="color: #000000">jclass</span>, <span style="color: #000000">jint</span>, <span style="color: #000000">jint</span>);
+</pre></div>
+
+<p>The type <code>jint</code> is defined per plattform. For OSX you can find it <a href="http://hg.openjdk.java.net/jdk8/jdk8/jdk/file/687fd7c7986d/src/macosx/javavm/export/jni_md.h#l33">here</a> and it maps to an <code>int</code>. The rust <code>libc</code> exports this type through <code>libc::c_int</code>, which we can utilize in our code. <code>jclass</code> is a reference type which we ignore for now, since we don&rsquo;t need it.</p>
+
+<p>All we need to do is add the two numbers and return the result:</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">#[no_mangle]</span>
+<span style="color: #A90D91">pub</span> <span style="color: #A90D91">extern</span> <span style="color: #A90D91">fn</span> <span style="color: #000000">Java_Adder_add</span>(<span style="color: #000000">jre:</span> <span style="color: #000000">*</span><span style="color: #A90D91">mut</span> <span style="color: #000000">JNIEnv</span>, <span style="color: #000000">class:</span> <span style="color: #000000">*</span><span style="color: #A90D91">const</span> <span style="color: #000000">c_void</span>, <span style="color: #000000">v1:</span> <span style="color: #000000">c_int</span>, <span style="color: #000000">v2:</span> <span style="color: #000000">c_int</span>) <span style="color: #000000">-&gt;</span> <span style="color: #000000">c_int</span> {
+    <span style="color: #000000">v1</span> <span style="color: #000000">+</span> <span style="color: #000000">v2</span>
+}
+</pre></div>
+
+<p>Make sure you don&rsquo;t forget the <code>#[no_mangle]</code> which tells Rust to turn off its name mangling so that there are no issues while linking (try it out and you&rsquo;ll see the <code>UnsatisfiedLinkError</code> again). Finally its time to compile the <code>crate</code> once more and run the Java class again. Note that you don&rsquo;t need to recompile the Java code every time you make a change to the Rust code. Just rebuild with cargo and run the Java file again, it will pick up the freshly created <code>dylib</code>.</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>cargo build
+   Compiling libc v0.2.7
+   Compiling highperf-adder v0.1.0 <span style="color: #000000">(</span>file:///Users/michael/rust/highperf-adder<span style="color: #000000">)</span>
+src/lib.rs:18:30: 18:33 warning: unused variable: <span style="color: #C41A16">`</span>jre<span style="color: #C41A16">`</span>, <span style="color: #177500">#[warn(unused_variables)] on by default</span>
+src/lib.rs:18 pub extern fn Java_Adder_add<span style="color: #000000">(</span>jre: *mut JNIEnv, class: *const c_void, v1: c_int, v2: c_int<span style="color: #000000">)</span> -&gt; c_int <span style="color: #000000">{</span>
+                                           ^~~
+src/lib.rs:18:48: 18:53 warning: unused variable: <span style="color: #C41A16">`</span>class<span style="color: #C41A16">`</span>, <span style="color: #177500">#[warn(unused_variables)] on by default</span>
+src/lib.rs:18 pub extern fn Java_Adder_add<span style="color: #000000">(</span>jre: *mut JNIEnv, class: *const c_void, v1: c_int, v2: c_int<span style="color: #000000">)</span> -&gt; c_int <span style="color: #000000">{</span>
+                                                             ^~~~~
+src/lib.rs:18:1: 20:2 warning: <span style="color: #A90D91">function</span> <span style="color: #C41A16">`</span>Java_Adder_add<span style="color: #C41A16">`</span> should have a snake <span style="color: #A90D91">case</span> name such as <span style="color: #C41A16">`</span>java_adder_add<span style="color: #C41A16">`</span>, <span style="color: #177500">#[warn(non_snake_case)] on by default</span>
+src/lib.rs:18 pub extern fn Java_Adder_add<span style="color: #000000">(</span>jre: *mut JNIEnv, class: *const c_void, v1: c_int, v2: c_int<span style="color: #000000">)</span> -&gt; c_int <span style="color: #000000">{</span>
+src/lib.rs:19     v1 + v2
+src/lib.rs:20 <span style="color: #000000">}</span>
+</pre></div>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>java Adder
+<span style="color: #1C01CE">2</span> + <span style="color: #000000">3</span> <span style="color: #000000">=</span> 5
+</pre></div>
+
+<p>It works! The warnings from <code>rustc</code> are there because the rust compiler is as always super correct and tells us we are neither making use of the <code>jre</code> nor of the <code>class</code> function arguments. Also, our method signature is not named like idiomatic rust code is. You can turn off those warnings by adding the attributes the compiler suggests.</p>
+
+<p>I think a crate which abstracts the JNI C FFI would be pretty awesome to abstract the nitty gritty details and to expose a safe, idiomatic Rust API. I&rsquo;m planning to work on that as time permits, let me know if you also want to hack on it. Finally, thanks to <a href="https://twitter.com/netvlm">Vladimir Mateev</a> who <a href="http://stackoverflow.com/questions/30258427/calling-rust-from-java">answered</a> a related question on stackoverflow last year which got me motivated to dive in further.</p>
+
+                    </div>
+                </section>
+                
                 <h1 class="content-subhead">11 Feb 2016</h1>
                 <section class="post">
                     <header class="post-header">
