@@ -7,7 +7,7 @@
 
     <meta name="description" content="">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Dns &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -82,15 +82,16 @@
 <p>Here&rsquo;s the itch we&rsquo;re trying to scratch: is there an easy way to determine hostnames for - let&rsquo;s say - a database connection? There are many ways to do this, like hardcoding it, providing them through a properties file and so on. All this techniques (maybe aside from fetching it over the network from a central storage) require some modifications on the server once one of the hostnames changes. If you need to maintain a lot of machines, this can get inefficient pretty quickly.</p>
 
 <p>Now let&rsquo;s step back a second and think about what we&rsquo;re using anyway in our infrastructure: DNS. Until recently I haven&rsquo;t heard of the SRV record that you can use to &ldquo;refer&rdquo; to other hostnames. The nice thing about this is that you can provide more endpoints and even add weights and and priorities. Let&rsquo;s look at an example:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">_cbnodes._tcp.example.com.  0  IN  SRV  20  0  8091  node2.example.com.
+
+<pre><code>_cbnodes._tcp.example.com.  0  IN  SRV  20  0  8091  node2.example.com.
 _cbnodes._tcp.example.com.  0  IN  SRV  10  0  8091  node1.example.com.
 _cbnodes._tcp.example.com.  0  IN  SRV  30  0  8091  node3.example.com.
-</pre></div>
+</code></pre>
 
 <p>Here, based on the &ldquo;_cbnodes._tcp.example.com.&rdquo; service information we get to know that there are three nodes configured that belong to this service. They all listen on port <code>8091</code>, but have priorities associated with them (10, 20, 30). Lower priorities are considered more important, so you can use that to your advantage. The <code>0</code> between the priority and the port is the weight. You can use different weights (which are probabilities) to generate some kind of load-balancing behaviour.</p>
 
 <p>Once this is configured on the DNS server, we can make use of that in our application. Say we want to infer the seed nodes to bootstrap from in our <code>CouchbaseClient</code>. To make this happen, we need to make use of <a href="http://en.wikipedia.org/wiki/Java_Naming_and_Directory_Interface">JNDI</a>. Let&rsquo;s first create a simple class that will hold those records shown above:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">static</span> <span style="color: #A90D91">class</span> <span style="color: #3F6E75">DnsRecord</span> <span style="color: #A90D91">implements</span> <span style="color: #000000">Comparable&lt;DnsRecord&gt;</span> <span style="color: #000000">{</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">static</span> <span style="color: #A90D91">class</span> <span style="color: #3F6E75">DnsRecord</span> <span style="color: #A90D91">implements</span> <span style="color: #000000">Comparable&lt;DnsRecord&gt;</span> <span style="color: #000000">{</span>
     <span style="color: #A90D91">private</span> <span style="color: #A90D91">final</span> <span style="color: #A90D91">int</span> <span style="color: #000000">priority;</span>
     <span style="color: #A90D91">private</span> <span style="color: #A90D91">final</span> <span style="color: #A90D91">int</span> <span style="color: #000000">weight;</span>
     <span style="color: #A90D91">private</span> <span style="color: #A90D91">final</span> <span style="color: #A90D91">int</span> <span style="color: #000000">port;</span>
@@ -152,7 +153,7 @@ _cbnodes._tcp.example.com.  0  IN  SRV  30  0  8091  node3.example.com.
 </pre></div>
 
 <p>We provide a custom <code>compareTo</code> method in order to automatically sort each <code>DnsRecord</code> by priority. The next step is to write a method that allows us to fetch the actual information:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">String</span> <span style="color: #000000">service</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;_cbnodes._tcp.example.com&quot;</span><span style="color: #000000">;</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #000000">String</span> <span style="color: #000000">service</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;_cbnodes._tcp.example.com&quot;</span><span style="color: #000000">;</span>
 
 <span style="color: #000000">Hashtable&lt;String,</span> <span style="color: #000000">String&gt;</span> <span style="color: #000000">env</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Hashtable&lt;String,</span> <span style="color: #000000">String&gt;();</span>
 <span style="color: #000000">env.</span><span style="color: #836C28">put</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;java.naming.factory.initial&quot;</span><span style="color: #000000">,</span> <span style="color: #C41A16">&quot;com.sun.jndi.dns.DnsContextFactory&quot;</span><span style="color: #000000">);</span>
@@ -169,7 +170,7 @@ _cbnodes._tcp.example.com.  0  IN  SRV  30  0  8091  node3.example.com.
 </pre></div>
 
 <p>Now we have a <code>Set</code> of sorted <code>DnsRecords</code>, which we can use however we want to. For example, with <a href="http://couchbase.com">Couchbase</a> we can turn them into <code>URI</code>s:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">List&lt;URI&gt;</span> <span style="color: #000000">uris</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">ArrayList&lt;URI&gt;();</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #000000">List&lt;URI&gt;</span> <span style="color: #000000">uris</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">ArrayList&lt;URI&gt;();</span>
 <span style="color: #A90D91">for</span><span style="color: #000000">(DnsRecord</span> <span style="color: #000000">record</span> <span style="color: #000000">:</span> <span style="color: #000000">sortedRecords)</span> <span style="color: #000000">{</span>
 	<span style="color: #000000">uris.</span><span style="color: #836C28">add</span><span style="color: #000000">(</span><span style="color: #A90D91">new</span> <span style="color: #000000">URI(</span><span style="color: #C41A16">&quot;http://&quot;</span> <span style="color: #000000">+</span> <span style="color: #000000">record.</span><span style="color: #836C28">getHost</span><span style="color: #000000">()</span> <span style="color: #000000">+</span> <span style="color: #C41A16">&quot;:&quot;</span> <span style="color: #000000">+</span> <span style="color: #000000">record.</span><span style="color: #836C28">getPort</span><span style="color: #000000">()</span> <span style="color: #000000">+</span> <span style="color: #C41A16">&quot;/pools&quot;</span><span style="color: #000000">));</span>
 <span style="color: #000000">}</span>
@@ -177,7 +178,7 @@ _cbnodes._tcp.example.com.  0  IN  SRV  30  0  8091  node3.example.com.
 
 <p>If you want to play around with the code and don&rsquo;t have DNS SRV records set up, I recommend you to use <code>_xmpp-server._tcp.gmail.com</code>. It exposes Googles GMail XMPP servers and lets
 you try the code without much effort. In case you wonder how to mock that thing correctly, I recommend you to mock the <code>DirContext</code> like so:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">String</span> <span style="color: #000000">service</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;_seeds._tcp.couchbase.com&quot;</span><span style="color: #000000">;</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #000000">String</span> <span style="color: #000000">service</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;_seeds._tcp.couchbase.com&quot;</span><span style="color: #000000">;</span>
 
 <span style="color: #000000">BasicAttributes</span> <span style="color: #000000">basicAttributes</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">BasicAttributes(</span><span style="color: #A90D91">true</span><span style="color: #000000">);</span>
 <span style="color: #000000">BasicAttribute</span> <span style="color: #000000">basicAttribute</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">BasicAttribute(</span><span style="color: #C41A16">&quot;SRV&quot;</span><span style="color: #000000">);</span>
@@ -203,7 +204,7 @@ you try the code without much effort. In case you wonder how to mock that thing 
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

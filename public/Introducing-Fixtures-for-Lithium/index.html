@@ -7,7 +7,7 @@
 
     <meta name="description" content="With the new li3_fixtures plugin you can simplify your tests, DRY them up and make them more readable.">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Introducing Fixtures for Lithium &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -74,42 +74,47 @@
                             
                         </p>
                     </header>
-
+                    
+                    
                     <div class="post-description">
                         <p>When you write tests for your classes (and you should), you may run into the problem that you create large arrays of test data in your code. Consider the following example:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$expected</span> <span style="color: #000000">=</span> <span style="color: #000000">array(</span>
-    <span style="color: #C41A16">&#39;post1&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">array(</span>
-        <span style="color: #C41A16">&#39;title&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;My First Post&#39;</span><span style="color: #000000">,</span>
-        <span style="color: #C41A16">&#39;content&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;First Content...&#39;</span>
-    <span style="color: #000000">),</span>
-    <span style="color: #C41A16">&#39;post2&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">array(</span>
-        <span style="color: #C41A16">&#39;title&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;My Second Post&#39;</span><span style="color: #000000">,</span>
-        <span style="color: #C41A16">&#39;content&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;Also some foobar text&#39;</span>
-    <span style="color: #000000">),</span>
-    <span style="color: #C41A16">&#39;post3&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">array(</span>
-        <span style="color: #C41A16">&#39;title&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;My Third Post&#39;</span><span style="color: #000000">,</span>
-        <span style="color: #C41A16">&#39;content&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;I like to write some foobar foo too&#39;</span>
-    <span style="color: #000000">)</span>
-<span style="color: #000000">);</span>
 
-<span style="color: #000000">$this-&gt;assertEqual($expected</span><span style="color: #633820">[</span><span style="color: #1C01CE">0</span><span style="color: #633820">]</span><span style="color: #000000">,</span> <span style="color: #000000">Post::first());</span>
-<span style="color: #177500">/* more tests down here */</span>
-</pre></div>
+<pre><code>$expected = array(
+    'post1' =&gt; array(
+        'title' =&gt; 'My First Post',
+        'content' =&gt; 'First Content...'
+    ),
+    'post2' =&gt; array(
+        'title' =&gt; 'My Second Post',
+        'content' =&gt; 'Also some foobar text'
+    ),
+    'post3' =&gt; array(
+        'title' =&gt; 'My Third Post',
+        'content' =&gt; 'I like to write some foobar foo too'
+    )
+);
+
+$this-&gt;assertEqual($expected[0], Post::first());
+/* more tests down here */
+</code></pre>
 
 <p>This creates a nested array of test data where each inner array mocks a <code>post</code> stored in the database. If we have to do this more than once (maybe in an other test we insert this data into the database to test validations), we may put the snippet in the <code>setUp()</code> method. A better approach would be to move this code in fixture files. The <code>li3_fixtures</code> plugin tries to help you with that and provides a simple and convenient approach to integrate fixtures in your tests.</p>
 
 <p>Before we can use the plugin, we need to install it first. <code>li3_fixtures</code> doesn&rsquo;t have any dependencies, so this is straightforward. Note that for now you need a rad-dev.org-account to clone the repository.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span><span style="color: #A90D91">cd</span> /path/to/app/libraries
-<span style="color: #000000">$ </span>git clone code@rad-dev.org:li3_fixtures.git
-<span style="color: #000000">$ </span>mkdir /path/to/app/tests/fixtures
-</pre></div>
+
+<pre><code>$ cd /path/to/app/libraries
+$ git clone code@rad-dev.org:li3_fixtures.git
+$ mkdir /path/to/app/tests/fixtures
+</code></pre>
 
 <p>Now we need to tell our app to use the plugin, so fire up your editor and modify your <code>app/config/bootstrap/libraries.php</code>.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">Libraries::add(</span><span style="color: #C41A16">&#39;li3_fixtures&#39;</span><span style="color: #000000">);</span>
-</pre></div>
+
+<pre><code>Libraries::add('li3_fixtures');
+</code></pre>
 
 <p>After that, we can create a sample fixture file in <code>app/tests/fixtures/posts.json</code>. Currently only json-files are supported, but xml-support is planned.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">{
+
+<pre><code>{
     &quot;post1&quot;: {
         &quot;title&quot;: &quot;My First Post&quot;,
         &quot;body&quot;: &quot;First Content...&quot;
@@ -123,12 +128,13 @@
         &quot;body&quot;: &quot;I like to write some foobar foo too&quot;
     }
 }
-</pre></div>
+</code></pre>
 
 <p>Now that we have our fixture file in place, lets see how the <code>$this-&gt;assertEqual()</code> looks like (don&rsquo;t forget to use the <code>li3_fixtures</code> plugin with <code>use li3_fixtures\test\Fixture;</code>):</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$fixtures</span> <span style="color: #000000">=</span> <span style="color: #000000">Fixture::load(</span><span style="color: #C41A16">&#39;Post&#39;</span><span style="color: #000000">);</span>
-<span style="color: #000000">$this-&gt;assertEqual($fixtures-&gt;first(),</span> <span style="color: #000000">Post::first());</span>
-</pre></div>
+
+<pre><code>$fixtures = Fixture::load('Post');
+$this-&gt;assertEqual($fixtures-&gt;first(), Post::first());
+</code></pre>
 
 <p>By convention, your <code>$model</code> in <code>Fixture::load($model)</code>well be lowercased and pluralized by the Inflector (so &lsquo;Post&rsquo; loads &lsquo;posts.json&rsquo;). The <code>load</code>-method also takes an optional argument where you can override various default settings like the extension or location of the fixture-file.</p>
 
@@ -157,7 +163,7 @@
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

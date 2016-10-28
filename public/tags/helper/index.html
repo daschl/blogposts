@@ -7,7 +7,7 @@
 
     <meta name="description" content="">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Helper &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -83,92 +83,101 @@ you&rsquo;ll need to clone the latest <code>master</code> branch of Lithium if y
 try it out now.</p>
 
 <p>CSRF protection in Lithium is twofold. First, you need to add a unique token to your forms and then check in your controller if the sent token is correct. As Lithium stores the generated <code>sessionKey</code> in your session, make sure that you have session support enabled. If you don&rsquo;t activate sessions, the <code>check</code> method fails silently (which we&rsquo;llsee later on). So uncomment the following line in <code>app/config/bootstrap.php</code> (if you haven&rsquo;t already):</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">/**</span>
-<span style="color: #177500"> * This file contains configuration for session (and/or cookie) storage, and user or web service</span>
-<span style="color: #177500"> * authentication.</span>
-<span style="color: #177500"> *</span>
-<span style="color: #177500"> */</span>
-<span style="color: #000000">//</span>require __DIR__ <span style="color: #000000">.</span> <span style="color: #C41A16">&#39;/bootstrap/session.php&#39;</span><span style="color: #000000">;</span>
-</pre></div>
+
+<pre><code>/**
+ * This file contains configuration for session (and/or cookie) storage, and user or web service
+ * authentication.
+ *
+ */
+//require __DIR__ . '/bootstrap/session.php';
+</code></pre>
 
 <p>Let&rsquo;s look at the view layer first with a very simple form:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">form</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">create</span>(); <span style="color: #633820">?&gt;</span>
-    <span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">security</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">requestToken</span>(); <span style="color: #633820">?&gt;</span>
-    <span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">form</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">field</span>(<span style="color: #C41A16">&#39;title&#39;</span>); <span style="color: #633820">?&gt;</span>
-    <span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">form</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">submit</span>(<span style="color: #C41A16">&#39;Submit&#39;</span>); <span style="color: #633820">?&gt;</span>
-<span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">form</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">end</span>(); <span style="color: #633820">?&gt;</span>
-</pre></div>
+
+<pre><code>&lt;?= $this-&gt;form-&gt;create(); ?&gt;
+    &lt;?= $this-&gt;security-&gt;requestToken(); ?&gt;
+    &lt;?= $this-&gt;form-&gt;field('title'); ?&gt;
+    &lt;?= $this-&gt;form-&gt;submit('Submit'); ?&gt;
+&lt;?= $this-&gt;form-&gt;end(); ?&gt;
+</code></pre>
 
 <p>Thanks to lazy loading, we don&rsquo;t have to do anything special to
 include our new <code>Security</code> helper. The helper provides the
 <code>requestToken()</code> method that generates a unique token (a salted hash) and renders it in a hidden field. If you inspect your form, you should see
 something like this (note that i&rsquo;ve shortened the value attribute for better
 readability):</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">&lt;input type=&quot;hidden&quot; value=&quot;$2a$1...Ay62/W&quot; name=&quot;security[token]&quot;&gt;
-</pre></div>
+
+<pre><code>&lt;input type=&quot;hidden&quot; value=&quot;$2a$1...Ay62/W&quot; name=&quot;security[token]&quot;&gt;
+</code></pre>
 
 <p>Now that we&rsquo;ve adapted our form, we can work with it in our controller.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
 
-<span style="color: #A90D91">namespace</span> <span style="color: #000000">app\controllers</span>;
+<pre><code>&lt;?php
 
-<span style="color: #A90D91">use</span> <span style="color: #000000">lithium\security\validation\RequestToken</span>;
+namespace app\controllers;
 
-<span style="color: #A90D91">class</span> <span style="color: #3F6E75">TasksController</span> <span style="color: #A90D91">extends</span> <span style="color: #000000">\lithium\action\Controller</span> {
+use lithium\security\validation\RequestToken;
 
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">add</span>() {
-        <span style="color: #A90D91">if</span>(<span style="color: #000000">$this-&gt;</span><span style="color: #836C28">request</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">data</span>) {
-            <span style="color: #A90D91">if</span>(<span style="color: #000000">!RequestToken::</span><span style="color: #836C28">check</span>(<span style="color: #000000">$this-&gt;</span><span style="color: #836C28">request</span>)) {
-                <span style="color: #000000">RequestToken::</span><span style="color: #836C28">get</span>(<span style="color: #A90D91">array</span>(<span style="color: #C41A16">&#39;regenerate&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">true</span>));
-            } <span style="color: #A90D91">else</span> {
-                <span style="color: #177500">// work with the request as usual</span>
+class TasksController extends \lithium\action\Controller {
+
+    public function add() {
+        if($this-&gt;request-&gt;data) {
+            if(!RequestToken::check($this-&gt;request)) {
+                RequestToken::get(array('regenerate' =&gt; true));
+            } else {
+                // work with the request as usual
             }
         }
     }
 
 }
 
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>There are many ways how to handle security checks, so the code snippet above shows only one of them. Let&rsquo;s tackle the important parts one by one.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">use lithium\security\validation\RequestToken;
-</pre></div>
+
+<pre><code>use lithium\security\validation\RequestToken;
+</code></pre>
 
 <p>You&rsquo;ll need to import the <code>RequestToken</code> class into your namespace, as it is the responsible class for dealing with the tokens.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">RequestToken::check($this-&gt;request);</span>
-</pre></div>
+
+<pre><code>RequestToken::check($this-&gt;request);
+</code></pre>
 
 <p>The <code>check</code> method reads the <code>sessionKey</code> from your session and checks if it is identical to the requested one. You can also provide the key directly:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$key</span> <span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;request-&gt;data</span><span style="color: #633820">[</span><span style="color: #C41A16">&#39;security&#39;</span><span style="color: #633820">][</span><span style="color: #C41A16">&#39;token&#39;</span><span style="color: #633820">]</span><span style="color: #000000">;</span>
-<span style="color: #000000">RequestToken::check($key);</span>
-</pre></div>
+
+<pre><code>$key = $this-&gt;request-&gt;data['security']['token'];
+RequestToken::check($key);
+</code></pre>
 
 <p>Now you can modify the key manually (set it to <code>foobar</code> or so) and then see if the <code>check</code> method fails. How you may handle security errors depends heavily on your application. In our example, we regenerate the token with:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">RequestToken::get(array(</span><span style="color: #C41A16">&#39;regenerate&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">true));</span>
-</pre></div>
+
+<pre><code>RequestToken::get(array('regenerate' =&gt; true));
+</code></pre>
 
 <p>If you go down this route, you&rsquo;ll also have to tell the user what happend in your view. A more secure route would be to raise an exception (or render a error template) and log what happened. In normal production environments this is clearly a exceptional behavior and therefore should be treated this way. If you need this more often in your controller, you can also move the checks to the <code>_init()</code> method.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">class</span> <span style="color: #000000">TasksController</span> <span style="color: #A90D91">extends</span> <span style="color: #000000">\lithium\action\Controller</span> {
 
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">_init</span>() {
-        <span style="color: #000000">parent::_init</span>();
+<pre><code>class TasksController extends \lithium\action\Controller {
 
-        <span style="color: #A90D91">if</span>(<span style="color: #000000">$this-&gt;request-&gt;data</span> <span style="color: #000000">&amp;&amp;</span> <span style="color: #000000">!RequestToken::check</span>(<span style="color: #000000">$this-&gt;request</span>)) {
-            <span style="color: #000000">$host</span> <span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;request-&gt;env</span>(<span style="color: #C41A16">&#39;HTTP_HOST&#39;</span>);
-            <span style="color: #000000">Logger::error</span>(<span style="color: #C41A16">&quot;Possible CSRF attack from host $host&quot;</span>);
-            <span style="color: #000000">$this-&gt;redirect</span>(<span style="color: #C41A16">&#39;/&#39;</span>);
+    public function _init() {
+        parent::_init();
+
+        if($this-&gt;request-&gt;data &amp;&amp; !RequestToken::check($this-&gt;request)) {
+            $host = $this-&gt;request-&gt;env('HTTP_HOST');
+            Logger::error(&quot;Possible CSRF attack from host $host&quot;);
+            $this-&gt;redirect('/');
         }
     }
 
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">add</span>() {
-        <span style="color: #A90D91">if</span>(<span style="color: #000000">$this-&gt;request-&gt;data</span>) {
-                <span style="color: #177500">// save your data as usual</span>
+    public function add() {
+        if($this-&gt;request-&gt;data) {
+                // save your data as usual
         }
     }
 
 }
-</pre></div>
+</code></pre>
 
 <p>This should give you a good starting point on how to work with the new
 CSRF protection mechanisms. As of today, there is only one major feature left (namely MongoDB relationships) until Lithium reaches the &ldquo;big one&rdquo; so stay tuned for more announcements in the next weeks!</p>
@@ -192,68 +201,73 @@ CSRF protection mechanisms. As of today, there is only one major feature left (n
                         <p>Lithium comes with two helpers out of the box. The Form-Helper and the Html-Helper. Both are great and help you to make your View-Code more flexible, maintainable and easier to read.</p>
 
 <p>But what do you do when you need a functionality that they don&rsquo;t provide? Right, you write your own. Let&rsquo;s imagine you want to tell your blog-readers how many posts you have stored in your database. In our first iteration our code might look like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">We</span> <span style="color: #000000">have</span> <span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #A90D91">count</span>(<span style="color: #000000">$posts</span>) <span style="color: #633820">?&gt;</span> <span style="color: #000000">posts</span> <span style="color: #000000">stored</span> <span style="color: #A90D91">in</span> <span style="color: #000000">the</span> <span style="color: #000000">database</span>.
-</pre></div>
+
+<pre><code>We have &lt;?= count($posts) ?&gt; posts stored in the database.
+</code></pre>
 
 <p>Looks great so far, but our code doesn&rsquo;t cover the case when we have only one post stored. Let&rsquo;s fix that:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">We</span> <span style="color: #000000">have</span> <span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #A90D91">count</span>(<span style="color: #000000">$posts</span>) <span style="color: #633820">?&gt;</span> 
-<span style="color: #633820">&lt;?php</span> <span style="color: #A90D91">if</span>(<span style="color: #A90D91">count</span>(<span style="color: #000000">$posts</span>) <span style="color: #000000">!=</span> <span style="color: #1C01CE">1</span>)<span style="color: #000000">:</span> <span style="color: #633820">?&gt;</span>
-    <span style="color: #000000">posts</span>
-<span style="color: #633820">&lt;?php</span> <span style="color: #A90D91">else</span><span style="color: #000000">:</span> <span style="color: #633820">?&gt;</span>
-    <span style="color: #000000">post</span>
-<span style="color: #633820">&lt;?php</span> <span style="color: #A90D91">endif</span>; <span style="color: #633820">?&gt;</span>
-<span style="color: #000000">stored</span> <span style="color: #A90D91">in</span> <span style="color: #000000">the</span> <span style="color: #000000">database</span>.
-</pre></div>
+
+<pre><code>We have &lt;?= count($posts) ?&gt; 
+&lt;?php if(count($posts) != 1): ?&gt;
+    posts
+&lt;?php else: ?&gt;
+    post
+&lt;?php endif; ?&gt;
+stored in the database.
+</code></pre>
 
 <p>This works, but looks ugly and makes our View more complicated and messy (leaving aside that the above code is a bit verbose). To fix that, we write a custom <code>Word-Helper</code> that abstracts the count-stuff for our view.</p>
 
 <p>Thankfully, the li3-developers thought about that and provide us with everything we need to get started. Lithium also automatically loads our helper if we want to access it. Let&rsquo;s assume that we want to call the helper with <code>$this-&gt;word-&gt;pluralize(count($posts), 'post')</code>.</p>
 
 <p>We all love tests, so let&rsquo;s start with them first. We create a new <code>WordTest.php</code> (in <code>app/tests/cases/extensions/helper</code>) and add a some test cases.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #A90D91">namespace</span> <span style="color: #000000">app\tests\cases\extensions\helper</span>;
-<span style="color: #A90D91">use</span> <span style="color: #000000">app\extensions\helper\Word</span>;
 
-<span style="color: #A90D91">class</span> <span style="color: #3F6E75">WordTest</span> <span style="color: #A90D91">extends</span> <span style="color: #000000">\lithium\test\Unit</span> {
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">setUp</span>() {
-        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">word</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Word</span>();
+<pre><code>&lt;?php
+namespace app\tests\cases\extensions\helper;
+use app\extensions\helper\Word;
+
+class WordTest extends \lithium\test\Unit {
+    public function setUp() {
+        $this-&gt;word = new Word();
     }
 
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">testPluralize</span>() {
-        <span style="color: #000000">$singular</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;post&#39;</span>;
+    public function testPluralize() {
+        $singular = 'post';
 
-        <span style="color: #000000">$expected</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;1 post&#39;</span>;
-        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">assertEqual</span>(<span style="color: #000000">$expected</span>, <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">word</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">pluralize</span>(<span style="color: #1C01CE">1</span>, <span style="color: #000000">$singular</span>));
+        $expected = '1 post';
+        $this-&gt;assertEqual($expected, $this-&gt;word-&gt;pluralize(1, $singular));
 
-        <span style="color: #000000">$expected</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;0 posts&#39;</span>;
-        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">assertEqual</span>(<span style="color: #000000">$expected</span>, <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">word</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">pluralize</span>(<span style="color: #1C01CE">0</span>, <span style="color: #000000">$singular</span>));
+        $expected = '0 posts';
+        $this-&gt;assertEqual($expected, $this-&gt;word-&gt;pluralize(0, $singular));
 
-        <span style="color: #000000">$expected</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;2 posts&#39;</span>;
-        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">assertEqual</span>(<span style="color: #000000">$expected</span>, <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">word</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">pluralize</span>(<span style="color: #1C01CE">2</span>, <span style="color: #000000">$singular</span>));
+        $expected = '2 posts';
+        $this-&gt;assertEqual($expected, $this-&gt;word-&gt;pluralize(2, $singular));
     }
 }
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>If we run the tests (<code>http://yourblog.com/test/app/tests/cases/extensions/helper/WordTest</code>), they will fail (as expected). In the <code>setUp</code>-method we try to instantiate the Word-Helper, but it doesn&rsquo;t exist yet. The <code>testPluralize</code>-method tests three different calls of our <code>Word::pluralize()</code> Helper-Method. To make our tests go green, we finally create our <code>Word</code>-Helper (in <code>app/extensions/helper/Word.php</code>).</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #A90D91">namespace</span> <span style="color: #000000">app\extensions\helper</span>;
-<span style="color: #A90D91">use</span> <span style="color: #000000">lithium\util\Inflector</span>;
 
-<span style="color: #A90D91">class</span> <span style="color: #3F6E75">Word</span> <span style="color: #A90D91">extends</span> <span style="color: #000000">\lithium\template\Helper</span> {
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">pluralize</span>(<span style="color: #000000">$count</span>, <span style="color: #000000">$word</span>) {      
-        <span style="color: #000000">$word</span> <span style="color: #000000">=</span> (<span style="color: #000000">$count</span> <span style="color: #000000">!=</span> <span style="color: #1C01CE">1</span> <span style="color: #000000">?</span> <span style="color: #000000">Inflector::</span><span style="color: #836C28">pluralize</span>(<span style="color: #000000">$word</span>) <span style="color: #000000">:</span> <span style="color: #000000">$word</span>);
-        <span style="color: #A90D91">return</span> <span style="color: #000000">$count.</span><span style="color: #C41A16">&quot; &quot;</span><span style="color: #000000">.$word</span>;
+<pre><code>&lt;?php
+namespace app\extensions\helper;
+use lithium\util\Inflector;
+
+class Word extends \lithium\template\Helper {
+    public function pluralize($count, $word) {      
+        $word = ($count != 1 ? Inflector::pluralize($word) : $word);
+        return $count.&quot; &quot;.$word;
     }
 }
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>Now re-run your tests - they should succeed. If they don&rsquo;t, please check that your files are named correctly and you don&rsquo;t have any typos in them.</p>
 
 <p>Now it&rsquo;s time to call our brand-new helper from our view. Thanks to the <code>autoloading</code> feature, it&rsquo;s dead easy:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">We</span> <span style="color: #000000">have</span> <span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">word</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">pluralize</span>(<span style="color: #A90D91">count</span>(<span style="color: #000000">$posts</span>), <span style="color: #C41A16">&#39;post&#39;</span>); <span style="color: #633820">?&gt;</span> <span style="color: #000000">stored</span> <span style="color: #A90D91">in</span> <span style="color: #000000">the</span> <span style="color: #000000">database</span>.
-</pre></div>
+
+<pre><code>We have &lt;?= $this-&gt;word-&gt;pluralize(count($posts), 'post'); ?&gt; stored in the database.
+</code></pre>
 
 <p>That&rsquo;s it - you&rsquo;ve just created your own View-Helper! If you have any questions or suggestions, feel free to comment below.</p>
 
@@ -266,7 +280,7 @@ CSRF protection mechanisms. As of today, there is only one major feature left (n
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

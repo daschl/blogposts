@@ -21,7 +21,7 @@
 
 &lt;p&gt;As far as I can see, there are three big use cases for fixtures:&lt;/p&gt;
 
-&lt;h2 id=&#34;unit-testing-models:6cff1db96cce95ed97eeab057e8d6618&#34;&gt;Unit-Testing Models&lt;/h2&gt;
+&lt;h2 id=&#34;unit-testing-models&#34;&gt;Unit-Testing Models&lt;/h2&gt;
 
 &lt;p&gt;This seems to be the most common use case. To test models effectively, you need a bunch of demo data on which your tests rely on. This data includes both valid and invalid data to test if validations work as expected and how the application can handle large batches of data. The database itself is not mocked, but fixture data is used to populate it before or during the actual tests.&lt;/p&gt;
 
@@ -33,21 +33,21 @@
 &lt;li&gt;easy loading of fixture datasets into the database.&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;mocking-models:6cff1db96cce95ed97eeab057e8d6618&#34;&gt;Mocking Models&lt;/h2&gt;
+&lt;h2 id=&#34;mocking-models&#34;&gt;Mocking Models&lt;/h2&gt;
 
 &lt;p&gt;When you test your controllers, you often need to work with data from your models. There are two different scenarios here: you can either write integration tests and populate your real database with data, or mock your models away and work with static data instead of touching the database (for unit-testing controller actions). This allows you to work independently on both layers and improves the performance of your tests.&lt;/p&gt;
 
 &lt;p&gt;Lithium already uses Mocks extensively, so the plugin needs tight integration into them. It should be easy to load fixture data that acts like &amp;ldquo;real&amp;rdquo; data (like iterating over Document/RecordSets).&lt;/p&gt;
 
-&lt;h2 id=&#34;mocking-web-services-and-apis:6cff1db96cce95ed97eeab057e8d6618&#34;&gt;Mocking Web-Services and APIs&lt;/h2&gt;
+&lt;h2 id=&#34;mocking-web-services-and-apis&#34;&gt;Mocking Web-Services and APIs&lt;/h2&gt;
 
 &lt;p&gt;The third use case is not really different from the two mentioned above, but works more with the &lt;code&gt;service&lt;/code&gt; than the the &lt;code&gt;data&lt;/code&gt; layer. As web services are often not inside the boundaries of the developer, the plugin should make it easy to provide demo data for mocks while testing web services.&lt;/p&gt;
 
-&lt;h2 id=&#34;additional-functionality:6cff1db96cce95ed97eeab057e8d6618&#34;&gt;Additional Functionality&lt;/h2&gt;
+&lt;h2 id=&#34;additional-functionality&#34;&gt;Additional Functionality&lt;/h2&gt;
 
 &lt;p&gt;In terms of rapid application development, it would be great to generate fixture data automatically based on patterns or generation rules. There are great libraries like &lt;a href=&#34;https://github.com/fzaninotto/Faker&#34;&gt;Faker&lt;/a&gt; out there, and it would be great to have a feature like this integrated (accessible from the command line). Also, fixture file generation should happen automatically when new models are created from the command line.&lt;/p&gt;
 
-&lt;h2 id=&#34;implementation-documentation:6cff1db96cce95ed97eeab057e8d6618&#34;&gt;Implementation &amp;amp; Documentation&lt;/h2&gt;
+&lt;h2 id=&#34;implementation-documentation&#34;&gt;Implementation &amp;amp; Documentation&lt;/h2&gt;
 
 &lt;p&gt;I want to make extensive use of adapters and strategies, as they make a lot of sense in this context. I think it would be a good idea to use adapters for all input file types (JSON, XML and YAML) and strategies for their representation in the test classes (DocumentSets, RecordSets, Collections or plain arrays). This also makes it trivial to implement custom file types and representations.&lt;/p&gt;
 
@@ -55,7 +55,7 @@
 
 &lt;p&gt;Finally, the plugin will be usable through composer and uses it too to manage external dependencies (I plan to use the Symfony parser for the YAML format).&lt;/p&gt;
 
-&lt;h2 id=&#34;next-steps:6cff1db96cce95ed97eeab057e8d6618&#34;&gt;Next Steps&lt;/h2&gt;
+&lt;h2 id=&#34;next-steps&#34;&gt;Next Steps&lt;/h2&gt;
 
 &lt;p&gt;Now it&amp;rsquo;s your turn! Comment below and tell me wheter you like the ideas presented here or not. I&amp;rsquo;m open to every suggestion!&lt;/p&gt;
 </description>
@@ -68,39 +68,43 @@
       
       <guid>http://nitschinger.at/Introducing-Fixtures-for-Lithium/</guid>
       <description>&lt;p&gt;When you write tests for your classes (and you should), you may run into the problem that you create large arrays of test data in your code. Consider the following example:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array(&lt;/span&gt;
-    &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;post1&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array(&lt;/span&gt;
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;title&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;My First Post&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt;
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;content&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;First Content...&amp;#39;&lt;/span&gt;
-    &lt;span style=&#34;color: #000000&#34;&gt;),&lt;/span&gt;
-    &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;post2&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array(&lt;/span&gt;
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;title&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;My Second Post&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt;
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;content&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;Also some foobar text&amp;#39;&lt;/span&gt;
-    &lt;span style=&#34;color: #000000&#34;&gt;),&lt;/span&gt;
-    &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;post3&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array(&lt;/span&gt;
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;title&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;My Third Post&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt;
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;content&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;I like to write some foobar foo too&amp;#39;&lt;/span&gt;
-    &lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
 
-&lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertEqual($expected&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;]&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Post::first());&lt;/span&gt;
-&lt;span style=&#34;color: #177500&#34;&gt;/* more tests down here */&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+&lt;pre&gt;&lt;code&gt;$expected = array(
+    &#39;post1&#39; =&amp;gt; array(
+        &#39;title&#39; =&amp;gt; &#39;My First Post&#39;,
+        &#39;content&#39; =&amp;gt; &#39;First Content...&#39;
+    ),
+    &#39;post2&#39; =&amp;gt; array(
+        &#39;title&#39; =&amp;gt; &#39;My Second Post&#39;,
+        &#39;content&#39; =&amp;gt; &#39;Also some foobar text&#39;
+    ),
+    &#39;post3&#39; =&amp;gt; array(
+        &#39;title&#39; =&amp;gt; &#39;My Third Post&#39;,
+        &#39;content&#39; =&amp;gt; &#39;I like to write some foobar foo too&#39;
+    )
+);
+
+$this-&amp;gt;assertEqual($expected[0], Post::first());
+/* more tests down here */
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;This creates a nested array of test data where each inner array mocks a &lt;code&gt;post&lt;/code&gt; stored in the database. If we have to do this more than once (maybe in an other test we insert this data into the database to test validations), we may put the snippet in the &lt;code&gt;setUp()&lt;/code&gt; method. A better approach would be to move this code in fixture files. The &lt;code&gt;li3_fixtures&lt;/code&gt; plugin tries to help you with that and provides a simple and convenient approach to integrate fixtures in your tests.&lt;/p&gt;
 
 &lt;p&gt;Before we can use the plugin, we need to install it first. &lt;code&gt;li3_fixtures&lt;/code&gt; doesn&amp;rsquo;t have any dependencies, so this is straightforward. Note that for now you need a rad-dev.org-account to clone the repository.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;cd&lt;/span&gt; /path/to/app/libraries
-&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;git clone code@rad-dev.org:li3_fixtures.git
-&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;mkdir /path/to/app/tests/fixtures
-&lt;/pre&gt;&lt;/div&gt;
+
+&lt;pre&gt;&lt;code&gt;$ cd /path/to/app/libraries
+$ git clone code@rad-dev.org:li3_fixtures.git
+$ mkdir /path/to/app/tests/fixtures
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Now we need to tell our app to use the plugin, so fire up your editor and modify your &lt;code&gt;app/config/bootstrap/libraries.php&lt;/code&gt;.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;Libraries::add(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;li3_fixtures&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+
+&lt;pre&gt;&lt;code&gt;Libraries::add(&#39;li3_fixtures&#39;);
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;After that, we can create a sample fixture file in &lt;code&gt;app/tests/fixtures/posts.json&lt;/code&gt;. Currently only json-files are supported, but xml-support is planned.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;{
+
+&lt;pre&gt;&lt;code&gt;{
     &amp;quot;post1&amp;quot;: {
         &amp;quot;title&amp;quot;: &amp;quot;My First Post&amp;quot;,
         &amp;quot;body&amp;quot;: &amp;quot;First Content...&amp;quot;
@@ -114,12 +118,13 @@
         &amp;quot;body&amp;quot;: &amp;quot;I like to write some foobar foo too&amp;quot;
     }
 }
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Now that we have our fixture file in place, lets see how the &lt;code&gt;$this-&amp;gt;assertEqual()&lt;/code&gt; looks like (don&amp;rsquo;t forget to use the &lt;code&gt;li3_fixtures&lt;/code&gt; plugin with &lt;code&gt;use li3_fixtures\test\Fixture;&lt;/code&gt;):&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$fixtures&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Fixture::load(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;Post&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertEqual($fixtures-&amp;gt;first(),&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Post::first());&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+
+&lt;pre&gt;&lt;code&gt;$fixtures = Fixture::load(&#39;Post&#39;);
+$this-&amp;gt;assertEqual($fixtures-&amp;gt;first(), Post::first());
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;By convention, your &lt;code&gt;$model&lt;/code&gt; in &lt;code&gt;Fixture::load($model)&lt;/code&gt;well be lowercased and pluralized by the Inflector (so &amp;lsquo;Post&amp;rsquo; loads &amp;lsquo;posts.json&amp;rsquo;). The &lt;code&gt;load&lt;/code&gt;-method also takes an optional argument where you can override various default settings like the extension or location of the fixture-file.&lt;/p&gt;
 

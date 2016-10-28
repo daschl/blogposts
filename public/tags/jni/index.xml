@@ -24,31 +24,34 @@
 &lt;p&gt;Note that all steps performed in this blog post were done on OSX, but with little adaption they should also work on Linux. Maybe even on Windows, but I&amp;rsquo;m not so sure there since my experience with Windows is very limited. Any recent Rust version should suffice, I&amp;rsquo;m using 1.6.0 stable.&lt;/p&gt;
 
 &lt;p&gt;The first step is to create a &lt;code&gt;cargo&lt;/code&gt; library project:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;~/rust $ cargo new highperf-adder
-&lt;/pre&gt;&lt;/div&gt;
+
+&lt;pre&gt;&lt;code&gt;~/rust $ cargo new highperf-adder
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Open the generated &lt;code&gt;Cargo.toml&lt;/code&gt; and add &lt;code&gt;libc&lt;/code&gt; as a dependency. When interacting with &lt;a href=&#34;https://docs.oracle.com/javase/8/docs/technotes/guides/jni/spec/jniTOC.html&#34;&gt;JNI&lt;/a&gt;, Rust needs to dress up a bit to look like C, and &lt;code&gt;libc&lt;/code&gt; helps with that.&lt;/p&gt;
 
 &lt;p&gt;While you&amp;rsquo;re in there, tell &lt;code&gt;cargo&lt;/code&gt; that you want to build the crate as a &lt;code&gt;dylib&lt;/code&gt; and also give it an explicit name:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;[lib]&lt;/span&gt;
-&lt;span style=&#34;color: #836C28&#34;&gt;name&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;hpa&amp;quot;&lt;/span&gt;
-&lt;span style=&#34;color: #836C28&#34;&gt;crate-type&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;[&amp;quot;dylib&amp;quot;]&lt;/span&gt;
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;[dependencies]&lt;/span&gt;
-&lt;span style=&#34;color: #836C28&#34;&gt;libc&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;0.2.7&amp;quot;&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+&lt;pre&gt;&lt;code&gt;[lib]
+name = &amp;quot;hpa&amp;quot;
+crate-type = [&amp;quot;dylib&amp;quot;]
+
+[dependencies]
+libc = &amp;quot;0.2.7&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;If you don&amp;rsquo;t specify that you want a &lt;code&gt;dylib&lt;/code&gt;, it will build a &lt;code&gt;rlib&lt;/code&gt; which is not intended for external use. Also don&amp;rsquo;t use &lt;code&gt;staticlib&lt;/code&gt;, since this fail to link as well.&lt;/p&gt;
 
 &lt;p&gt;To make sure all is well so far we can build the project:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;cargo build
-Updating registry &lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;https://github.com/rust-lang/crates.io-index&lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;
+
+&lt;pre&gt;&lt;code&gt;$ cargo build
+Updating registry `https://github.com/rust-lang/crates.io-index`
 Compiling libc v0.2.7
-Compiling highperf-adder v0.1.0 &lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;file:///Users/michael/rust/highperf-adder&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+Compiling highperf-adder v0.1.0 (file:///Users/michael/rust/highperf-adder)
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Instead of diving straight into Rust code, let&amp;rsquo;s work on the Java code first. To keep it simple, create a &lt;code&gt;Adder.java&lt;/code&gt; file in the root of the project directory and add the following code:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;java.nio.file.Path;&lt;/span&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;java.nio.file.Path;&lt;/span&gt;
 &lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;java.nio.file.Paths;&lt;/span&gt;
 
 &lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;Adder&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
@@ -68,20 +71,20 @@ Compiling highperf-adder v0.1.0 &lt;span style=&#34;color: #000000&#34;&gt;(&lt;
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Let&amp;rsquo;s break the code up into digestible chunks.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
     &lt;span style=&#34;color: #000000&#34;&gt;Path&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Paths.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;get&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;target/debug/libhpa.dylib&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
     &lt;span style=&#34;color: #000000&#34;&gt;System.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;load&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(p.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;toAbsolutePath&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;().&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;toString&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;());&lt;/span&gt;
 &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;We need to tell the JVM to pick up our shared library that got built by Rust. If you are running &lt;code&gt;cargo build&lt;/code&gt; with the &lt;code&gt;--release&lt;/code&gt; flag to optimize, make sure to point it towards &lt;code&gt;target/release/libhpa.dylib&lt;/code&gt; instead.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;native&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;add(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;v1,&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;v2);&lt;/span&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;native&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;add(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;v1,&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;v2);&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Next up we define all our native methods that we want to call through JNI. It works a little bit like implementing an abstract class, but you are implementing the actual code in Rust intead of Java userland. The name of the method and its calling class will become important in a bit, so if you want to follow along make sure you keep the same names.&lt;/p&gt;
 
 &lt;p&gt;In our case we define one &lt;code&gt;add&lt;/code&gt; method which takes two integers as arguments and returns the result as an integer.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;main(String...&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;args)&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;main(String...&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;args)&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
     &lt;span style=&#34;color: #000000&#34;&gt;System.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;out&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;2 + 3 = &amp;quot;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Adder.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;add&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;2&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;3&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;));&lt;/span&gt;
 &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
@@ -89,17 +92,18 @@ Compiling highperf-adder v0.1.0 &lt;span style=&#34;color: #000000&#34;&gt;(&lt;
 &lt;p&gt;The &lt;code&gt;main&lt;/code&gt; method calls our static JNI method and prints the result to &lt;code&gt;stdout&lt;/code&gt;.&lt;/p&gt;
 
 &lt;p&gt;Let&amp;rsquo;s run it straight away:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;javac Adder.java 
-&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;java Adder
-Exception in thread &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;main&amp;quot;&lt;/span&gt; java.lang.UnsatisfiedLinkError: Adder.add&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;II&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt;I
-    at Adder.add&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;Native Method&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt;
-    at Adder.main&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;Adder.java:14&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+
+&lt;pre&gt;&lt;code&gt;$ javac Adder.java 
+$ java Adder
+Exception in thread &amp;quot;main&amp;quot; java.lang.UnsatisfiedLinkError: Adder.add(II)I
+    at Adder.add(Native Method)
+    at Adder.main(Adder.java:14)
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;It compiles without errors, but at runtime it breaks apart. This doesn&amp;rsquo;t come as a huge surprise since we didn&amp;rsquo;t write a single line of Rust code yet. The JVM just tells us it can&amp;rsquo;t link the method we&amp;rsquo;re looking for.&lt;/p&gt;
 
 &lt;p&gt;To fix that, open the &lt;code&gt;src/lib.rs&lt;/code&gt; file and insert the following Rust code:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;libc&lt;/span&gt;;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;libc&lt;/span&gt;;
 
 &lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;libc::&lt;/span&gt;{&lt;span style=&#34;color: #000000&#34;&gt;c_void&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;c_int&lt;/span&gt;};
 
@@ -122,7 +126,7 @@ Exception in thread &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;main&am
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Alright, so what&amp;rsquo;s going on here?&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;#[repr(C)]&lt;/span&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;#[repr(C)]&lt;/span&gt;
 &lt;span style=&#34;color: #A90D91&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;JNINativeInterface&lt;/span&gt; {
     &lt;span style=&#34;color: #000000&#34;&gt;reserved0:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;c_void&lt;/span&gt;,
     &lt;span style=&#34;color: #000000&#34;&gt;reserved1:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;c_void&lt;/span&gt;,
@@ -137,8 +141,8 @@ Exception in thread &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;main&am
 &lt;p&gt;The JVM exports a &lt;code&gt;jni.h&lt;/code&gt; header file which contains its primary interfaces when interacting through JNI. Normally we&amp;rsquo;d write a proper Rust C FFI binding here and keep our code idiomatic, but for now all we need is a pointer to the &lt;code&gt;JNIEnv&lt;/code&gt; (even if we don&amp;rsquo;t actually use it, it gets passed in to our &lt;code&gt;add&lt;/code&gt; method as an argument). If you take a look at the &lt;a href=&#34;http://hg.openjdk.java.net/jdk8/jdk8/jdk/file/687fd7c7986d/src/share/javavm/export/jni.h#l214&#34;&gt;actual jni.h&lt;/a&gt; you can see that we get away with lots of handwaving for now.&lt;/p&gt;
 
 &lt;p&gt;Btw, how on earth did we know that the JVM expects a method with the signature of &lt;code&gt;fn Java_Adder_add(jre: *mut JNIEnv, class: *const c_void, v1: c_int, v2: c_int) -&amp;gt; c_int&lt;/code&gt;? The answer lies in the &lt;code&gt;javah&lt;/code&gt; command and some conversion of C to Rust. If you run &lt;code&gt;javah Adder&lt;/code&gt; you get a &lt;code&gt;Adder.h&lt;/code&gt; file which looks like:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #177500&#34;&gt;/* DO NOT EDIT THIS FILE - it is machine generated */&lt;/span&gt;
-&lt;span style=&#34;color: #633820&#34;&gt;#include &amp;lt;jni.h&amp;gt;&lt;/span&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #177500&#34;&gt;/* DO NOT EDIT THIS FILE - it is machine generated */&lt;/span&gt;
+&lt;span style=&#34;color: #633820&#34;&gt;#include&lt;/span&gt; &lt;span style=&#34;color: #177500&#34;&gt;&amp;lt;jni.h&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;&lt;/span&gt;
 &lt;span style=&#34;color: #177500&#34;&gt;/* Header for class Adder */&lt;/span&gt;
 
 &lt;span style=&#34;color: #633820&#34;&gt;#ifndef _Included_Adder&lt;/span&gt;
@@ -161,36 +165,38 @@ Exception in thread &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;main&am
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;The important part is this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;JNIEXPORT&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;jint&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;JNICALL&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Java_Adder_add&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;JNIEnv&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;jclass&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;jint&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;jint&lt;/span&gt;);
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;JNIEXPORT&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;jint&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;JNICALL&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Java_Adder_add&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;JNIEnv&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;jclass&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;jint&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;jint&lt;/span&gt;);
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;The type &lt;code&gt;jint&lt;/code&gt; is defined per plattform. For OSX you can find it &lt;a href=&#34;http://hg.openjdk.java.net/jdk8/jdk8/jdk/file/687fd7c7986d/src/macosx/javavm/export/jni_md.h#l33&#34;&gt;here&lt;/a&gt; and it maps to an &lt;code&gt;int&lt;/code&gt;. The rust &lt;code&gt;libc&lt;/code&gt; exports this type through &lt;code&gt;libc::c_int&lt;/code&gt;, which we can utilize in our code. &lt;code&gt;jclass&lt;/code&gt; is a reference type which we ignore for now, since we don&amp;rsquo;t need it.&lt;/p&gt;
 
 &lt;p&gt;All we need to do is add the two numbers and return the result:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;#[no_mangle]&lt;/span&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;#[no_mangle]&lt;/span&gt;
 &lt;span style=&#34;color: #A90D91&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Java_Adder_add&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;jre:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;JNIEnv&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;class:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;const&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;c_void&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;v1:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;c_int&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;v2:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;c_int&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;c_int&lt;/span&gt; {
     &lt;span style=&#34;color: #000000&#34;&gt;v1&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;v2&lt;/span&gt;
 }
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Make sure you don&amp;rsquo;t forget the &lt;code&gt;#[no_mangle]&lt;/code&gt; which tells Rust to turn off its name mangling so that there are no issues while linking (try it out and you&amp;rsquo;ll see the &lt;code&gt;UnsatisfiedLinkError&lt;/code&gt; again). Finally its time to compile the &lt;code&gt;crate&lt;/code&gt; once more and run the Java class again. Note that you don&amp;rsquo;t need to recompile the Java code every time you make a change to the Rust code. Just rebuild with cargo and run the Java file again, it will pick up the freshly created &lt;code&gt;dylib&lt;/code&gt;.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;cargo build
+
+&lt;pre&gt;&lt;code&gt;$ cargo build
    Compiling libc v0.2.7
-   Compiling highperf-adder v0.1.0 &lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;file:///Users/michael/rust/highperf-adder&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt;
-src/lib.rs:18:30: 18:33 warning: unused variable: &lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;jre&lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;, &lt;span style=&#34;color: #177500&#34;&gt;#[warn(unused_variables)] on by default&lt;/span&gt;
-src/lib.rs:18 pub extern fn Java_Adder_add&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;jre: *mut JNIEnv, class: *const c_void, v1: c_int, v2: c_int&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt; -&amp;gt; c_int &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+   Compiling highperf-adder v0.1.0 (file:///Users/michael/rust/highperf-adder)
+src/lib.rs:18:30: 18:33 warning: unused variable: `jre`, #[warn(unused_variables)] on by default
+src/lib.rs:18 pub extern fn Java_Adder_add(jre: *mut JNIEnv, class: *const c_void, v1: c_int, v2: c_int) -&amp;gt; c_int {
                                            ^~~
-src/lib.rs:18:48: 18:53 warning: unused variable: &lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;class&lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;, &lt;span style=&#34;color: #177500&#34;&gt;#[warn(unused_variables)] on by default&lt;/span&gt;
-src/lib.rs:18 pub extern fn Java_Adder_add&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;jre: *mut JNIEnv, class: *const c_void, v1: c_int, v2: c_int&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt; -&amp;gt; c_int &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+src/lib.rs:18:48: 18:53 warning: unused variable: `class`, #[warn(unused_variables)] on by default
+src/lib.rs:18 pub extern fn Java_Adder_add(jre: *mut JNIEnv, class: *const c_void, v1: c_int, v2: c_int) -&amp;gt; c_int {
                                                              ^~~~~
-src/lib.rs:18:1: 20:2 warning: &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;Java_Adder_add&lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt; should have a snake &lt;span style=&#34;color: #A90D91&#34;&gt;case&lt;/span&gt; name such as &lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;java_adder_add&lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;, &lt;span style=&#34;color: #177500&#34;&gt;#[warn(non_snake_case)] on by default&lt;/span&gt;
-src/lib.rs:18 pub extern fn Java_Adder_add&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;jre: *mut JNIEnv, class: *const c_void, v1: c_int, v2: c_int&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt; -&amp;gt; c_int &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+src/lib.rs:18:1: 20:2 warning: function `Java_Adder_add` should have a snake case name such as `java_adder_add`, #[warn(non_snake_case)] on by default
+src/lib.rs:18 pub extern fn Java_Adder_add(jre: *mut JNIEnv, class: *const c_void, v1: c_int, v2: c_int) -&amp;gt; c_int {
 src/lib.rs:19     v1 + v2
-src/lib.rs:20 &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;java Adder
-&lt;span style=&#34;color: #1C01CE&#34;&gt;2&lt;/span&gt; + &lt;span style=&#34;color: #000000&#34;&gt;3&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; 5
-&lt;/pre&gt;&lt;/div&gt;
+src/lib.rs:20 }
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;pre&gt;&lt;code&gt;$ java Adder
+2 + 3 = 5
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;It works! The warnings from &lt;code&gt;rustc&lt;/code&gt; are there because the rust compiler is as always super correct and tells us we are neither making use of the &lt;code&gt;jre&lt;/code&gt; nor of the &lt;code&gt;class&lt;/code&gt; function arguments. Also, our method signature is not named like idiomatic rust code is. You can turn off those warnings by adding the attributes the compiler suggests.&lt;/p&gt;
 

@@ -7,7 +7,7 @@
 
     <meta name="description" content="Read what I plan for the new li3_fixtures plugin and share your thoughts!">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="RFC: li3_fixtures Rewrite &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -74,7 +74,8 @@
                             
                         </p>
                     </header>
-
+                    
+                    
                     <div class="post-description">
                         
 
@@ -82,7 +83,7 @@
 
 <p>As far as I can see, there are three big use cases for fixtures:</p>
 
-<h2 id="unit-testing-models:6cff1db96cce95ed97eeab057e8d6618">Unit-Testing Models</h2>
+<h2 id="unit-testing-models">Unit-Testing Models</h2>
 
 <p>This seems to be the most common use case. To test models effectively, you need a bunch of demo data on which your tests rely on. This data includes both valid and invalid data to test if validations work as expected and how the application can handle large batches of data. The database itself is not mocked, but fixture data is used to populate it before or during the actual tests.</p>
 
@@ -94,21 +95,21 @@
 <li>easy loading of fixture datasets into the database.</li>
 </ul>
 
-<h2 id="mocking-models:6cff1db96cce95ed97eeab057e8d6618">Mocking Models</h2>
+<h2 id="mocking-models">Mocking Models</h2>
 
 <p>When you test your controllers, you often need to work with data from your models. There are two different scenarios here: you can either write integration tests and populate your real database with data, or mock your models away and work with static data instead of touching the database (for unit-testing controller actions). This allows you to work independently on both layers and improves the performance of your tests.</p>
 
 <p>Lithium already uses Mocks extensively, so the plugin needs tight integration into them. It should be easy to load fixture data that acts like &ldquo;real&rdquo; data (like iterating over Document/RecordSets).</p>
 
-<h2 id="mocking-web-services-and-apis:6cff1db96cce95ed97eeab057e8d6618">Mocking Web-Services and APIs</h2>
+<h2 id="mocking-web-services-and-apis">Mocking Web-Services and APIs</h2>
 
 <p>The third use case is not really different from the two mentioned above, but works more with the <code>service</code> than the the <code>data</code> layer. As web services are often not inside the boundaries of the developer, the plugin should make it easy to provide demo data for mocks while testing web services.</p>
 
-<h2 id="additional-functionality:6cff1db96cce95ed97eeab057e8d6618">Additional Functionality</h2>
+<h2 id="additional-functionality">Additional Functionality</h2>
 
 <p>In terms of rapid application development, it would be great to generate fixture data automatically based on patterns or generation rules. There are great libraries like <a href="https://github.com/fzaninotto/Faker">Faker</a> out there, and it would be great to have a feature like this integrated (accessible from the command line). Also, fixture file generation should happen automatically when new models are created from the command line.</p>
 
-<h2 id="implementation-documentation:6cff1db96cce95ed97eeab057e8d6618">Implementation &amp; Documentation</h2>
+<h2 id="implementation-documentation">Implementation &amp; Documentation</h2>
 
 <p>I want to make extensive use of adapters and strategies, as they make a lot of sense in this context. I think it would be a good idea to use adapters for all input file types (JSON, XML and YAML) and strategies for their representation in the test classes (DocumentSets, RecordSets, Collections or plain arrays). This also makes it trivial to implement custom file types and representations.</p>
 
@@ -116,7 +117,7 @@
 
 <p>Finally, the plugin will be usable through composer and uses it too to manage external dependencies (I plan to use the Symfony parser for the YAML format).</p>
 
-<h2 id="next-steps:6cff1db96cce95ed97eeab057e8d6618">Next Steps</h2>
+<h2 id="next-steps">Next Steps</h2>
 
 <p>Now it&rsquo;s your turn! Comment below and tell me wheter you like the ideas presented here or not. I&rsquo;m open to every suggestion!</p>
 
@@ -141,7 +142,7 @@
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

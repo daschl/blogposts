@@ -7,7 +7,7 @@
 
     <meta name="description" content="This blog post gives you an introduction on how you can speed up your Doctrine ORM layer by using Couchbase Server 2.0 as a simple, fast and elastic cache in front of your entities.">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Caching Doctrine Entities with Couchbase &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -74,11 +74,12 @@
                             
                         </p>
                     </header>
-
+                    
+                    
                     <div class="post-description">
                         
 
-<h2 id="motivation:cf67ea8c1c378f2ec2474b9e0692d877">Motivation</h2>
+<h2 id="motivation">Motivation</h2>
 
 <p>As part of our ongoing efforts to make Couchbase more integrated with frameworks and libraries, we added caching support for the <a href="http://www.doctrine-project.org/">Doctrine ORM</a>. Recently, the pull request has been merged into the master branch and is scheduled to be published along with the <a href="http://doctrine-project.org/jira/browse/DCOM/fixforversion/10327">2.4</a> release.</p>
 
@@ -86,72 +87,78 @@
 
 <p>Since 2.4 has not been released yet, we need to work against the <code>2.4.x-dev</code> branch. We&rsquo;ll be using <a href="http://getcomposer.org/">Composer</a> to fetch our dependencies, so just need change the version number if you want to pin it down to 2.4 later.</p>
 
-<h2 id="simple-caching:cf67ea8c1c378f2ec2474b9e0692d877">Simple Caching</h2>
+<h2 id="simple-caching">Simple Caching</h2>
 
 <p>Our first example shows how the caching API can be used directly. If you are familiar with the Couchbase API, you may think that it&rsquo;s more or less just a different API with the same (and maybe less) semantics, but the point is that it uses the Doctrine Cache API interface and as a result you can switch between different caching implementations very easily.</p>
 
 <p>Create a directory called <code>couchbase-doctrine-simple</code> with the following <code>composer.json</code> inside:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">{
+
+<pre><code>{
     &quot;require&quot;: {
         &quot;doctrine/common&quot;: &quot;2.4.x-dev&quot;,
         &quot;ext-couchbase&quot;: &quot;1.1.x&quot;
     }
 }
-</pre></div>
+</code></pre>
 
 <p>This installs the <a href="https://packagist.org/packages/doctrine/common">doctrine/common</a> package and also makes sure that we have the <code>couchbase.so</code> extension in place. If you haven&rsquo;t installed the Couchbase PHP extension already, head over to the <a href="http://www.couchbase.com/develop/php/current">official website</a> and install it based on the tutorial and the docs.</p>
 
 <p>Create a <code>index.php</code> with the following content (we&rsquo;ll break up the code afterwards):</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #177500">// 0: Composer Autoloader</span>
-<span style="color: #A90D91">require</span> <span style="color: #C41A16">&#39;vendor/autoload.php&#39;</span>;
 
-<span style="color: #177500">// 1: Open the Couchbase Connection</span>
-<span style="color: #000000">$couchbase</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Couchbase</span>(<span style="color: #C41A16">&quot;127.0.0.1&quot;</span>, <span style="color: #C41A16">&quot;&quot;</span>, <span style="color: #C41A16">&quot;&quot;</span>, <span style="color: #C41A16">&quot;default&quot;</span>);
+<pre><code>&lt;?php
+// 0: Composer Autoloader
+require 'vendor/autoload.php';
 
-<span style="color: #177500">// 2: Instantiate the Driver &amp; Inject the Connection</span>
-<span style="color: #000000">$cacheDriver</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">\Doctrine\Common\Cache\CouchbaseCache</span>();
-<span style="color: #000000">$cacheDriver-&gt;</span><span style="color: #836C28">setCouchbase</span>(<span style="color: #000000">$couchbase</span>);
+// 1: Open the Couchbase Connection
+$couchbase = new Couchbase(&quot;127.0.0.1&quot;, &quot;&quot;, &quot;&quot;, &quot;default&quot;);
 
-<span style="color: #177500">// 3: Execute your commands!</span>
-<span style="color: #000000">$key</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;my-cache-item&quot;</span>;
+// 2: Instantiate the Driver &amp; Inject the Connection
+$cacheDriver = new \Doctrine\Common\Cache\CouchbaseCache();
+$cacheDriver-&gt;setCouchbase($couchbase);
 
-<span style="color: #A90D91">if</span>(<span style="color: #000000">!$cacheDriver-&gt;</span><span style="color: #836C28">contains</span>(<span style="color: #000000">$key</span>)) {
-    <span style="color: #000000">$cacheDriver-&gt;</span><span style="color: #836C28">save</span>(<span style="color: #000000">$key</span>, <span style="color: #C41A16">&quot;my_data&quot;</span>);
-} <span style="color: #A90D91">else</span> {
-    <span style="color: #A90D91">echo</span> <span style="color: #000000">$cacheDriver-&gt;</span><span style="color: #836C28">fetch</span>(<span style="color: #000000">$key</span>);
+// 3: Execute your commands!
+$key = &quot;my-cache-item&quot;;
+
+if(!$cacheDriver-&gt;contains($key)) {
+    $cacheDriver-&gt;save($key, &quot;my_data&quot;);
+} else {
+    echo $cacheDriver-&gt;fetch($key);
 }
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>First, we need to bootstrap the composer autoloader so we don&rsquo;t have to write all <code>require</code> statements on our own. The next thing we need to do is actually connect to the Couchbase cluster:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// 1: Open the Couchbase Connection
-$<span style="color: #000000">couchbase</span> = new Couchbase(&quot;127.0.0.1&quot;, &quot;&quot;, &quot;&quot;, &quot;default&quot;);
-</pre></div>
+
+<pre><code>// 1: Open the Couchbase Connection
+$couchbase = new Couchbase(&quot;127.0.0.1&quot;, &quot;&quot;, &quot;&quot;, &quot;default&quot;);
+</code></pre>
 
 <p>Here, we&rsquo;re connecting to a node in the cluster which points at <code>localhost</code>, but you can pass in an array of nodes as well. We connect to the <code>default</code> bucket, which has no password. Now that we have our connection established, we can instantiate the cache driver and inject our Couchbase client:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// 2: Instantiate the Driver &amp; Inject the Connection
-$<span style="color: #000000">cacheDriver</span> = new \Doctrine\Common\Cache\CouchbaseCache();
-$<span style="color: #000000">cacheDriver</span>-&gt;setCouchbase($<span style="color: #000000">couchbase</span>);
-</pre></div>
+
+<pre><code>// 2: Instantiate the Driver &amp; Inject the Connection
+$cacheDriver = new \Doctrine\Common\Cache\CouchbaseCache();
+$cacheDriver-&gt;setCouchbase($couchbase);
+</code></pre>
 
 <p>From here on, the API is the same for all cache drivers. The following code checks if the cache contains a key. If it is present, it prints out the document but if it isn&rsquo;t it creates a new one. This is a very simple example but shows how you can start to use Couchbase caching in your own projects with just a few lines of bootstrapping!</p>
 
 <p>Aside from these three methods, there is also a <code>delete</code> method available. Finally, you can pass an optional third param on <code>save</code> with a <code>$lifeTime</code> so that the cache item vanishes automatically.</p>
 
 <p>Since Couchbase Server doesn&rsquo;t care what you store, you can also save and fetch any kind of datatype (aside from resources):</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">$<span style="color: #000000">cacheDriver</span>-&gt;save($<span style="color: #000000">key</span>, array(&#39;foo&#39; =&gt; &#39;bar&#39;));
-var_dump($<span style="color: #000000">cacheDriver</span>-&gt;fetch($<span style="color: #000000">key</span>));
-</pre></div>
+
+<pre><code>$cacheDriver-&gt;save($key, array('foo' =&gt; 'bar'));
+var_dump($cacheDriver-&gt;fetch($key));
+</code></pre>
 
 <p>Note that when you use the driver at this level, try to store JSON strings when you can (use <code>json_encode</code>/<code>json_decode</code> on your datastructures) This way you can take advantage of the brand new view engine inside Couchbase Server 2.0. You can always just store serialized objects as well (like we need to do with ORM integration) since for Couchbase Server it&rsquo;s just a byte stream.</p>
 
 <p>We can now build on this foundation and see how this works with ORM integration.</p>
 
-<h2 id="orm-integration:cf67ea8c1c378f2ec2474b9e0692d877">ORM Integration</h2>
+<h2 id="orm-integration">ORM Integration</h2>
 
 <p>Create a new directory called <code>couchbase-doctrine-orm</code> with the following <code>composer.json</code>:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">{
+
+<pre><code>{
     &quot;require&quot;: {
         &quot;doctrine/orm&quot;: &quot;2.4.x-dev&quot;,
         &quot;doctrine/dbal&quot;: &quot;2.4.x-dev&quot;,
@@ -164,138 +171,144 @@ var_dump($<span style="color: #000000">cacheDriver</span>-&gt;fetch($<span style
         }
     }
 }
-</pre></div>
+</code></pre>
 
 <p>This time our <code>composer.json</code> file is a little bit longer, because we need to define all of our dependencies by hand (since we don&rsquo;t want to work against the stable release). Since we need to define Doctrine Entities we pass the composer autoloader the custom directory (<code>src/</code>).</p>
 
 <p>The next thing we need is our actual entity that we want to manage through Doctrine. Go ahead and create a <code>Person.php</code> file inside the <code>src/Entities</code> directory with the following content:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
 
-<span style="color: #A90D91">namespace</span> <span style="color: #000000">Entities</span>;
+<pre><code>&lt;?php
 
-<span style="color: #C41A16">/** @Entity */</span>
-<span style="color: #A90D91">class</span> <span style="color: #3F6E75">Person</span> {
+namespace Entities;
 
-    <span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">     * @Id @Column(type=&quot;integer&quot;) @GeneratedValue(strategy=&quot;AUTO&quot;)</span>
-<span style="color: #C41A16">     */</span>
-    <span style="color: #A90D91">private</span> <span style="color: #000000">$id</span>;
+/** @Entity */
+class Person {
 
-    <span style="color: #C41A16">/** @Column(type=&quot;string&quot;) */</span>
-    <span style="color: #A90D91">private</span> <span style="color: #000000">$firstname</span>;
+    /**
+     * @Id @Column(type=&quot;integer&quot;) @GeneratedValue(strategy=&quot;AUTO&quot;)
+     */
+    private $id;
 
-    <span style="color: #C41A16">/** @Column(type=&quot;string&quot;) */</span>
-    <span style="color: #A90D91">private</span> <span style="color: #000000">$lastname</span>;
+    /** @Column(type=&quot;string&quot;) */
+    private $firstname;
 
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">setFirstname</span>(<span style="color: #000000">$firstname</span>) {
-        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">firstname</span> <span style="color: #000000">=</span> <span style="color: #000000">$firstname</span>;
+    /** @Column(type=&quot;string&quot;) */
+    private $lastname;
+
+    public function setFirstname($firstname) {
+        $this-&gt;firstname = $firstname;
     }
 
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">getFirstname</span>() {
-        <span style="color: #A90D91">return</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">firstname</span>;
+    public function getFirstname() {
+        return $this-&gt;firstname;
     }
 
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">setLastname</span>(<span style="color: #000000">$lastname</span>) {
-        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">lastname</span> <span style="color: #000000">=</span> <span style="color: #000000">$lastname</span>;
+    public function setLastname($lastname) {
+        $this-&gt;lastname = $lastname;
     }
 
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">getLastname</span>() {
-        <span style="color: #A90D91">return</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">lastname</span>;
+    public function getLastname() {
+        return $this-&gt;lastname;
     }
 
 }
 
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>This is a very simple Doctrine Entity that has some properties and also a autogenerated <code>ID</code> field. I&rsquo;m going to use <a href="http://www.sqlite.org/">SQLite</a> in the following example, but feel free to use MySQL or any other relational database that you have available.</p>
 
 <p>To wire everything together, we&rsquo;re going to create a <code>index.php</code> file in the root directory of the project. Again, here is the full content and we&rsquo;re going to break it apart afterwards:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #177500">// Composer autoloader.</span>
-<span style="color: #000000">$loader</span> <span style="color: #000000">=</span> <span style="color: #A90D91">require</span> <span style="color: #C41A16">&#39;vendor/autoload.php&#39;</span>;
 
-<span style="color: #C41A16">/**</span>
-<span style="color: #C41A16"> * Initialize Couchbase &amp; the Cache.</span>
-<span style="color: #C41A16"> */</span>
-<span style="color: #000000">$couchbase</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Couchbase</span>(<span style="color: #C41A16">&quot;127.0.0.1&quot;</span>, <span style="color: #C41A16">&quot;&quot;</span>, <span style="color: #C41A16">&quot;&quot;</span>, <span style="color: #C41A16">&quot;default&quot;</span>);
-<span style="color: #000000">$cacheDriver</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">\Doctrine\Common\Cache\CouchbaseCache</span>();
-<span style="color: #000000">$cacheDriver-&gt;</span><span style="color: #836C28">setCouchbase</span>(<span style="color: #000000">$couchbase</span>);
+<pre><code>&lt;?php
+// Composer autoloader.
+$loader = require 'vendor/autoload.php';
+
+/**
+ * Initialize Couchbase &amp; the Cache.
+ */
+$couchbase = new Couchbase(&quot;127.0.0.1&quot;, &quot;&quot;, &quot;&quot;, &quot;default&quot;);
+$cacheDriver = new \Doctrine\Common\Cache\CouchbaseCache();
+$cacheDriver-&gt;setCouchbase($couchbase);
 
 
-<span style="color: #C41A16">/**</span>
-<span style="color: #C41A16"> * Initialize the Entity Manager.</span>
-<span style="color: #C41A16"> */</span>
-<span style="color: #000000">$paths</span> <span style="color: #000000">=</span> <span style="color: #A90D91">array</span>(<span style="color: #000000">__DIR__</span> <span style="color: #000000">.</span> <span style="color: #C41A16">&#39;/src/Entities/&#39;</span>);
-<span style="color: #000000">$isDevMode</span> <span style="color: #000000">=</span> <span style="color: #A90D91">true</span>;
-<span style="color: #000000">$dbParams</span> <span style="color: #000000">=</span> <span style="color: #A90D91">array</span>(
-    <span style="color: #C41A16">&#39;driver&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;pdo_sqlite&#39;</span>,
-    <span style="color: #C41A16">&#39;user&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;root&#39;</span>,
-    <span style="color: #C41A16">&#39;password&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;&#39;</span>,
-    <span style="color: #C41A16">&#39;path&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">__DIR__</span> <span style="color: #000000">.</span> <span style="color: #C41A16">&#39;/cbexample.sqlite&#39;</span>
+/**
+ * Initialize the Entity Manager.
+ */
+$paths = array(__DIR__ . '/src/Entities/');
+$isDevMode = true;
+$dbParams = array(
+    'driver' =&gt; 'pdo_sqlite',
+    'user' =&gt; 'root',
+    'password' =&gt; '',
+    'path' =&gt; __DIR__ . '/cbexample.sqlite'
 );
 
-<span style="color: #000000">$config</span> <span style="color: #000000">=</span> <span style="color: #000000">\Doctrine\ORM\Tools\Setup::</span><span style="color: #836C28">createAnnotationMetadataConfiguration</span>(<span style="color: #000000">$paths</span>, <span style="color: #000000">$isDevMode</span>, <span style="color: #A90D91">null</span>, <span style="color: #000000">$cacheDriver</span>);
-<span style="color: #000000">$em</span> <span style="color: #000000">=</span> <span style="color: #000000">\Doctrine\ORM\EntityManager::</span><span style="color: #836C28">create</span>(<span style="color: #000000">$dbParams</span>, <span style="color: #000000">$config</span>);
+$config = \Doctrine\ORM\Tools\Setup::createAnnotationMetadataConfiguration($paths, $isDevMode, null, $cacheDriver);
+$em = \Doctrine\ORM\EntityManager::create($dbParams, $config);
 
-<span style="color: #C41A16">/**</span>
-<span style="color: #C41A16"> * Work with our Entities.</span>
-<span style="color: #C41A16"> */</span>
-<span style="color: #000000">$person</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">\Entities\Person</span>();
-<span style="color: #000000">$person-&gt;</span><span style="color: #836C28">setFirstname</span>(<span style="color: #C41A16">&quot;Michael&quot;</span>);
-<span style="color: #000000">$person-&gt;</span><span style="color: #836C28">setLastname</span>(<span style="color: #C41A16">&quot;Nitschinger&quot;</span>);
+/**
+ * Work with our Entities.
+ */
+$person = new \Entities\Person();
+$person-&gt;setFirstname(&quot;Michael&quot;);
+$person-&gt;setLastname(&quot;Nitschinger&quot;);
 
-<span style="color: #000000">$em-&gt;</span><span style="color: #836C28">persist</span>(<span style="color: #000000">$person</span>);
-<span style="color: #000000">$em-&gt;</span><span style="color: #836C28">flush</span>();
+$em-&gt;persist($person);
+$em-&gt;flush();
 
-<span style="color: #177500">// Query with Result Cache</span>
-<span style="color: #000000">$query</span> <span style="color: #000000">=</span> <span style="color: #000000">$em-&gt;</span><span style="color: #836C28">createQuery</span>(<span style="color: #C41A16">&#39;select p from Entities\Person p&#39;</span>);
-<span style="color: #000000">$query-&gt;</span><span style="color: #836C28">useResultCache</span>(<span style="color: #A90D91">true</span>);
-<span style="color: #000000">$results</span> <span style="color: #000000">=</span> <span style="color: #000000">$query-&gt;</span><span style="color: #836C28">getResult</span>();
+// Query with Result Cache
+$query = $em-&gt;createQuery('select p from Entities\Person p');
+$query-&gt;useResultCache(true);
+$results = $query-&gt;getResult();
 
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>Since this may be a lot to grasp, let&rsquo;s break it into smaller sized chunks.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">$<span style="color: #000000">couchbase</span> = new Couchbase(&quot;127.0.0.1&quot;, &quot;&quot;, &quot;&quot;, &quot;default&quot;);
-$<span style="color: #000000">cacheDriver</span> = new \Doctrine\Common\Cache\CouchbaseCache();
-$<span style="color: #000000">cacheDriver</span>-&gt;setCouchbase($<span style="color: #000000">couchbase</span>);
-</pre></div>
+
+<pre><code>$couchbase = new Couchbase(&quot;127.0.0.1&quot;, &quot;&quot;, &quot;&quot;, &quot;default&quot;);
+$cacheDriver = new \Doctrine\Common\Cache\CouchbaseCache();
+$cacheDriver-&gt;setCouchbase($couchbase);
+</code></pre>
 
 <p>After our bootstrapping the autoloader, we&rsquo;re initializing the cache driver. You already know what this means because we&rsquo;ve used the same code in the simple example before.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$paths</span> <span style="color: #000000">=</span> <span style="color: #000000">array(__DIR__</span> <span style="color: #000000">.</span> <span style="color: #C41A16">&#39;/src/Entities/&#39;</span><span style="color: #000000">);</span>
-<span style="color: #000000">$isDevMode</span> <span style="color: #000000">=</span> <span style="color: #000000">true;</span>
-<span style="color: #000000">$dbParams</span> <span style="color: #000000">=</span> <span style="color: #000000">array(</span>
-    <span style="color: #C41A16">&#39;driver&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;pdo_sqlite&#39;</span><span style="color: #000000">,</span>
-    <span style="color: #C41A16">&#39;user&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;root&#39;</span><span style="color: #000000">,</span>
-    <span style="color: #C41A16">&#39;password&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;&#39;</span><span style="color: #000000">,</span>
-    <span style="color: #C41A16">&#39;path&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">__DIR__</span> <span style="color: #000000">.</span> <span style="color: #C41A16">&#39;/cbexample.sqlite&#39;</span>
-<span style="color: #000000">);</span>
 
-<span style="color: #000000">$config</span> <span style="color: #000000">=</span> <span style="color: #000000">\Doctrine\ORM\Tools\Setup::createAnnotationMetadataConfiguration($paths,</span> <span style="color: #000000">$isDevMode,</span> <span style="color: #000000">null,</span> <span style="color: #000000">$cacheDriver);</span>
-<span style="color: #000000">$em</span> <span style="color: #000000">=</span> <span style="color: #000000">\Doctrine\ORM\EntityManager::create($dbParams,</span> <span style="color: #000000">$config);</span>
-</pre></div>
+<pre><code>$paths = array(__DIR__ . '/src/Entities/');
+$isDevMode = true;
+$dbParams = array(
+    'driver' =&gt; 'pdo_sqlite',
+    'user' =&gt; 'root',
+    'password' =&gt; '',
+    'path' =&gt; __DIR__ . '/cbexample.sqlite'
+);
+
+$config = \Doctrine\ORM\Tools\Setup::createAnnotationMetadataConfiguration($paths, $isDevMode, null, $cacheDriver);
+$em = \Doctrine\ORM\EntityManager::create($dbParams, $config);
+</code></pre>
 
 <p>The <code>\Doctrine\ORM\EntityManager</code> is one of the major building blocks inside Doctrine and needs to be initialized accordingly. Therefore, we need to provide it a valid configuration. Here we&rsquo;re going to use annotations (as seen on the Doctrine Entity, but you can also do it through XML or YAML). We also need to provide our database connection and the path to the entities. The important part here is that we pass the <code>$cacheDriver</code> to the factory method. This automatically initializes our <code>CouchbaseCache</code> to be used for all kinds of caching (Query, Metadata and Result caching).</p>
 
 <p>Now we can go ahead and create a record:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">$<span style="color: #000000">person</span> = new \Entities\Person();
-$<span style="color: #000000">person</span>-&gt;setFirstname(&quot;Michael&quot;);
-$<span style="color: #000000">person</span>-&gt;setLastname(&quot;Nitschinger&quot;);
 
-$<span style="color: #000000">em</span>-&gt;persist($<span style="color: #000000">person</span>);
-$<span style="color: #000000">em</span>-&gt;flush();
-</pre></div>
+<pre><code>$person = new \Entities\Person();
+$person-&gt;setFirstname(&quot;Michael&quot;);
+$person-&gt;setLastname(&quot;Nitschinger&quot;);
+
+$em-&gt;persist($person);
+$em-&gt;flush();
+</code></pre>
 
 <p>Afterwards, we can fetch it back through a query:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">$<span style="color: #000000">query</span> = $<span style="color: #000000">em</span>-&gt;createQuery(&#39;select p from Entities\Person p&#39;);
-$<span style="color: #000000">query</span>-&gt;useResultCache(true);
-$<span style="color: #000000">results</span> = $<span style="color: #000000">query</span>-&gt;getResult();
-</pre></div>
+
+<pre><code>$query = $em-&gt;createQuery('select p from Entities\Person p');
+$query-&gt;useResultCache(true);
+$results = $query-&gt;getResult();
+</code></pre>
 
 <p>Note that we explicitely tell it to cache this query result for us (by default, result caching won&rsquo;t be used). If open the browser and point it to your Couchbase Server 2.0 management UI, you can see that Doctrine did create lots of documents behind the scenes. These are subsequently used to boost your application performance.</p>
 
-<h2 id="summary:cf67ea8c1c378f2ec2474b9e0692d877">Summary</h2>
+<h2 id="summary">Summary</h2>
 
 <p>As you can see, using Couchbase as a Cache for Doctrine is not hard. You just need to initialize it and pass it into the configuration. From this point on, everything happens behind the scenes. And don&rsquo;t forget that you not only get exceptional performance, but also persistence, scalability and all the cool stuff that Couchbase Server provides out of the box.</p>
 
@@ -322,7 +335,7 @@ $<span style="color: #000000">results</span> = $<span style="color: #000000">que
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

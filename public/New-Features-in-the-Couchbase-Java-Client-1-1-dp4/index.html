@@ -7,7 +7,7 @@
 
     <meta name="description" content="This post shows off some of the new features shipped with the new Couchbase Java Client 1.1 release.">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="New Features in the Couchbase Java Client 1.1-dp4 &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -74,50 +74,57 @@
                             
                         </p>
                     </header>
-
+                    
+                    
                     <div class="post-description">
                         
 
-<h2 id="introduction:ce2158c13cb07928acc4bd887e624d2c">Introduction</h2>
+<h2 id="introduction">Introduction</h2>
 
 <p>The latest <a href="http://www.couchbase.com/develop/java/next">Java Developer Preview (dp4)</a> is hot off the press, and therefore I thought it would be a good idea to show you how to use some of the brand-new features that are now available. This post will show you how to use the new <code>ComplexKey</code> class for view queries and also how to create and delete buckets directly from your SDK.</p>
 
 <p>First, we added a very flexible way of providing parameters to view queries. The idea is that, instead of having to deal with JSON strings on your own, you can pass in Java objects and the appropriate JSON string will be created for you. While it may not sound like a big deal first, this also frees you from the worries about encoding it properly so that it can be transferred over HTTP. Before we dig into the inner workings, lets first start with a basic example on how to create a view query.</p>
 
 <p>Every time you query a view, you need to create a <code>Query</code> and a <code>View</code> object. The <code>View</code> both  object defines the name of the design document and the view, and the <code>Query</code> object allows you to control the params that you can supply with the query.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">View myview = client.getView(&quot;designdoc&quot;, &quot;viewname&quot;);
-</pre></div>
+
+<pre><code>View myview = client.getView(&quot;designdoc&quot;, &quot;viewname&quot;);
+</code></pre>
 
 <p>Instead of creating the <code>View</code> object directly, you use the <code>getView()</code> method on the client object. It is important to know that the SDK actually fetches view information from the server and will throw an exception if either the design document name or the view name are not found. An exception typically looks like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">com.couchbase.client.protocol.views.InvalidViewException: Could not load view &quot;viewname&quot; for design doc &quot;designdoc&quot;
-</pre></div>
+
+<pre><code>com.couchbase.client.protocol.views.InvalidViewException: Could not load view &quot;viewname&quot; for design doc &quot;designdoc&quot;
+</code></pre>
 
 <p>Now that we have our view created, let&rsquo;s instantiate a query object:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">Query myquery = new Query();
-</pre></div>
+
+<pre><code>Query myquery = new Query();
+</code></pre>
 
 <p>If you don&rsquo;t specify anything else, the query object will work with the default settings. This means that no reduce function will be used and the full documents are not included. If you want to change these settings (or others), the <code>Query</code> instance provides setter methods for all of them. If you want to find out more, look at the SDK documentation or at the <a href="http://www.couchbase.com/docs/couchbase-manual-2.0/couchbase-views-querying-rest-api.html">Couchbase Server manual</a>. Basically, you can control everything that you could too while querying a view from the Couchbase UI. Here are some examples:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">// Include the full documents as well</span>
-<span style="color: #000000">myquery</span>.<span style="color: #000000">setIncludeDocs</span>(<span style="color: #A90D91">true</span>);
 
-<span style="color: #177500">// Enable the reduce function</span>
-<span style="color: #000000">myquery</span>.<span style="color: #000000">setReduce</span>(<span style="color: #A90D91">true</span>);
+<pre><code>// Include the full documents as well
+myquery.setIncludeDocs(true);
 
-<span style="color: #177500">// Set the group level</span>
-<span style="color: #000000">myquery</span>.<span style="color: #000000">setGroupLevel</span>(<span style="color: #1C01CE">2</span>);
-</pre></div>
+// Enable the reduce function
+myquery.setReduce(true);
+
+// Set the group level
+myquery.setGroupLevel(2);
+</code></pre>
 
 <p>Note that it doesn&rsquo;t make sense to include the full documents and run the reduce phase, since you don&rsquo;t have document references left after the reduce phase. If you try to set both to true, the SDK complains with the following exception:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// query.setReduce(true); query.setIncludeDocs(true);
-java.lang.UnsupportedOperationException: Reduced views don&#39;t contain documents
-</pre></div>
+
+<pre><code>// query.setReduce(true); query.setIncludeDocs(true);
+java.lang.UnsupportedOperationException: Reduced views don't contain documents
+</code></pre>
 
 <p>Also, if your view doesn&rsquo;t contain a reduce function and you set <code>reduce</code> to <code>true</code>, you&rsquo;ll see the following:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">// query.setReduce(true); on a view with no reduce function defined.</span>
-<span style="color: #000000">java</span>.<span style="color: #000000">lang</span>.<span style="color: #000000">RuntimeException:</span> <span style="color: #000000">This</span> <span style="color: #000000">view</span> <span style="color: #000000">doesn&#39;t</span> <span style="color: #000000">contain</span> <span style="color: #000000">a</span> <span style="color: #000000">reduce</span> <span style="color: #A90D91">function</span>
-</pre></div>
 
-<h2 id="querying-with-complexkeys:ce2158c13cb07928acc4bd887e624d2c">Querying with ComplexKeys</h2>
+<pre><code>// query.setReduce(true); on a view with no reduce function defined.
+java.lang.RuntimeException: This view doesn't contain a reduce function
+</code></pre>
+
+<h2 id="querying-with-complexkeys">Querying with ComplexKeys</h2>
 
 <p>Enough with exceptions, here comes the fun part: some query setter methods not only accept boolean or string arguments, they also allow instances of <code>ComplexKey</code>. <code>ComplexKey</code> takes care of translating your Java objects (or primitives) to their appropriate <a href="http://json.org/">JSON</a> representation. Here is a list of the query methods who support it:</p>
 
@@ -130,7 +137,8 @@ java.lang.UnsupportedOperationException: Reduced views don&#39;t contain documen
 </ul>
 
 <p>An instance of a <code>ComplexKey</code> object is obtained through the static <code>of</code> factory method. When the query object is accessed during the view query, the <code>toJSON()</code> method is called on it and as a result the JSON string is generated. Here are some examples:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// JSON Result: 100
+
+<pre><code>// JSON Result: 100
 ComplexKey.of(100);
 
 // JSON Result: &quot;Hello&quot;
@@ -141,38 +149,42 @@ ComplexKey.of(&quot;Hello&quot;, &quot;World&quot;);
 
 // JSON Result: [1349360771542,1]
 ComplexKey.of(new Date().getTime(), 1);
-</pre></div>
+</code></pre>
 
 <p>This means that you don&rsquo;t have to deal with building the proper JSON strings for yourself (and make sure the escaping is correct). All methods except <code>setRange()</code> expect exactly one instance of ComplexKey. For example, if you emit keys with a unix timestamp and you want to fetch all records until now, you could do it like so:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">Query query = new Query();
+
+<pre><code>Query query = new Query();
 query.setRangeEnd(ComplexKey.of(new Date().getTime()));
-</pre></div>
+</code></pre>
 
 <p>When converted to a string to send it over the wire, it would look like this: <code>?endkey=1349361137738</code>. This makes it also very easy to create a full range query:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">long now = new Date().getTime();
+
+<pre><code>long now = new Date().getTime();
 long tomorrow = now + 86400;
 Query query = new Query();
 query.setRange(ComplexKey.of(now), ComplexKey.of(tomorrow));
-</pre></div>
+</code></pre>
 
 <p>This converts to <code>?startkey=1349362647742&amp;endkey=1349362734142</code> on the wire.</p>
 
-<h2 id="bucket-management-through-the-clustermanager:ce2158c13cb07928acc4bd887e624d2c">Bucket management through the ClusterManager</h2>
+<h2 id="bucket-management-through-the-clustermanager">Bucket management through the ClusterManager</h2>
 
 <p>Until now, you&rsquo;d have to <a href="http://www.couchbase.com/docs/couchbase-manual-2.0/couchbase-admin-web-console-data-buckets.html">create and delete buckets</a> either manually through the Couchbase UI or by using the REST API directly. With the addition of the <code>ClusterManager</code>, it is now possible to mange your buckets directly through the SDK, be it for testing purposes or to automatically create them when your code is deployed to a new environment. This can be especially useful if you want to automate bucket management in a staging or CI environment.</p>
 
 <p>The management API is not accessible through <code>CouchbaseClient</code>, but through the <code>ClusterManager</code> class. This is because the <code>CouchbaseClient</code> is bound to a specific bucket and was not designed for management purposes like this. Instead, you create a new instance of the <code>ClusterManager</code> class and pass it a list of URIs and the admin user name and password.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">List&lt;URI&gt;</span> <span style="color: #000000">uris</span> <span style="color: #000000">=</span> <span style="color: #000000">new</span> <span style="color: #000000">LinkedList&lt;URI&gt;();</span>
-<span style="color: #000000">uris</span><span style="color: #3F6E75">.add</span><span style="color: #000000">(URI</span><span style="color: #3F6E75">.create</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;http://127.0.0.1:8091/pools&quot;</span><span style="color: #000000">));</span>
-<span style="color: #000000">ClusterManager</span> <span style="color: #000000">manager</span> <span style="color: #000000">=</span> <span style="color: #000000">new</span> <span style="color: #000000">ClusterManager(uris,</span> <span style="color: #C41A16">&quot;Administrator&quot;</span><span style="color: #000000">,</span> <span style="color: #C41A16">&quot;password&quot;</span><span style="color: #000000">);</span>
 
-<span style="color: #000000">//</span> <span style="color: #000000">..</span> <span style="color: #000000">your</span> <span style="color: #000000">code</span>
+<pre><code>List&lt;URI&gt; uris = new LinkedList&lt;URI&gt;();
+uris.add(URI.create(&quot;http://127.0.0.1:8091/pools&quot;));
+ClusterManager manager = new ClusterManager(uris, &quot;Administrator&quot;, &quot;password&quot;);
 
-<span style="color: #000000">manager</span><span style="color: #3F6E75">.shutdown</span><span style="color: #000000">();</span>
-</pre></div>
+// .. your code
+
+manager.shutdown();
+</code></pre>
 
 <p>You can now create and delete buckets (of type <code>Couchbase</code> or <code>Memcached</code>). You can also list all available buckets in the Couchbase cluster or flush the bucket (if flush is enabled). Here are some examples:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// Create the default bucket with a 100MB memory limit and 0 replicas.
+
+<pre><code>// Create the default bucket with a 100MB memory limit and 0 replicas.
 manager.createDefaultBucket(BucketType.COUCHBASE, 100, 0);
 
 // Create a bucket with authentication.
@@ -190,11 +202,11 @@ assertTrue(buckets.contains(&quot;mybucket&quot;));
 
 // Flush the &quot;default&quot; bucket if flush is enabled
 manager.flushBucket(&quot;default&quot;);
-</pre></div>
+</code></pre>
 
 <p>Note that creating, deleting and flushing may take some time (from milliseconds to seconds, depending on the cluster load). You can either wait a few seconds before you move on (with a Thread.sleep()), or you can wait until <code>listBuckets()</code> contains your created bucket. There is also a callback-approach (which the client library uses internally to minimize waiting times during tests), but this involves more code on the application side.</p>
 
-<h2 id="wrapping-up:ce2158c13cb07928acc4bd887e624d2c">Wrapping up</h2>
+<h2 id="wrapping-up">Wrapping up</h2>
 
 <p>This post showed you two brand-new features shipped with the 1.1-dp4 release.</p>
 
@@ -225,7 +237,7 @@ manager.flushBucket(&quot;default&quot;);
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

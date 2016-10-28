@@ -7,7 +7,7 @@
 
     <meta name="description" content="This post shows you how to write solid microbenchmarks using the new OpenJDK JMH library.">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Using JMH for Java Microbenchmarking &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -74,7 +74,8 @@
                             
                         </p>
                     </header>
-
+                    
+                    
                     <div class="post-description">
                         
 
@@ -84,14 +85,15 @@
 
 <p>In this post I just show you how to get started, but there are still lots of things you need to think about. I really recommend you to watch <a href="http://vimeo.com/78900556">the talk by Aleksey Shipilev</a> which dives into concepts and pitfalls. You can also find the slides <a href="http://shipilev.net/pub/talks/devoxx-Nov2013-benchmarking.pdf">here</a>.</p>
 
-<h2 id="using-jmh:0f20f20af93d3314cabbf6bbd8064467">Using JMH</h2>
+<h2 id="using-jmh">Using JMH</h2>
 
 <p>There are a few ways to use it and all of them are explained on the official website linked above. In general, you want to use the self-contained jar and run them on the command line, but there is also an easy way to run them directly out of your IDE - this is what I&rsquo;m showing you in a second. If you just want to run it from the command line, you do it like (but you need to build the jar first):</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>java -jar target/microbenchmarks.jar -h
-</pre></div>
+
+<pre><code>$ java -jar target/microbenchmarks.jar -h
+</code></pre>
 
 <p>Let&rsquo;s start a maven project in our IDE and add the following dependency (mad props to <a href="https://twitter.com/_godin_/status/403668134206242817">Evgeny Mandrikov</a> for putting it on maven central recently):</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">&lt;dependency&gt;</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #000000">&lt;dependency&gt;</span>
   <span style="color: #000000">&lt;groupId&gt;</span>org.openjdk.jmh<span style="color: #000000">&lt;/groupId&gt;</span>
   <span style="color: #000000">&lt;artifactId&gt;</span>jmh-core<span style="color: #000000">&lt;/artifactId&gt;</span>
   <span style="color: #000000">&lt;version&gt;</span>0.1<span style="color: #000000">&lt;/version&gt;</span>
@@ -99,7 +101,7 @@
 </pre></div>
 
 <p>Now let&rsquo;s write a main method that calls the underlying method of JMH so we can run it easily form our IDE:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">import</span> <span style="color: #000000">org.openjdk.jmh.Main;</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">import</span> <span style="color: #000000">org.openjdk.jmh.Main;</span>
 
 <span style="color: #A90D91">public</span> <span style="color: #A90D91">class</span> <span style="color: #3F6E75">Start</span> <span style="color: #000000">{</span>
   <span style="color: #A90D91">public</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">void</span> <span style="color: #000000">main(String...</span> <span style="color: #000000">args)</span> <span style="color: #000000">{</span>
@@ -109,11 +111,12 @@
 </pre></div>
 
 <p>If we hit run, all we&rsquo;ll see is:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">No matching benchmarks. Miss-spelled regexp? Use -v for verbose output.
-</pre></div>
+
+<pre><code>No matching benchmarks. Miss-spelled regexp? Use -v for verbose output.
+</code></pre>
 
 <p>Which is good, because we know JMH is working and looking for our benchmarks. Let&rsquo;s write an empty one to get a feeling of how it works.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">package</span> <span style="color: #000000">benchmarks;</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">package</span> <span style="color: #000000">benchmarks;</span>
 
 <span style="color: #A90D91">import</span> <span style="color: #000000">org.openjdk.jmh.annotations.GenerateMicroBenchmark;</span>
 
@@ -128,7 +131,8 @@
 </pre></div>
 
 <p>JMH will automatically pick it up from the CLASSPATH and start to run our benchmark. You will see lots of output (forks, warmup runs), but be patient until the end and you&rsquo;ll see something like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"># Fork: 1 of 1
+
+<pre><code># Fork: 1 of 1
 # Warmup: 20 iterations, 1 s each
 # Measurement: 10 iterations, 1 s each
 # Threads: 1 thread, will synchronize iterations
@@ -153,14 +157,14 @@ Result : 3073969.337 ±(95%) 45679.588 ±(99%) 65631.592 ops/ms
 
 Benchmark                   Mode Thr     Count  Sec         Mean   Mean error    Units
 b.HelloWorld.helloWorld    thrpt   1        10    1  3073969.337    65631.592   ops/ms
-</pre></div>
+</code></pre>
 
 <p>Note that both the output and the results may look different on your machine. To not fork as often and don&rsquo;t do so many measure runs (for demo purposes), you can apply the following flags for the command in your IDE: <code>-i 10 -f 1</code>. This will only run one fork and do 10 iterations after warming up. There are dozens of flags you can tune to your needs.</p>
 
-<h2 id="benchmarking-real-code:0f20f20af93d3314cabbf6bbd8064467">Benchmarking real code</h2>
+<h2 id="benchmarking-real-code">Benchmarking real code</h2>
 
 <p>Now all is fun, but let&rsquo;s test some real code. In Spymemcached, before we put a document on the wire we check that the key is not longer than allowed and - for ascii based operations - also check if they do not contain whitespace and so on. The code in question currently looks like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">public</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">void</span> <span style="color: #000000">validateKey(String</span> <span style="color: #000000">key,</span> <span style="color: #A90D91">boolean</span> <span style="color: #000000">binary)</span> <span style="color: #000000">{</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">public</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">void</span> <span style="color: #000000">validateKey(String</span> <span style="color: #000000">key,</span> <span style="color: #A90D91">boolean</span> <span style="color: #000000">binary)</span> <span style="color: #000000">{</span>
   <span style="color: #A90D91">byte</span><span style="color: #000000">[]</span> <span style="color: #000000">keyBytes</span> <span style="color: #000000">=</span> <span style="color: #000000">KeyUtil.</span><span style="color: #836C28">getKeyBytes</span><span style="color: #000000">(key);</span>
   <span style="color: #A90D91">if</span> <span style="color: #000000">(keyBytes.</span><span style="color: #836C28">length</span> <span style="color: #000000">&gt;</span> <span style="color: #000000">MemcachedClientIF.</span><span style="color: #836C28">MAX_KEY_LENGTH</span><span style="color: #000000">)</span> <span style="color: #000000">{</span>
     <span style="color: #A90D91">throw</span> <span style="color: #A90D91">new</span> <span style="color: #000000">IllegalArgumentException(</span><span style="color: #C41A16">&quot;Key is too long (maxlen = &quot;</span>
@@ -183,7 +187,7 @@ b.HelloWorld.helloWorld    thrpt   1        10    1  3073969.337    65631.592   
 </pre></div>
 
 <p>Let&rsquo;s say we don&rsquo;t care about optimizing it yet, but we want to see how it performs if the &ldquo;binary&rdquo; flag is applied or not. Obviously less work is done but we want to see how that turns out in practice. Let&rsquo;s add the dependency so we can use the static method directly from the code:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">&lt;dependency&gt;</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #000000">&lt;dependency&gt;</span>
   <span style="color: #000000">&lt;groupId&gt;</span>net.spy<span style="color: #000000">&lt;/groupId&gt;</span>
   <span style="color: #000000">&lt;artifactId&gt;</span>spymemcached<span style="color: #000000">&lt;/artifactId&gt;</span>
   <span style="color: #000000">&lt;version&gt;</span>2.10.2<span style="color: #000000">&lt;/version&gt;</span>
@@ -191,7 +195,7 @@ b.HelloWorld.helloWorld    thrpt   1        10    1  3073969.337    65631.592   
 </pre></div>
 
 <p>And write a new benchmark that compares both approaches with variation.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">package</span> <span style="color: #000000">benchmarks;</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">package</span> <span style="color: #000000">benchmarks;</span>
 
 <span style="color: #A90D91">import</span> <span style="color: #000000">net.spy.memcached.util.StringUtils;</span>
 <span style="color: #A90D91">import</span> <span style="color: #000000">org.openjdk.jmh.annotations.GenerateMicroBenchmark;</span>
@@ -263,7 +267,7 @@ b.HelloWorld.helloWorld    thrpt   1        10    1  3073969.337    65631.592   
 
 <p>Also, if you are running those benchmarks on your notebook (and not on the servers, where you should too), make sure you don&rsquo;t enable power management so your CPUs work full steam during the full runs. Also, close all other programs that are not essential and leave it alone until the benchmark finishes. That way you reduce the probability of other tasks inferring with your benchmark results and helping you to get more consistent ones.</p>
 
-<h2 id="further-considerations:0f20f20af93d3314cabbf6bbd8064467">Further Considerations</h2>
+<h2 id="further-considerations">Further Considerations</h2>
 
 <p>Funny enough, JMH not only makes your microbenchmarks more accurate, I think they are also much easier to write. You don&rsquo;t need to fight with things happening in the JVM and your operating system while the tests run. You can integrate those benchmarks into your CI runs when someone checks in a new piece of code and look at historically accurate performance numbers (for crucial pieces in your codebase).</p>
 
@@ -271,10 +275,10 @@ b.HelloWorld.helloWorld    thrpt   1        10    1  3073969.337    65631.592   
 
 <p>Please share your findings and additions in the comments section below!</p>
 
-<h2 id="additional-information:0f20f20af93d3314cabbf6bbd8064467">Additional Information</h2>
+<h2 id="additional-information">Additional Information</h2>
 
 <p>As <a href="https://twitter.com/shipilev">Aleksey Shipilёv</a> points out in the comments, there is also a nice Java API that you can use, instead of just proxying &ldquo;main&rdquo; and emulating the command line. Here is an example that shows how to use it. Note that iterating the MAP is optional, but it gives you a code-readable way of the results. If you just call <code>new Runner(opts).run();</code>, you will see the identical output as above.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">public</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">void</span> <span style="color: #000000">main(String...</span> <span style="color: #000000">args)</span> <span style="color: #A90D91">throws</span> <span style="color: #000000">Exception</span> <span style="color: #000000">{</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">public</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">void</span> <span style="color: #000000">main(String...</span> <span style="color: #000000">args)</span> <span style="color: #A90D91">throws</span> <span style="color: #000000">Exception</span> <span style="color: #000000">{</span>
   <span style="color: #000000">Options</span> <span style="color: #000000">opts</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">OptionsBuilder()</span>
       <span style="color: #000000">.</span><span style="color: #836C28">include</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;.*&quot;</span><span style="color: #000000">)</span>
       <span style="color: #000000">.</span><span style="color: #836C28">warmupIterations</span><span style="color: #000000">(</span><span style="color: #1C01CE">10</span><span style="color: #000000">)</span>
@@ -296,7 +300,7 @@ b.HelloWorld.helloWorld    thrpt   1        10    1  3073969.337    65631.592   
 </pre></div>
 
 <p>Also, the constant keys used in the above example are subject to constant optimizations. To work around that, there is the @State annotation for the class and the static fields need to be instance variables. Here is the updated code sample for clarity, the numbers don&rsquo;t change for the purpose of this post.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">package</span> <span style="color: #000000">benchmarks;</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">package</span> <span style="color: #000000">benchmarks;</span>
 
 <span style="color: #A90D91">import</span> <span style="color: #000000">net.spy.memcached.util.StringUtils;</span>
 <span style="color: #A90D91">import</span> <span style="color: #000000">org.openjdk.jmh.annotations.GenerateMicroBenchmark;</span>
@@ -363,7 +367,7 @@ b.HelloWorld.helloWorld    thrpt   1        10    1  3073969.337    65631.592   
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

@@ -7,7 +7,7 @@
 
     <meta name="description" content="">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Jvm &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -82,69 +82,74 @@
 <p>Since I wanted to make it work on my development machine and didn&rsquo;t find something comprehensive for Mac, here is how to do it.</p>
 
 <p>First, make sure to have a more or less recent JDK installed. Mac ships with Java 6, but I think you want to upgrade to 7. You can grab the JDK packages from <a href="http://www.oracle.com/technetwork/java/javase/downloads/jdk7-downloads-1880260.html">here</a> if you haven&rsquo;t already.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">~ $ java -version
+
+<pre><code>~ $ java -version
 java version &quot;1.7.0_17&quot;
 Java(TM) SE Runtime Environment (build 1.7.0_17-b02)
 Java HotSpot(TM) 64-Bit Server VM (build 23.7-b01, mixed mode)
-</pre></div>
+</code></pre>
 
 <p>Now to enable the ASM output, you need to pass in two flags, namely <code>UnlockDiagnosticVMOptions</code> and <code>PrintAssembly</code>. Because the generated ASM is different for each runtime, you need to pass it to the <code>java</code> command and not <code>javac</code>.</p>
 
 <p>Create a very simple script like this and name it <code>Main.java</code>:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">public class Main {
+
+<pre><code>public class Main {
     public static void main(String[] args) {
         System.out.println(&quot;Hello World&quot;);
     }
 }
-</pre></div>
+</code></pre>
 
 <p>Now, we&rsquo;re going to compile and run it with those options:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">michael</span><span style="color: #A90D91">@daschlbook</span> <span style="color: #000000">~/Downloads/java</span> <span style="color: #000000">$</span> <span style="color: #000000">javac</span> <span style="color: #000000">Main</span><span style="color: #3F6E75">.java</span> <span style="color: #000000">&amp;&amp;</span> <span style="color: #000000">java</span> <span style="color: #000000">-XX:+UnlockDiagnosticVMOptions</span> <span style="color: #000000">-XX:+PrintAssembly</span> <span style="color: #000000">Main</span>
-<span style="color: #000000">Java</span> <span style="color: #000000">HotSpot(TM)</span> <span style="color: #000000">64-Bit</span> <span style="color: #000000">Server</span> <span style="color: #000000">VM</span> <span style="color: #000000">warning:</span> <span style="color: #000000">PrintAssembly</span> <span style="color: #000000">is</span> <span style="color: #000000">enabled</span>; <span style="color: #000000">turning</span> <span style="color: #000000">on</span> <span style="color: #000000">DebugNonSafepoints</span> <span style="color: #000000">to</span> <span style="color: #000000">gain</span> <span style="color: #000000">additional</span> <span style="color: #000000">output</span>
-<span style="color: #000000">Could</span> <span style="color: #000000">not</span> <span style="color: #000000">load</span> <span style="color: #000000">hsdis-amd64</span><span style="color: #3F6E75">.dylib</span><span style="color: #000000">;</span> <span style="color: #000000">library</span> <span style="color: #000000">not</span> <span style="color: #000000">loadable;</span> <span style="color: #000000">PrintAssembly</span> <span style="color: #000000">is</span> <span style="color: #000000">disabled</span>
-<span style="color: #000000">Hello</span> <span style="color: #000000">World</span>
-</pre></div>
+
+<pre><code>michael@daschlbook ~/Downloads/java $ javac Main.java &amp;&amp; java -XX:+UnlockDiagnosticVMOptions -XX:+PrintAssembly Main
+Java HotSpot(TM) 64-Bit Server VM warning: PrintAssembly is enabled; turning on DebugNonSafepoints to gain additional output
+Could not load hsdis-amd64.dylib; library not loadable; PrintAssembly is disabled
+Hello World
+</code></pre>
 
 <p>Woops, not what we expected. The code did compile properly, but HotSpot complains about <code>hsdis-amd64.dylib</code>. I had to google a bit to find it, but you can download <a href="https://kenai.com/projects/base-hsdis/downloads/download/gnu-versions/hsdis-amd64.dylib">the file</a> from <a href="https://kenai.com/projects/base-hsdis/downloads/directory/gnu-versions">here</a>.</p>
 
 <p>Now we need to put it somewhere to make it loadable, and the easiest thing I found is to put it onto <code>LD_LIBRARY_PATH</code>. Make sure to not override any other settings, but in my case the variable was empty so its straightforward.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">export LD_LIBRARY_PATH=~/PathToFile/
-</pre></div>
+
+<pre><code>export LD_LIBRARY_PATH=~/PathToFile/
+</code></pre>
 
 <p>If you run our command again from before, you should now see &ldquo;beautiful&rdquo; ASM code generated:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">michael</span>@<span style="color: #000000">daschlbook</span> <span style="color: #000000">~/Downloads/java</span> <span style="color: #000000">$</span> <span style="color: #000000">javac</span> <span style="color: #000000">Main</span>.<span style="color: #000000">java</span> <span style="color: #000000">&amp;&amp;</span> <span style="color: #000000">java</span> <span style="color: #000000">-XX</span>:<span style="color: #000000">+UnlockDiagnosticVMOptions</span> <span style="color: #000000">-XX</span>:<span style="color: #000000">+PrintAssembly</span> <span style="color: #000000">Main</span>
-<span style="color: #000000">Java</span> <span style="color: #000000">HotSpot</span>(<span style="color: #000000">TM</span>) <span style="color: #1C01CE">64</span><span style="color: #000000">-Bit</span> <span style="color: #000000">Server</span> <span style="color: #000000">VM</span> <span style="color: #000000">warning</span>: <span style="color: #000000">PrintAssembly</span> <span style="color: #000000">is</span> <span style="color: #000000">enabled</span>; <span style="color: #000000">turning</span> <span style="color: #000000">on</span> <span style="color: #000000">DebugNonSafepoints</span> <span style="color: #000000">to</span> <span style="color: #000000">gain</span> <span style="color: #000000">additional</span> <span style="color: #000000">output</span>
-<span style="color: #000000">Loaded</span> <span style="color: #000000">disassembler</span> <span style="color: #000000">from</span> <span style="color: #000000">hsdis-amd64</span>.<span style="color: #000000">dylib</span>
-<span style="color: #000000">Decoding</span> <span style="color: #000000">compiled</span> <span style="color: #000000">method</span> <span style="color: #1C01CE">0x000000010ac74150</span><span style="color: #000000">:</span>
-  <span style="color: #1C01CE">0x000000010ac742ba</span><span style="color: #000000">:</span> <span style="color: #000000">add</span>   [<span style="color: #000000">eax</span>], <span style="color: #000000">al</span>
-[<span style="color: #000000">Disassembling</span> <span style="color: #A90D91">for</span> <span style="color: #000000">mach=&#39;i386</span>(<span style="color: #000000">base-hsdis</span>)<span style="color: #000000">&#39;</span>]
-[<span style="color: #000000">Entry</span> <span style="color: #000000">Point</span>]
-[<span style="color: #000000">Constants</span>]
-  <span style="color: #633820"># {method} &#39;hashCode&#39; &#39;()I&#39; in &#39;java/lang/String&#39;</span>
-  <span style="color: #633820">#           [sp+0x30]  (sp of caller)</span>
-  <span style="color: #1C01CE">0x000000010ac742a0</span><span style="color: #000000">:</span> <span style="color: #000000">inc</span>   <span style="color: #000000">esp</span>
-  <span style="color: #1C01CE">0x000000010ac742a1</span><span style="color: #000000">:</span> <span style="color: #000000">mov</span>   <span style="color: #000000">edx</span>, [<span style="color: #000000">esi+</span><span style="color: #1C01CE">0x8</span>]
-  <span style="color: #1C01CE">0x000000010ac742a4</span><span style="color: #000000">:</span> <span style="color: #000000">dec</span>   <span style="color: #000000">ecx</span>
-  <span style="color: #1C01CE">0x000000010ac742a5</span><span style="color: #000000">:</span> <span style="color: #000000">shl</span>   <span style="color: #000000">edx</span>, <span style="color: #1C01CE">3</span>
-  <span style="color: #1C01CE">0x000000010ac742a8</span><span style="color: #000000">:</span> <span style="color: #000000">dec</span>   <span style="color: #000000">ecx</span>
-  <span style="color: #1C01CE">0x000000010ac742a9</span><span style="color: #000000">:</span> <span style="color: #000000">cmp</span>   <span style="color: #000000">eax</span>, <span style="color: #000000">edx</span>
-  <span style="color: #1C01CE">0x000000010ac742ab</span><span style="color: #000000">:</span> <span style="color: #000000">jnz</span>   <span style="color: #1C01CE">0x000000000ac4ba60</span>  ;   {<span style="color: #000000">runtime_call</span>}
-  <span style="color: #1C01CE">0x000000010ac742b1</span><span style="color: #000000">:</span> <span style="color: #000000">nop</span>
-  <span style="color: #1C01CE">0x000000010ac742b4</span><span style="color: #000000">:</span> <span style="color: #000000">invalid</span>   <span style="color: #1C01CE">0x0f</span> <span style="color: #000000">#size=</span><span style="color: #1C01CE">0</span>
-  <span style="color: #1C01CE">0x000000010ac742b5</span><span style="color: #000000">:</span> <span style="color: #000000">pop</span>   <span style="color: #000000">ds</span>
-  <span style="color: #1C01CE">0x000000010ac742b6</span><span style="color: #000000">:</span> <span style="color: #000000">test</span>  [<span style="color: #000000">eax</span>], <span style="color: #000000">al</span>
-  <span style="color: #1C01CE">0x000000010ac742b8</span><span style="color: #000000">:</span> <span style="color: #000000">add</span>   [<span style="color: #000000">eax</span>], <span style="color: #000000">al</span>
-  <span style="color: #1C01CE">0x000000010ac742ba</span><span style="color: #000000">:</span> <span style="color: #000000">add</span>   [<span style="color: #000000">eax</span>], <span style="color: #000000">al</span>
-  <span style="color: #1C01CE">0x000000010ac742bc</span><span style="color: #000000">:</span> <span style="color: #000000">nop</span>
-[<span style="color: #000000">Verified</span> <span style="color: #000000">Entry</span> <span style="color: #000000">Point</span>]
-  <span style="color: #1C01CE">0x000000010ac742c0</span><span style="color: #000000">:</span> <span style="color: #000000">mov</span>   [<span style="color: #000000">esp-</span><span style="color: #1C01CE">0x14000</span>], <span style="color: #000000">eax</span>
-  <span style="color: #1C01CE">0x000000010ac742c7</span><span style="color: #000000">:</span> <span style="color: #000000">push</span>  <span style="color: #000000">ebp</span>
-  <span style="color: #1C01CE">0x000000010ac742c8</span><span style="color: #000000">:</span> <span style="color: #000000">dec</span>   <span style="color: #000000">eax</span>
-  <span style="color: #1C01CE">0x000000010ac742c9</span><span style="color: #000000">:</span> <span style="color: #000000">sub</span>   <span style="color: #000000">esp</span>, <span style="color: #1C01CE">0x0000000000000020</span>
-                                                ;<span style="color: #000000">*synchronization</span> <span style="color: #000000">entry</span>
-                                                ; <span style="color: #000000">-</span> <span style="color: #000000">java</span>.<span style="color: #000000">lang</span>.<span style="color: #000000">String::hashCode</span>@<span style="color: #000000">-</span><span style="color: #1C01CE">1</span> (<span style="color: #000000">line</span> <span style="color: #1C01CE">1446</span>)
+
+<pre><code>michael@daschlbook ~/Downloads/java $ javac Main.java &amp;&amp; java -XX:+UnlockDiagnosticVMOptions -XX:+PrintAssembly Main
+Java HotSpot(TM) 64-Bit Server VM warning: PrintAssembly is enabled; turning on DebugNonSafepoints to gain additional output
+Loaded disassembler from hsdis-amd64.dylib
+Decoding compiled method 0x000000010ac74150:
+  0x000000010ac742ba: add   [eax], al
+[Disassembling for mach='i386(base-hsdis)']
+[Entry Point]
+[Constants]
+  # {method} 'hashCode' '()I' in 'java/lang/String'
+  #           [sp+0x30]  (sp of caller)
+  0x000000010ac742a0: inc   esp
+  0x000000010ac742a1: mov   edx, [esi+0x8]
+  0x000000010ac742a4: dec   ecx
+  0x000000010ac742a5: shl   edx, 3
+  0x000000010ac742a8: dec   ecx
+  0x000000010ac742a9: cmp   eax, edx
+  0x000000010ac742ab: jnz   0x000000000ac4ba60  ;   {runtime_call}
+  0x000000010ac742b1: nop
+  0x000000010ac742b4: invalid   0x0f #size=0
+  0x000000010ac742b5: pop   ds
+  0x000000010ac742b6: test  [eax], al
+  0x000000010ac742b8: add   [eax], al
+  0x000000010ac742ba: add   [eax], al
+  0x000000010ac742bc: nop
+[Verified Entry Point]
+  0x000000010ac742c0: mov   [esp-0x14000], eax
+  0x000000010ac742c7: push  ebp
+  0x000000010ac742c8: dec   eax
+  0x000000010ac742c9: sub   esp, 0x0000000000000020
+                                                ;*synchronization entry
+                                                ; - java.lang.String::hashCode@-1 (line 1446)
 ...
-</pre></div>
+</code></pre>
 
 <p>Now I guess this is were the real fun starts, happy debugging!</p>
 
@@ -157,7 +162,7 @@ Java HotSpot(TM) 64-Bit Server VM (build 23.7-b01, mixed mode)
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

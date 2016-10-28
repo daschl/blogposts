@@ -7,7 +7,7 @@
 
     <meta name="description" content="What about avoiding nulls completely in your PHP application? Inspired by Scala and Google Guava, this post shows you how to do it in PHP.">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="A Journey on Avoiding Nulls in PHP &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -74,7 +74,8 @@
                             
                         </p>
                     </header>
-
+                    
+                    
                     <div class="post-description">
                         
 
@@ -85,7 +86,8 @@
 <p>It turns out that for example in <a href="http://www.scala-lang.org/">Scala</a>, you can avoid nulls by using the <a href="http://www.scala-lang.org/api/current/index.html#scala.Option">Option</a> class. It allows you to express in a clear way that the result of a - lets say - method can either be good (a reference to a valid object) or bad. In PHP, bad often means null. Scala then consequently provides method to access this object safely. You as the developer can choose at which point you want to get the value out, either by accessing it directly (and catching exceptions) or provide a sensible default value.</p>
 
 <p>In Scala, you write code like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">/* An option with a value */
+
+<pre><code>/* An option with a value */
 val a: Option[Int] = Some(5)
 /* An option with no value */
 val b: Option[Int] = None
@@ -94,195 +96,201 @@ val b: Option[Int] = None
 a.getOrElse(0)
 /* Returns 10 */
 b.getOrElse(10)
-</pre></div>
+</code></pre>
 
 <p>You can also use helpful methods like <code>isDefined()</code> to peek into the object and see whats going on at runtime. All this is much more expressive than juggling around with a possible <code>null</code> value.</p>
 
 <p>Java has the same issues as PHP, and it hurt Google so much that they integrated the concept of an <a href="http://code.google.com/p/guava-libraries/wiki/UsingAndAvoidingNullExplained">Optional</a> directly into the core of their <a href="http://code.google.com/p/guava-libraries/">Google Guava</a> Java library collection. I really like their code and use it in my Java projects, so I decided it would be an interesting project to port this to PHP. Since PHP isn&rsquo;t a statically typed language like Java, concepts like generics have been removed and some methods renamed (they look more like Scala&rsquo;s now), but in essence its the same.</p>
 
-<h2 id="usage:d2267bd319f6db001a379c1a12ddc220">Usage</h2>
+<h2 id="usage">Usage</h2>
 
 <p>Before digging into how it works, let&rsquo;s look at how we can use it. We only need to work with three classes called <code>Optional</code>, <code>Present</code> and <code>Absent</code>. <code>Optional</code> is the base class, <code>Present</code> and <code>Absent</code> inherit from it and provide the method bodies for their appropriate behavior.</p>
 
 <p>The main idea is to fail fast when null is discovered and afterwards have a safe way of working with our value. Creating a <code>Optional</code> works through the static <code>of</code> method. We then have a range of methods available to inspect and fetch the output:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #000000">$possible</span> <span style="color: #000000">=</span> <span style="color: #000000">Optional::</span><span style="color: #836C28">of</span>(<span style="color: #1C01CE">5</span>);
-<span style="color: #A90D91">var_dump</span>(<span style="color: #000000">$possible-&gt;</span><span style="color: #836C28">isPresent</span>()); <span style="color: #177500">// bool(true)</span>
-<span style="color: #A90D91">var_dump</span>(<span style="color: #000000">$possible-&gt;</span><span style="color: #836C28">get</span>()); <span style="color: #177500">// int(5)</span>
-<span style="color: #A90D91">var_dump</span>(<span style="color: #000000">$possible-&gt;</span><span style="color: #836C28">getOrElse</span>(<span style="color: #1C01CE">99</span>)); <span style="color: #177500">// int(5)</span>
-<span style="color: #A90D91">var_dump</span>(<span style="color: #000000">$possible-&gt;</span><span style="color: #836C28">getOrNull</span>()); <span style="color: #177500">// int(5)</span>
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+
+<pre><code>&lt;?php
+$possible = Optional::of(5);
+var_dump($possible-&gt;isPresent()); // bool(true)
+var_dump($possible-&gt;get()); // int(5)
+var_dump($possible-&gt;getOrElse(99)); // int(5)
+var_dump($possible-&gt;getOrNull()); // int(5)
+?&gt;
+</code></pre>
 
 <p>If we&rsquo;re trying to call <code>of</code> with <code>null</code>, a <code>NullPointerException</code> is raised immediately. We can use the <code>fromNullable</code> method to handle this case safely:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #000000">$possible</span> <span style="color: #000000">=</span> <span style="color: #000000">Optional::</span><span style="color: #836C28">of</span>(<span style="color: #A90D91">null</span>); <span style="color: #177500">// Throws &#39;NullPointerException&#39; with message &#39;Unallowed null in reference found.&#39;</span>
-<span style="color: #000000">$possible</span> <span style="color: #000000">=</span> <span style="color: #000000">Optional::</span><span style="color: #836C28">fromNullable</span>(<span style="color: #A90D91">null</span>);
-<span style="color: #A90D91">var_dump</span>(<span style="color: #000000">$possible-&gt;</span><span style="color: #836C28">isPresent</span>()); <span style="color: #177500">// bool(false)</span>
-<span style="color: #A90D91">var_dump</span>(<span style="color: #000000">$possible-&gt;</span><span style="color: #836C28">get</span>()); <span style="color: #177500">// Throws IllegalStateException</span>
-<span style="color: #A90D91">var_dump</span>(<span style="color: #000000">$possible-&gt;</span><span style="color: #836C28">getOrElse</span>(<span style="color: #1C01CE">99</span>)); <span style="color: #177500">// int(99)</span>
-<span style="color: #A90D91">var_dump</span>(<span style="color: #000000">$possible-&gt;</span><span style="color: #836C28">getOrNull</span>()); <span style="color: #177500">// NULL</span>
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+
+<pre><code>&lt;?php
+$possible = Optional::of(null); // Throws 'NullPointerException' with message 'Unallowed null in reference found.'
+$possible = Optional::fromNullable(null);
+var_dump($possible-&gt;isPresent()); // bool(false)
+var_dump($possible-&gt;get()); // Throws IllegalStateException
+var_dump($possible-&gt;getOrElse(99)); // int(99)
+var_dump($possible-&gt;getOrNull()); // NULL
+?&gt;
+</code></pre>
 
 <p>We can even check the equality of the contained Optionals:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #000000">$val1</span> <span style="color: #000000">=</span> <span style="color: #000000">Optional::</span><span style="color: #836C28">fromNullable</span>(<span style="color: #1C01CE">5</span>);
-<span style="color: #000000">$val2</span> <span style="color: #000000">=</span> <span style="color: #000000">Optional::</span><span style="color: #836C28">fromNullable</span>(<span style="color: #1C01CE">4</span>);
-<span style="color: #000000">$val3</span> <span style="color: #000000">=</span> <span style="color: #000000">Optional::</span><span style="color: #836C28">fromNullable</span>(<span style="color: #1C01CE">4</span>);
 
-<span style="color: #A90D91">var_dump</span>(<span style="color: #000000">$val1-&gt;</span><span style="color: #836C28">equals</span>(<span style="color: #000000">$val2</span>)); <span style="color: #177500">// bool(false)</span>
-<span style="color: #A90D91">var_dump</span>(<span style="color: #000000">$val2-&gt;</span><span style="color: #836C28">equals</span>(<span style="color: #000000">$val3</span>)); <span style="color: #177500">// bool(true)</span>
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+<pre><code>&lt;?php
+$val1 = Optional::fromNullable(5);
+$val2 = Optional::fromNullable(4);
+$val3 = Optional::fromNullable(4);
+
+var_dump($val1-&gt;equals($val2)); // bool(false)
+var_dump($val2-&gt;equals($val3)); // bool(true)
+?&gt;
+</code></pre>
 
 <p>Now this simple examples are easy to grasp and this is a good thing. It&rsquo;s not about complexity here, it&rsquo;s about making it obvious that a value may or may not be null and handling it appropriately.</p>
 
 <p>If you&rsquo;re accessing a method of a library, you need to check the return value every time if it&rsquo;s null to make sure you&rsquo;re not in an invalid state. If it&rsquo;s clear that the library is returning an instance of <code>Optional</code>, you know what to expect and how to deal with it appropriately.</p>
 
-<h2 id="implementation:d2267bd319f6db001a379c1a12ddc220">Implementation</h2>
+<h2 id="implementation">Implementation</h2>
 
 <p>Let&rsquo;s look at how this implemented.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #A90D91">abstract</span> <span style="color: #A90D91">class</span> <span style="color: #3F6E75">Optional</span> {
 
-    <span style="color: #A90D91">private</span> <span style="color: #A90D91">function</span> <span style="color: #000000">__construct</span>() {}
+<pre><code>&lt;?php
+abstract class Optional {
 
-    <span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">     * Returns an instance with no contained reference.</span>
-<span style="color: #C41A16">     */</span>
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">function</span> <span style="color: #000000">absent</span>() {
-        <span style="color: #A90D91">return</span> <span style="color: #000000">Absent::</span><span style="color: #836C28">instance</span>();
+    private function __construct() {}
+
+    /**
+     * Returns an instance with no contained reference.
+     */
+    public static function absent() {
+        return Absent::instance();
     }
 
-    <span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">     * Returns an Optional instance containing the given non-null reference.</span>
-<span style="color: #C41A16">     */</span>
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">function</span> <span style="color: #000000">of</span>(<span style="color: #000000">$reference</span>) {
-        <span style="color: #A90D91">return</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Present</span>(<span style="color: #A90D91">static</span><span style="color: #000000">::</span><span style="color: #836C28">checkNotNull</span>(<span style="color: #000000">$reference</span>));
+    /**
+     * Returns an Optional instance containing the given non-null reference.
+     */
+    public static function of($reference) {
+        return new Present(static::checkNotNull($reference));
     }
 
-    <span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">     * If reference is non-null, returns an Optional instance containing</span>
-<span style="color: #C41A16">     * that reference; otherwise returns Absent.</span>
-<span style="color: #C41A16">     */</span>
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">function</span> <span style="color: #000000">fromNullable</span>(<span style="color: #000000">$reference</span>) {
-        <span style="color: #A90D91">return</span> <span style="color: #000000">$reference</span> <span style="color: #000000">===</span> <span style="color: #A90D91">null</span> <span style="color: #000000">?</span> <span style="color: #A90D91">static</span><span style="color: #000000">::</span><span style="color: #836C28">absent</span>() <span style="color: #000000">:</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Present</span>(<span style="color: #000000">$reference</span>);
+    /**
+     * If reference is non-null, returns an Optional instance containing
+     * that reference; otherwise returns Absent.
+     */
+    public static function fromNullable($reference) {
+        return $reference === null ? static::absent() : new Present($reference);
     }
 
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">abstract</span> <span style="color: #A90D91">function</span> <span style="color: #000000">isPresent</span>();
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">abstract</span> <span style="color: #A90D91">function</span> <span style="color: #000000">get</span>();
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">abstract</span> <span style="color: #A90D91">function</span> <span style="color: #000000">getOrElse</span>(<span style="color: #000000">$defaultValue</span>);
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">abstract</span> <span style="color: #A90D91">function</span> <span style="color: #000000">getOrNull</span>();
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">abstract</span> <span style="color: #A90D91">function</span> <span style="color: #000000">equals</span>(<span style="color: #000000">$object</span>);
+    public abstract function isPresent();
+    public abstract function get();
+    public abstract function getOrElse($defaultValue);
+    public abstract function getOrNull();
+    public abstract function equals($object);
 
-    <span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">     * Make sure the passed reference is not null.</span>
-<span style="color: #C41A16">     */</span>
-    <span style="color: #A90D91">protected</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">function</span> <span style="color: #000000">checkNotNull</span>(<span style="color: #000000">$reference</span>, <span style="color: #000000">$message</span> <span style="color: #000000">=</span> <span style="color: #A90D91">null</span>) {
-        <span style="color: #A90D91">if</span>(<span style="color: #000000">$message</span> <span style="color: #000000">===</span> <span style="color: #A90D91">null</span>) {
-            <span style="color: #000000">$message</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;Unallowed null in reference found.&quot;</span>;
+    /**
+     * Make sure the passed reference is not null.
+     */
+    protected static function checkNotNull($reference, $message = null) {
+        if($message === null) {
+            $message = &quot;Unallowed null in reference found.&quot;;
         }
 
-        <span style="color: #A90D91">if</span>(<span style="color: #000000">$reference</span> <span style="color: #000000">===</span> <span style="color: #A90D91">null</span>) {
-            <span style="color: #A90D91">throw</span> <span style="color: #A90D91">new</span> <span style="color: #000000">NullPointerException</span>(<span style="color: #000000">$message</span>);
+        if($reference === null) {
+            throw new NullPointerException($message);
         }
-        <span style="color: #A90D91">return</span> <span style="color: #000000">$reference</span>;
+        return $reference;
     }
 
 
 }
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>This abstract class defines all of the methods we&rsquo;ll implement in <code>Present</code> and <code>Absent</code>, as well as all the static methods that you can call directly (especially the <code>of</code> and <code>fromNullable</code> methods). Note that in the appropriate places, <code>checkNotNull</code> is called which will throw a <code>NullPointerException</code> if a null is found. This adheres to the fail fast principle.</p>
 
 <p>Now let&rsquo;s implement the <code>Absent</code> class, which represents the state where no reference is present (for example a null was passed in through <code>fromNullable</code>).</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #A90D91">class</span> <span style="color: #3F6E75">Absent</span> <span style="color: #A90D91">extends</span> <span style="color: #000000">Optional</span> {
 
-    <span style="color: #A90D91">private</span> <span style="color: #A90D91">static</span> <span style="color: #000000">$instance</span>;
+<pre><code>&lt;?php
+class Absent extends Optional {
 
-    <span style="color: #A90D91">private</span> <span style="color: #A90D91">function</span> <span style="color: #000000">__construct</span>() {}
+    private static $instance;
 
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">isPresent</span>() {
-        <span style="color: #A90D91">return</span> <span style="color: #A90D91">false</span>;
+    private function __construct() {}
+
+    public function isPresent() {
+        return false;
     }
 
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">get</span>() {
-        <span style="color: #A90D91">throw</span> <span style="color: #A90D91">new</span> <span style="color: #000000">IllegalStateException</span>(<span style="color: #C41A16">&quot;Optional-&gt;get() cannot be called on an absent value&quot;</span>);
+    public function get() {
+        throw new IllegalStateException(&quot;Optional-&gt;get() cannot be called on an absent value&quot;);
     }
 
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">getOrElse</span>(<span style="color: #000000">$defaultValue</span>) {
-        <span style="color: #000000">$message</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;use Optional-&gt;orNull() instead of Optional-&gt;or(null)&quot;</span>;
-        <span style="color: #A90D91">return</span> <span style="color: #A90D91">static</span><span style="color: #000000">::</span><span style="color: #836C28">checkNotNull</span>(<span style="color: #000000">$defaultValue</span>, <span style="color: #000000">$message</span>);
+    public function getOrElse($defaultValue) {
+        $message = &quot;use Optional-&gt;orNull() instead of Optional-&gt;or(null)&quot;;
+        return static::checkNotNull($defaultValue, $message);
     }
 
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">getOrNull</span>() {
-        <span style="color: #A90D91">return</span> <span style="color: #A90D91">null</span>;
+    public function getOrNull() {
+        return null;
     }
 
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">equals</span>(<span style="color: #000000">$object</span>) {
-        <span style="color: #A90D91">return</span> <span style="color: #000000">$object</span> <span style="color: #000000">===</span> <span style="color: #000000">$this</span>;
+    public function equals($object) {
+        return $object === $this;
     }
 
-    <span style="color: #A90D91">protected</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">function</span> <span style="color: #000000">instance</span>() {
-        <span style="color: #A90D91">if</span>(<span style="color: #A90D91">static</span><span style="color: #000000">::$instance</span> <span style="color: #000000">==</span> <span style="color: #A90D91">null</span>) {
-            <span style="color: #A90D91">return</span> <span style="color: #A90D91">static</span><span style="color: #000000">::$instance</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Absent</span>();
+    protected static function instance() {
+        if(static::$instance == null) {
+            return static::$instance = new Absent();
         }
-        <span style="color: #A90D91">return</span> <span style="color: #A90D91">static</span><span style="color: #000000">::$instance</span>;
+        return static::$instance;
     }
 
 }
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>The <code>$instance</code> variable is managed here through the singleton pattern. We only need one instance of <code>Absent</code>, this saves memory and CPU time. The other methods just implement the expected behaviour of something that is not available.</p>
 
 <p>Finally, we can implement the <code>Present</code> class, which actually stores our instance if available.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #A90D91">class</span> <span style="color: #3F6E75">Present</span> <span style="color: #A90D91">extends</span> <span style="color: #000000">Optional</span> {
 
-    <span style="color: #A90D91">private</span> <span style="color: #000000">$reference</span>;
+<pre><code>&lt;?php
+class Present extends Optional {
 
-    <span style="color: #A90D91">protected</span> <span style="color: #A90D91">function</span> <span style="color: #000000">__construct</span>(<span style="color: #000000">$reference</span>) {
-        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">reference</span> <span style="color: #000000">=</span> <span style="color: #000000">$reference</span>;
+    private $reference;
+
+    protected function __construct($reference) {
+        $this-&gt;reference = $reference;
     }
 
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">isPresent</span>() {
-        <span style="color: #A90D91">return</span> <span style="color: #A90D91">true</span>;
+    public function isPresent() {
+        return true;
     }
 
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">get</span>() {
-        <span style="color: #A90D91">return</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">reference</span>;
+    public function get() {
+        return $this-&gt;reference;
     }
 
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">getOrElse</span>(<span style="color: #000000">$defaultValue</span>) {
-        <span style="color: #000000">$message</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;use Optional-&gt;orNull() instead of Optional-&gt;or(null)&quot;</span>;
-        <span style="color: #A90D91">static</span><span style="color: #000000">::</span><span style="color: #836C28">checkNotNull</span>(<span style="color: #000000">$defaultValue</span>, <span style="color: #000000">$message</span>);
-        <span style="color: #A90D91">return</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">reference</span>;
+    public function getOrElse($defaultValue) {
+        $message = &quot;use Optional-&gt;orNull() instead of Optional-&gt;or(null)&quot;;
+        static::checkNotNull($defaultValue, $message);
+        return $this-&gt;reference;
     }
 
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">getOrNull</span>() {
-        <span style="color: #A90D91">return</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">reference</span>;
+    public function getOrNull() {
+        return $this-&gt;reference;
     }
 
 
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">equals</span>(<span style="color: #000000">$object</span>) {
-        <span style="color: #A90D91">if</span>(<span style="color: #000000">$object</span> <span style="color: #000000">instanceof</span> <span style="color: #000000">Present</span>) {
-            <span style="color: #A90D91">return</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">reference</span> <span style="color: #000000">===</span> <span style="color: #000000">$object-&gt;</span><span style="color: #836C28">get</span>();
+    public function equals($object) {
+        if($object instanceof Present) {
+            return $this-&gt;reference === $object-&gt;get();
         }
-        <span style="color: #A90D91">return</span> <span style="color: #A90D91">false</span>;
+        return false;
     }
 }
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>It looks the same as the <code>Absent</code> class, but manages to return our instance if necessary and implements the <code>equals</code> method to actually check with the given object.</p>
 
 <p>Edit: Rasmus Schultz pointed out that he uses the ternary operator for lightweight null checks, you may want to <a href="http://blog.mindplay.dk/2013/02/the-or-else-operator-in-php-53.html">check out</a> his post too!</p>
 
-<h2 id="summary:d2267bd319f6db001a379c1a12ddc220">Summary</h2>
+<h2 id="summary">Summary</h2>
 
 <p>As you can see, the adoption of the <code>Optional</code> pattern can greatly increase the expressiveness of your code, by consequently avoiding null and its associated pitfalls. It also makes your code less error-prone, because you can&rsquo;t stumble upon nulls when using this pattern consequently.</p>
 
@@ -309,7 +317,7 @@ b.getOrElse(10)
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

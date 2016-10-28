@@ -20,69 +20,74 @@
 &lt;p&gt;Since I wanted to make it work on my development machine and didn&amp;rsquo;t find something comprehensive for Mac, here is how to do it.&lt;/p&gt;
 
 &lt;p&gt;First, make sure to have a more or less recent JDK installed. Mac ships with Java 6, but I think you want to upgrade to 7. You can grab the JDK packages from &lt;a href=&#34;http://www.oracle.com/technetwork/java/javase/downloads/jdk7-downloads-1880260.html&#34;&gt;here&lt;/a&gt; if you haven&amp;rsquo;t already.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;~ $ java -version
+
+&lt;pre&gt;&lt;code&gt;~ $ java -version
 java version &amp;quot;1.7.0_17&amp;quot;
 Java(TM) SE Runtime Environment (build 1.7.0_17-b02)
 Java HotSpot(TM) 64-Bit Server VM (build 23.7-b01, mixed mode)
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Now to enable the ASM output, you need to pass in two flags, namely &lt;code&gt;UnlockDiagnosticVMOptions&lt;/code&gt; and &lt;code&gt;PrintAssembly&lt;/code&gt;. Because the generated ASM is different for each runtime, you need to pass it to the &lt;code&gt;java&lt;/code&gt; command and not &lt;code&gt;javac&lt;/code&gt;.&lt;/p&gt;
 
 &lt;p&gt;Create a very simple script like this and name it &lt;code&gt;Main.java&lt;/code&gt;:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;public class Main {
+
+&lt;pre&gt;&lt;code&gt;public class Main {
     public static void main(String[] args) {
         System.out.println(&amp;quot;Hello World&amp;quot;);
     }
 }
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Now, we&amp;rsquo;re going to compile and run it with those options:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;michael&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;@daschlbook&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;~/Downloads/java&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;javac&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Main&lt;/span&gt;&lt;span style=&#34;color: #3F6E75&#34;&gt;.java&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;java&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;-XX:+UnlockDiagnosticVMOptions&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;-XX:+PrintAssembly&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Main&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;Java&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;HotSpot(TM)&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;64-Bit&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Server&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;VM&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;warning:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;PrintAssembly&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;is&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;enabled&lt;/span&gt;; &lt;span style=&#34;color: #000000&#34;&gt;turning&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;on&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;DebugNonSafepoints&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;to&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;gain&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;additional&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;output&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;Could&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;not&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;load&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hsdis-amd64&lt;/span&gt;&lt;span style=&#34;color: #3F6E75&#34;&gt;.dylib&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;library&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;not&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;loadable;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;PrintAssembly&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;is&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;disabled&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;Hello&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;World&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+
+&lt;pre&gt;&lt;code&gt;michael@daschlbook ~/Downloads/java $ javac Main.java &amp;amp;&amp;amp; java -XX:+UnlockDiagnosticVMOptions -XX:+PrintAssembly Main
+Java HotSpot(TM) 64-Bit Server VM warning: PrintAssembly is enabled; turning on DebugNonSafepoints to gain additional output
+Could not load hsdis-amd64.dylib; library not loadable; PrintAssembly is disabled
+Hello World
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Woops, not what we expected. The code did compile properly, but HotSpot complains about &lt;code&gt;hsdis-amd64.dylib&lt;/code&gt;. I had to google a bit to find it, but you can download &lt;a href=&#34;https://kenai.com/projects/base-hsdis/downloads/download/gnu-versions/hsdis-amd64.dylib&#34;&gt;the file&lt;/a&gt; from &lt;a href=&#34;https://kenai.com/projects/base-hsdis/downloads/directory/gnu-versions&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
 
 &lt;p&gt;Now we need to put it somewhere to make it loadable, and the easiest thing I found is to put it onto &lt;code&gt;LD_LIBRARY_PATH&lt;/code&gt;. Make sure to not override any other settings, but in my case the variable was empty so its straightforward.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;export LD_LIBRARY_PATH=~/PathToFile/
-&lt;/pre&gt;&lt;/div&gt;
+
+&lt;pre&gt;&lt;code&gt;export LD_LIBRARY_PATH=~/PathToFile/
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;If you run our command again from before, you should now see &amp;ldquo;beautiful&amp;rdquo; ASM code generated:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;michael&lt;/span&gt;@&lt;span style=&#34;color: #000000&#34;&gt;daschlbook&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;~/Downloads/java&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;javac&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Main&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;java&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;java&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;-XX&lt;/span&gt;:&lt;span style=&#34;color: #000000&#34;&gt;+UnlockDiagnosticVMOptions&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;-XX&lt;/span&gt;:&lt;span style=&#34;color: #000000&#34;&gt;+PrintAssembly&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Main&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;Java&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;HotSpot&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;TM&lt;/span&gt;) &lt;span style=&#34;color: #1C01CE&#34;&gt;64&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-Bit&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Server&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;VM&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;warning&lt;/span&gt;: &lt;span style=&#34;color: #000000&#34;&gt;PrintAssembly&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;is&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;enabled&lt;/span&gt;; &lt;span style=&#34;color: #000000&#34;&gt;turning&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;on&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;DebugNonSafepoints&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;to&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;gain&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;additional&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;output&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;Loaded&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;disassembler&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;from&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hsdis-amd64&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;dylib&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;Decoding&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;compiled&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;method&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0x000000010ac74150&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;
-  &lt;span style=&#34;color: #1C01CE&#34;&gt;0x000000010ac742ba&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;add&lt;/span&gt;   [&lt;span style=&#34;color: #000000&#34;&gt;eax&lt;/span&gt;], &lt;span style=&#34;color: #000000&#34;&gt;al&lt;/span&gt;
-[&lt;span style=&#34;color: #000000&#34;&gt;Disassembling&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;mach=&amp;#39;i386&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;base-hsdis&lt;/span&gt;)&lt;span style=&#34;color: #000000&#34;&gt;&amp;#39;&lt;/span&gt;]
-[&lt;span style=&#34;color: #000000&#34;&gt;Entry&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Point&lt;/span&gt;]
-[&lt;span style=&#34;color: #000000&#34;&gt;Constants&lt;/span&gt;]
-  &lt;span style=&#34;color: #633820&#34;&gt;# {method} &amp;#39;hashCode&amp;#39; &amp;#39;()I&amp;#39; in &amp;#39;java/lang/String&amp;#39;&lt;/span&gt;
-  &lt;span style=&#34;color: #633820&#34;&gt;#           [sp+0x30]  (sp of caller)&lt;/span&gt;
-  &lt;span style=&#34;color: #1C01CE&#34;&gt;0x000000010ac742a0&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;inc&lt;/span&gt;   &lt;span style=&#34;color: #000000&#34;&gt;esp&lt;/span&gt;
-  &lt;span style=&#34;color: #1C01CE&#34;&gt;0x000000010ac742a1&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;mov&lt;/span&gt;   &lt;span style=&#34;color: #000000&#34;&gt;edx&lt;/span&gt;, [&lt;span style=&#34;color: #000000&#34;&gt;esi+&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0x8&lt;/span&gt;]
-  &lt;span style=&#34;color: #1C01CE&#34;&gt;0x000000010ac742a4&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;dec&lt;/span&gt;   &lt;span style=&#34;color: #000000&#34;&gt;ecx&lt;/span&gt;
-  &lt;span style=&#34;color: #1C01CE&#34;&gt;0x000000010ac742a5&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;shl&lt;/span&gt;   &lt;span style=&#34;color: #000000&#34;&gt;edx&lt;/span&gt;, &lt;span style=&#34;color: #1C01CE&#34;&gt;3&lt;/span&gt;
-  &lt;span style=&#34;color: #1C01CE&#34;&gt;0x000000010ac742a8&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;dec&lt;/span&gt;   &lt;span style=&#34;color: #000000&#34;&gt;ecx&lt;/span&gt;
-  &lt;span style=&#34;color: #1C01CE&#34;&gt;0x000000010ac742a9&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cmp&lt;/span&gt;   &lt;span style=&#34;color: #000000&#34;&gt;eax&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;edx&lt;/span&gt;
-  &lt;span style=&#34;color: #1C01CE&#34;&gt;0x000000010ac742ab&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;jnz&lt;/span&gt;   &lt;span style=&#34;color: #1C01CE&#34;&gt;0x000000000ac4ba60&lt;/span&gt;  ;   {&lt;span style=&#34;color: #000000&#34;&gt;runtime_call&lt;/span&gt;}
-  &lt;span style=&#34;color: #1C01CE&#34;&gt;0x000000010ac742b1&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;nop&lt;/span&gt;
-  &lt;span style=&#34;color: #1C01CE&#34;&gt;0x000000010ac742b4&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;invalid&lt;/span&gt;   &lt;span style=&#34;color: #1C01CE&#34;&gt;0x0f&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#size=&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;
-  &lt;span style=&#34;color: #1C01CE&#34;&gt;0x000000010ac742b5&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;pop&lt;/span&gt;   &lt;span style=&#34;color: #000000&#34;&gt;ds&lt;/span&gt;
-  &lt;span style=&#34;color: #1C01CE&#34;&gt;0x000000010ac742b6&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;test&lt;/span&gt;  [&lt;span style=&#34;color: #000000&#34;&gt;eax&lt;/span&gt;], &lt;span style=&#34;color: #000000&#34;&gt;al&lt;/span&gt;
-  &lt;span style=&#34;color: #1C01CE&#34;&gt;0x000000010ac742b8&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;add&lt;/span&gt;   [&lt;span style=&#34;color: #000000&#34;&gt;eax&lt;/span&gt;], &lt;span style=&#34;color: #000000&#34;&gt;al&lt;/span&gt;
-  &lt;span style=&#34;color: #1C01CE&#34;&gt;0x000000010ac742ba&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;add&lt;/span&gt;   [&lt;span style=&#34;color: #000000&#34;&gt;eax&lt;/span&gt;], &lt;span style=&#34;color: #000000&#34;&gt;al&lt;/span&gt;
-  &lt;span style=&#34;color: #1C01CE&#34;&gt;0x000000010ac742bc&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;nop&lt;/span&gt;
-[&lt;span style=&#34;color: #000000&#34;&gt;Verified&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Entry&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Point&lt;/span&gt;]
-  &lt;span style=&#34;color: #1C01CE&#34;&gt;0x000000010ac742c0&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;mov&lt;/span&gt;   [&lt;span style=&#34;color: #000000&#34;&gt;esp-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0x14000&lt;/span&gt;], &lt;span style=&#34;color: #000000&#34;&gt;eax&lt;/span&gt;
-  &lt;span style=&#34;color: #1C01CE&#34;&gt;0x000000010ac742c7&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;push&lt;/span&gt;  &lt;span style=&#34;color: #000000&#34;&gt;ebp&lt;/span&gt;
-  &lt;span style=&#34;color: #1C01CE&#34;&gt;0x000000010ac742c8&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;dec&lt;/span&gt;   &lt;span style=&#34;color: #000000&#34;&gt;eax&lt;/span&gt;
-  &lt;span style=&#34;color: #1C01CE&#34;&gt;0x000000010ac742c9&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;sub&lt;/span&gt;   &lt;span style=&#34;color: #000000&#34;&gt;esp&lt;/span&gt;, &lt;span style=&#34;color: #1C01CE&#34;&gt;0x0000000000000020&lt;/span&gt;
-                                                ;&lt;span style=&#34;color: #000000&#34;&gt;*synchronization&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;entry&lt;/span&gt;
-                                                ; &lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;java&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;lang&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;String::hashCode&lt;/span&gt;@&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;line&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1446&lt;/span&gt;)
+
+&lt;pre&gt;&lt;code&gt;michael@daschlbook ~/Downloads/java $ javac Main.java &amp;amp;&amp;amp; java -XX:+UnlockDiagnosticVMOptions -XX:+PrintAssembly Main
+Java HotSpot(TM) 64-Bit Server VM warning: PrintAssembly is enabled; turning on DebugNonSafepoints to gain additional output
+Loaded disassembler from hsdis-amd64.dylib
+Decoding compiled method 0x000000010ac74150:
+  0x000000010ac742ba: add   [eax], al
+[Disassembling for mach=&#39;i386(base-hsdis)&#39;]
+[Entry Point]
+[Constants]
+  # {method} &#39;hashCode&#39; &#39;()I&#39; in &#39;java/lang/String&#39;
+  #           [sp+0x30]  (sp of caller)
+  0x000000010ac742a0: inc   esp
+  0x000000010ac742a1: mov   edx, [esi+0x8]
+  0x000000010ac742a4: dec   ecx
+  0x000000010ac742a5: shl   edx, 3
+  0x000000010ac742a8: dec   ecx
+  0x000000010ac742a9: cmp   eax, edx
+  0x000000010ac742ab: jnz   0x000000000ac4ba60  ;   {runtime_call}
+  0x000000010ac742b1: nop
+  0x000000010ac742b4: invalid   0x0f #size=0
+  0x000000010ac742b5: pop   ds
+  0x000000010ac742b6: test  [eax], al
+  0x000000010ac742b8: add   [eax], al
+  0x000000010ac742ba: add   [eax], al
+  0x000000010ac742bc: nop
+[Verified Entry Point]
+  0x000000010ac742c0: mov   [esp-0x14000], eax
+  0x000000010ac742c7: push  ebp
+  0x000000010ac742c8: dec   eax
+  0x000000010ac742c9: sub   esp, 0x0000000000000020
+                                                ;*synchronization entry
+                                                ; - java.lang.String::hashCode@-1 (line 1446)
 ...
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Now I guess this is were the real fun starts, happy debugging!&lt;/p&gt;
 </description>

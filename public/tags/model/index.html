@@ -7,7 +7,7 @@
 
     <meta name="description" content="">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Model &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -83,15 +83,16 @@ relevant for now, but Lithium provides you with a mechanism to write your own fi
 
 <p>To understand how we can implement our own finder, let&rsquo;s take a look at the built-in <code>first</code> one. If you want to dig deeper, look at the
 <a href="http://lithify.me/docs/lithium/data/Model::_findFilters%28%29">_findFilters()</a> method. The <code>_findFilters()</code> method constructs the default finders and returns them to the <code>Model::config()</code> method so that they are loaded when your model is initialized.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">// ... some php code ...</span>
-<span style="color: #C41A16">&#39;first&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">function</span>(<span style="color: #000000">$self</span>, <span style="color: #000000">$params</span>, <span style="color: #000000">$chain</span>) {
-    <span style="color: #000000">$params</span><span style="color: #633820">[</span><span style="color: #C41A16">&#39;options&#39;</span><span style="color: #633820">][</span><span style="color: #C41A16">&#39;limit&#39;</span><span style="color: #633820">]</span> <span style="color: #000000">=</span> <span style="color: #1C01CE">1</span>;
-    <span style="color: #000000">$data</span> <span style="color: #000000">=</span> <span style="color: #000000">$chain-&gt;next</span>(<span style="color: #000000">$self</span>, <span style="color: #000000">$params</span>, <span style="color: #000000">$chain</span>);
-    <span style="color: #000000">$data</span> <span style="color: #000000">=</span> <span style="color: #000000">is_object</span>(<span style="color: #000000">$data</span>) <span style="color: #000000">?</span> <span style="color: #000000">$data-&gt;rewind</span>() <span style="color: #000000">:</span> <span style="color: #000000">$data</span>;
-    <span style="color: #A90D91">return</span> <span style="color: #000000">$data</span> <span style="color: #000000">?:</span> <span style="color: #A90D91">null</span>;
+
+<pre><code>// ... some php code ...
+'first' =&gt; function($self, $params, $chain) {
+    $params['options']['limit'] = 1;
+    $data = $chain-&gt;next($self, $params, $chain);
+    $data = is_object($data) ? $data-&gt;rewind() : $data;
+    return $data ?: null;
 }
-<span style="color: #177500">// ... more finders ...</span>
-</pre></div>
+// ... more finders ...
+</code></pre>
 
 <p>Your custom finders will also take the same params, so they let&rsquo;s investigate them:</p>
 
@@ -106,66 +107,71 @@ or <code>conditions</code>.</li>
 <a href="http://rad-dev.org/drafts/source/en/02_lithium_basics/02_filters.wiki">Filters</a> pattern in Lithium! In fact, all finders run through the filter system and this is good news for us: we can also adapt the default ones if we need to.</p>
 
 <p>Our code example first sets a <code>limit</code> option and then lets the chain move on. At the end of the chain, it sets the returned data to the beginning if its an object or just returns the array. Now it&rsquo;s time to write our own finder. To keep things simple at first, let&rsquo;s say we want to find the first five datasets in our model. Just add it to your controller for now, we&rsquo;ll see a bit later how to move it to your model.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">Tasks::finder</span>(<span style="color: #C41A16">&#39;firstFive&#39;</span>, <span style="color: #A90D91">function</span>(<span style="color: #000000">$self</span>, <span style="color: #000000">$params</span>, <span style="color: #000000">$chain</span>) {
-    <span style="color: #000000">$params</span><span style="color: #633820">[</span><span style="color: #C41A16">&#39;options&#39;</span><span style="color: #633820">][</span><span style="color: #C41A16">&#39;limit&#39;</span><span style="color: #633820">]</span> <span style="color: #000000">=</span> <span style="color: #1C01CE">5</span>;
-    <span style="color: #000000">$data</span> <span style="color: #000000">=</span> <span style="color: #000000">$chain-&gt;next</span>(<span style="color: #000000">$self</span>, <span style="color: #000000">$params</span>, <span style="color: #000000">$chain</span>);
-    <span style="color: #A90D91">return</span> <span style="color: #000000">$data</span> <span style="color: #000000">?:</span> <span style="color: #A90D91">null</span>;       
+
+<pre><code>Tasks::finder('firstFive', function($self, $params, $chain) {
+    $params['options']['limit'] = 5;
+    $data = $chain-&gt;next($self, $params, $chain);
+    return $data ?: null;       
 });
-</pre></div>
+</code></pre>
 
 <p>In our example we have a <code>Tasks</code> model who just has an <code>id</code> and a task <code>name</code> stored. Note that we use MySQL here so that noone can say I&rsquo;m always using MongoDB ;). We can now run our finder with one of the following methods:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$tasks</span> <span style="color: #000000">=</span> <span style="color: #000000">Tasks::find(</span><span style="color: #C41A16">&#39;firstFive&#39;</span><span style="color: #000000">)</span>
-<span style="color: #000000">$tasks</span> <span style="color: #000000">=</span> <span style="color: #000000">Tasks::firstFive();</span>
-</pre></div>
+
+<pre><code>$tasks = Tasks::find('firstFive')
+$tasks = Tasks::firstFive();
+</code></pre>
 
 <p>If you want to check the results immediately, you can use the handy <code>to('array')</code> method on the result set:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">var_dump(Tasks::firstFive()-&gt;to(</span><span style="color: #C41A16">&#39;array&#39;</span><span style="color: #000000">));</span>
 
-<span style="color: #000000">//</span> <span style="color: #000000">Should</span> <span style="color: #000000">print</span> <span style="color: #000000">something</span> <span style="color: #000000">like</span>
-<span style="color: #000000">array</span>
-    <span style="color: #000000">1</span> <span style="color: #000000">=&gt;</span> 
-        <span style="color: #000000">array</span>
-            <span style="color: #C41A16">&#39;id&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">string</span> <span style="color: #C41A16">&#39;1&#39;</span> <span style="color: #000000">(length=1)</span>
-            <span style="color: #C41A16">&#39;title&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">string</span> <span style="color: #C41A16">&#39;first task&#39;</span> <span style="color: #000000">(length=10)</span>
-    <span style="color: #000000">2</span> <span style="color: #000000">=&gt;</span> 
-        <span style="color: #000000">array</span>
-            <span style="color: #C41A16">&#39;id&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">string</span> <span style="color: #C41A16">&#39;2&#39;</span> <span style="color: #000000">(length=1)</span>
-            <span style="color: #C41A16">&#39;title&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">string</span> <span style="color: #C41A16">&#39;second task&#39;</span> <span style="color: #000000">(length=11)</span>
-    <span style="color: #000000">3</span> <span style="color: #000000">=&gt;</span> 
-        <span style="color: #000000">array</span>
-            <span style="color: #C41A16">&#39;id&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">string</span> <span style="color: #C41A16">&#39;3&#39;</span> <span style="color: #000000">(length=1)</span>
-            <span style="color: #C41A16">&#39;title&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">string</span> <span style="color: #C41A16">&#39;third task&#39;</span> <span style="color: #000000">(length=10)</span>
-    <span style="color: #000000">4</span> <span style="color: #000000">=&gt;</span> 
-        <span style="color: #000000">array</span>
-            <span style="color: #C41A16">&#39;id&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">string</span> <span style="color: #C41A16">&#39;4&#39;</span> <span style="color: #000000">(length=1)</span>
-            <span style="color: #C41A16">&#39;title&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">string</span> <span style="color: #C41A16">&#39;fourth task&#39;</span> <span style="color: #000000">(length=11)</span>
-    <span style="color: #000000">5</span> <span style="color: #000000">=&gt;</span> 
-        <span style="color: #000000">array</span>
-            <span style="color: #C41A16">&#39;id&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">string</span> <span style="color: #C41A16">&#39;5&#39;</span> <span style="color: #000000">(length=1)</span>
-            <span style="color: #C41A16">&#39;title&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">string</span> <span style="color: #C41A16">&#39;fifth task&#39;</span> <span style="color: #000000">(length=10)</span>
-</pre></div>
+<pre><code>var_dump(Tasks::firstFive()-&gt;to('array'));
+
+// Should print something like
+array
+    1 =&gt; 
+        array
+            'id' =&gt; string '1' (length=1)
+            'title' =&gt; string 'first task' (length=10)
+    2 =&gt; 
+        array
+            'id' =&gt; string '2' (length=1)
+            'title' =&gt; string 'second task' (length=11)
+    3 =&gt; 
+        array
+            'id' =&gt; string '3' (length=1)
+            'title' =&gt; string 'third task' (length=10)
+    4 =&gt; 
+        array
+            'id' =&gt; string '4' (length=1)
+            'title' =&gt; string 'fourth task' (length=11)
+    5 =&gt; 
+        array
+            'id' =&gt; string '5' (length=1)
+            'title' =&gt; string 'fifth task' (length=10)
+</code></pre>
 
 <p>If you comment out the limit line in our filter, you can see that you get all results back from the database (just make sure you have more than five rows stored so you can see the difference).</p>
 
 <p>Recently, a new functionality was added to make custom finders a bit more flexible. You can now just hand over an array of params and you don&rsquo;t need to provide a full closure. This comes in handy when you just want to add a <code>limit</code> or a fixed set of <code>conditions</code>. Note that this is currently only available in the <code>x-relationships</code> branch. Once the whole relationship-related code gets merged into master, this feature will also be available.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">Tasks::finder(</span><span style="color: #C41A16">&#39;myAwesomeFinder&#39;</span><span style="color: #000000">,</span> <span style="color: #000000">array(</span>
-    <span style="color: #C41A16">&#39;fields&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">array(</span><span style="color: #C41A16">&#39;id&#39;</span><span style="color: #000000">,</span> <span style="color: #C41A16">&#39;name&#39;</span><span style="color: #000000">),</span>
-    <span style="color: #C41A16">&#39;conditions&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">array(</span><span style="color: #C41A16">&#39;id&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">2)</span>
-<span style="color: #000000">));</span>
 
-<span style="color: #000000">$tasks</span> <span style="color: #000000">=</span> <span style="color: #000000">Tasks::myAwesomeFinder();</span>
-</pre></div>
+<pre><code>Tasks::finder('myAwesomeFinder', array(
+    'fields' =&gt; array('id', 'name'),
+    'conditions' =&gt; array('id' =&gt; 2)
+));
+
+$tasks = Tasks::myAwesomeFinder();
+</code></pre>
 
 <p>You can also add the custom finder in your model, so you don&rsquo;t have to deal with it in the controller. According to the MVC pattern, I&rsquo;d recomend you to place it there. You can override the <code>__init()</code> method so that your finder will be loaded at runtime.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">public</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">function</span> <span style="color: #000000">__init</span>() {
-    <span style="color: #000000">parent::__init</span>();
-    <span style="color: #A90D91">static</span><span style="color: #000000">::finder</span>(<span style="color: #C41A16">&#39;firstFive&#39;</span>, <span style="color: #A90D91">function</span>(<span style="color: #000000">$self</span>, <span style="color: #000000">$params</span>, <span style="color: #000000">$chain</span>) {
-        <span style="color: #000000">$params</span><span style="color: #633820">[</span><span style="color: #C41A16">&#39;options&#39;</span><span style="color: #633820">][</span><span style="color: #C41A16">&#39;limit&#39;</span><span style="color: #633820">]</span> <span style="color: #000000">=</span> <span style="color: #1C01CE">5</span>;
-        <span style="color: #000000">$data</span> <span style="color: #000000">=</span> <span style="color: #000000">$chain-&gt;next</span>(<span style="color: #000000">$self</span>, <span style="color: #000000">$params</span>, <span style="color: #000000">$chain</span>);
-        <span style="color: #A90D91">return</span> <span style="color: #000000">$data</span> <span style="color: #000000">?:</span> <span style="color: #A90D91">null</span>;
+
+<pre><code>public static function __init() {
+    parent::__init();
+    static::finder('firstFive', function($self, $params, $chain) {
+        $params['options']['limit'] = 5;
+        $data = $chain-&gt;next($self, $params, $chain);
+        return $data ?: null;
     });
 }
-</pre></div>
+</code></pre>
 
 <p>I think this is enough for a short introduction into custom finders, if you want to find out more you should check out the <a href="http://lithify.me/docs/lithium/data/Model::finder%28%29">Model::finder</a>
 method and poke around in the <a href="http://lithify.me/docs/lithium/data/Model::find%28%29">Model::find</a> source. Once the model part of the <a href="http://rad-dev.org/drafts/source">drafts</a> is finished, you&rsquo;ll finde more detailed documentation on this topic.</p>
@@ -181,7 +187,7 @@ method and poke around in the <a href="http://lithify.me/docs/lithium/data/Model
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

@@ -21,21 +21,23 @@
 
 &lt;p&gt;The main purpose of this post is to show you how core tests work and were the core team needs help to improve things further. At the end of this post you should be able to write new and extend existing test cases. A side effect of this is that you&amp;rsquo;ll learn parts of the core from the inside out while you&amp;rsquo;re testing them.&lt;/p&gt;
 
-&lt;h2 id=&#34;introducing-core-tests:ecedfe84f7ffd774ecf4f5159f0f34ea&#34;&gt;Introducing core tests&lt;/h2&gt;
+&lt;h2 id=&#34;introducing-core-tests&#34;&gt;Introducing core tests&lt;/h2&gt;
 
 &lt;p&gt;Before you start writing your own tests, make sure the existing cases work as expected (without any &lt;code&gt;Exceptions&lt;/code&gt; or &lt;code&gt;Errors&lt;/code&gt;). For developing directly in the core, I&amp;rsquo;d recommend you a slightly different setup than the default one. You should clone the &lt;code&gt;framework&lt;/code&gt; and the &lt;code&gt;lithium&lt;/code&gt; repository in different directories so you can quickly exchange functionality and symlink stuff if you have to. My setup looks similar to this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;- web
+
+&lt;pre&gt;&lt;code&gt;- web
     - framework
     - libraries
         - lithium
         - li3_docs
         - manual
         - lithium_qa
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Now tell your &lt;code&gt;framework&lt;/code&gt; to look at the right path, hop into &lt;code&gt;app/config/bootstrap/libraries.php&lt;/code&gt; and modify the &lt;code&gt;LITHIUM_LIBRARY_PATH&lt;/code&gt;.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;define(&amp;#39;LITHIUM_LIBRARY_PATH&amp;#39;, dirname(dirname(LITHIUM_APP_PATH)) . &amp;#39;/libraries&amp;#39;);
-&lt;/pre&gt;&lt;/div&gt;
+
+&lt;pre&gt;&lt;code&gt;define(&#39;LITHIUM_LIBRARY_PATH&#39;, dirname(dirname(LITHIUM_APP_PATH)) . &#39;/libraries&#39;);
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;If you haven&amp;rsquo;t already, make sure that the &lt;code&gt;app/resources&lt;/code&gt; folder is writable.&lt;/p&gt;
 
@@ -45,7 +47,7 @@
 
 &lt;p&gt;If you have any failing tests, try to track down if it is your setup or some test cases are not working correctly. If you&amp;rsquo;re unsure, you can always get feedback on #li3 at freenode.&lt;/p&gt;
 
-&lt;h2 id=&#34;understanding-test-filters:ecedfe84f7ffd774ecf4f5159f0f34ea&#34;&gt;Understanding test filters&lt;/h2&gt;
+&lt;h2 id=&#34;understanding-test-filters&#34;&gt;Understanding test filters&lt;/h2&gt;
 
 &lt;p&gt;Now that existing tests are running as expected, take a look at the buttons on the top. The &lt;code&gt;Affected&lt;/code&gt;, &lt;code&gt;Complexity&lt;/code&gt;, &lt;code&gt;Coverage&lt;/code&gt; and &lt;code&gt;Profiler&lt;/code&gt; labeled buttons are called &amp;ldquo;test filters&amp;rdquo; and perform specific tasks on the selected group of test cases.&lt;/p&gt;
 
@@ -62,86 +64,90 @@
 
 &lt;p&gt;Make sure to get familiar with these filters as they are crucial in verifying and investigating your written tests.&lt;/p&gt;
 
-&lt;h2 id=&#34;investigating-core-tests:ecedfe84f7ffd774ecf4f5159f0f34ea&#34;&gt;Investigating core tests&lt;/h2&gt;
+&lt;h2 id=&#34;investigating-core-tests&#34;&gt;Investigating core tests&lt;/h2&gt;
 
 &lt;p&gt;The best way to get familiar with core tests is to look at existing ones. Let&amp;rsquo;s investigate one test case of the &lt;code&gt;ValidatorTest&lt;/code&gt; class.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #177500&#34;&gt;/**&lt;/span&gt;
-&lt;span style=&#34;color: #177500&#34;&gt; * Tests that new methods can be called on Validator by adding rules using Validator::add().&lt;/span&gt;
-&lt;span style=&#34;color: #177500&#34;&gt; *&lt;/span&gt;
-&lt;span style=&#34;color: #177500&#34;&gt; * @return void&lt;/span&gt;
-&lt;span style=&#34;color: #177500&#34;&gt; */&lt;/span&gt;
-&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;testAddCustomRegexMethods&lt;/span&gt;() {
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertNull&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;Validator::rules&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;foo&amp;#39;&lt;/span&gt;));
 
-    &lt;span style=&#34;color: #000000&#34;&gt;Validator::add&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;foo&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/^foo$/&amp;#39;&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertTrue&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;Validator::isFoo&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;foo&amp;#39;&lt;/span&gt;));
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertFalse&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;Validator::isFoo&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;bar&amp;#39;&lt;/span&gt;));
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertTrue&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;in_array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;foo&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;Validator::rules&lt;/span&gt;()));
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertEqual&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/^foo$/&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;Validator::rules&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;foo&amp;#39;&lt;/span&gt;));
+&lt;pre&gt;&lt;code&gt;/**
+ * Tests that new methods can be called on Validator by adding rules using Validator::add().
+ *
+ * @return void
+ */
+public function testAddCustomRegexMethods() {
+    $this-&amp;gt;assertNull(Validator::rules(&#39;foo&#39;));
 
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;expectException&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Rule `bar` is not a validation rule.&amp;quot;&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertNull&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;Validator::isBar&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;foo&amp;#39;&lt;/span&gt;));
+    Validator::add(&#39;foo&#39;, &#39;/^foo$/&#39;);
+    $this-&amp;gt;assertTrue(Validator::isFoo(&#39;foo&#39;));
+    $this-&amp;gt;assertFalse(Validator::isFoo(&#39;bar&#39;));
+    $this-&amp;gt;assertTrue(in_array(&#39;foo&#39;, Validator::rules()));
+    $this-&amp;gt;assertEqual(&#39;/^foo$/&#39;, Validator::rules(&#39;foo&#39;));
+
+    $this-&amp;gt;expectException(&amp;quot;Rule `bar` is not a validation rule.&amp;quot;);
+    $this-&amp;gt;assertNull(Validator::isBar(&#39;foo&#39;));
 }
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;If you look closely, you can identify a pattern here that will come frequently. Before you test a specific functionality/value, make sure it isn&amp;rsquo;t already set. You can do this with &lt;code&gt;assertFalse&lt;/code&gt;, &lt;code&gt;assertNull&lt;/code&gt; or maybe &lt;code&gt;assertTrue(empty(..))&lt;/code&gt;. Next, perform the piece of code you want to test (like adding a custom regex rule here) and then perform checks on the entity again. A good rule of thumb is to test normal cases first and then exceptional cases (which often raise &lt;code&gt;Exceptions&lt;/code&gt;). You can also break down complicated tests in smaller ones and add helper methods that get called from the main test case.&lt;/p&gt;
 
 &lt;p&gt;If your tests contain dependencies, make sure to initialize them in &lt;code&gt;setUp()&lt;/code&gt; and remove/reset them in &lt;code&gt;tearDown()&lt;/code&gt;. These methods get called before/after all tests in the test class and should leave the environment in a clean state. This prevents unexpected failures in later tests and also keeps the memory usage on a normal level. Here&amp;rsquo;s an example of the &lt;code&gt;MongoDb&lt;/code&gt; test class:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;setUp&lt;/span&gt;() {
-    &lt;span style=&#34;color: #000000&#34;&gt;Connections::config&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;lithium_mongo_test&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;_testConfig&lt;/span&gt;));
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;db&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Connections::get&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;lithium_mongo_test&amp;#39;&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$model&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;_model&lt;/span&gt;;
-    &lt;span style=&#34;color: #000000&#34;&gt;$model::config&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;key&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;_id&amp;#39;&lt;/span&gt;));
-    &lt;span style=&#34;color: #000000&#34;&gt;$model::resetConnection&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;false&lt;/span&gt;);
 
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;query&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Query&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;compact&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;model&amp;#39;&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;entity&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Document&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;compact&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;model&amp;#39;&lt;/span&gt;))
+&lt;pre&gt;&lt;code&gt;public function setUp() {
+    Connections::config(array(&#39;lithium_mongo_test&#39; =&amp;gt; $this-&amp;gt;_testConfig));
+    $this-&amp;gt;db = Connections::get(&#39;lithium_mongo_test&#39;);
+    $model = $this-&amp;gt;_model;
+    $model::config(array(&#39;key&#39; =&amp;gt; &#39;_id&#39;));
+    $model::resetConnection(false);
+
+    $this-&amp;gt;query = new Query(compact(&#39;model&#39;) + array(
+        &#39;entity&#39; =&amp;gt; new Document(compact(&#39;model&#39;))
     ));
 }
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;tearDown&lt;/span&gt;() {
-    &lt;span style=&#34;color: #A90D91&#34;&gt;try&lt;/span&gt; {
-        &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;db-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;delete&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;query&lt;/span&gt;);
-    } &lt;span style=&#34;color: #A90D91&#34;&gt;catch&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;Exception&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$e&lt;/span&gt;) {}
-    &lt;span style=&#34;color: #000000&#34;&gt;unset&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;query&lt;/span&gt;);
+public function tearDown() {
+    try {
+        $this-&amp;gt;db-&amp;gt;delete($this-&amp;gt;query);
+    } catch (Exception $e) {}
+    unset($this-&amp;gt;query);
 }
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;The &lt;code&gt;setUp()&lt;/code&gt; method initializes a test connection to the database and &lt;code&gt;tearDown()&lt;/code&gt; makes sure that the test database gets deleted and the &lt;code&gt;$this-&amp;gt;query&lt;/code&gt; object is freed.&lt;/p&gt;
 
 &lt;p&gt;There are a lot more patterns that you&amp;rsquo;ll learn while writing core tests, but this should give you a start.&lt;/p&gt;
 
-&lt;h2 id=&#34;qa-your-code:ecedfe84f7ffd774ecf4f5159f0f34ea&#34;&gt;QA your code&lt;/h2&gt;
+&lt;h2 id=&#34;qa-your-code&#34;&gt;QA your code&lt;/h2&gt;
 
 &lt;p&gt;To ensure a high-quality codebase, Lithium enforces a set of coding standards which can be found &lt;a href=&#34;https://github.com/UnionOfRAD/lithium/wiki/Coding-Standards&#34;&gt;here&lt;/a&gt;. You don&amp;rsquo;t have to know every part of the standard by heart, because Lithium provides a plugin called &lt;a href=&#34;https://github.com/UnionOfRAD/lithium_qa&#34;&gt;lithium_qa&lt;/a&gt;. This plugin checks your code if it complies to the standards and shows you what parts of it are wrong. I recommend you to clone it into the &lt;code&gt;libraries&lt;/code&gt; directory shown above. It is also a good idea to add the &lt;code&gt;li3&lt;/code&gt; command to your &lt;code&gt;PATH&lt;/code&gt; so your calls don&amp;rsquo;t get too verbose.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;cd&lt;/span&gt; /usr/local/bin
-&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;sudo ln -s /path/to/lithium/console/li3 li3
-&lt;/pre&gt;&lt;/div&gt;
+
+&lt;pre&gt;&lt;code&gt;$ cd /usr/local/bin
+$ sudo ln -s /path/to/lithium/console/li3 li3
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Let&amp;rsquo;s assume we want to check classes in the &lt;code&gt;lithium\core&lt;/code&gt; namespace:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;cd &lt;/span&gt;lithium_qa
-&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;li3 syntax ../lithium/core
-&lt;span style=&#34;color: #000000&#34;&gt;[&lt;/span&gt;Passed &lt;span style=&#34;color: #000000&#34;&gt;]&lt;/span&gt; syntax check of &lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;core/Object.php&lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;[&lt;/span&gt;Passed &lt;span style=&#34;color: #000000&#34;&gt;]&lt;/span&gt; syntax check of &lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;core/Adaptable.php&lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;[&lt;/span&gt;Failed &lt;span style=&#34;color: #000000&#34;&gt;]&lt;/span&gt; syntax check of &lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;core/StaticObject.php&lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;
+
+&lt;pre&gt;&lt;code&gt;$ cd lithium_qa
+$ li3 syntax ../lithium/core
+[Passed ] syntax check of `core/Object.php`
+[Passed ] syntax check of `core/Adaptable.php`
+[Failed ] syntax check of `core/StaticObject.php`
 59| 101| Maximum line length exceeded
-&lt;span style=&#34;color: #000000&#34;&gt;[&lt;/span&gt;Passed &lt;span style=&#34;color: #000000&#34;&gt;]&lt;/span&gt; syntax check of &lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;core/Environment.php&lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;[&lt;/span&gt;Passed &lt;span style=&#34;color: #000000&#34;&gt;]&lt;/span&gt; syntax check of &lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;core/ConfigException.php&lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;[&lt;/span&gt;Passed &lt;span style=&#34;color: #000000&#34;&gt;]&lt;/span&gt; syntax check of &lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;core/ClassNotFoundException.php&lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;[&lt;/span&gt;Passed &lt;span style=&#34;color: #000000&#34;&gt;]&lt;/span&gt; syntax check of &lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;core/NetworkException.php&lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;[&lt;/span&gt;Passed &lt;span style=&#34;color: #000000&#34;&gt;]&lt;/span&gt; syntax check of &lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;core/ErrorHandler.php&lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;[&lt;/span&gt;Passed &lt;span style=&#34;color: #000000&#34;&gt;]&lt;/span&gt; syntax check of &lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;core/Libraries.php&lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+[Passed ] syntax check of `core/Environment.php`
+[Passed ] syntax check of `core/ConfigException.php`
+[Passed ] syntax check of `core/ClassNotFoundException.php`
+[Passed ] syntax check of `core/NetworkException.php`
+[Passed ] syntax check of `core/ErrorHandler.php`
+[Passed ] syntax check of `core/Libraries.php`
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;There you can see that each core class passed the test except the &lt;code&gt;StaticObject&lt;/code&gt; class which has one line (59) that is too long. Now you can edit that file and modify it accordingly. If you&amp;rsquo;re not sure what the output means, head back to the &lt;a href=&#34;https://github.com/UnionOfRAD/lithium/wiki/Coding-Standards&#34;&gt;official standard&lt;/a&gt; and look for the corresponding entry.&lt;/p&gt;
 
 &lt;p&gt;Please make sure that all code you want to see in the core respects these standards. You can also use it to test your own code as well!&lt;/p&gt;
 
-&lt;h2 id=&#34;getting-help:ecedfe84f7ffd774ecf4f5159f0f34ea&#34;&gt;Getting help&lt;/h2&gt;
+&lt;h2 id=&#34;getting-help&#34;&gt;Getting help&lt;/h2&gt;
 
 &lt;p&gt;If you&amp;rsquo;re new to code testing in Lithium, make sure to read the official guide in the &lt;a href=&#34;http://lithify.me/docs/manual/10_testing/readme.wiki&#34;&gt;manual&lt;/a&gt; first. Next, check out the main &lt;a href=&#34;https://github.com/UnionOfRAD/lithium/issues/17&#34;&gt;testing ticket on GitHub&lt;/a&gt; which is constantly updated and shows what classes need testing. If you need help on testing the core, make sure to join #li3-core on freenode and ping one of the core developers. You can also contact me directly and I&amp;rsquo;ll make sure to help you out or point you in the right direction.&lt;/p&gt;
 
-&lt;h2 id=&#34;wrapping-up:ecedfe84f7ffd774ecf4f5159f0f34ea&#34;&gt;Wrapping up&lt;/h2&gt;
+&lt;h2 id=&#34;wrapping-up&#34;&gt;Wrapping up&lt;/h2&gt;
 
 &lt;p&gt;You should now be able to run the core tests, extend and write your own and also pass your code through the official code quality assurance tool. Please help out and fork the core, run it on your machine, check for errors, extend current tests, write new ones and correct QA issues. If we all work together, I&amp;rsquo;m sure we can make Lithium the best tested web framework out there. If you want to see more information regarding this topic on my blog, comment down below and I&amp;rsquo;ll see what I can provide.&lt;/p&gt;
 
@@ -157,7 +163,7 @@
       <guid>http://nitschinger.at/Understanding-the-Lithium-Router-Part-2/</guid>
       <description>
 
-&lt;h3 id=&#34;introduction:7d5f34c0cc895ef21f6fb009931e6d2c&#34;&gt;Introduction&lt;/h3&gt;
+&lt;h3 id=&#34;introduction&#34;&gt;Introduction&lt;/h3&gt;
 
 &lt;p&gt;Routes play an essential role in your request/response-cycle and therefore should also be tested like any other component that you develop. As the Lithium routing infrastructure also consists of classes and methods, we can run unit and integration tests against them.&lt;/p&gt;
 
@@ -165,7 +171,7 @@
 
 &lt;p&gt;Let&amp;rsquo;s cover unit tests first and then move on to the integration tests. Afterwards, we&amp;rsquo;ll look at testing reverse routes (more on that later).&lt;/p&gt;
 
-&lt;h3 id=&#34;unit-testing:7d5f34c0cc895ef21f6fb009931e6d2c&#34;&gt;Unit Testing&lt;/h3&gt;
+&lt;h3 id=&#34;unit-testing&#34;&gt;Unit Testing&lt;/h3&gt;
 
 &lt;p&gt;Let me clarify one thing first: in general, you don&amp;rsquo;t need to unit test your routes (instead you only need to do integration testing, but more on that later). There core developers did an awesome job in unit testing the routing infrastructure for you, so there is no need for you to duplicate their tests.&lt;/p&gt;
 
@@ -174,286 +180,297 @@
 &lt;p&gt;If we don&amp;rsquo;t know how to implement unit tests, it is always a good idea to look at the core tests, as they show us how to do this properly and at the same time give us use cases that we can use in our own application. We can also copy and modify some tests, because often our own tests will be similar.&lt;/p&gt;
 
 &lt;p&gt;Before we can unit test some routes, we need to add a unit test file. According to the namespace standard, let&amp;rsquo;s create the appropriate file (&lt;code&gt;RouteTest.php&lt;/code&gt;) in &lt;code&gt;app\tests\cases\net\http&lt;/code&gt;:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
-&lt;span style=&#34;color: #A90D91&#34;&gt;namespace&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;app\tests\cases\net\http&lt;/span&gt;;
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;lithium\action\Request&lt;/span&gt;;
-&lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;lithium\net\http\Route&lt;/span&gt;;
+&lt;pre&gt;&lt;code&gt;&amp;lt;?php
+namespace app\tests\cases\net\http;
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;RouteTest&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;extends&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;\lithium\test\Unit&lt;/span&gt; {
+use lithium\action\Request;
+use lithium\net\http\Route;
+
+class RouteTest extends \lithium\test\Unit {
 
 }
 
-&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+?&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;In our first test, we want to make sure that the route &lt;code&gt;/foo&lt;/code&gt;, matches the &lt;code&gt;FooController&lt;/code&gt; and the &lt;code&gt;index&lt;/code&gt; action. Insert the following test case in your previously created class and run it through the test runner (&amp;ldquo;&lt;a href=&#34;http://example.com/test/app/tests/cases/net/http/RouteTest&amp;quot;&#34;&gt;http://example.com/test/app/tests/cases/net/http/RouteTest&amp;quot;&lt;/a&gt;).&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;testFooRoute&lt;/span&gt;() {
-    &lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;controller&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;foo&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;action&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;index&amp;#39;&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$route&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Route&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;template&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/foo&amp;#39;&lt;/span&gt;,
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;params&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt;
+
+&lt;pre&gt;&lt;code&gt;public function testFooRoute() {
+    $params = array(&#39;controller&#39; =&amp;gt; &#39;foo&#39;, &#39;action&#39; =&amp;gt; &#39;index&#39;);
+    $route = new Route(array(
+        &#39;template&#39; =&amp;gt; &#39;/foo&#39;,
+        &#39;params&#39; =&amp;gt; $params
     ));
 
-    &lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Request&lt;/span&gt;();
-    &lt;span style=&#34;color: #000000&#34;&gt;$request-&amp;gt;url&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/foo&amp;#39;&lt;/span&gt;;
+    $request = new Request();
+    $request-&amp;gt;url = &#39;/foo&#39;;
 
-    &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$route-&amp;gt;parse&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertEqual&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$result-&amp;gt;params&lt;/span&gt;);
+    $result = $route-&amp;gt;parse($request);
+    $this-&amp;gt;assertEqual($params, $result-&amp;gt;params);
 }
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;If we run &lt;code&gt;Router::connect()&lt;/code&gt;, the &lt;code&gt;Router&lt;/code&gt; basically creates a new &lt;code&gt;Route&lt;/code&gt; object and passes the arguments to its constructor. In our tests we do the same, but we initialize the Route directly. This way, we can test the route in isolation. When we create a new route, the &lt;code&gt;template&lt;/code&gt; param is the URL that our route will match (remember that it can also contain non-static identifiers). The params argument tells
 the route what to return when the template matches the request. We then create a simple &lt;code&gt;Request&lt;/code&gt; object (that mimics a request by the browser) and hard-code a URL (in the real application, the &lt;code&gt;$request-&amp;gt;url&lt;/code&gt; will be dynamically assigned). Now we run &lt;code&gt;parse()&lt;/code&gt;,
 that&amp;rsquo;s exactly what the Router does route for route when the &lt;code&gt;Dispatcher&lt;/code&gt; asks him to route the request. The parse method returns a &lt;code&gt;Request&lt;/code&gt; object with the params set accordingly when it matches, and false when it does not.&lt;/p&gt;
 
 &lt;p&gt;To get more familiar, we&amp;rsquo;ll add some more assertions to this test, just append them after the last &lt;code&gt;assertEqual()&lt;/code&gt; and run the tests again. You can see that this route really matches only &lt;code&gt;/foo&lt;/code&gt; and nothing else:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;$&lt;span style=&#34;color: #000000&#34;&gt;request&lt;/span&gt;-&amp;gt;url = &amp;#39;/bar&amp;#39;;
-$&lt;span style=&#34;color: #000000&#34;&gt;result&lt;/span&gt; = $&lt;span style=&#34;color: #000000&#34;&gt;route&lt;/span&gt;-&amp;gt;parse($&lt;span style=&#34;color: #000000&#34;&gt;request&lt;/span&gt;);
-$&lt;span style=&#34;color: #000000&#34;&gt;this&lt;/span&gt;-&amp;gt;assertFalse($&lt;span style=&#34;color: #000000&#34;&gt;result&lt;/span&gt;);
 
-$&lt;span style=&#34;color: #000000&#34;&gt;request&lt;/span&gt;-&amp;gt;url = &amp;#39;/foo/edit&amp;#39;;
-$&lt;span style=&#34;color: #000000&#34;&gt;result&lt;/span&gt; = $&lt;span style=&#34;color: #000000&#34;&gt;route&lt;/span&gt;-&amp;gt;parse($&lt;span style=&#34;color: #000000&#34;&gt;request&lt;/span&gt;);
-$&lt;span style=&#34;color: #000000&#34;&gt;this&lt;/span&gt;-&amp;gt;assertFalse($&lt;span style=&#34;color: #000000&#34;&gt;result&lt;/span&gt;);
-&lt;/pre&gt;&lt;/div&gt;
+&lt;pre&gt;&lt;code&gt;$request-&amp;gt;url = &#39;/bar&#39;;
+$result = $route-&amp;gt;parse($request);
+$this-&amp;gt;assertFalse($result);
+
+$request-&amp;gt;url = &#39;/foo/edit&#39;;
+$result = $route-&amp;gt;parse($request);
+$this-&amp;gt;assertFalse($result);
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Now that we wrote some basic tests, let&amp;rsquo;s move on to a slightly more complex example with a non-static routing template. The route &lt;code&gt;/users/{:id}&lt;/code&gt; matches with or without an ID given and passes it as a param in the returned request object.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;testUserWithIdRoute&lt;/span&gt;() {
-    &lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;id&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;null&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;action&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;index&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;controller&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;users&amp;#39;&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$route&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Route&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;template&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/users/{:id}&amp;#39;&lt;/span&gt;,
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;params&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt;
+
+&lt;pre&gt;&lt;code&gt;public function testUserWithIdRoute() {
+    $params = array(&#39;id&#39; =&amp;gt; null, &#39;action&#39; =&amp;gt; &#39;index&#39;, &#39;controller&#39; =&amp;gt; &#39;users&#39;);
+    $route = new Route(array(
+        &#39;template&#39; =&amp;gt; &#39;/users/{:id}&#39;,
+        &#39;params&#39; =&amp;gt; $params
     ));
-    &lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Request&lt;/span&gt;();
+    $request = new Request();
 
-    &lt;span style=&#34;color: #000000&#34;&gt;$request-&amp;gt;url&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/users&amp;#39;&lt;/span&gt;;
-    &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$route-&amp;gt;parse&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertEqual&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$result-&amp;gt;params&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertNull&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$result-&amp;gt;params&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;id&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;]&lt;/span&gt;);
+    $request-&amp;gt;url = &#39;/users&#39;;
+    $result = $route-&amp;gt;parse($request);
+    $this-&amp;gt;assertEqual($params, $result-&amp;gt;params);
+    $this-&amp;gt;assertNull($result-&amp;gt;params[&#39;id&#39;]);
 
-    &lt;span style=&#34;color: #000000&#34;&gt;$request-&amp;gt;url&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/users/4&amp;#39;&lt;/span&gt;;
-    &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$route-&amp;gt;parse&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertEqual&lt;/span&gt;(&lt;span style=&#34;color: #1C01CE&#34;&gt;4&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$result-&amp;gt;params&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;id&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;]&lt;/span&gt;);
+    $request-&amp;gt;url = &#39;/users/4&#39;;
+    $result = $route-&amp;gt;parse($request);
+    $this-&amp;gt;assertEqual(4, $result-&amp;gt;params[&#39;id&#39;]);
 }
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;We can also test for various HTTP parameters like the request type (typically GET, PUT, POST and DELETE). Let&amp;rsquo;s assume we want to match &lt;code&gt;/cocktails/delete/{:id}&lt;/code&gt; only when the id is present (non-optional), it is numeric and the request method is &lt;code&gt;delete&lt;/code&gt;. The equivalent router call in our &lt;code&gt;routes.php&lt;/code&gt; file would be &lt;code&gt;Router::connect(&#39;/cocktails/delete/{:id:\d+}, array(&#39;controller&#39; =&amp;gt; &#39;cocktails&#39;, 
 &#39;action&#39; =&amp;gt; &#39;delete&#39;, &#39;http:method&#39; =&amp;gt; &#39;DELETE&#39;));&lt;/code&gt;.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;testCocktailDeleteRoute&lt;/span&gt;() {
-    &lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;controller&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;cocktails&amp;#39;&lt;/span&gt;,
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;action&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;delete&amp;#39;&lt;/span&gt;,
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;http:method&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;DELETE&amp;#39;&lt;/span&gt;
+
+&lt;pre&gt;&lt;code&gt;public function testCocktailDeleteRoute() {
+    $params = array(
+        &#39;controller&#39; =&amp;gt; &#39;cocktails&#39;,
+        &#39;action&#39; =&amp;gt; &#39;delete&#39;,
+        &#39;http:method&#39; =&amp;gt; &#39;DELETE&#39;
     );
-    &lt;span style=&#34;color: #000000&#34;&gt;$route&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Route&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;template&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/cocktails/delete/{:id:\d+}&amp;#39;&lt;/span&gt;,
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;params&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt;
+    $route = new Route(array(
+        &#39;template&#39; =&amp;gt; &#39;/cocktails/delete/{:id:\d+}&#39;,
+        &#39;params&#39; =&amp;gt; $params
     ));
 
-    &lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Request&lt;/span&gt;();
-    &lt;span style=&#34;color: #000000&#34;&gt;$request-&amp;gt;url&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/cocktails/delete/4&amp;#39;&lt;/span&gt;;
-    &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$route-&amp;gt;parse&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertFalse&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt;);
+    $request = new Request();
+    $request-&amp;gt;url = &#39;/cocktails/delete/4&#39;;
+    $result = $route-&amp;gt;parse($request);
+    $this-&amp;gt;assertFalse($result);
 
-    &lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Request&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;env&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;REQUEST_METHOD&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;DELETE&amp;#39;&lt;/span&gt;)));
-    &lt;span style=&#34;color: #000000&#34;&gt;$request-&amp;gt;url&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/cocktails/delete&amp;#39;&lt;/span&gt;;
-    &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$route-&amp;gt;parse&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertFalse&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt;);
+    $request = new Request(array(&#39;env&#39; =&amp;gt; array(&#39;REQUEST_METHOD&#39; =&amp;gt; &#39;DELETE&#39;)));
+    $request-&amp;gt;url = &#39;/cocktails/delete&#39;;
+    $result = $route-&amp;gt;parse($request);
+    $this-&amp;gt;assertFalse($result);
 
-    &lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Request&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;env&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;REQUEST_METHOD&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;DELETE&amp;#39;&lt;/span&gt;)));
-    &lt;span style=&#34;color: #000000&#34;&gt;$request-&amp;gt;url&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/cocktails/delete/4&amp;#39;&lt;/span&gt;;
-    &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$route-&amp;gt;parse&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertEqual&lt;/span&gt;(&lt;span style=&#34;color: #1C01CE&#34;&gt;4&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$result-&amp;gt;params&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;id&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;]&lt;/span&gt;);
+    $request = new Request(array(&#39;env&#39; =&amp;gt; array(&#39;REQUEST_METHOD&#39; =&amp;gt; &#39;DELETE&#39;)));
+    $request-&amp;gt;url = &#39;/cocktails/delete/4&#39;;
+    $result = $route-&amp;gt;parse($request);
+    $this-&amp;gt;assertEqual(4, $result-&amp;gt;params[&#39;id&#39;]);
 }
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;As stated in the first lines of this section, you won&amp;rsquo;t need to do this in your application code, but writing this kind of tests has one more benefit: if something goes wrong, it is a great tool to understand the inner workings and also to test scenarios in isolation. If you encounter any bugs in the router, writing a unit test that shows the failure is also highly recommended, so that the core team is able to track down your problem and reproduce it in their environments. Also, writing failing test cases ensures that after a bug is fixed, it never happens again.&lt;/p&gt;
 
 &lt;p&gt;A great way to inspect and debug routes is the &lt;code&gt;export()&lt;/code&gt; method. With this method, you can inspect the full state of an route and run assertions against it. Let&amp;rsquo;s try this in a test:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;testExport&lt;/span&gt;() {
-    &lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;controller&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;posts&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;action&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;index&amp;#39;&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$route&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Route&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;template&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/read&amp;#39;&lt;/span&gt;,
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;params&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt;
+
+&lt;pre&gt;&lt;code&gt;public function testExport() {
+    $params = array(&#39;controller&#39; =&amp;gt; &#39;posts&#39;, &#39;action&#39; =&amp;gt; &#39;index&#39;);
+    $route = new Route(array(
+        &#39;template&#39; =&amp;gt; &#39;/read&#39;,
+        &#39;params&#39; =&amp;gt; $params
     ));
 
-    &lt;span style=&#34;color: #000000&#34;&gt;$exported&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$route-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;export&lt;/span&gt;();
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertEqual&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$exported&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;params&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;]&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertEqual&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/read&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$exported&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;template&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;]&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertFalse&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$exported&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;handler&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;]&lt;/span&gt;);
+    $exported = $route-&amp;gt;export();
+    $this-&amp;gt;assertEqual($params, $exported[&#39;params&#39;]);
+    $this-&amp;gt;assertEqual(&#39;/read&#39;, $exported[&#39;template&#39;]);
+    $this-&amp;gt;assertFalse($exported[&#39;handler&#39;]);
 }
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Now let&amp;rsquo;s move on to something that we should really use in our applications, integration testing.&lt;/p&gt;
 
-&lt;h3 id=&#34;integration-testing:7d5f34c0cc895ef21f6fb009931e6d2c&#34;&gt;Integration Testing&lt;/h3&gt;
+&lt;h3 id=&#34;integration-testing&#34;&gt;Integration Testing&lt;/h3&gt;
 
 &lt;p&gt;Now that we&amp;rsquo;ve tested each route in isolation, it&amp;rsquo;s time to get a higher-level view of our application. When we test more than one class in isolation, we call that &amp;ldquo;Integration Testing&amp;rdquo;. Technically, these tests are similar to normal unit tests, so you don&amp;rsquo;t need to learn something new. In a typical framework request, the &lt;code&gt;Dispatcher&lt;/code&gt; calls the &lt;code&gt;Router&lt;/code&gt; with a &lt;code&gt;Request&lt;/code&gt;, and the router matches it against all connected routes and checks if there is a match.&lt;/p&gt;
 
 &lt;p&gt;The following code snippets are suited for a default installation. Create a &lt;code&gt;RouterTest.php&lt;/code&gt; file in &lt;code&gt;app/tests/integration/net/http&lt;/code&gt;. Additionally, you may also need to create the appropriate subdirectories in there.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
-&lt;span style=&#34;color: #A90D91&#34;&gt;namespace&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;app\tests\integration\net\http&lt;/span&gt;;
-&lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;lithium\net\http\Router&lt;/span&gt;;
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;RouterTest&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;extends&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;\lithium\test\Unit&lt;/span&gt; {
+&lt;pre&gt;&lt;code&gt;&amp;lt;?php
+namespace app\tests\integration\net\http;
+use lithium\net\http\Router;
+
+class RouterTest extends \lithium\test\Unit {
 
 }
 
-&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+?&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;We can issue a request against the router and check that the output is correct. Let&amp;rsquo;s do that for a subset of our default routes:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;testRootRoute&lt;/span&gt;() {
-    &lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;controller&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;pages&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;action&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;view&amp;#39;&lt;/span&gt;);
 
-    &lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Request&lt;/span&gt;();
-    &lt;span style=&#34;color: #000000&#34;&gt;$request-&amp;gt;url&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/&amp;#39;&lt;/span&gt;;
+&lt;pre&gt;&lt;code&gt;public function testRootRoute() {
+    $expected = array(&#39;controller&#39; =&amp;gt; &#39;pages&#39;, &#39;action&#39; =&amp;gt; &#39;view&#39;);
 
-    &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Router::process&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertEqual&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$result-&amp;gt;params&lt;/span&gt;);
+    $request = new Request();
+    $request-&amp;gt;url = &#39;/&#39;;
+
+    $result = Router::process($request);
+    $this-&amp;gt;assertEqual($expected, $result-&amp;gt;params);
 }
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;testPagesRoutes&lt;/span&gt;() {
-    &lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Request&lt;/span&gt;();
+public function testPagesRoutes() {
+    $request = new Request();
 
-    &lt;span style=&#34;color: #000000&#34;&gt;$request-&amp;gt;url&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/pages&amp;#39;&lt;/span&gt;;
-    &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Router::process&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;controller&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;pages&amp;#39;&lt;/span&gt;,
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;action&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;view&amp;#39;&lt;/span&gt;
+    $request-&amp;gt;url = &#39;/pages&#39;;
+    $result = Router::process($request);
+    $expected = array(
+        &#39;controller&#39; =&amp;gt; &#39;pages&#39;,
+        &#39;action&#39; =&amp;gt; &#39;view&#39;
     );
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertEqual&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$result-&amp;gt;params&lt;/span&gt;);
+    $this-&amp;gt;assertEqual($expected, $result-&amp;gt;params);
 
-    &lt;span style=&#34;color: #000000&#34;&gt;$request-&amp;gt;url&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/pages/1&amp;#39;&lt;/span&gt;;
-    &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Router::process&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;args&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;1&amp;#39;&lt;/span&gt;),
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;controller&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;pages&amp;#39;&lt;/span&gt;,
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;action&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;view&amp;#39;&lt;/span&gt;
+    $request-&amp;gt;url = &#39;/pages/1&#39;;
+    $result = Router::process($request);
+    $expected = array(
+        &#39;args&#39; =&amp;gt; array(&#39;1&#39;),
+        &#39;controller&#39; =&amp;gt; &#39;pages&#39;,
+        &#39;action&#39; =&amp;gt; &#39;view&#39;
     );
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertEqual&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$result-&amp;gt;params&lt;/span&gt;);
+    $this-&amp;gt;assertEqual($expected, $result-&amp;gt;params);
 }
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;testDefaultRoutes&lt;/span&gt;() {
-    &lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Request&lt;/span&gt;();
+public function testDefaultRoutes() {
+    $request = new Request();
 
-    &lt;span style=&#34;color: #000000&#34;&gt;$request-&amp;gt;url&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/foo&amp;#39;&lt;/span&gt;;
-    &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Router::process&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;controller&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;foo&amp;#39;&lt;/span&gt;,
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;action&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;index&amp;#39;&lt;/span&gt;
+    $request-&amp;gt;url = &#39;/foo&#39;;
+    $result = Router::process($request);
+    $expected = array(
+        &#39;controller&#39; =&amp;gt; &#39;foo&#39;,
+        &#39;action&#39; =&amp;gt; &#39;index&#39;
     );
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertEqual&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$result-&amp;gt;params&lt;/span&gt;);
+    $this-&amp;gt;assertEqual($expected, $result-&amp;gt;params);
 
-    &lt;span style=&#34;color: #000000&#34;&gt;$request-&amp;gt;url&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/foo/bar&amp;#39;&lt;/span&gt;;
-    &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Router::process&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;controller&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;foo&amp;#39;&lt;/span&gt;,
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;action&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;bar&amp;#39;&lt;/span&gt;
+    $request-&amp;gt;url = &#39;/foo/bar&#39;;
+    $result = Router::process($request);
+    $expected = array(
+        &#39;controller&#39; =&amp;gt; &#39;foo&#39;,
+        &#39;action&#39; =&amp;gt; &#39;bar&#39;
     );
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertEqual&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$result-&amp;gt;params&lt;/span&gt;);
+    $this-&amp;gt;assertEqual($expected, $result-&amp;gt;params);
 
-    &lt;span style=&#34;color: #000000&#34;&gt;$request-&amp;gt;url&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/foo/bar/1&amp;#39;&lt;/span&gt;;
-    &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Router::process&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;controller&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;foo&amp;#39;&lt;/span&gt;,
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;action&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;bar&amp;#39;&lt;/span&gt;,
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;args&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;1&amp;#39;&lt;/span&gt;)
+    $request-&amp;gt;url = &#39;/foo/bar/1&#39;;
+    $result = Router::process($request);
+    $expected = array(
+        &#39;controller&#39; =&amp;gt; &#39;foo&#39;,
+        &#39;action&#39; =&amp;gt; &#39;bar&#39;,
+        &#39;args&#39; =&amp;gt; array(&#39;1&#39;)
     );
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertEqual&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$result-&amp;gt;params&lt;/span&gt;);
+    $this-&amp;gt;assertEqual($expected, $result-&amp;gt;params);
 }
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Most of the code should look familiar to you, the most interesting part is the call of &lt;code&gt;Router::process()&lt;/code&gt;. This method is also called by the dispatcher (but with the actual Request object). For every call to the Router, we simulate a request by the client browser. This code contains a high amount of duplication, so you may want to compact this and create a helper method in your test class that wraps and simplifies the duplicated code.&lt;/p&gt;
 
 &lt;p&gt;Here is another example for a route that we can test:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;app\models\Post&lt;/span&gt;;
 
-&lt;span style=&#34;color: #000000&#34;&gt;Router::connect&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/{:slug:&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;\w\-&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;]&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;+}&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;Posts::show&amp;#39;&lt;/span&gt;), &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt;) {
+&lt;pre&gt;&lt;code&gt;use app\models\Post;
 
-    &lt;span style=&#34;color: #000000&#34;&gt;$conditions&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;conditions&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(
-            &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;slug&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$request-&amp;gt;params&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;slug&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;]&lt;/span&gt;
+Router::connect(&#39;/{:slug:[\w\-]+}&#39;, array(&#39;Posts::show&#39;), function($request) {
+
+    $conditions = array(
+        &#39;conditions&#39; =&amp;gt; array(
+            &#39;slug&#39; =&amp;gt; $request-&amp;gt;params[&#39;slug&#39;]
         )
     );
 
-    &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;Post::count&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$conditions&lt;/span&gt;)) {
-        &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt;;
-    } &lt;span style=&#34;color: #A90D91&#34;&gt;else&lt;/span&gt; {
-        &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;false&lt;/span&gt;;
+    if(Post::count($conditions)) {
+        return $request;
+    } else {
+        return false;
     }
 
 });
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;When this route is placed right before the default routes, it should correctly match URLs like &lt;code&gt;/a-cool-article&lt;/code&gt;. The code inside the closure calls the database and checks if the given slug really exists in the database. If it does, it returns the request (and false if not). The router iterates over each route and when false is returned, he tries the next route. So when we return the &lt;code&gt;Request&lt;/code&gt;-object, we tell the router that our route is the one he has searched for. To ensure that everything works as expected, we can write some integration tests.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;testSlugRoute&lt;/span&gt;() {
-    &lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Request&lt;/span&gt;();
 
-    &lt;span style=&#34;color: #177500&#34;&gt;// a correct slug (stored in the db)&lt;/span&gt;
-    &lt;span style=&#34;color: #000000&#34;&gt;$request-&amp;gt;url&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/a-correct-slug&amp;#39;&lt;/span&gt;;
-    &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Router::process&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;controller&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;posts&amp;#39;&lt;/span&gt;,
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;action&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;show&amp;#39;&lt;/span&gt;,
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;slug&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;a-correct-slug&amp;#39;&lt;/span&gt;
-    );
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertEqual&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$result-&amp;gt;params&lt;/span&gt;);
+&lt;pre&gt;&lt;code&gt;public function testSlugRoute() {
+    $request = new Request();
 
-    &lt;span style=&#34;color: #177500&#34;&gt;// not a correct slug, renders a default route&lt;/span&gt;
-    &lt;span style=&#34;color: #000000&#34;&gt;$request-&amp;gt;url&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/foobar-not-a-slug-here&amp;#39;&lt;/span&gt;;
-    &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Router::process&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;controller&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;posts&amp;#39;&lt;/span&gt;,
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;action&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;show&amp;#39;&lt;/span&gt;,
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;slug&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;foobar-not-a-slug-here&amp;#39;&lt;/span&gt;
+    // a correct slug (stored in the db)
+    $request-&amp;gt;url = &#39;/a-correct-slug&#39;;
+    $result = Router::process($request);
+    $expected = array(
+        &#39;controller&#39; =&amp;gt; &#39;posts&#39;,
+        &#39;action&#39; =&amp;gt; &#39;show&#39;,
+        &#39;slug&#39; =&amp;gt; &#39;a-correct-slug&#39;
     );
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertNotEqual&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$result-&amp;gt;params&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertFalse&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;isset&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$result-&amp;gt;params&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;slug&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;]&lt;/span&gt;));
+    $this-&amp;gt;assertEqual($expected, $result-&amp;gt;params);
 
-    &lt;span style=&#34;color: #177500&#34;&gt;// tests should always come first&lt;/span&gt;
-    &lt;span style=&#34;color: #000000&#34;&gt;$request-&amp;gt;url&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/test&amp;#39;&lt;/span&gt;;
-    &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Router::process&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$request&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;controller&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;lithium\test\Controller&amp;#39;&lt;/span&gt;,
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;action&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;index&amp;#39;&lt;/span&gt;,
+    // not a correct slug, renders a default route
+    $request-&amp;gt;url = &#39;/foobar-not-a-slug-here&#39;;
+    $result = Router::process($request);
+    $expected = array(
+        &#39;controller&#39; =&amp;gt; &#39;posts&#39;,
+        &#39;action&#39; =&amp;gt; &#39;show&#39;,
+        &#39;slug&#39; =&amp;gt; &#39;foobar-not-a-slug-here&#39;
     );
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertEqual&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$result-&amp;gt;params&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertFalse&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;isset&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$result-&amp;gt;params&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;slug&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;]&lt;/span&gt;));
+    $this-&amp;gt;assertNotEqual($expected, $result-&amp;gt;params);
+    $this-&amp;gt;assertFalse(isset($result-&amp;gt;params[&#39;slug&#39;]));
+
+    // tests should always come first
+    $request-&amp;gt;url = &#39;/test&#39;;
+    $result = Router::process($request);
+    $expected = array(
+        &#39;controller&#39; =&amp;gt; &#39;lithium\test\Controller&#39;,
+        &#39;action&#39; =&amp;gt; &#39;index&#39;,
+    );
+    $this-&amp;gt;assertEqual($expected, $result-&amp;gt;params);
+    $this-&amp;gt;assertFalse(isset($result-&amp;gt;params[&#39;slug&#39;]));
 }
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;This code assumes that your database has a reproducible set of posts stored in it. I&amp;rsquo;d recommend you to load a set of posts with the &lt;a href=&#34;http://rad-dev.org/li3_fixtures&#34;&gt;li3_fixtures&lt;/a&gt; plugin and then populate the database in the &lt;code&gt;setUp()&lt;/code&gt; method. If you want to play around with it some more, I&amp;rsquo;d suggest you to check the current &lt;a href=&#34;http://lithify.me/docs/lithium/core/Environment&#34;&gt;Environment&lt;/a&gt; and test the different behavior for different environments.&lt;/p&gt;
 
 &lt;p&gt;With this tools at hand, you should be able to test everything that has to do with your routes and make sure that they are connected in the correct order and return the response you&amp;rsquo;ve intended.&lt;/p&gt;
 
-&lt;h3 id=&#34;reverse-routing:7d5f34c0cc895ef21f6fb009931e6d2c&#34;&gt;Reverse Routing&lt;/h3&gt;
+&lt;h3 id=&#34;reverse-routing&#34;&gt;Reverse Routing&lt;/h3&gt;
 
 &lt;p&gt;As the router also handles reverse routing (which is used by the HTML helper to generate links), we can test it here too. Because we look at the router and its routes, reverse routing fits well into our router integration tests.&lt;/p&gt;
 
 &lt;p&gt;Testing reverse routing is straightforward, so let&amp;rsquo;s start with some examples and work them through afterwards.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;testReverseRouting&lt;/span&gt;() {
-    &lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/foo/bar&amp;#39;&lt;/span&gt;;
-    &lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;controller&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;foo&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;action&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;bar&amp;#39;&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Router::match&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertEqual&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt;);
 
-    &lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/pages&amp;#39;&lt;/span&gt;;
-    &lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;controller&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;pages&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;action&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;index&amp;#39;&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Router::match&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertEqual&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt;);
+&lt;pre&gt;&lt;code&gt;public function testReverseRouting() {
+    $expected = &#39;/foo/bar&#39;;
+    $params = array(&#39;controller&#39; =&amp;gt; &#39;foo&#39;, &#39;action&#39; =&amp;gt; &#39;bar&#39;);
+    $result = Router::match($params);
+    $this-&amp;gt;assertEqual($expected, $result);
 
-    &lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/pages/index/1&amp;#39;&lt;/span&gt;;
-    &lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;controller&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;pages&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;action&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;index&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;args&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;1&amp;#39;&lt;/span&gt;));
-    &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Router::match&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertEqual&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$expected&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt;);
+    $expected = &#39;/pages&#39;;
+    $params = array(&#39;controller&#39; =&amp;gt; &#39;pages&#39;, &#39;action&#39; =&amp;gt; &#39;index&#39;);
+    $result = Router::match($params);
+    $this-&amp;gt;assertEqual($expected, $result);
+
+    $expected = &#39;/pages/index/1&#39;;
+    $params = array(&#39;controller&#39; =&amp;gt; &#39;pages&#39;, &#39;action&#39; =&amp;gt; &#39;index&#39;, &#39;args&#39; =&amp;gt; array(&#39;1&#39;));
+    $result = Router::match($params);
+    $this-&amp;gt;assertEqual($expected, $result);
 }
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Here, we test the opposite direction. We pass the router a set of arguments and get an URL back. As it&amp;rsquo;s the case with normal
 routing, if two routes compete for the same URL, the first one wins. We call &lt;code&gt;Router::match()&lt;/code&gt; with our request params and get a URL as a string returned. This way, we can test that our HTML helper will return the desired URLs in our application. Of course, you can also add some tests to the HTML Helper (where you can make sure that the echoed HTML code is correct). If the router is not able to translate your params into a URL, it will raise an exception.&lt;/p&gt;
 
-&lt;h3 id=&#34;wrapping-up:7d5f34c0cc895ef21f6fb009931e6d2c&#34;&gt;Wrapping up&lt;/h3&gt;
+&lt;h3 id=&#34;wrapping-up&#34;&gt;Wrapping up&lt;/h3&gt;
 
 &lt;p&gt;In part two of our series we&amp;rsquo;ve looked at unit testing routes, running integration tests against them and also testing the reverse routing
 mechanism. Of course, these tests depend heavily on your application and will surely become more complex as the previous examples. The next higher level would be to do add some acceptance tests with &lt;a href=&#34;http://seleniumhq.org/&#34;&gt;Selenium&lt;/a&gt;, so that you can test routes in combination with links and forms on your page, to make sure that the data flow works as expected between pages. Also, I&amp;rsquo;m working on a BDD plugin for Lithium that works similar to &lt;a href=&#34;http://cukes.info/&#34;&gt;Cucumber&lt;/a&gt;, so stay tuned.&lt;/p&gt;

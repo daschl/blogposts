@@ -17,7 +17,7 @@
       <guid>http://nitschinger.at/Introducing-Relationships-in-Lithium/</guid>
       <description>
 
-&lt;h1 id=&#34;introduction:67d4565097d1bde8073768640d3759a0&#34;&gt;Introduction&lt;/h1&gt;
+&lt;h1 id=&#34;introduction&#34;&gt;Introduction&lt;/h1&gt;
 
 &lt;p&gt;The model relationship support in Lithium is one of the hottest topics on IRC lately, so I thought it would be a good idea to blog about it.&lt;/p&gt;
 
@@ -25,17 +25,18 @@
 
 &lt;p&gt;This post gives you a little background on relationship types and their database representations before we implement a simple example in PHP.&lt;/p&gt;
 
-&lt;h1 id=&#34;basics-first:67d4565097d1bde8073768640d3759a0&#34;&gt;Basics First&lt;/h1&gt;
+&lt;h1 id=&#34;basics-first&#34;&gt;Basics First&lt;/h1&gt;
 
 &lt;p&gt;If you know how the three &amp;ldquo;big&amp;rdquo; relationship types 1:1, 1:n and m:n are implemented on the database side, feel free to jump straight to the practical example. This is not a exhaustive guide to the relational database model and should only set the stage for the practical example later. Note that I didn&amp;rsquo;t add any foreign key constraints on the database level to make it easier to follow along.&lt;/p&gt;
 
 &lt;p&gt;If you work with a relational data model, and have a (more or less) &lt;a href=&#34;http://en.wikipedia.org/wiki/Database_normalization&#34;&gt;normalized&lt;/a&gt; schema, you need to find a way to model relationships between relations (speak &amp;ldquo;entities&amp;rdquo; or &amp;ldquo;tables&amp;rdquo;). In pratice, these relationships fall into three categories:&lt;/p&gt;
 
-&lt;h2 id=&#34;1-1-relationships:67d4565097d1bde8073768640d3759a0&#34;&gt;1:1 Relationships&lt;/h2&gt;
+&lt;h2 id=&#34;1-1-relationships&#34;&gt;1:1 Relationships&lt;/h2&gt;
 
 &lt;p&gt;Exactly one entity belongs to exactly one other entity. For example, think of a &lt;code&gt;people&lt;/code&gt; relation and you want to model
 the relationship between married people. One husband can only belong to one wife and vice versa (depending from where you are reading this post this might be different ;)). In a physical database schema, it may look like this.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;mysql&amp;gt; describe people;
+
+&lt;pre&gt;&lt;code&gt;mysql&amp;gt; describe people;
 +-----------+--------------+------+-----+---------+----------------+
 | Field     | Type         | Null | Key | Default | Extra          |
 +-----------+--------------+------+-----+---------+----------------+
@@ -44,10 +45,11 @@ the relationship between married people. One husband can only belong to one wife
 | spouse_id | int(11)      | YES  |     | NULL    |                |
 +-----------+--------------+------+-----+---------+----------------+
 3 rows in set (0.01 sec)
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;The &lt;code&gt;spouse_id&lt;/code&gt; references a different person (note that it is not important if you reference an entity in the same or a different table. Here&amp;rsquo;s some example data:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;mysql&amp;gt; select * from people;
+
+&lt;pre&gt;&lt;code&gt;mysql&amp;gt; select * from people;
 +----+--------+-----------+
 | id | name   | spouse_id |
 +----+--------+-----------+
@@ -55,14 +57,15 @@ the relationship between married people. One husband can only belong to one wife
 |  2 | Alice  |         1 |
 +----+--------+-----------+
 4 rows in set (0.00 sec)
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;&lt;code&gt;Bob&lt;/code&gt; and &lt;code&gt;Alice&lt;/code&gt; are married and their relationship is identified over the foreign key &lt;code&gt;spouse id&lt;/code&gt;. In Lithium, this type of relation is called &lt;code&gt;hasOne&lt;/code&gt;.&lt;/p&gt;
 
-&lt;h2 id=&#34;1-n-relationships:67d4565097d1bde8073768640d3759a0&#34;&gt;1:n Relationships&lt;/h2&gt;
+&lt;h2 id=&#34;1-n-relationships&#34;&gt;1:n Relationships&lt;/h2&gt;
 
 &lt;p&gt;Exactly one entity belongs to zero or more other entites. This is easy: a user can write zero or more blog posts. Let&amp;rsquo;s model this accordingly:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;mysql&amp;gt; describe posts;
+
+&lt;pre&gt;&lt;code&gt;mysql&amp;gt; describe posts;
 +---------+--------------+------+-----+---------+----------------+
 | Field   | Type         | Null | Key | Default | Extra          |
 +---------+--------------+------+-----+---------+----------------+
@@ -80,10 +83,11 @@ mysql&amp;gt; describe users;
 | name  | varchar(255) | NO   |     | NULL    |                |
 +-------+--------------+------+-----+---------+----------------+
 2 rows in set (0.01 sec)
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Here&amp;rsquo;s some example data to work with:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;mysql&amp;gt; select * from posts;
+
+&lt;pre&gt;&lt;code&gt;mysql&amp;gt; select * from posts;
 +----+--------------+---------+
 | id | title        | user_id |
 +----+--------------+---------+
@@ -100,15 +104,16 @@ mysql&amp;gt; select * from users;
 |  2 | Alice     |
 +----+-----------+
 1 row in set (0.00 sec)
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;It&amp;rsquo;s easy to see that Bob wrote two posts while Alice didn&amp;rsquo;t write a single one. We can look at these relations from two different angles (and can also answer two different questions): &amp;ldquo;What posts did Bob write?&amp;rdquo; and &amp;ldquo;Who is the author of the first post?&amp;rdquo;. To answer both questions
  orrectly, Lithium uses two different relation types for the models: &lt;code&gt;hasMany&lt;/code&gt; and &lt;code&gt;belongsTo&lt;/code&gt;. One user &lt;code&gt;hasMany&lt;/code&gt; blog posts, but one post &lt;code&gt;belongsTo&lt;/code&gt; only one user. The wording also implies where the foreign key is placed: in a &lt;code&gt;hasMany&lt;/code&gt; relationship, the foreign key is expected on the other model, while &lt;code&gt;belongsTo&lt;/code&gt; expects it in the current model. We&amp;rsquo;ll see shortly how this works out in practice.&lt;/p&gt;
 
-&lt;h2 id=&#34;m-n-relationships:67d4565097d1bde8073768640d3759a0&#34;&gt;m:n Relationships&lt;/h2&gt;
+&lt;h2 id=&#34;m-n-relationships&#34;&gt;m:n Relationships&lt;/h2&gt;
 
 &lt;p&gt;Lastly, zero or more entities can belong to zero or more other entities. This is a bit tricky, because we need a third table to model this relationship efficiently. For example, a user can belong to zero or more groups and groups can have zero or more members.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;mysql&amp;gt; describe users;
+
+&lt;pre&gt;&lt;code&gt;mysql&amp;gt; describe users;
 +-------+--------------+------+-----+---------+----------------+
 | Field | Type         | Null | Key | Default | Extra          |
 +-------+--------------+------+-----+---------+----------------+
@@ -134,10 +139,11 @@ mysql&amp;gt; describe users_groups;
 | user_id  | int(11) | NO   |     | NULL    |       |
 +----------+---------+------+-----+---------+-------+
 2 rows in set (0.01 sec)
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;You can see that we need a third table to &amp;ldquo;glue&amp;rdquo; the other two together. Here&amp;rsquo;s some example data:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;mysql&amp;gt; select * from users;
+
+&lt;pre&gt;&lt;code&gt;mysql&amp;gt; select * from users;
 +----+-----------+
 | id | name      |
 +----+-----------+
@@ -165,17 +171,18 @@ mysql&amp;gt; select * from users_groups;
 |        2 |       2 |
 +----------+---------+
 3 rows in set (0.00 sec)
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;&lt;code&gt;John&lt;/code&gt; has access to both groups, while the &lt;code&gt;Administrator&lt;/code&gt; group has two members. Lithium doesn&amp;rsquo;t support this kind of relationship for now, but in CakePHP it is called &lt;code&gt;hasAndBelongsToMany&lt;/code&gt;.&lt;/p&gt;
 
-&lt;h1 id=&#34;the-blog-example:67d4565097d1bde8073768640d3759a0&#34;&gt;The Blog example&lt;/h1&gt;
+&lt;h1 id=&#34;the-blog-example&#34;&gt;The Blog example&lt;/h1&gt;
 
 &lt;p&gt;Now that we&amp;rsquo;ve got the basics settled, let&amp;rsquo;s get our hands on some code and implement the &amp;ldquo;Hello World 2.0&amp;rdquo; example -
 a blog. Along the way we can reuse some of the tables above.&lt;/p&gt;
 
 &lt;p&gt;Let&amp;rsquo;s assume we want to store blog posts and their authors. For simplicity, every author can belong to only one group and a group can only have one member. This way, we can practice 1:n and 1:1 relationships. Let&amp;rsquo;s create the appropriate data model using the MySQL DDL:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;CREATE TABLE groups (
+
+&lt;pre&gt;&lt;code&gt;CREATE TABLE groups (
     id integer auto_increment primary key,
     name varchar(255) not null
 );
@@ -193,148 +200,157 @@ CREATE TABLE posts (
     body text,
     author_id integer
 );
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Let&amp;rsquo;s insert some demo data to work with:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;insert into groups (name) values (&amp;#39;Admins&amp;#39;);
-insert into groups (name) values (&amp;#39;Editors&amp;#39;);
 
-insert into authors (firstname, lastname, group_id) values (&amp;#39;Johnnie&amp;#39;, &amp;#39;Walker&amp;#39;, 1);
-insert into authors (firstname, lastname, group_id) values (&amp;#39;John&amp;#39;, &amp;#39;Jameson&amp;#39;, 2);
-insert into authors (firstname, lastname, group_id) values (&amp;#39;Jack&amp;#39;, &amp;#39;Daniels&amp;#39;, 2);
+&lt;pre&gt;&lt;code&gt;insert into groups (name) values (&#39;Admins&#39;);
+insert into groups (name) values (&#39;Editors&#39;);
 
-insert into posts (author_id, title, body) values (1, &amp;#39;On whisky nosing&amp;#39;, &amp;#39;...&amp;#39;);
-insert into posts (author_id, title, body) values (2, &amp;#39;Irish on the ROCKS&amp;#39;, &amp;#39;...&amp;#39;);
-insert into posts (author_id, title, body) values (2, &amp;#39;Without fear.&amp;#39;, &amp;#39;...&amp;#39;);
-insert into posts (author_id, title, body) values (3, &amp;#39;On drinking Bourbon&amp;#39;, &amp;#39;...&amp;#39;);
-&lt;/pre&gt;&lt;/div&gt;
+insert into authors (firstname, lastname, group_id) values (&#39;Johnnie&#39;, &#39;Walker&#39;, 1);
+insert into authors (firstname, lastname, group_id) values (&#39;John&#39;, &#39;Jameson&#39;, 2);
+insert into authors (firstname, lastname, group_id) values (&#39;Jack&#39;, &#39;Daniels&#39;, 2);
+
+insert into posts (author_id, title, body) values (1, &#39;On whisky nosing&#39;, &#39;...&#39;);
+insert into posts (author_id, title, body) values (2, &#39;Irish on the ROCKS&#39;, &#39;...&#39;);
+insert into posts (author_id, title, body) values (2, &#39;Without fear.&#39;, &#39;...&#39;);
+insert into posts (author_id, title, body) values (3, &#39;On drinking Bourbon&#39;, &#39;...&#39;);
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Next, grab a fresh copy of Lithium and create a connection in &lt;code&gt;config/bootstrap/connections.php&lt;/code&gt;:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;Connections::add(&amp;#39;default&amp;#39;, array(
-    &amp;#39;type&amp;#39; =&amp;gt; &amp;#39;database&amp;#39;,
-    &amp;#39;adapter&amp;#39; =&amp;gt; &amp;#39;MySql&amp;#39;,
-    &amp;#39;host&amp;#39; =&amp;gt; &amp;#39;localhost&amp;#39;,
-    &amp;#39;login&amp;#39; =&amp;gt; &amp;#39;&amp;lt;USER&amp;gt;&amp;#39;,
-    &amp;#39;password&amp;#39; =&amp;gt; &amp;#39;&amp;lt;PASSWORD&amp;gt;&amp;#39;,
-    &amp;#39;database&amp;#39; =&amp;gt; &amp;#39;&amp;lt;DBNAME&amp;gt;&amp;#39;,
-    &amp;#39;encoding&amp;#39; =&amp;gt; &amp;#39;UTF-8&amp;#39;
+
+&lt;pre&gt;&lt;code&gt;Connections::add(&#39;default&#39;, array(
+    &#39;type&#39; =&amp;gt; &#39;database&#39;,
+    &#39;adapter&#39; =&amp;gt; &#39;MySql&#39;,
+    &#39;host&#39; =&amp;gt; &#39;localhost&#39;,
+    &#39;login&#39; =&amp;gt; &#39;&amp;lt;USER&amp;gt;&#39;,
+    &#39;password&#39; =&amp;gt; &#39;&amp;lt;PASSWORD&amp;gt;&#39;,
+    &#39;database&#39; =&amp;gt; &#39;&amp;lt;DBNAME&amp;gt;&#39;,
+    &#39;encoding&#39; =&amp;gt; &#39;UTF-8&#39;
 ));
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Now, let&amp;rsquo;s create three bare-bone models in &lt;code&gt;app\models&lt;/code&gt; to start with:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
-&lt;span style=&#34;color: #177500&#34;&gt;// Filename: /app/models/Posts.php&lt;/span&gt;
-&lt;span style=&#34;color: #A90D91&#34;&gt;namespace&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;app\models&lt;/span&gt;;
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;Posts&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;extends&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;\lithium\data\Model&lt;/span&gt; {
+&lt;pre&gt;&lt;code&gt;&amp;lt;?php
+// Filename: /app/models/Posts.php
+namespace app\models;
 
-}
-&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
-
-&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
-&lt;span style=&#34;color: #177500&#34;&gt;// Filename: /app/models/Authors.php&lt;/span&gt;
-&lt;span style=&#34;color: #A90D91&#34;&gt;namespace&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;app\models&lt;/span&gt;;
-
-&lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;Authors&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;extends&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;\lithium\data\Model&lt;/span&gt; {
+class Posts extends \lithium\data\Model {
 
 }
-&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+?&amp;gt;
 
-&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
-&lt;span style=&#34;color: #177500&#34;&gt;// Filename: /app/models/Groups.php&lt;/span&gt;
-&lt;span style=&#34;color: #A90D91&#34;&gt;namespace&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;app\models&lt;/span&gt;;
+&amp;lt;?php
+// Filename: /app/models/Authors.php
+namespace app\models;
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;Groups&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;extends&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;\lithium\data\Model&lt;/span&gt; {
+class Authors extends \lithium\data\Model {
 
 }
-&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+?&amp;gt;
+
+&amp;lt;?php
+// Filename: /app/models/Groups.php
+namespace app\models;
+
+class Groups extends \lithium\data\Model {
+
+}
+?&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;To produce meaningful output in the browser, we&amp;rsquo;d better add a controller and a view template.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
-&lt;span style=&#34;color: #177500&#34;&gt;// Filename: /app/controllers/PostsController.php&lt;/span&gt;
-&lt;span style=&#34;color: #A90D91&#34;&gt;namespace&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;app\controllers&lt;/span&gt;;
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;app\models\Posts&lt;/span&gt;;
-&lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;app\models\Authors&lt;/span&gt;;
-&lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;app\models\Groups&lt;/span&gt;;
+&lt;pre&gt;&lt;code&gt;&amp;lt;?php
+// Filename: /app/controllers/PostsController.php
+namespace app\controllers;
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;PostsController&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;extends&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;\lithium\action\Controller&lt;/span&gt; {
+use app\models\Posts;
+use app\models\Authors;
+use app\models\Groups;
 
-    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;index&lt;/span&gt;() {
+class PostsController extends \lithium\action\Controller {
+
+    public function index() {
 
     }
 
 }
-&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
+?&amp;gt;
 
 
-&lt;span style=&#34;color: #177500&#34;&gt;&amp;lt;!-- Filename: /app/views/posts/index.html.php --&amp;gt;&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;h2&amp;gt;&lt;/span&gt;All Posts.&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/h2&amp;gt;&lt;/span&gt;
+&amp;lt;!-- Filename: /app/views/posts/index.html.php --&amp;gt;
+&amp;lt;h2&amp;gt;All Posts.&amp;lt;/h2&amp;gt;
 
 More stuff will be here soon.
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Now that we have everything in place, we can define our relationships in Lithium. Place the following snippets in their appropriate models:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;// Posts:
-public $&lt;span style=&#34;color: #000000&#34;&gt;belongsTo&lt;/span&gt; = array(&amp;#39;Authors&amp;#39;);
+
+&lt;pre&gt;&lt;code&gt;// Posts:
+public $belongsTo = array(&#39;Authors&#39;);
 
 // Authors:
-public $&lt;span style=&#34;color: #000000&#34;&gt;hasMany&lt;/span&gt; = array(&amp;#39;Posts&amp;#39;);
+public $hasMany = array(&#39;Posts&#39;);
 
 // Groups:
-public $&lt;span style=&#34;color: #000000&#34;&gt;hasOne&lt;/span&gt; = array(&amp;#39;Authors&amp;#39;);
-&lt;/pre&gt;&lt;/div&gt;
+public $hasOne = array(&#39;Authors&#39;);
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;As our database tables rely on conventional column names, we don&amp;rsquo;t have to provide more configuration params to Lithium. Now, let&amp;rsquo;s read all posts, their corresponding authors and print them in the template.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;// PostsController:
+
+&lt;pre&gt;&lt;code&gt;// PostsController:
 public function index() {
-    $posts = Posts::all(array(&amp;#39;with&amp;#39; =&amp;gt; &amp;#39;Authors&amp;#39;));
-    return compact(&amp;#39;posts&amp;#39;);
+    $posts = Posts::all(array(&#39;with&#39; =&amp;gt; &#39;Authors&#39;));
+    return compact(&#39;posts&#39;);
 }
 
 
 // index.html.php:
-&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;ul&amp;gt;&lt;/span&gt;
-    &lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;foreach&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$posts&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;as&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$post&lt;/span&gt;)&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
-        &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;li&amp;gt;&lt;/span&gt;
-            &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;strong&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$post-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;title&lt;/span&gt;; &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/strong&amp;gt;&lt;/span&gt;, by 
-            &lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$post-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;author&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;firstname&lt;/span&gt;; &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$post-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;author&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;lastname&lt;/span&gt;; &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
-        &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/li&amp;gt;&lt;/span&gt;
-    &lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;endforeach&lt;/span&gt;; &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/ul&amp;gt;&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+&amp;lt;ul&amp;gt;
+    &amp;lt;?php foreach($posts as $post): ?&amp;gt;
+        &amp;lt;li&amp;gt;
+            &amp;lt;strong&amp;gt;&amp;lt;?= $post-&amp;gt;title; ?&amp;gt;&amp;lt;/strong&amp;gt;, by 
+            &amp;lt;?= $post-&amp;gt;author-&amp;gt;firstname; ?&amp;gt; &amp;lt;?= $post-&amp;gt;author-&amp;gt;lastname; ?&amp;gt;
+        &amp;lt;/li&amp;gt;
+    &amp;lt;?php endforeach; ?&amp;gt;
+&amp;lt;/ul&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;The &lt;code&gt;with&lt;/code&gt; param controls what relationships you want to fetch. In this case, as a post belongs to one author, Lithium knows that only one &lt;code&gt;Record&lt;/code&gt; is returned and you can use the &lt;code&gt;author&lt;/code&gt; directly. If you don&amp;rsquo;t provide the appropriate class there, Lithium won&amp;rsquo;t call the associated model and an error will be raised (because &lt;code&gt;$post-&amp;gt;author&lt;/code&gt; isn&amp;rsquo;t set, PHP complains that you want to access &lt;code&gt;firstname&lt;/code&gt; from a non-object). This is a common mistake, so keep it in mind!&lt;/p&gt;
 
 &lt;p&gt;Lithium is very flexible on the data layer, and you can write instance methods on your model and access them through the relation. Let&amp;rsquo;s say we want to provide the full name at the model layer, so that we don&amp;rsquo;t have to read both the first- and the lastname in the template.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;// Authors:
+
+&lt;pre&gt;&lt;code&gt;// Authors:
 public function fullName($entity) {
     return $entity-&amp;gt;firstname.&amp;quot; &amp;quot;.$entity-&amp;gt;lastname;
 }
 
 // index.html.php:
-&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;strong&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$post-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;title&lt;/span&gt;; &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;/strong&amp;gt;&lt;/span&gt;, by &lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$post-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;author&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;fullName&lt;/span&gt;(); &lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+&amp;lt;strong&amp;gt;&amp;lt;?= $post-&amp;gt;title; ?&amp;gt;&amp;lt;/strong&amp;gt;, by &amp;lt;?= $post-&amp;gt;author-&amp;gt;fullName(); ?&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;We can also read all posts that belong to a particular author:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;$&lt;span style=&#34;color: #000000&#34;&gt;posts&lt;/span&gt; = Authors::first(array(
-    &amp;#39;conditions&amp;#39; =&amp;gt; array(&amp;#39;posts.id&amp;#39; =&amp;gt; $&lt;span style=&#34;color: #000000&#34;&gt;author_id&lt;/span&gt;), 
-    &amp;#39;with&amp;#39; =&amp;gt; &amp;#39;Posts&amp;#39;
+
+&lt;pre&gt;&lt;code&gt;$posts = Authors::first(array(
+    &#39;conditions&#39; =&amp;gt; array(&#39;posts.id&#39; =&amp;gt; $author_id), 
+    &#39;with&#39; =&amp;gt; &#39;Posts&#39;
 ))-&amp;gt;posts;
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;To find data through our 1:1 relation, we can use the same mechanisms:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;// Find the author name for a group:
-$&lt;span style=&#34;color: #000000&#34;&gt;name&lt;/span&gt; = Groups::first(array(
-    &amp;#39;conditions&amp;#39; =&amp;gt; array(&amp;#39;groups.id&amp;#39; =&amp;gt; $&lt;span style=&#34;color: #000000&#34;&gt;group_id&lt;/span&gt;),
-    &amp;#39;with&amp;#39; =&amp;gt; array(&amp;#39;Authors&amp;#39;)
+
+&lt;pre&gt;&lt;code&gt;// Find the author name for a group:
+$name = Groups::first(array(
+    &#39;conditions&#39; =&amp;gt; array(&#39;groups.id&#39; =&amp;gt; $group_id),
+    &#39;with&#39; =&amp;gt; array(&#39;Authors&#39;)
 ))-&amp;gt;author-&amp;gt;fullName();
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Note that if we want to find the name of the associated group for an author, we would need to add a foreign key to the &lt;code&gt;groups&lt;/code&gt; table (there is no real difference between &lt;code&gt;hasOne&lt;/code&gt; and &lt;code&gt;hasMany&lt;/code&gt;, just the fact that &lt;code&gt;hasOne&lt;/code&gt; returns exactly one entity instead of zero or more and therefore no &lt;code&gt;Collection&lt;/code&gt; is needed).&lt;/p&gt;
 
-&lt;h1 id=&#34;wrapping-up:67d4565097d1bde8073768640d3759a0&#34;&gt;Wrapping up&lt;/h1&gt;
+&lt;h1 id=&#34;wrapping-up&#34;&gt;Wrapping up&lt;/h1&gt;
 
 &lt;p&gt;This post has covered the basics of model relationships and how to model the 1:1 and 1:n types in Lithium. We now set the stage for more advanced topics, including: form integration, faking the m:n relationship for relational databases, faking relationships for MongoDB and advanced relationship handling through the &lt;code&gt;Relationship&lt;/code&gt; class. If you have any other interesting topics that you want to read about soon, share your ideas!&lt;/p&gt;
 </description>

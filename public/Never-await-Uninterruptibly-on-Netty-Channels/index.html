@@ -7,7 +7,7 @@
 
     <meta name="description" content="A quick tip about waiting on Channels in Netty.">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Never awaitUninterruptibly() on Netty Channels &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -74,12 +74,14 @@
                             
                         </p>
                     </header>
-
+                    
+                    
                     <div class="post-description">
-                        <p>TL:DR; When acquiring <a href="http://netty.io/3.6/api/org/jboss/netty/channel/Channel.html">Channels</a> in <a href="http://netty.io">Netty</a>, always use a <a href="http://netty.io/3.6/api/org/jboss/netty/channel/ChannelFutureListener.html">ChannelFutureListener</a> and never <a href="http://docs.jboss.org/netty/3.2/api/org/jboss/netty/channel/ChannelFuture.html#awaitUninterruptibly(">awaitUninterruptibly()</a>). Curious why? Read on.</p>
+                        <p>TL:DR; When acquiring <a href="http://netty.io/3.6/api/org/jboss/netty/channel/Channel.html">Channels</a> in <a href="http://netty.io">Netty</a>, always use a <a href="http://netty.io/3.6/api/org/jboss/netty/channel/ChannelFutureListener.html">ChannelFutureListener</a> and never <a href="http://docs.jboss.org/netty/3.2/api/org/jboss/netty/channel/ChannelFuture.html#awaitUninterruptibly()">awaitUninterruptibly()</a>. Curious why? Read on.</p>
 
 <p>In the <a href="http://www.couchbase.com/develop/java/current">Java SDK</a> for <a href="http://www.couchbase.com/">Couchbase</a>, we use Netty to establish and maintain a streaming connection to one of the cluster nodes in order to get notified when topology changes happen. This streaming connection needs to be established during the bootstrap process of the client and we need to block until the connection is established (actually we don&rsquo;t need to, but the current implementation works that way). The old implementation to acquire the Channel looked like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">ClientBootstrap bootstrap = new ClientBootstrap(factory);
+
+<pre><code>ClientBootstrap bootstrap = new ClientBootstrap(factory);
 bootstrap.setPipelineFactory(new BucketMonitorPipelineFactory());
 ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
 
@@ -88,14 +90,16 @@ if (!future.isSuccess()) {
   bootstrap.releaseExternalResources();
   throw new ConnectionException(&quot;Something bad happened...&quot;);
 }
-</pre></div>
+</code></pre>
 
 <p>This works great, but there is a problem associated that is not obvious in the first place. As long as you use this code only in a client side context, Netty will not complain and happily work with your code. When people started to use our client library inside a Netty based server framework (for example <a href="http://www.playframework.com/">Play</a>), Netty complained like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">Unexpected exception[IllegalStateException: await*() in I/O thread causes a dead lock or sudden performance drop. Use addListener() instead or call await*() from a different thread.]
-</pre></div>
+
+<pre><code>Unexpected exception[IllegalStateException: await*() in I/O thread causes a dead lock or sudden performance drop. Use addListener() instead or call await*() from a different thread.]
+</code></pre>
 
 <p>The environment where this happens is clearly defined: we are bootstrapping a Netty client inside the I/O thread of a Netty server, so we basically have two Netty environments running and one is complaining about the other. Once you are aware of this situation, it is more or less easy to fix:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">bootstrap = new ClientBootstrap(factory);
+
+<pre><code>bootstrap = new ClientBootstrap(factory);
 bootstrap.setPipelineFactory(new BucketMonitorPipelineFactory());
 ChannelFuture future =  bootstrap.connect(new InetSocketAddress(host, port));
 channelFuture.addListener(new ChannelFutureListener() {
@@ -109,10 +113,11 @@ channelFuture.addListener(new ChannelFutureListener() {
     }
   }
 });
-</pre></div>
+</code></pre>
 
 <p>Now, instead of waiting on the caller thread, we move the waiting part to a separate thread managed by the Netty execution context. There&rsquo;s only one problem left: we still need to block, because the code down the stack depends on a established Channel to work with. To solve this issue, we can use a <a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/CountDownLatch.html">CountDownLatch</a> like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">final CountDownLatch channelLatch = new CountDownLatch(1);
+
+<pre><code>final CountDownLatch channelLatch = new CountDownLatch(1);
 channelFuture.addListener(new ChannelFutureListener() {
   @Override
   public void operationComplete(ChannelFuture cf) throws Exception {
@@ -132,7 +137,7 @@ try {
   throw new ConnectionException(&quot;Interrupted while waiting for streaming &quot;
     + &quot;connection to arrive.&quot;);
 }
-</pre></div>
+</code></pre>
 
 <p>In the end we still block on the caller thread, but we are compliant with Netty. The main takeaway for me is that you should never block on acquiring Channels in Netty, just because of the fact that your client side code may be used in a server side context as well. This is especially true for library developers like me.</p>
 
@@ -157,7 +162,7 @@ try {
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

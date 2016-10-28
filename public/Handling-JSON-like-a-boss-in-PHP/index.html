@@ -7,7 +7,7 @@
 
     <meta name="description" content="After reading this post, you will be able to understand, work and test JSON code with PHP.">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Handling JSON like a boss in PHP &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -74,7 +74,8 @@
                             
                         </p>
                     </header>
-
+                    
+                    
                     <div class="post-description">
                         
 
@@ -86,14 +87,15 @@
 
 <p>Before we start handling JSON in PHP, we need to take a short look at the JSON specification to understand how it is implemented and what&rsquo;s possible.</p>
 
-<h2 id="introducing-json:a3d5483349c0d950e081bf899405ed60">Introducing JSON</h2>
+<h2 id="introducing-json">Introducing JSON</h2>
 
 <p>Since JSON is a subset of the JavaScript language, it shares all of its language constructs with its parent. In JSON, you can store unordered key/value combinations in objects or use arrays to preserve the order of values. This makes it easy to parse and to read, but also has some limitations. Since JSON only defines a small amount of data types, you can&rsquo;t transmit types like dates natively (you can, but you need to transform them into a string or a unix timestamp as an integer).</p>
 
 <p>So, what datatypes does JSON support? It all boils down to strings, numbers, booleans and null. Of course, you can also supply objects or arrays as values.</p>
 
 <p>Here&rsquo;s a example JSON document:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">{
+
+<pre><code>{
     &quot;title&quot;: &quot;A cool blog post&quot;,
     &quot;clicks&quot;: 4000,
     &quot;children&quot;: null,
@@ -105,17 +107,17 @@
         },
         {
             &quot;author&quot;: &quot;Misrer Y&quot;,
-            &quot;message&quot;: &quot;It&#39;s me again!&quot;
+            &quot;message&quot;: &quot;It's me again!&quot;
         }
     ]
 }
-</pre></div>
+</code></pre>
 
 <p>It contains basically everything that you can express through JSON. As you can see no dates, regexes or something like that. Also, you need to make sure that your whole JSON document is encoded in <a href="http://en.wikipedia.org/wiki/UTF-8">UTF-8</a>. We&rsquo;ll see later how to ensure that in PHP. Due to this shortcomings (and for other good reasons) <a href="http://bsonspec.org/">BSON</a>(Binary JSON) was developed. It was designed to be more space-efficient and provides traversability and extensions like the date type. Its most prominent use case is <a href="http://www.mongodb.org/">MongoDB</a>, but honestly I never came across it somewhere else. I recommend you to take a short look at the specification if you have some time left, since I find it very educating.</p>
 
 <p>Since PHP has a richer type handling than JSON, you need to prepare yourself to write some code on both ends to transform the correct information apart from the obligatory encoding/decoding step. For example, if you want to transport date objects, you need to think if you can just send a unix timestamp over the wire or maybe use a preformatted date string (like <a href="http://php.net/manual/en/function.strftime.php">strftime</a>).</p>
 
-<h2 id="encoding-json-in-php:a3d5483349c0d950e081bf899405ed60">Encoding JSON in PHP</h2>
+<h2 id="encoding-json-in-php">Encoding JSON in PHP</h2>
 
 <p>Some years ago, JSON support was provided through the <a href="http://pecl.php.net/package/json">json pecl extension</a>. Since PHP 5.2, it is included in the core directly, so if you use a recent PHP version you should have no trouble using it.</p>
 
@@ -124,140 +126,148 @@
 <p>Back to JSON. With <a href="http://php.net/manual/en/function.json-encode.php">json_encode</a>, you can translate anything that is UTF-8 encoded (except resources) from PHP into a JSON string. As a rule of thumb, everything except pure arrays (in PHP this means arrays with an ordered, numerical index) is converted into an object with keys and values.</p>
 
 <p>The method call is easy and looks like the following:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">    json_encode(mixed $<span style="color: #000000">value</span>, int $<span style="color: #000000">options</span> = 0);
-</pre></div>
 
-<p>An integer for options you might ask? Yup, that&rsquo;s called a <a href="http://en.wikipedia.org/wiki/Mask_(computing">bitmask</a>). We&rsquo;ll cover them in a separate part a little bit later. Since these bitmask options change the way the data is encoded, for the following examples assume that we use defaults and don&rsquo;t provide custom params.</p>
+<pre><code>    json_encode(mixed $value, int $options = 0);
+</code></pre>
+
+<p>An integer for options you might ask? Yup, that&rsquo;s called a <a href="http://en.wikipedia.org/wiki/Mask_(computing)">bitmask</a>. We&rsquo;ll cover them in a separate part a little bit later. Since these bitmask options change the way the data is encoded, for the following examples assume that we use defaults and don&rsquo;t provide custom params.</p>
 
 <p>Let&rsquo;s start with the basic types first. Since its so easy to grasp, here&rsquo;s the code with short comments on what was translated:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #177500">// Returns: [&quot;Apple&quot;,&quot;Banana&quot;,&quot;Pear&quot;]</span>
-<span style="color: #A90D91">json_encode</span>(<span style="color: #A90D91">array</span>(<span style="color: #C41A16">&quot;Apple&quot;</span>, <span style="color: #C41A16">&quot;Banana&quot;</span>, <span style="color: #C41A16">&quot;Pear&quot;</span>));
 
-<span style="color: #177500">// Returns: {&quot;4&quot;:&quot;four&quot;,&quot;8&quot;:&quot;eight&quot;}</span>
-<span style="color: #A90D91">json_encode</span>(<span style="color: #A90D91">array</span>(<span style="color: #1C01CE">4</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;four&quot;</span>, <span style="color: #1C01CE">8</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;eight&quot;</span>));
+<pre><code>&lt;?php
+// Returns: [&quot;Apple&quot;,&quot;Banana&quot;,&quot;Pear&quot;]
+json_encode(array(&quot;Apple&quot;, &quot;Banana&quot;, &quot;Pear&quot;));
 
-<span style="color: #177500">// Returns: {&quot;apples&quot;:true,&quot;bananas&quot;:null}</span>
-<span style="color: #A90D91">json_encode</span>(<span style="color: #A90D91">array</span>(<span style="color: #C41A16">&quot;apples&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">true</span>, <span style="color: #C41A16">&quot;bananas&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">null</span>));
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+// Returns: {&quot;4&quot;:&quot;four&quot;,&quot;8&quot;:&quot;eight&quot;}
+json_encode(array(4 =&gt; &quot;four&quot;, 8 =&gt; &quot;eight&quot;));
+
+// Returns: {&quot;apples&quot;:true,&quot;bananas&quot;:null}
+json_encode(array(&quot;apples&quot; =&gt; true, &quot;bananas&quot; =&gt; null));
+?&gt;
+</code></pre>
 
 <p>How your arrays are translated depends on your indexes used. You can also see that <code>json_encode</code> takes care of the correct type conversion, so <code>booleans</code> and <code>null</code> are not transformed into strings but use their correct type. Let&rsquo;s now look into objects:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #A90D91">class</span> <span style="color: #3F6E75">User</span> {
-    <span style="color: #A90D91">public</span> <span style="color: #000000">$firstname</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;&quot;</span>;
-    <span style="color: #A90D91">public</span> <span style="color: #000000">$lastname</span>  <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;&quot;</span>;
-    <span style="color: #A90D91">public</span> <span style="color: #000000">$birthdate</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;&quot;</span>;
+
+<pre><code>&lt;?php
+class User {
+    public $firstname = &quot;&quot;;
+    public $lastname  = &quot;&quot;;
+    public $birthdate = &quot;&quot;;
 }
 
-<span style="color: #000000">$user</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">User</span>();
-<span style="color: #000000">$user-&gt;</span><span style="color: #836C28">firstname</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;foo&quot;</span>;
-<span style="color: #000000">$user-&gt;</span><span style="color: #836C28">lastname</span>  <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;bar&quot;</span>;
+$user = new User();
+$user-&gt;firstname = &quot;foo&quot;;
+$user-&gt;lastname  = &quot;bar&quot;;
 
-<span style="color: #177500">// Returns: {&quot;firstname&quot;:&quot;foo&quot;,&quot;lastname&quot;:&quot;bar&quot;}</span>
-<span style="color: #A90D91">json_encode</span>(<span style="color: #000000">$user</span>);
+// Returns: {&quot;firstname&quot;:&quot;foo&quot;,&quot;lastname&quot;:&quot;bar&quot;}
+json_encode($user);
 
-<span style="color: #000000">$user-&gt;</span><span style="color: #836C28">birthdate</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">DateTime</span>();
+$user-&gt;birthdate = new DateTime();
 
-<span style="color: #177500">/* Returns:</span>
-<span style="color: #177500">    {</span>
-<span style="color: #177500">        &quot;firstname&quot;:&quot;foo&quot;,</span>
-<span style="color: #177500">        &quot;lastname&quot;:&quot;bar&quot;,</span>
-<span style="color: #177500">        &quot;birthdate&quot;: {</span>
-<span style="color: #177500">            &quot;date&quot;:&quot;2012-06-06 08:46:58&quot;,</span>
-<span style="color: #177500">            &quot;timezone_type&quot;:3,</span>
-<span style="color: #177500">            &quot;timezone&quot;:&quot;Europe\/Berlin&quot;</span>
-<span style="color: #177500">        }</span>
-<span style="color: #177500">    }</span>
-<span style="color: #177500">*/</span>
-<span style="color: #A90D91">json_encode</span>(<span style="color: #000000">$user</span>);
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+/* Returns:
+    {
+        &quot;firstname&quot;:&quot;foo&quot;,
+        &quot;lastname&quot;:&quot;bar&quot;,
+        &quot;birthdate&quot;: {
+            &quot;date&quot;:&quot;2012-06-06 08:46:58&quot;,
+            &quot;timezone_type&quot;:3,
+            &quot;timezone&quot;:&quot;Europe\/Berlin&quot;
+        }
+    }
+*/
+json_encode($user);
+?&gt;
+</code></pre>
 
 <p>Objects are inspected and their public attributes are converted. This happens recursively, so in the example above the public attributes of the <a href="http://at2.php.net/manual/en/datetime.construct.php">DateTime</a> object are also translated into JSON. This is a handy trick if you want to easly transmit datetimes over JSON, since the client-side can then operate on both the actual time and the timezone.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #A90D91">class</span> <span style="color: #3F6E75">User</span> {
-    <span style="color: #A90D91">public</span> <span style="color: #000000">$pub</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;Mister X.&quot;</span>;
-    <span style="color: #A90D91">protected</span> <span style="color: #000000">$pro</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;hidden&quot;</span>;
-    <span style="color: #A90D91">private</span> <span style="color: #000000">$priv</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;hidden too&quot;</span>;
 
-    <span style="color: #A90D91">public</span> <span style="color: #000000">$func</span>;
-    <span style="color: #A90D91">public</span> <span style="color: #000000">$notUsed</span>;
+<pre><code>&lt;?php
+class User {
+    public $pub = &quot;Mister X.&quot;;
+    protected $pro = &quot;hidden&quot;;
+    private $priv = &quot;hidden too&quot;;
 
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">__construct</span>() {
-        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">func</span> <span style="color: #000000">=</span> <span style="color: #A90D91">function</span>() {
-            <span style="color: #A90D91">return</span> <span style="color: #C41A16">&quot;Foo&quot;</span>;
+    public $func;
+    public $notUsed;
+
+    public function __construct() {
+        $this-&gt;func = function() {
+            return &quot;Foo&quot;;
         };
     }
 }
 
-<span style="color: #000000">$user</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">User</span>();
+$user = new User();
 
-<span style="color: #177500">// Returns: {&quot;pub&quot;:&quot;Mister X.&quot;,&quot;func&quot;:{},&quot;notUsed&quot;:null}</span>
-<span style="color: #A90D91">echo</span> <span style="color: #A90D91">json_encode</span>(<span style="color: #000000">$user</span>);
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+// Returns: {&quot;pub&quot;:&quot;Mister X.&quot;,&quot;func&quot;:{},&quot;notUsed&quot;:null}
+echo json_encode($user);
+?&gt;
+</code></pre>
 
 <p>Here, you can see that only public attributes are used. Not initialized variables are translated to <code>null</code> while closures that are bound to a public attribute are encoded with an empty object (as of PHP 5.4, there is no option to prevent public closures to be translated).</p>
 
-<h3 id="the-option-bitmasks:a3d5483349c0d950e081bf899405ed60">The $option bitmasks</h3>
+<h3 id="the-option-bitmasks">The $option bitmasks</h3>
 
 <p>Bitmasks are used to set certain flags on or off in a function call. This language pattern is commonly used in C and since PHP is written in C this concept made it up to some PHP function arguments as well. It&rsquo;s easy to use: if you want to set an option, just pass the constant as an argument. If you want to combine two or more options, combine them with the bitwise OR operation <code>|</code>. So, a call to json_encode may look like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #177500">// Returns: {&quot;0&quot;:&quot;Starsky &amp; Hutch&quot;,&quot;1&quot;:123456}</span>
-<span style="color: #A90D91">json_encode</span>(<span style="color: #A90D91">array</span>(<span style="color: #C41A16">&quot;Starsky &amp; Hutch&quot;</span>, <span style="color: #C41A16">&quot;123456&quot;</span>), <span style="color: #000000">JSON_NUMERIC_CHECK</span> <span style="color: #000000">|</span> <span style="color: #000000">JSON_FORCE_OBJECT</span>);
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+
+<pre><code>&lt;?php
+// Returns: {&quot;0&quot;:&quot;Starsky &amp; Hutch&quot;,&quot;1&quot;:123456}
+json_encode(array(&quot;Starsky &amp; Hutch&quot;, &quot;123456&quot;), JSON_NUMERIC_CHECK | JSON_FORCE_OBJECT);
+?&gt;
+</code></pre>
 
 <p><code>JSON_FORCE_OBJECT</code> forces the array to be translated into an object and <code>JSON_NUMERIC_CHECK</code> converts string-formatted numbers to actual numbers. You can find all bitmasks (constants) <a href="http://php.net/manual/en/json.constants.php">here</a>. Note that most of the constants are available since PHP 5.3 and some of them were added in 5.4. Most of them deal with how to convert characters like <code>&lt; &gt;</code>, <code>&amp;</code> or <code>&quot;&quot;</code>. PHP 5.4 provides a <code>JSON_PRETTY_PRINT</code> constant that may you help during development since it uses whitespace to format the output (since it adds character overhead, I won&rsquo;t enable it in production of course).</p>
 
-<h2 id="decoding-json-in-php:a3d5483349c0d950e081bf899405ed60">Decoding JSON in PHP</h2>
+<h2 id="decoding-json-in-php">Decoding JSON in PHP</h2>
 
 <p>Decoding JSON is as simple as encoding it. PHP provides you a handy <a href="http://php.net/manual/de/function.json-decode.php">json_decode</a> function that handles everything for you. If you just pass a valid JSON string into the method, you get an object of type <code>stdClass</code> back. Here&rsquo;s a short example:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #000000">$string</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;{&quot;foo&quot;: &quot;bar&quot;, &quot;cool&quot;: &quot;attr&quot;}&#39;</span>;
-<span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #A90D91">json_decode</span>(<span style="color: #000000">$string</span>);
 
-<span style="color: #177500">// Result: object(stdClass)#1 (2) { [&quot;foo&quot;]=&gt; string(3) &quot;bar&quot; [&quot;cool&quot;]=&gt; string(4) &quot;attr&quot; }</span>
-<span style="color: #A90D91">var_dump</span>(<span style="color: #000000">$result</span>);
+<pre><code>&lt;?php
+$string = '{&quot;foo&quot;: &quot;bar&quot;, &quot;cool&quot;: &quot;attr&quot;}';
+$result = json_decode($string);
 
-<span style="color: #177500">// Prints &quot;bar&quot;</span>
-<span style="color: #A90D91">echo</span> <span style="color: #000000">$result-&gt;</span><span style="color: #836C28">foo</span>;
+// Result: object(stdClass)#1 (2) { [&quot;foo&quot;]=&gt; string(3) &quot;bar&quot; [&quot;cool&quot;]=&gt; string(4) &quot;attr&quot; }
+var_dump($result);
 
-<span style="color: #177500">// Prints &quot;attr&quot;</span>
-<span style="color: #A90D91">echo</span> <span style="color: #000000">$result-&gt;</span><span style="color: #836C28">cool</span>;
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+// Prints &quot;bar&quot;
+echo $result-&gt;foo;
+
+// Prints &quot;attr&quot;
+echo $result-&gt;cool;
+?&gt;
+</code></pre>
 
 <p>If you want to get an associative array back instead, set the second parameter to true:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #000000">$string</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;{&quot;foo&quot;: &quot;bar&quot;, &quot;cool&quot;: &quot;attr&quot;}&#39;</span>;
-<span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #A90D91">json_decode</span>(<span style="color: #000000">$string</span>, <span style="color: #A90D91">true</span>);
 
-<span style="color: #177500">// Result: array(2) { [&quot;foo&quot;]=&gt; string(3) &quot;bar&quot; [&quot;cool&quot;]=&gt; string(4) &quot;attr&quot; }</span>
-<span style="color: #A90D91">var_dump</span>(<span style="color: #000000">$result</span>);
+<pre><code>&lt;?php
+$string = '{&quot;foo&quot;: &quot;bar&quot;, &quot;cool&quot;: &quot;attr&quot;}';
+$result = json_decode($string, true);
 
-<span style="color: #177500">// Prints &quot;bar&quot;</span>
-<span style="color: #A90D91">echo</span> <span style="color: #000000">$result</span>[<span style="color: #C41A16">&#39;foo&#39;</span>];
+// Result: array(2) { [&quot;foo&quot;]=&gt; string(3) &quot;bar&quot; [&quot;cool&quot;]=&gt; string(4) &quot;attr&quot; }
+var_dump($result);
 
-<span style="color: #177500">// Prints &quot;attr&quot;</span>
-<span style="color: #A90D91">echo</span> <span style="color: #000000">$result</span>[<span style="color: #C41A16">&#39;cool&#39;</span>];
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+// Prints &quot;bar&quot;
+echo $result['foo'];
+
+// Prints &quot;attr&quot;
+echo $result['cool'];
+?&gt;
+</code></pre>
 
 <p>If you expect a very large nested JSON document, you can limit the recursion depth to a certain level. The function will return <code>null</code> and stops parsing if the document is deeper than the given depth.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #000000">$string</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;{&quot;foo&quot;: {&quot;bar&quot;: {&quot;cool&quot;: &quot;value&quot;}}}&#39;</span>;
-<span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #A90D91">json_decode</span>(<span style="color: #000000">$string</span>, <span style="color: #A90D91">true</span>, <span style="color: #1C01CE">2</span>);
 
-<span style="color: #177500">// Result: null</span>
-<span style="color: #A90D91">var_dump</span>(<span style="color: #000000">$result</span>);
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+<pre><code>&lt;?php
+$string = '{&quot;foo&quot;: {&quot;bar&quot;: {&quot;cool&quot;: &quot;value&quot;}}}';
+$result = json_decode($string, true, 2);
+
+// Result: null
+var_dump($result);
+?&gt;
+</code></pre>
 
 <p>The last argument works the same as in json_encode, but there is only one bitmask supported currently (which allows you to convert bigints to strings and is only available from PHP 5.4 upwards).We&rsquo;ve been working with valid JSON strings until now (aside fromt the <code>null</code> depth error). The next part shows you how to deal with errors.</p>
 
-<h2 id="error-handling-and-testing:a3d5483349c0d950e081bf899405ed60">Error-Handling and Testing</h2>
+<h2 id="error-handling-and-testing">Error-Handling and Testing</h2>
 
 <p>If the JSON value could not be parsed or a nesting level deeper than the given (or default) depth is found, NULL is returned from json_decode. This means that no exception is raised by json_encode/json_deocde directly.</p>
 
@@ -273,57 +283,60 @@
 </ul>
 
 <p>With those information at hand, we can write a quick parsing helper method that raises a descriptive exception when an error is found.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #A90D91">class</span> <span style="color: #3F6E75">JsonHandler</span> {
 
-    <span style="color: #A90D91">protected</span> <span style="color: #A90D91">static</span> <span style="color: #000000">$_messages</span> <span style="color: #000000">=</span> <span style="color: #A90D91">array</span>(
-        <span style="color: #000000">JSON_ERROR_NONE</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;No error has occurred&#39;</span>,
-        <span style="color: #000000">JSON_ERROR_DEPTH</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;The maximum stack depth has been exceeded&#39;</span>,
-        <span style="color: #000000">JSON_ERROR_STATE_MISMATCH</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;Invalid or malformed JSON&#39;</span>,
-        <span style="color: #000000">JSON_ERROR_CTRL_CHAR</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;Control character error, possibly incorrectly encoded&#39;</span>,
-        <span style="color: #000000">JSON_ERROR_SYNTAX</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;Syntax error&#39;</span>,
-        <span style="color: #000000">JSON_ERROR_UTF8</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;Malformed UTF-8 characters, possibly incorrectly encoded&#39;</span>
+<pre><code>&lt;?php
+class JsonHandler {
+
+    protected static $_messages = array(
+        JSON_ERROR_NONE =&gt; 'No error has occurred',
+        JSON_ERROR_DEPTH =&gt; 'The maximum stack depth has been exceeded',
+        JSON_ERROR_STATE_MISMATCH =&gt; 'Invalid or malformed JSON',
+        JSON_ERROR_CTRL_CHAR =&gt; 'Control character error, possibly incorrectly encoded',
+        JSON_ERROR_SYNTAX =&gt; 'Syntax error',
+        JSON_ERROR_UTF8 =&gt; 'Malformed UTF-8 characters, possibly incorrectly encoded'
     );
 
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">function</span> <span style="color: #000000">encode</span>(<span style="color: #000000">$value</span>, <span style="color: #000000">$options</span> <span style="color: #000000">=</span> <span style="color: #1C01CE">0</span>) {
-        <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #A90D91">json_encode</span>(<span style="color: #000000">$value</span>, <span style="color: #000000">$options</span>);
+    public static function encode($value, $options = 0) {
+        $result = json_encode($value, $options);
 
-        <span style="color: #A90D91">if</span>(<span style="color: #000000">$result</span>)  {
-            <span style="color: #A90D91">return</span> <span style="color: #000000">$result</span>;
+        if($result)  {
+            return $result;
         }
 
-        <span style="color: #A90D91">throw</span> <span style="color: #A90D91">new</span> <span style="color: #000000">RuntimeException</span>(<span style="color: #A90D91">static</span><span style="color: #000000">::$_messages</span>[<span style="color: #A90D91">json_last_error</span>()]);
+        throw new RuntimeException(static::$_messages[json_last_error()]);
     }
 
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">function</span> <span style="color: #000000">decode</span>(<span style="color: #000000">$json</span>, <span style="color: #000000">$assoc</span> <span style="color: #000000">=</span> <span style="color: #A90D91">false</span>) {
-        <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #A90D91">json_decode</span>(<span style="color: #000000">$json</span>, <span style="color: #000000">$assoc</span>);
+    public static function decode($json, $assoc = false) {
+        $result = json_decode($json, $assoc);
 
-        <span style="color: #A90D91">if</span>(<span style="color: #000000">$result</span>) {
-            <span style="color: #A90D91">return</span> <span style="color: #000000">$result</span>;
+        if($result) {
+            return $result;
         }
 
-        <span style="color: #A90D91">throw</span> <span style="color: #A90D91">new</span> <span style="color: #000000">RuntimeException</span>(<span style="color: #A90D91">static</span><span style="color: #000000">::$_messages</span>[<span style="color: #A90D91">json_last_error</span>()]);
+        throw new RuntimeException(static::$_messages[json_last_error()]);
     }
 
 }
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>We can now use the exception testing function <a href="http://nitschinger.at/A-primer-on-PHP-exceptions">from the last post about exception handling</a> to test if our exception works correctly.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">// Returns &quot;Correctly thrown&quot;</span>
-<span style="color: #000000">assertException</span>(<span style="color: #C41A16">&quot;Syntax error&quot;</span>, <span style="color: #A90D91">function</span>() {
-    <span style="color: #000000">$string</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;{&quot;foo&quot;: {&quot;bar&quot;: {&quot;cool&quot;: NONUMBER}}}&#39;</span>;
-    <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">JsonHandler::decode</span>(<span style="color: #000000">$string</span>);
+
+<pre><code>// Returns &quot;Correctly thrown&quot;
+assertException(&quot;Syntax error&quot;, function() {
+    $string = '{&quot;foo&quot;: {&quot;bar&quot;: {&quot;cool&quot;: NONUMBER}}}';
+    $result = JsonHandler::decode($string);
 });
-</pre></div>
+</code></pre>
 
 <p>Note that since PHP 5.3.3, there is a <code>JSON_ERROR_UTF8</code> error returned when an invalid UTF-8 character is found in the string. This is a strong indication that a different charset than UTF-8 is used. If the incoming string is not under your control, you can use the <a href="http://at2.php.net/manual/en/function.utf8-encode.php">utf8_encode</a> function to convert it into utf8.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span> <span style="color: #A90D91">echo</span> <span style="color: #A90D91">utf8_encode</span>(<span style="color: #A90D91">json_encode</span>(<span style="color: #000000">$payload</span>)); <span style="color: #633820">?&gt;</span>
-</pre></div>
+
+<pre><code>&lt;?php echo utf8_encode(json_encode($payload)); ?&gt;
+</code></pre>
 
 <p>I&rsquo;ve been using this in the past to convert data loaded from a legacy MSSQL database that didn&rsquo;t use UTF-8.</p>
 
-<h2 id="summary:a3d5483349c0d950e081bf899405ed60">Summary</h2>
+<h2 id="summary">Summary</h2>
 
 <p>JSON is a convenient, readable and easy to use data exchange format that seems to replace XML as the de-facto standard on the web. PHP has everything you need already built in and provides various configuration options if you use a recent version (&gt; 5.3).</p>
 
@@ -352,7 +365,7 @@
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

@@ -7,7 +7,7 @@
 
     <meta name="description" content="This post shows how you can learn more about your hardware topology using the Rust programming language and the hwloc library.">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Discovering Hardware Topology in Rust &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -74,7 +74,8 @@
                             
                         </p>
                     </header>
-
+                    
+                    
                     <div class="post-description">
                         
 
@@ -97,7 +98,7 @@ efficiently.</em></p>
 
 <p>I assume that you have basic rust skills, if not you want to check out <a href="https://doc.rust-lang.org/stable/book/">the book</a> first. All the examples shown here should work on Linux and OSX, I never tested rust binding on windows (hwloc itself supports windows). If you want to help out adding support for it, that would be awesome!</p>
 
-<h2 id="setup:59d60ae1f01cc6eb214b28fbb3277422">Setup</h2>
+<h2 id="setup">Setup</h2>
 
 <p>You need to have rust (for example 1.5.0) installed, as well as the <code>hwloc</code> C library. Please refer to the <a href="https://github.com/daschl/hwloc-rs#install-hwloc-on-os-x">README</a> for detailed instructions on how to install it. On linux, most of the time you can find recent packages in your package manager, on OSX you want to install it from source. For example, here is all you need to do on OSX:</p>
 
@@ -109,16 +110,19 @@ efficiently.</em></p>
 </ul>
 
 <p>The next step is to create a rust project which will be runnable from the command line:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">~/rust $ cargo new hwloc-playground --bin
-</pre></div>
+
+<pre><code>~/rust $ cargo new hwloc-playground --bin
+</code></pre>
 
 <p>Go modify your <code>Cargo.toml</code> and add <code>hwloc</code> as a dependency:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">[dependencies]</span>
-<span style="color: #836C28">hwloc</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;0.2.0&quot;</span>
-</pre></div>
+
+<pre><code>[dependencies]
+hwloc = &quot;0.2.0&quot;
+</code></pre>
 
 <p>Execute <code>cargo run</code> to make sure the dependency compiles correctly before we move on:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">~/rust/hwloc-playground $ cargo run
+
+<pre><code>~/rust/hwloc-playground $ cargo run
    Compiling winapi-build v0.1.1
    Compiling libc v0.2.4
    Compiling rustc-serialize v0.3.16
@@ -134,14 +138,14 @@ efficiently.</em></p>
    Compiling hwloc-playground v0.1.0 (file:///Users/michael/rust/hwloc-playground)
      Running `target/debug/hwloc-playground`
 Hello, world!
-</pre></div>
+</code></pre>
 
 <p><code>hwloc-rs</code> also provides rustdoc which you can find <a href="http://nitschinger.at/hwloc-rs/rustdoc">here</a> for the different versions.</p>
 
-<h3 id="cores-and-processing-units:59d60ae1f01cc6eb214b28fbb3277422">Cores and Processing Units</h3>
+<h3 id="cores-and-processing-units">Cores and Processing Units</h3>
 
 <p>As a first simple example, we&rsquo;ll find out how many physical cores we have on the machine. This introduces some basic concepts of <code>hwloc</code>. The full code sample looks like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">extern</span> <span style="color: #000000">crate</span> <span style="color: #000000">hwloc</span>;
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">extern</span> <span style="color: #A90D91">crate</span> <span style="color: #000000">hwloc</span>;
 
 <span style="color: #A90D91">use</span> <span style="color: #000000">hwloc::</span>{<span style="color: #000000">Topology</span>, <span style="color: #000000">ObjectType</span>};
 
@@ -154,54 +158,56 @@ Hello, world!
 
     <span style="color: #177500">// Match on the returned Result and print the length if successful.</span>
     <span style="color: #A90D91">match</span> <span style="color: #000000">cores</span> {
-        <span style="color: #A90D91">Ok</span>(<span style="color: #000000">c</span>) <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">println</span><span style="color: #000000">!</span>(<span style="color: #C41A16">&quot;There are {} cores on this machine.&quot;</span>, <span style="color: #000000">c</span>.<span style="color: #000000">len</span>()),
+        <span style="color: #A90D91">Ok</span>(<span style="color: #000000">c</span>) <span style="color: #000000">=&gt;</span> <span style="color: #000000">println!</span>(<span style="color: #C41A16">&quot;There are {} cores on this machine.&quot;</span>, <span style="color: #000000">c</span>.<span style="color: #000000">len</span>()),
         <span style="color: #A90D91">Err</span>(<span style="color: #000000">e</span>) <span style="color: #000000">=&gt;</span> <span style="color: #000000">panic!</span>(<span style="color: #000000">format!</span>(<span style="color: #C41A16">&quot;Could not load cores because of: {:?}&quot;</span>, <span style="color: #000000">e</span>))
     }
 }
 </pre></div>
 
 <p>Let&rsquo;s break the code apart a bit. The first thing you always need to do is create a <a href="http://nitschinger.at/hwloc-rs/rustdoc/0.2.0/hwloc/struct.Topology.html">Topology</a>. The <code>Topology</code> is your logical representation of the actual mapped hardware.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">let</span> <span style="color: #000000">topology</span> <span style="color: #000000">=</span> <span style="color: #000000">Topology::new</span>();
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">let</span> <span style="color: #000000">topology</span> <span style="color: #000000">=</span> <span style="color: #000000">Topology::new</span>();
 </pre></div>
 
 <p>Now that we have the <code>Topology</code>, we can ask it to return all <a href="http://nitschinger.at/hwloc-rs/rustdoc/0.2.0/hwloc/struct.TopologyObject.html">TopologyObjects</a> with a specific <a href="http://nitschinger.at/hwloc-rs/rustdoc/0.2.0/hwloc/enum.ObjectType.html">ObjectType</a>. One type is <code>Core</code> which maps to a computation unit on the physical hardware (most of the time a CPU Core).</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">let</span> <span style="color: #000000">cores</span> <span style="color: #000000">=</span> <span style="color: #000000">topology</span>.<span style="color: #000000">objects_with_type</span>(<span style="color: #000000">&amp;ObjectType::Core</span>);
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">let</span> <span style="color: #000000">cores</span> <span style="color: #000000">=</span> <span style="color: #000000">topology</span>.<span style="color: #000000">objects_with_type</span>(<span style="color: #000000">&amp;ObjectType::Core</span>);
 </pre></div>
 
 <p>Since not every ObjectType is available on every hardware, it might not be possible to figure out the actual objects. Because of this, the <code>objects_with_type</code> method returns a <code>Result&lt;Vec&lt;&amp;TopologyObject&gt;, TypeDepthError&gt;</code>. We can now utilize pattern matching to distinguish between success and error, and if it is successful print out the length of the <a href="https://doc.rust-lang.org/std/vec/struct.Vec.html#method.len">Vector</a>:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">match</span> <span style="color: #000000">cores</span> {
-    <span style="color: #A90D91">Ok</span>(<span style="color: #000000">c</span>) <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">println</span><span style="color: #000000">!</span>(<span style="color: #C41A16">&quot;There are {} cores on this machine.&quot;</span>, <span style="color: #000000">c</span>.<span style="color: #000000">len</span>()),
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">match</span> <span style="color: #000000">cores</span> {
+    <span style="color: #A90D91">Ok</span>(<span style="color: #000000">c</span>) <span style="color: #000000">=&gt;</span> <span style="color: #000000">println!</span>(<span style="color: #C41A16">&quot;There are {} cores on this machine.&quot;</span>, <span style="color: #000000">c</span>.<span style="color: #000000">len</span>()),
     <span style="color: #A90D91">Err</span>(<span style="color: #000000">e</span>) <span style="color: #000000">=&gt;</span> <span style="color: #000000">panic!</span>(<span style="color: #000000">format!</span>(<span style="color: #C41A16">&quot;Could not load cores because of: {:?}&quot;</span>, <span style="color: #000000">e</span>))
 }
 </pre></div>
 
 <p>If you run the code you should see an output like this (My machine is equipped with an i7 quadcore):</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">~/rust/hwloc-playground $ cargo run
+
+<pre><code>~/rust/hwloc-playground $ cargo run
    Compiling hwloc-playground v0.1.0 (file:///Users/michael/rust/hwloc-playground)
      Running `target/debug/hwloc-playground`
 There are 4 cores on this machine.
-</pre></div>
+</code></pre>
 
 <p>Hwloc allows you to differentiate between cores and actual processing units. For example if your CPU has hyperthreading enabled, you&rsquo;ll end up with more logical processing units than physical cores. Let&rsquo;s modify the code to print the number of logical processing units instead:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">// Get all objects with type &quot;PU&quot;</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #177500">// Get all objects with type &quot;PU&quot;</span>
 <span style="color: #A90D91">let</span> <span style="color: #000000">cores</span> <span style="color: #000000">=</span> <span style="color: #000000">topology</span>.<span style="color: #000000">objects_with_type</span>(<span style="color: #000000">&amp;ObjectType::PU</span>);
 
 <span style="color: #177500">// Match on the returned Result and print the length if successful.</span>
 <span style="color: #A90D91">match</span> <span style="color: #000000">cores</span> {
-    <span style="color: #A90D91">Ok</span>(<span style="color: #000000">c</span>) <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">println</span><span style="color: #000000">!</span>(<span style="color: #C41A16">&quot;There are {} processing units on this machine.&quot;</span>, <span style="color: #000000">c</span>.<span style="color: #000000">len</span>()),
+    <span style="color: #A90D91">Ok</span>(<span style="color: #000000">c</span>) <span style="color: #000000">=&gt;</span> <span style="color: #000000">println!</span>(<span style="color: #C41A16">&quot;There are {} processing units on this machine.&quot;</span>, <span style="color: #000000">c</span>.<span style="color: #000000">len</span>()),
     <span style="color: #A90D91">Err</span>(<span style="color: #000000">e</span>) <span style="color: #000000">=&gt;</span> <span style="color: #000000">panic!</span>(<span style="color: #000000">format!</span>(<span style="color: #C41A16">&quot;Could not load processing units because of: {:?}&quot;</span>, <span style="color: #000000">e</span>))
 }
 </pre></div>
 
 <p>My i7 indeed has hyperthreading enabled, so this prints:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">~/rust/hwloc-playground $ cargo run
+
+<pre><code>~/rust/hwloc-playground $ cargo run
    Compiling hwloc-playground v0.1.0 (file:///Users/michael/rust/hwloc-playground)
      Running `target/debug/hwloc-playground`
 There are 8 processing units on this machine.
-</pre></div>
+</code></pre>
 
 <p>The library also allows us to walk the topology in tree form, so the logical processing units (&ldquo;PU&rdquo;) are &ldquo;below&rdquo; the actual cores. If we want to determine how many PUs every core has, we can print that as well:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">extern</span> <span style="color: #000000">crate</span> <span style="color: #000000">hwloc</span>;
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">extern</span> <span style="color: #A90D91">crate</span> <span style="color: #000000">hwloc</span>;
 
 <span style="color: #A90D91">use</span> <span style="color: #000000">hwloc::</span>{<span style="color: #000000">Topology</span>, <span style="color: #000000">ObjectType</span>};
 
@@ -215,13 +221,13 @@ There are 8 processing units on this machine.
     <span style="color: #177500">// Iterate through each PU</span>
     <span style="color: #A90D91">for</span> <span style="color: #000000">pu</span> <span style="color: #A90D91">in</span> <span style="color: #000000">&amp;pus</span> {
         <span style="color: #177500">// Print the PU&#39;s logical index.</span>
-        <span style="color: #A90D91">print</span><span style="color: #000000">!</span>(<span style="color: #C41A16">&quot;PU #{} is on Core &quot;</span>, <span style="color: #000000">pu</span>.<span style="color: #000000">logical_index</span>());
+        <span style="color: #000000">print!</span>(<span style="color: #C41A16">&quot;PU #{} is on Core &quot;</span>, <span style="color: #000000">pu</span>.<span style="color: #000000">logical_index</span>());
 
         <span style="color: #177500">// Walk up the parent chain until the Core is found and print its id.</span>
         <span style="color: #A90D91">let</span> <span style="color: #A90D91">mut</span> <span style="color: #000000">parent</span> <span style="color: #000000">=</span> <span style="color: #000000">pu</span>.<span style="color: #000000">parent</span>();
         <span style="color: #A90D91">while</span> <span style="color: #A90D91">let</span> <span style="color: #A90D91">Some</span>(<span style="color: #000000">p</span>) <span style="color: #000000">=</span> <span style="color: #000000">parent</span> {
             <span style="color: #A90D91">if</span> <span style="color: #000000">p</span>.<span style="color: #000000">object_type</span>() <span style="color: #000000">==</span> <span style="color: #000000">ObjectType::Core</span> {
-                <span style="color: #A90D91">println</span><span style="color: #000000">!</span>(<span style="color: #C41A16">&quot;{}&quot;</span>, <span style="color: #000000">p</span>.<span style="color: #000000">logical_index</span>());
+                <span style="color: #000000">println!</span>(<span style="color: #C41A16">&quot;{}&quot;</span>, <span style="color: #000000">p</span>.<span style="color: #000000">logical_index</span>());
                 <span style="color: #000000">parent</span> <span style="color: #000000">=</span> <span style="color: #A90D91">None</span>;
             } <span style="color: #A90D91">else</span> {
                 <span style="color: #000000">parent</span> <span style="color: #000000">=</span> <span style="color: #000000">p</span>.<span style="color: #000000">parent</span>();
@@ -232,25 +238,25 @@ There are 8 processing units on this machine.
 </pre></div>
 
 <p>First, we load all the processing units:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">let</span> <span style="color: #000000">pus</span> <span style="color: #000000">=</span> <span style="color: #000000">topology</span>.<span style="color: #000000">objects_with_type</span>(<span style="color: #000000">&amp;ObjectType::PU</span>).<span style="color: #000000">ok</span>().<span style="color: #000000">expect</span>(<span style="color: #C41A16">&quot;Could not load PUs!&quot;</span>);
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">let</span> <span style="color: #000000">pus</span> <span style="color: #000000">=</span> <span style="color: #000000">topology</span>.<span style="color: #000000">objects_with_type</span>(<span style="color: #000000">&amp;ObjectType::PU</span>).<span style="color: #000000">ok</span>().<span style="color: #000000">expect</span>(<span style="color: #C41A16">&quot;Could not load PUs!&quot;</span>);
 </pre></div>
 
 <p>Next up, we iterate through each unit and print its logical index:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">// Iterate through each PU</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #177500">// Iterate through each PU</span>
 <span style="color: #A90D91">for</span> <span style="color: #000000">pu</span> <span style="color: #A90D91">in</span> <span style="color: #000000">&amp;pus</span> {
     <span style="color: #177500">// Print the PU&#39;s logical index.</span>
-    <span style="color: #A90D91">print</span><span style="color: #000000">!</span>(<span style="color: #C41A16">&quot;PU #{} is on Core &quot;</span>, <span style="color: #000000">pu</span>.<span style="color: #000000">logical_index</span>());
+    <span style="color: #000000">print!</span>(<span style="color: #C41A16">&quot;PU #{} is on Core &quot;</span>, <span style="color: #000000">pu</span>.<span style="color: #000000">logical_index</span>());
 
     <span style="color: #177500">// ...</span>
 }
 </pre></div>
 
 <p>Finally, we can walk up the tree of parents for each unit until we arrive at the Core level and print out its logical index as well. Notice how easy the walking is with the <code>while let</code> construct. This works because <code>TopologyObject#parent()</code> returns an <code>Option&lt;&amp;TopologyOption&gt;</code>.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">// Walk up the parent chain until the Core is found and print its id.</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #177500">// Walk up the parent chain until the Core is found and print its id.</span>
 <span style="color: #A90D91">let</span> <span style="color: #A90D91">mut</span> <span style="color: #000000">parent</span> <span style="color: #000000">=</span> <span style="color: #000000">pu</span>.<span style="color: #000000">parent</span>();
 <span style="color: #A90D91">while</span> <span style="color: #A90D91">let</span> <span style="color: #A90D91">Some</span>(<span style="color: #000000">p</span>) <span style="color: #000000">=</span> <span style="color: #000000">parent</span> {
     <span style="color: #A90D91">if</span> <span style="color: #000000">p</span>.<span style="color: #000000">object_type</span>() <span style="color: #000000">==</span> <span style="color: #000000">ObjectType::Core</span> {
-        <span style="color: #A90D91">println</span><span style="color: #000000">!</span>(<span style="color: #C41A16">&quot;{}&quot;</span>, <span style="color: #000000">p</span>.<span style="color: #000000">logical_index</span>());
+        <span style="color: #000000">println!</span>(<span style="color: #C41A16">&quot;{}&quot;</span>, <span style="color: #000000">p</span>.<span style="color: #000000">logical_index</span>());
         <span style="color: #000000">parent</span> <span style="color: #000000">=</span> <span style="color: #A90D91">None</span>;
     } <span style="color: #A90D91">else</span> {
         <span style="color: #000000">parent</span> <span style="color: #000000">=</span> <span style="color: #000000">p</span>.<span style="color: #000000">parent</span>();
@@ -259,7 +265,8 @@ There are 8 processing units on this machine.
 </pre></div>
 
 <p>On my machine this prints:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"> ~/rust/hwloc-playground $ cargo run
+
+<pre><code> ~/rust/hwloc-playground $ cargo run
    Compiling hwloc-playground v0.1.0 (file:///Users/michael/rust/hwloc-playground)
      Running `target/debug/hwloc-playground`
 PU #0 is on Core 0
@@ -270,14 +277,14 @@ PU #4 is on Core 2
 PU #5 is on Core 2
 PU #6 is on Core 3
 PU #7 is on Core 3
-</pre></div>
+</code></pre>
 
 <p>You can see that each Core has two PUs attached to it.</p>
 
-<h2 id="walking-the-tree:59d60ae1f01cc6eb214b28fbb3277422">Walking The Tree</h2>
+<h2 id="walking-the-tree">Walking The Tree</h2>
 
 <p>If you want to understand the topology as a whole, you can walk it in two ways: either level by level (by depth) or in tree form. Here is a full example to walk it by level:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">extern</span> <span style="color: #000000">crate</span> <span style="color: #000000">hwloc</span>;
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">extern</span> <span style="color: #A90D91">crate</span> <span style="color: #000000">hwloc</span>;
 
 <span style="color: #A90D91">use</span> <span style="color: #000000">hwloc::Topology</span>;
 
@@ -286,19 +293,20 @@ PU #7 is on Core 3
     <span style="color: #A90D91">let</span> <span style="color: #000000">topology</span> <span style="color: #000000">=</span> <span style="color: #000000">Topology::new</span>();
 
     <span style="color: #177500">// Loop through the complete topology depth.</span>
-    <span style="color: #A90D91">for</span> <span style="color: #000000">i</span> <span style="color: #A90D91">in</span> <span style="color: #1C01CE">0.</span>.<span style="color: #000000">topology</span>.<span style="color: #000000">depth</span>() {
-		<span style="color: #A90D91">println</span><span style="color: #000000">!</span>(<span style="color: #C41A16">&quot;*** Objects at level {}&quot;</span>, <span style="color: #000000">i</span>);
+    <span style="color: #A90D91">for</span> <span style="color: #000000">i</span> <span style="color: #A90D91">in</span> <span style="color: #1C01CE">0</span>..<span style="color: #000000">topology</span>.<span style="color: #000000">depth</span>() {
+		<span style="color: #000000">println!</span>(<span style="color: #C41A16">&quot;*** Objects at level {}&quot;</span>, <span style="color: #000000">i</span>);
 
         <span style="color: #177500">// Print each object at each level.</span>
 		<span style="color: #A90D91">for</span> (<span style="color: #000000">idx</span>, <span style="color: #000000">object</span>) <span style="color: #A90D91">in</span> <span style="color: #000000">topology</span>.<span style="color: #000000">objects_at_depth</span>(<span style="color: #000000">i</span>).<span style="color: #000000">iter</span>().<span style="color: #000000">enumerate</span>() {
-			<span style="color: #A90D91">println</span><span style="color: #000000">!</span>(<span style="color: #C41A16">&quot;{}: {}&quot;</span>, <span style="color: #000000">idx</span>, <span style="color: #000000">object</span>);
+			<span style="color: #000000">println!</span>(<span style="color: #C41A16">&quot;{}: {}&quot;</span>, <span style="color: #000000">idx</span>, <span style="color: #000000">object</span>);
 		}
 	}
 }
 </pre></div>
 
 <p>The code iterates through each level until the final topology depth is reached and on each level it prints all the TopologyObjects. This is the result on my machine:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">*** Objects at level 0
+
+<pre><code>*** Objects at level 0
 0: Machine ()
 *** Objects at level 1
 0: NUMANode16GB (16GB)
@@ -328,12 +336,12 @@ PU #7 is on Core 3
 5: PU ()
 6: PU ()
 7: PU ()
-</pre></div>
+</code></pre>
 
 <p>Here you can see new ObjectTypes in action. My machine has one NUMANode with 16GB of RAM. Then you can see the L3, L2 and L1 caches, as well as the individual Cores and logical processing units.</p>
 
 <p>A different way to visualize it is through a tree representation:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">extern</span> <span style="color: #000000">crate</span> <span style="color: #000000">hwloc</span>;
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">extern</span> <span style="color: #A90D91">crate</span> <span style="color: #000000">hwloc</span>;
 
 <span style="color: #A90D91">use</span> <span style="color: #000000">hwloc::</span>{<span style="color: #000000">Topology</span>, <span style="color: #000000">TopologyObject</span>};
 
@@ -342,33 +350,33 @@ PU #7 is on Core 3
 	<span style="color: #A90D91">let</span> <span style="color: #000000">topo</span> <span style="color: #000000">=</span> <span style="color: #000000">Topology::new</span>();
 
     <span style="color: #177500">// Print the tree and start at the root</span>
-	<span style="color: #A90D91">println</span><span style="color: #000000">!</span>(<span style="color: #C41A16">&quot;*** Printing overall tree&quot;</span>);
+	<span style="color: #000000">println!</span>(<span style="color: #C41A16">&quot;*** Printing overall tree&quot;</span>);
 	<span style="color: #000000">print_children</span>(<span style="color: #000000">&amp;topo</span>, <span style="color: #000000">topo</span>.<span style="color: #000000">object_at_root</span>(), <span style="color: #1C01CE">0</span>);
 }
 
 <span style="color: #177500">// Print children recursively</span>
-<span style="color: #A90D91">fn</span> <span style="color: #000000">print_children</span>(<span style="color: #000000">topo:</span> <span style="color: #000000">&amp;Topology</span>, <span style="color: #000000">obj:</span> <span style="color: #000000">&amp;TopologyObject</span>, <span style="color: #000000">depth:</span> <span style="color: #000000">usize</span>) {
+<span style="color: #A90D91">fn</span> <span style="color: #000000">print_children</span>(<span style="color: #000000">topo:</span> <span style="color: #000000">&amp;Topology</span>, <span style="color: #000000">obj:</span> <span style="color: #000000">&amp;TopologyObject</span>, <span style="color: #000000">depth:</span> <span style="color: #A90D91">usize</span>) {
     <span style="color: #177500">// some padding for the tree print</span>
-	<span style="color: #A90D91">let</span> <span style="color: #000000">padding</span> <span style="color: #000000">=</span> <span style="color: #000000">std::iter::repeat</span>(<span style="color: #C41A16">&quot; &quot;</span>).<span style="color: #000000">take</span>(<span style="color: #000000">depth</span>).<span style="color: #000000">collect::&lt;String&gt;</span>();
-	<span style="color: #A90D91">println</span><span style="color: #000000">!</span>(<span style="color: #C41A16">&quot;{}{}: #{}&quot;</span>, <span style="color: #000000">padding</span>, <span style="color: #000000">obj</span>, <span style="color: #000000">obj</span>.<span style="color: #000000">os_index</span>());
+	<span style="color: #A90D91">let</span> <span style="color: #000000">padding</span> <span style="color: #000000">=</span> <span style="color: #000000">std::iter::repeat</span>(<span style="color: #C41A16">&quot; &quot;</span>).<span style="color: #000000">take</span>(<span style="color: #000000">depth</span>).<span style="color: #000000">collect::&lt;</span><span style="color: #A90D91">String</span><span style="color: #000000">&gt;</span>();
+	<span style="color: #000000">println!</span>(<span style="color: #C41A16">&quot;{}{}: #{}&quot;</span>, <span style="color: #000000">padding</span>, <span style="color: #000000">obj</span>, <span style="color: #000000">obj</span>.<span style="color: #000000">os_index</span>());
 
-	<span style="color: #A90D91">for</span> <span style="color: #000000">i</span> <span style="color: #A90D91">in</span> <span style="color: #1C01CE">0.</span>.<span style="color: #000000">obj</span>.<span style="color: #000000">arity</span>() {
-		<span style="color: #000000">print_children</span>(<span style="color: #000000">topo</span>, <span style="color: #000000">obj</span>.<span style="color: #000000">children</span>()[<span style="color: #000000">i</span> <span style="color: #A90D91">as</span> <span style="color: #000000">usize</span>], <span style="color: #000000">depth</span> <span style="color: #000000">+</span> <span style="color: #1C01CE">1</span>);
+	<span style="color: #A90D91">for</span> <span style="color: #000000">i</span> <span style="color: #A90D91">in</span> <span style="color: #1C01CE">0</span>..<span style="color: #000000">obj</span>.<span style="color: #000000">arity</span>() {
+		<span style="color: #000000">print_children</span>(<span style="color: #000000">topo</span>, <span style="color: #000000">obj</span>.<span style="color: #000000">children</span>()[<span style="color: #000000">i</span> <span style="color: #A90D91">as</span> <span style="color: #A90D91">usize</span>], <span style="color: #000000">depth</span> <span style="color: #000000">+</span> <span style="color: #1C01CE">1</span>);
 	}
 }
 </pre></div>
 
 <p>We define a method called <code>print_children</code> which is called recursively:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">fn</span> <span style="color: #000000">print_children</span>(<span style="color: #000000">topo:</span> <span style="color: #000000">&amp;Topology</span>, <span style="color: #000000">obj:</span> <span style="color: #000000">&amp;TopologyObject</span>, <span style="color: #000000">depth:</span> <span style="color: #000000">usize</span>)
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">fn</span> <span style="color: #000000">print_children</span>(<span style="color: #000000">topo:</span> <span style="color: #000000">&amp;Topology</span>, <span style="color: #000000">obj:</span> <span style="color: #000000">&amp;TopologyObject</span>, <span style="color: #000000">depth:</span> <span style="color: #A90D91">usize</span>)
 </pre></div>
 
 <p>Note the funky padding variable is just there to create a left-padding for the tree view:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">let</span> <span style="color: #000000">padding</span> <span style="color: #000000">=</span> <span style="color: #000000">std::iter::repeat</span>(<span style="color: #C41A16">&quot; &quot;</span>).<span style="color: #000000">take</span>(<span style="color: #000000">depth</span>).<span style="color: #000000">collect::&lt;String&gt;</span>();
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">let</span> <span style="color: #000000">padding</span> <span style="color: #000000">=</span> <span style="color: #000000">std::iter::repeat</span>(<span style="color: #C41A16">&quot; &quot;</span>).<span style="color: #000000">take</span>(<span style="color: #000000">depth</span>).<span style="color: #000000">collect::&lt;</span><span style="color: #A90D91">String</span><span style="color: #000000">&gt;</span>();
 </pre></div>
 
 <p>Running the code above gives the same information but in a different style:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"> <span style="color: #000000">~/rust/hwloc-playground</span> <span style="color: #633820">$</span> <span style="color: #000000">cargo</span> <span style="color: #000000">run</span>
-   <span style="color: #000000">Compiling</span> <span style="color: #000000">hwloc-playground</span> <span style="color: #000000">v0</span>.<span style="color: #1C01CE">1.0</span> (<span style="color: #000000">file:</span><span style="color: #177500">///Users/michael/rust/hwloc-playground)</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span> <span style="color: #000000">~/rust/hwloc-playground</span> <span style="color: #633820">$</span> <span style="color: #000000">cargo</span> <span style="color: #000000">run</span>
+   <span style="color: #000000">Compiling</span> <span style="color: #000000">hwloc-playground</span> <span style="color: #000000">v0</span>.<span style="color: #1C01CE">1.0</span> (<span style="color: #000000">file:</span><span style="color: #C41A16">///Users/michael/rust/hwloc-playground)</span>
      <span style="color: #000000">Running</span> <span style="color: #000000">`target/debug/hwloc-playground`</span>
 <span style="color: #000000">***</span> <span style="color: #000000">Printing</span> <span style="color: #000000">overall</span> <span style="color: #000000">tree</span>
 <span style="color: #000000">Machine</span> ()<span style="color: #000000">:</span> <span style="color: #000000">#</span><span style="color: #1C01CE">0</span>
@@ -398,12 +406,12 @@ PU #7 is on Core 3
 
 <p>What you can spot here immediately is that each core has its own L2 cache (as well as a L1 data cache) while at the same time they all share the same L3 cache.</p>
 
-<h2 id="cpu-caches:59d60ae1f01cc6eb214b28fbb3277422">CPU Caches</h2>
+<h2 id="cpu-caches">CPU Caches</h2>
 
 <p>Speaking of caches, it is often quite helpful to know how much memory and cache is available to each core/processing unit. This can be used to aid cpu and memory binding decisions which are concerned with data locality.</p>
 
 <p>Let&rsquo;s say we want to know how much cache our first logical processing unit has available:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">extern</span> <span style="color: #000000">crate</span> <span style="color: #000000">hwloc</span>;
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">extern</span> <span style="color: #A90D91">crate</span> <span style="color: #000000">hwloc</span>;
 
 <span style="color: #A90D91">use</span> <span style="color: #000000">hwloc::</span>{<span style="color: #000000">Topology</span>, <span style="color: #000000">ObjectType</span>};
 
@@ -428,18 +436,20 @@ PU #7 is on Core 3
 	}
 
     <span style="color: #177500">// Print out the result</span>
-	<span style="color: #A90D91">println</span><span style="color: #000000">!</span>(<span style="color: #C41A16">&quot;*** Logical processor 0 has {} caches totalling {} KB&quot;</span>, <span style="color: #000000">levels</span>, <span style="color: #000000">size</span> <span style="color: #000000">/</span> <span style="color: #1C01CE">1024</span>);
+	<span style="color: #000000">println!</span>(<span style="color: #C41A16">&quot;*** Logical processor 0 has {} caches totalling {} KB&quot;</span>, <span style="color: #000000">levels</span>, <span style="color: #000000">size</span> <span style="color: #000000">/</span> <span style="color: #1C01CE">1024</span>);
 }
 </pre></div>
 
 <p>We are using a similar technique as in the examples above, but this time we just add up all the capacity for each cache and then print it out.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"> ~/rust/hwloc-playground $ cargo run
+
+<pre><code> ~/rust/hwloc-playground $ cargo run
      Running `target/debug/hwloc-playground`
 *** Logical processor 0 has 3 caches totalling 6432 KB
-</pre></div>
+</code></pre>
 
 <p>This output is not surprising given we have seen the topology before:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">...
+
+<pre><code>...
   L3 (6144KB): #0
    L2 (256KB): #0
     L1d (32KB): #0
@@ -447,19 +457,20 @@ PU #7 is on Core 3
       PU (): #0 &lt;----
       PU (): #1
 ...
-</pre></div>
+</code></pre>
 
 <p>For a quick crosscheck, this is what OSX shows in its <code>System Report</code>:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">Processor Name:	Intel Core i7
+
+<pre><code>Processor Name:	Intel Core i7
 Processor Speed:	2,3 GHz
 Number of Processors:	1
 Total Number of Cores:	4
 L2 Cache (per Core):	256 KB
 L3 Cache:	6 MB
 Memory:	16 GB
-</pre></div>
+</code></pre>
 
-<h2 id="conclusion:59d60ae1f01cc6eb214b28fbb3277422">Conclusion</h2>
+<h2 id="conclusion">Conclusion</h2>
 
 <p>Hwloc and the rust binding provide a very convenient way to identify hardware topology characteristics. While hwloc has much more to offer, this post should have given you an easy introduction and should motivate you discovering your own topologies. In a followup post I&rsquo;ll show you how you can utilize the binding API to perform CPU binding if your OS supports it.</p>
 
@@ -486,7 +497,7 @@ Memory:	16 GB
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

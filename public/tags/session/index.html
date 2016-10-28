@@ -7,7 +7,7 @@
 
     <meta name="description" content="">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Session &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -83,7 +83,7 @@
 
 <p>Let&rsquo;s look at some obstacles that we as application developers face and then see how we may solve them through Couchbase and its functionality. Of course, there are lots of ways to solve the same problem domain and the solutions provided here may not fit your problem as good as another technology/stack/software. I&rsquo;d love to hear your opinions on this if you have a more elegant or flexible approach with a similar technology.</p>
 
-<h2 id="introduction:512f62c3475e795b4e119166c489818f">Introduction</h2>
+<h2 id="introduction">Introduction</h2>
 
 <p>The root of all session storage problems is that most web applications need to store some kind of state across pages and HTTP is by design <a href="http://en.wikipedia.org/wiki/Stateless_protocol">stateless</a>. Therefore, we need to use some of the solutions that were invented to fill exactly this gap.</p>
 
@@ -99,34 +99,38 @@
 
 <p>That&rsquo;s the short story on the origins of Couchbase. Note that there are lots of other awesome projects out there that help you achieve similar results, with <a href="http://redis.io/">Redis</a>, <a href="http://www.mongodb.org/">MongoDB</a> or <a href="http://wiki.basho.com/">Riak</a> as the more prominent ones. Espcially Redis provides more powerful data structures on top of the &ldquo;key/value&rdquo; pattern and is definitely worth a look.</p>
 
-<h2 id="implementation:512f62c3475e795b4e119166c489818f">Implementation</h2>
+<h2 id="implementation">Implementation</h2>
 
 <p>The most simple use case that all session stores need to fulfill is - of course - to store and read session data in a very performant way. Most of the time, a unique session identifier is used as the key and some arbitrary payload as the value (for example usernames, ids or other related data).</p>
 
 <p>Note that this post aims to be a SDK-independent introduction to the topic, and the exact syntax may vary a bit from SDK to SDK (I&rsquo;m using PHP here, but the syntax is nearly identical for the other SDKs). As the Couchbase API is similar to memcached, you should feel right at home if you&rsquo;ve used it already (at least for the basic commands).</p>
 
 <p>Couchbase provides you with <code>get</code> and <code>set</code> methods to read and store a value identified by a unique key. The key should be a string and the value preferably a JSON object. You can also store serialized or binary data, but you then loose the ability to query it through views. On the <code>set</code>-command, you can also pass in an optional expiration time, which comes in handy if you want to expire sessions automatically. Here&rsquo;s an example to store a session document:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$user</span> <span style="color: #000000">=</span> <span style="color: #000000">array(</span>
-    <span style="color: #C41A16">&#39;username&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;daschl&#39;</span><span style="color: #000000">,</span>
-    <span style="color: #C41A16">&#39;fullname&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;Michael Nitschinger&#39;</span>
-<span style="color: #000000">);</span>
-<span style="color: #000000">$document</span> <span style="color: #000000">=</span> <span style="color: #000000">json_encode($user);</span>
-<span style="color: #000000">$couchbase-&gt;set(</span><span style="color: #C41A16">&#39;user:1234&#39;</span><span style="color: #000000">,</span> <span style="color: #000000">$document,</span> <span style="color: #000000">60);</span>
-</pre></div>
+
+<pre><code>$user = array(
+    'username' =&gt; 'daschl',
+    'fullname' =&gt; 'Michael Nitschinger'
+);
+$document = json_encode($user);
+$couchbase-&gt;set('user:1234', $document, 60);
+</code></pre>
 
 <p>This stores the given JSON document with the key <code>user:1234</code> and a expiry time of 60 seconds in Couchbase. If you provide a expiry time that is larger than 30 days, Couchbase assumes that you pass in a unix timestamp (as a result, you can also pass absolute timestamps instead of relative ones).</p>
 
 <p>To read it back afterwards, you can use the <code>get</code> method:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">$couchbase-&gt;get(</span><span style="color: #C41A16">&#39;user:1234&#39;</span><span style="color: #000000">);</span>
-</pre></div>
+
+<pre><code>$result = $couchbase-&gt;get('user:1234');
+</code></pre>
 
 <p>If you want to delete the key (for example to destroy the session), you can just remove the key:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">$couchbase-&gt;delete(</span><span style="color: #C41A16">&#39;user:1234&#39;</span><span style="color: #000000">);</span>
-</pre></div>
+
+<pre><code>$result = $couchbase-&gt;delete('user:1234');
+</code></pre>
 
 <p>You can also just &ldquo;touch&rdquo; the document, so that the expiry key will be refreshed:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">$couchbase-&gt;touch(</span><span style="color: #C41A16">&#39;user:1234&#39;</span><span style="color: #000000">,</span> <span style="color: #000000">60);</span>
-</pre></div>
+
+<pre><code>$result = $couchbase-&gt;touch('user:1234', 60);
+</code></pre>
 
 <p>Of course that&rsquo;s just the simplest use case, but it is often enough to start with. If you&rsquo;re curious, you can also <a href="http://www.couchbase.com/docs/couchbase-sdk-php-1.1/api-reference-summary.html">look into</a> <code>getMulti</code> and <code>setMulti</code> to fetch more keys at the same time. One thing to remember is that when you specify an expiration time the key will only be deleted on the next fetch and not automatically. If you have a large batch of keys that you want to remove you need some kind of background script that touches them and makes sure they are actually deleted. Note that you can also wait for the Couchbase background job to delete the expired keys for you which runs every hour by default.</p>
 
@@ -143,7 +147,8 @@
 <p>In order to achieve this, we need some way to differentiate if a user is just visiting the website or is logged in. Also, we need to store the location from where he is coming. Since this a more-or-less SDK-agnostic post, here are some hints how this could be done:</p>
 
 <p>When an anonymous user requests our website, we initiate a session that identifies him by his ip-address and does a lookup of his location based on some external information (for example the <a href="http://www.maxmind.com/app/geolite">MaxMind GeoLite database</a>). We store a session identifier in a cookie and the following document in Couchbase:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// Key: user:&lt;SESSION-IDENTIFIER&gt;
+
+<pre><code>// Key: user:&lt;SESSION-IDENTIFIER&gt;
 {
     &quot;namespace&quot;: &quot;sessions&quot;,
     &quot;type&quot;: &quot;anonymous&quot;,
@@ -152,10 +157,11 @@
     &quot;remoteAddress&quot;: &quot;&lt;ipaddr&gt;&quot;,
     &quot;location&quot;: &quot;Vienna/Austria&quot;
 }
-</pre></div>
+</code></pre>
 
 <p>If the user is logged in, we can clear the old session and instantiate a new one with more details about our user:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// Key: user:&lt;SESSION-IDENTIFIER&gt;
+
+<pre><code>// Key: user:&lt;SESSION-IDENTIFIER&gt;
 {
     &quot;namespace&quot;: &quot;sessions&quot;,
     &quot;type&quot;: &quot;user&quot;,
@@ -166,123 +172,130 @@
     &quot;location&quot;: &quot;Vienna/Austria&quot;,
     &quot;name&quot;: &quot;&lt;full name&gt;&quot;
 }
-</pre></div>
+</code></pre>
 
 <p>The whole store, delete and update calls can be done with the basic methods described above, but what I want to concentrate on are the views. If you want to follow along, here is a short PHP script that populates the default bucket with some data to work with:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-    <span style="color: #177500">// Open the Connection</span>
-    <span style="color: #000000">$couchbase</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Couchbase</span>(<span style="color: #C41A16">&quot;127.0.0.1:8091&quot;</span>);
 
-    <span style="color: #177500">// Create some fake data with random hashes to simulate session identifiers.</span>
-    <span style="color: #000000">$data</span> <span style="color: #000000">=</span> <span style="color: #A90D91">array</span>(
-        <span style="color: #C41A16">&#39;68ea304124beaa7e648cc1327d793b0a&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">array</span>(
-            <span style="color: #C41A16">&#39;namespace&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;sessions&#39;</span>,
-            <span style="color: #C41A16">&#39;type&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;anonymous&#39;</span>,
-            <span style="color: #C41A16">&#39;lastSeen&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">time</span>(),
-            <span style="color: #C41A16">&#39;firstSeen&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">time</span>(),
-            <span style="color: #C41A16">&#39;remoteAddress&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;192.168.0.1&#39;</span>,
-            <span style="color: #C41A16">&#39;location&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;Vienna/Austria&#39;</span>
+<pre><code>&lt;?php
+    // Open the Connection
+    $couchbase = new Couchbase(&quot;127.0.0.1:8091&quot;);
+
+    // Create some fake data with random hashes to simulate session identifiers.
+    $data = array(
+        '68ea304124beaa7e648cc1327d793b0a' =&gt; array(
+            'namespace' =&gt; 'sessions',
+            'type' =&gt; 'anonymous',
+            'lastSeen' =&gt; time(),
+            'firstSeen' =&gt; time(),
+            'remoteAddress' =&gt; '192.168.0.1',
+            'location' =&gt; 'Vienna/Austria'
         ),
-        <span style="color: #C41A16">&#39;6254b64d554a88b629bdbfc507d8c267&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">array</span>(
-            <span style="color: #C41A16">&#39;namespace&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;sessions&#39;</span>,
-            <span style="color: #C41A16">&#39;type&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;anonymous&#39;</span>,
-            <span style="color: #C41A16">&#39;lastSeen&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">time</span>(),
-            <span style="color: #C41A16">&#39;firstSeen&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">time</span>()<span style="color: #000000">-</span><span style="color: #1C01CE">3600</span>,
-            <span style="color: #C41A16">&#39;remoteAddress&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;10.10.10.10&#39;</span>,
-            <span style="color: #C41A16">&#39;location&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;Berlin/Germany&#39;</span>
+        '6254b64d554a88b629bdbfc507d8c267' =&gt; array(
+            'namespace' =&gt; 'sessions',
+            'type' =&gt; 'anonymous',
+            'lastSeen' =&gt; time(),
+            'firstSeen' =&gt; time()-3600,
+            'remoteAddress' =&gt; '10.10.10.10',
+            'location' =&gt; 'Berlin/Germany'
         ),
-        <span style="color: #C41A16">&#39;6148bae4fad02c0edfd7dbd8d54d79f1&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">array</span>(
-            <span style="color: #C41A16">&#39;namespace&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;sessions&#39;</span>,
-            <span style="color: #C41A16">&quot;type&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;user&quot;</span>,
-            <span style="color: #C41A16">&quot;userID&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;1234&quot;</span>,
-            <span style="color: #C41A16">&#39;lastSeen&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">time</span>()<span style="color: #000000">-</span><span style="color: #1C01CE">7200</span>,
-            <span style="color: #C41A16">&#39;firstSeen&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">time</span>()<span style="color: #000000">-</span><span style="color: #1C01CE">7800</span>,
-            <span style="color: #C41A16">&quot;remoteAddress&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;1.2.3.4&quot;</span>,
-            <span style="color: #C41A16">&quot;location&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;Rome/Italy&quot;</span>,
-            <span style="color: #C41A16">&quot;name&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;Luigi Manfrotto&quot;</span>
+        '6148bae4fad02c0edfd7dbd8d54d79f1' =&gt; array(
+            'namespace' =&gt; 'sessions',
+            &quot;type&quot; =&gt; &quot;user&quot;,
+            &quot;userID&quot; =&gt; &quot;1234&quot;,
+            'lastSeen' =&gt; time()-7200,
+            'firstSeen' =&gt; time()-7800,
+            &quot;remoteAddress&quot; =&gt; &quot;1.2.3.4&quot;,
+            &quot;location&quot; =&gt; &quot;Rome/Italy&quot;,
+            &quot;name&quot; =&gt; &quot;Luigi Manfrotto&quot;
         ),
-        <span style="color: #C41A16">&#39;4aeb265e299c41450dd6af813d0bef97&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">array</span>(
-            <span style="color: #C41A16">&#39;namespace&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;sessions&#39;</span>,
-            <span style="color: #C41A16">&quot;type&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;user&quot;</span>,
-            <span style="color: #C41A16">&quot;userID&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;1104&quot;</span>,
-            <span style="color: #C41A16">&#39;lastSeen&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">time</span>(),
-            <span style="color: #C41A16">&#39;firstSeen&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">time</span>(),
-            <span style="color: #C41A16">&quot;remoteAddress&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;2.3.4.5&quot;</span>,
-            <span style="color: #C41A16">&quot;location&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;Vienna/Austria&quot;</span>,
-            <span style="color: #C41A16">&quot;name&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;Hans Huber&quot;</span>
+        '4aeb265e299c41450dd6af813d0bef97' =&gt; array(
+            'namespace' =&gt; 'sessions',
+            &quot;type&quot; =&gt; &quot;user&quot;,
+            &quot;userID&quot; =&gt; &quot;1104&quot;,
+            'lastSeen' =&gt; time(),
+            'firstSeen' =&gt; time(),
+            &quot;remoteAddress&quot; =&gt; &quot;2.3.4.5&quot;,
+            &quot;location&quot; =&gt; &quot;Vienna/Austria&quot;,
+            &quot;name&quot; =&gt; &quot;Hans Huber&quot;
         )
     );
 
-    <span style="color: #177500">// Store the documents in Couchbase</span>
-    <span style="color: #A90D91">foreach</span>(<span style="color: #000000">$data</span> <span style="color: #A90D91">as</span> <span style="color: #000000">$hash</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">$document</span>) {
-        <span style="color: #000000">$couchbase-&gt;</span><span style="color: #836C28">set</span>(<span style="color: #C41A16">&quot;user:$hash&quot;</span>, <span style="color: #A90D91">json_encode</span>(<span style="color: #000000">$document</span>));
+    // Store the documents in Couchbase
+    foreach($data as $hash =&gt; $document) {
+        $couchbase-&gt;set(&quot;user:$hash&quot;, json_encode($document));
     }
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>Now that we have four documents to work with, we can start creating views from the Couchbase GUI. Head over to the &ldquo;Views&rdquo; section and click on &ldquo;Create Development View&rdquo;. The way Couchbase works is that you write your view queries in development mode on a subset of your documents and when you&rsquo;re finished you can publish them to production. Since we have only four documents in the bucket, it won&rsquo;t make any difference here.</p>
 
 <p>The name of our design document is <code>_design/dev_sessions</code> and the first view is called <code>active</code>. This one will return all currently logged in users:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">function</span> (<span style="color: #000000">doc</span>) {
-    <span style="color: #A90D91">if</span>(<span style="color: #000000">doc</span>.<span style="color: #000000">namespace</span> <span style="color: #000000">==</span> <span style="color: #C41A16">&#39;sessions&#39;</span>) {
-        <span style="color: #000000">emit</span>(<span style="color: #000000">doc</span>.<span style="color: #000000">_id</span>, <span style="color: #000000">doc</span>);
+
+<pre><code>function (doc) {
+    if(doc.namespace == 'sessions') {
+        emit(doc._id, doc);
     }
 }
-</pre></div>
+</code></pre>
 
 <p>If you save it and click <code>Show Results</code>, then you&rsquo;ll see all four documents below that got matched. You can also click on the URI string above <code>?connection_timeout=60000&amp;limit=10&amp;skip=0</code> to see the actual response in your browser. But what if we just want the total number of users logged in? We can use a built-in reduce function for that. In the &ldquo;Reduce&rdquo; textarea to the right just enter <code>_count</code>. If you click save and then show the results again, you can see that we just got one document back with no key and just <code>4</code> as the value.</p>
 
 <p>The nice thing here is that we can pass <code>reduce=true/false</code> as a param and then get either the full response back or just the aggregated version. So this query gives us all active users on the website. Let&rsquo;s write another view that just returns the logged in users:</p>
 
 <p>Modify the view like here and then click <code>Save As...</code> and name it <code>logged_in</code>:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">function</span> (<span style="color: #000000">doc</span>) {
-    <span style="color: #A90D91">if</span>(<span style="color: #000000">doc</span>.<span style="color: #000000">namespace</span> <span style="color: #000000">==</span> <span style="color: #C41A16">&#39;sessions&#39;</span> <span style="color: #000000">&amp;&amp;</span> <span style="color: #000000">doc</span>.<span style="color: #000000">type</span> <span style="color: #000000">==</span> <span style="color: #C41A16">&#39;user&#39;</span>) {
-        <span style="color: #000000">emit</span>(<span style="color: #000000">doc</span>.<span style="color: #000000">_id</span>, <span style="color: #000000">doc</span>);
+
+<pre><code>function (doc) {
+    if(doc.namespace == 'sessions' &amp;&amp; doc.type == 'user') {
+        emit(doc._id, doc);
     }
 }
-</pre></div>
+</code></pre>
 
 <p>The reduce function can be reused in the same way. As you can see, with just a bit more code in JavaScript we have another view that just returns the logged in users. Now we want to display a third diagram that displays all users from <code>Vienna/Austria</code>. This time, we want to differentiate between anonymous and logged in users so that they can be displayed in two distinct graphs. Our map function may look like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">function</span> (<span style="color: #000000">doc</span>) {
-    <span style="color: #A90D91">if</span>(<span style="color: #000000">doc</span>.<span style="color: #000000">namespace</span> <span style="color: #000000">==</span> <span style="color: #C41A16">&#39;sessions&#39;</span> <span style="color: #000000">&amp;&amp;</span> <span style="color: #000000">doc</span>.<span style="color: #000000">location</span> <span style="color: #000000">==</span> <span style="color: #C41A16">&#39;Vienna/Austria&#39;</span>) {
-        <span style="color: #000000">emit</span>(<span style="color: #000000">doc</span>.<span style="color: #000000">type</span>, <span style="color: #1C01CE">1</span>);
+
+<pre><code>function (doc) {
+    if(doc.namespace == 'sessions' &amp;&amp; doc.location == 'Vienna/Austria') {
+        emit(doc.type, 1);
     }
 }
-</pre></div>
+</code></pre>
 
 <p>Every time we find a document with the correct location, we emit a document with the key of either <code>anonymous</code> or <code>user</code>. As values we supply a value of <code>1</code> since we can reuse that in our reduce function. The reduce function is again the built in <code>_count</code> function, but this time we pass an additional param <code>group_level</code> with a value of <code>1</code> to our query. This way, Couchbase aggregates our data and returns a document like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// Params: ?group_level=1&amp;reduce=true&amp;connection_timeout=60000&amp;limit=10&amp;skip=0
+
+<pre><code>// Params: ?group_level=1&amp;reduce=true&amp;connection_timeout=60000&amp;limit=10&amp;skip=0
 {
     &quot;rows&quot;: [
         {&quot;key&quot;:&quot;anonymous&quot;,&quot;value&quot;:1},
         {&quot;key&quot;:&quot;user&quot;,&quot;value&quot;:1}
     ]
 }
-</pre></div>
+</code></pre>
 
 <p>If we insert another <code>user</code> document the counter would display <code>2</code>. If we don&rsquo;t use the grouping level setting, Couchbase would just return the total amount of documents emitted.</p>
 
 <p>All of these views assumed that we have some kind of realtime polling to our backend, because the results didn&rsquo;t include grouping by a distinct timestamp. In order to load a graph with meaningful results for the last hour, we can return it aggregated by timestamp (we can reuse the same <code>_count</code> reduce function and the level 1 grouping):</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">function</span> (<span style="color: #000000">doc</span>) {
-    <span style="color: #A90D91">if</span>(<span style="color: #000000">doc</span>.<span style="color: #000000">namespace</span> <span style="color: #000000">==</span> <span style="color: #C41A16">&#39;sessions&#39;</span>) {
-        <span style="color: #000000">emit</span>(<span style="color: #000000">doc</span>.<span style="color: #000000">lastSeen</span>, <span style="color: #1C01CE">1</span>);
+
+<pre><code>function (doc) {
+    if(doc.namespace == 'sessions') {
+        emit(doc.lastSeen, 1);
     }
 }
-</pre></div>
+</code></pre>
 
 <p>An example output would look like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// Params: ?group_level=1&amp;connection_timeout=60000&amp;limit=10&amp;skip=0
+
+<pre><code>// Params: ?group_level=1&amp;connection_timeout=60000&amp;limit=10&amp;skip=0
 {
     &quot;rows&quot;:[
         {&quot;key&quot;:1339997680,&quot;value&quot;:1},
         {&quot;key&quot;:1340004880,&quot;value&quot;:3}
     ]
 }
-</pre></div>
+</code></pre>
 
 <p>Now, if we have record for the last year in our database it won&rsquo;t make much sense to fetch them all on every request. If you look one entry below the <code>group_level</code> param, you&rsquo;ll find <code>startkey</code> and <code>endkey</code> options. With these two you can provide a timerange to fetch the results.</p>
 
-<h2 id="performance:512f62c3475e795b4e119166c489818f">Performance</h2>
+<h2 id="performance">Performance</h2>
 
 <p>I know that synthetic benchmarks never provide reproducible results in production environments, but they provide at least a rough estimation on how the application may be able to perform under certain conditions.</p>
 
@@ -292,7 +305,7 @@
 
 <p>If you ran the program, it would be cool to share your results in the comments below.</p>
 
-<h2 id="wrapping-up:512f62c3475e795b4e119166c489818f">Wrapping Up</h2>
+<h2 id="wrapping-up">Wrapping Up</h2>
 
 <p>From both its history and current feature set, chances are that Couchbase is a possible solution to your session store needs. It provides you with both fast and flexible querying mechanisms and is capable to scale up to more nodes with just a few clicks if you need it to. There are definitely other good storage systems out there (like redis), so make sure to dig deeper into the concepts to find out if Couchbase is right for your application.</p>
 
@@ -320,32 +333,35 @@
                     <div class="post-description">
                         
 
-<h2 id="the-basics:2a6783489cdbf95c96d62a3bcdf50b5d">The Basics</h2>
+<h2 id="the-basics">The Basics</h2>
 
 <p>If you check out the <code>master</code> branch, you can use the new <code>Encrypt</code> strategy to encrypt your session data automatically. This means that you can read and write session data in cleartext and they will be encrypted on the fly before getting stored (in a cookie, for example). You can read my post about &ldquo;baking cookies like a chef&rdquo; for  PHPAdvent 2011 <a href="http://phpadvent.org/2011/bake-cookies-like-a-chef-by-michael-nitschinger">here</a>. The article covers both HMAC signatures and encryption, and is a good place to start. This post will go a little bit deeper in how to use and configure the <code>Encrypt</code> strategy in Lithium. Note that you need to have the <a href="http://php.net/manual/en/book.mcrypt.php">mcrypt</a> extension installed and enabled for this to work.</p>
 
 <p>Here&rsquo;s the simplest configuration you can start with:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">Session::config(array(&#39;default&#39; =&gt; array(
-    &#39;adapter&#39; =&gt; &#39;Cookie&#39;,
-    &#39;strategies&#39; =&gt; array(&#39;Encrypt&#39; =&gt; array(&#39;secret&#39; =&gt; &#39;f00bar$<span style="color: #000000">l1thium</span>&#39;))
+
+<pre><code>Session::config(array('default' =&gt; array(
+    'adapter' =&gt; 'Cookie',
+    'strategies' =&gt; array('Encrypt' =&gt; array('secret' =&gt; 'f00bar$l1thium'))
 )));
-</pre></div>
+</code></pre>
 
 <p>This will store all your session data in a cookie. If you don&rsquo;t change anything else, your data will be encrypted with <a href="http://en.wikipedia.org/wiki/Advanced_Encryption_Standard">AES</a> in  <a href="http://en.wikipedia.org/wiki/Block_cipher_modes_of_operation#Cipher-block_chaining_.28CBC.29">CBC</a> mode with a block size of 256 bits (32 byte). This is a secure and sensible default, so if you don&rsquo;t need anything special just stick with the defaults.</p>
 
 <p>You can now read and write cleartext data and it will be encrypted on the fly for you. For example:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">Session::write(</span><span style="color: #C41A16">&#39;key&#39;</span><span style="color: #000000">,</span> <span style="color: #C41A16">&#39;my secret value&#39;</span><span style="color: #000000">);</span>
-</pre></div>
+
+<pre><code>Session::write('key', 'my secret value');
+</code></pre>
 
 <p>The result will look like this on the client side:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">appcookie[__encrypted]=c3Rqv%2FFYnuwAevxeseII7lOvyoOTi2foMfB%2FCoO4l4FcutRvBn7qq%2BZrPVWC%2FzEYEiSSFMWv7EhEx4ew99%2FmPQ%3D%3D
-</pre></div>
+
+<pre><code>appcookie[__encrypted]=c3Rqv%2FFYnuwAevxeseII7lOvyoOTi2foMfB%2FCoO4l4FcutRvBn7qq%2BZrPVWC%2FzEYEiSSFMWv7EhEx4ew99%2FmPQ%3D%3D
+</code></pre>
 
 <p>You can then read the value again with <code>Session::read('key');</code> or delete it with <code>Session::delete('key');</code>.</p>
 
 <p>That&rsquo;s it. If you don&rsquo;t want to dig into the internals, you can safely stop reading now and implement it in your own application.</p>
 
-<h2 id="further-discussion:2a6783489cdbf95c96d62a3bcdf50b5d">Further Discussion</h2>
+<h2 id="further-discussion">Further Discussion</h2>
 
 <p>Still here? Awesome!</p>
 
@@ -358,29 +374,31 @@ speaking, <code>MCRYPT_RIJNDAEL_256</code> is not part of the AES standard (beca
 <p>So to make sure we use the longest key possible, we hash the given secret with <code>sha256</code> and then substring the length we need. As <code>mcrypt</code> tells us which key lengths are supported for which cipher (through <a href="http://php.net/manual/en/function.mcrypt-enc-get-key-size.php">mcrypt_enc_get_key_size</a>), it is possible to determine the strongest key length. Note that this doesn&rsquo;t mean that you should use weak keys in the first place just because they get hashed anyway. In practice, you will only create them once so make sure they contain enough entropy.</p>
 
 <p>As always, the Lithium core provides sensible defaults but also lets you outgrow the framework if you need to. You can specify your own cipher or mode like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">Session::config(array(&#39;default&#39; =&gt; array(
-    &#39;adapter&#39; =&gt; &#39;Cookie&#39;,
-    &#39;strategies&#39; =&gt; array(&#39;Encrypt&#39; =&gt; array(
-        &#39;cipher&#39; =&gt; MCRYPT_RIJNDAEL_256,
-        &#39;mode&#39;   =&gt; MCRYPT_MODE_ECB, // Don&#39;t use ECB when you don&#39;t have to!
-        &#39;secret&#39;     =&gt; &#39;f00bar$<span style="color: #000000">l1thium</span>&#39;
+
+<pre><code>Session::config(array('default' =&gt; array(
+    'adapter' =&gt; 'Cookie',
+    'strategies' =&gt; array('Encrypt' =&gt; array(
+        'cipher' =&gt; MCRYPT_RIJNDAEL_256,
+        'mode'   =&gt; MCRYPT_MODE_ECB, // Don't use ECB when you don't have to!
+        'secret'     =&gt; 'f00bar$l1thium'
     ))
 )));
-</pre></div>
+</code></pre>
 
 <p>Here&rsquo;s a list of <a href="http://www.php.net/manual/en/mcrypt.ciphers.php">ciphers</a> and <a href="http://www.php.net/manual/en/mcrypt.constants.php">modes</a> you can use. Of course you need to make sure that your custom cipher/mode combination is supported.</p>
 
 <p>If you don&rsquo;t like how Lithium hashes your key or if you want to has it on your own, there&rsquo;s also a way to do this. If the length of your key is equal or longer than the longest key size supported by the algorithm, it gets passed through unchanged. Here&rsquo;s how it works:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">protected</span> <span style="color: #A90D91">function</span> <span style="color: #000000">_hashSecret</span>(<span style="color: #000000">$key</span>) {
-    <span style="color: #000000">$size</span> <span style="color: #000000">=</span> <span style="color: #000000">mcrypt_enc_get_key_size</span>(<span style="color: #A90D91">static</span><span style="color: #000000">::$_resource</span>);
 
-    <span style="color: #A90D91">if</span> (<span style="color: #000000">strlen</span>(<span style="color: #000000">$key</span>) <span style="color: #000000">&gt;=</span> <span style="color: #000000">$size</span>) {
-        <span style="color: #A90D91">return</span> <span style="color: #000000">$key</span>;
+<pre><code>protected function _hashSecret($key) {
+    $size = mcrypt_enc_get_key_size(static::$_resource);
+
+    if (strlen($key) &gt;= $size) {
+        return $key;
     }
 
-    <span style="color: #A90D91">return</span> <span style="color: #000000">substr</span>(<span style="color: #000000">hash</span>(<span style="color: #C41A16">&#39;sha256&#39;</span>, <span style="color: #000000">$key</span>, <span style="color: #A90D91">true</span>), <span style="color: #1C01CE">0</span>, <span style="color: #000000">$size</span>);
+    return substr(hash('sha256', $key, true), 0, $size);
 }
-</pre></div>
+</code></pre>
 
 <p>In my opinion, you should always encrypt your data if it gets stored on the client side. Lithium provides a convenient and transparent way to do it, so go ahead and use it in your own applications to make them more secure.</p>
 
@@ -393,7 +411,7 @@ speaking, <code>MCRYPT_RIJNDAEL_256</code> is not part of the AES standard (beca
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

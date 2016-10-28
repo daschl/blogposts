@@ -7,7 +7,7 @@
 
     <meta name="description" content="In this part we will look at testing your routes. This post covers unit testing, integration testing and reverse routing tests.">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Understanding the Lithium Router - Part 2 &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -74,11 +74,12 @@
                             
                         </p>
                     </header>
-
+                    
+                    
                     <div class="post-description">
                         
 
-<h3 id="introduction:7d5f34c0cc895ef21f6fb009931e6d2c">Introduction</h3>
+<h3 id="introduction">Introduction</h3>
 
 <p>Routes play an essential role in your request/response-cycle and therefore should also be tested like any other component that you develop. As the Lithium routing infrastructure also consists of classes and methods, we can run unit and integration tests against them.</p>
 
@@ -86,7 +87,7 @@
 
 <p>Let&rsquo;s cover unit tests first and then move on to the integration tests. Afterwards, we&rsquo;ll look at testing reverse routes (more on that later).</p>
 
-<h3 id="unit-testing:7d5f34c0cc895ef21f6fb009931e6d2c">Unit Testing</h3>
+<h3 id="unit-testing">Unit Testing</h3>
 
 <p>Let me clarify one thing first: in general, you don&rsquo;t need to unit test your routes (instead you only need to do integration testing, but more on that later). There core developers did an awesome job in unit testing the routing infrastructure for you, so there is no need for you to duplicate their tests.</p>
 
@@ -95,286 +96,297 @@
 <p>If we don&rsquo;t know how to implement unit tests, it is always a good idea to look at the core tests, as they show us how to do this properly and at the same time give us use cases that we can use in our own application. We can also copy and modify some tests, because often our own tests will be similar.</p>
 
 <p>Before we can unit test some routes, we need to add a unit test file. According to the namespace standard, let&rsquo;s create the appropriate file (<code>RouteTest.php</code>) in <code>app\tests\cases\net\http</code>:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #A90D91">namespace</span> <span style="color: #000000">app\tests\cases\net\http</span>;
 
-<span style="color: #A90D91">use</span> <span style="color: #000000">lithium\action\Request</span>;
-<span style="color: #A90D91">use</span> <span style="color: #000000">lithium\net\http\Route</span>;
+<pre><code>&lt;?php
+namespace app\tests\cases\net\http;
 
-<span style="color: #A90D91">class</span> <span style="color: #3F6E75">RouteTest</span> <span style="color: #A90D91">extends</span> <span style="color: #000000">\lithium\test\Unit</span> {
+use lithium\action\Request;
+use lithium\net\http\Route;
+
+class RouteTest extends \lithium\test\Unit {
 
 }
 
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>In our first test, we want to make sure that the route <code>/foo</code>, matches the <code>FooController</code> and the <code>index</code> action. Insert the following test case in your previously created class and run it through the test runner (&ldquo;<a href="http://example.com/test/app/tests/cases/net/http/RouteTest&quot;">http://example.com/test/app/tests/cases/net/http/RouteTest&quot;</a>).</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">testFooRoute</span>() {
-    <span style="color: #000000">$params</span> <span style="color: #000000">=</span> <span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;controller&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;foo&#39;</span>, <span style="color: #C41A16">&#39;action&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;index&#39;</span>);
-    <span style="color: #000000">$route</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Route</span>(<span style="color: #000000">array</span>(
-        <span style="color: #C41A16">&#39;template&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;/foo&#39;</span>,
-        <span style="color: #C41A16">&#39;params&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">$params</span>
+
+<pre><code>public function testFooRoute() {
+    $params = array('controller' =&gt; 'foo', 'action' =&gt; 'index');
+    $route = new Route(array(
+        'template' =&gt; '/foo',
+        'params' =&gt; $params
     ));
 
-    <span style="color: #000000">$request</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Request</span>();
-    <span style="color: #000000">$request-&gt;url</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;/foo&#39;</span>;
+    $request = new Request();
+    $request-&gt;url = '/foo';
 
-    <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">$route-&gt;parse</span>(<span style="color: #000000">$request</span>);
-    <span style="color: #000000">$this-&gt;assertEqual</span>(<span style="color: #000000">$params</span>, <span style="color: #000000">$result-&gt;params</span>);
+    $result = $route-&gt;parse($request);
+    $this-&gt;assertEqual($params, $result-&gt;params);
 }
-</pre></div>
+</code></pre>
 
 <p>If we run <code>Router::connect()</code>, the <code>Router</code> basically creates a new <code>Route</code> object and passes the arguments to its constructor. In our tests we do the same, but we initialize the Route directly. This way, we can test the route in isolation. When we create a new route, the <code>template</code> param is the URL that our route will match (remember that it can also contain non-static identifiers). The params argument tells
 the route what to return when the template matches the request. We then create a simple <code>Request</code> object (that mimics a request by the browser) and hard-code a URL (in the real application, the <code>$request-&gt;url</code> will be dynamically assigned). Now we run <code>parse()</code>,
 that&rsquo;s exactly what the Router does route for route when the <code>Dispatcher</code> asks him to route the request. The parse method returns a <code>Request</code> object with the params set accordingly when it matches, and false when it does not.</p>
 
 <p>To get more familiar, we&rsquo;ll add some more assertions to this test, just append them after the last <code>assertEqual()</code> and run the tests again. You can see that this route really matches only <code>/foo</code> and nothing else:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">$<span style="color: #000000">request</span>-&gt;url = &#39;/bar&#39;;
-$<span style="color: #000000">result</span> = $<span style="color: #000000">route</span>-&gt;parse($<span style="color: #000000">request</span>);
-$<span style="color: #000000">this</span>-&gt;assertFalse($<span style="color: #000000">result</span>);
 
-$<span style="color: #000000">request</span>-&gt;url = &#39;/foo/edit&#39;;
-$<span style="color: #000000">result</span> = $<span style="color: #000000">route</span>-&gt;parse($<span style="color: #000000">request</span>);
-$<span style="color: #000000">this</span>-&gt;assertFalse($<span style="color: #000000">result</span>);
-</pre></div>
+<pre><code>$request-&gt;url = '/bar';
+$result = $route-&gt;parse($request);
+$this-&gt;assertFalse($result);
+
+$request-&gt;url = '/foo/edit';
+$result = $route-&gt;parse($request);
+$this-&gt;assertFalse($result);
+</code></pre>
 
 <p>Now that we wrote some basic tests, let&rsquo;s move on to a slightly more complex example with a non-static routing template. The route <code>/users/{:id}</code> matches with or without an ID given and passes it as a param in the returned request object.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">testUserWithIdRoute</span>() {
-    <span style="color: #000000">$params</span> <span style="color: #000000">=</span> <span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;id&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">null</span>, <span style="color: #C41A16">&#39;action&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;index&#39;</span>, <span style="color: #C41A16">&#39;controller&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;users&#39;</span>);
-    <span style="color: #000000">$route</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Route</span>(<span style="color: #000000">array</span>(
-        <span style="color: #C41A16">&#39;template&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;/users/{:id}&#39;</span>,
-        <span style="color: #C41A16">&#39;params&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">$params</span>
+
+<pre><code>public function testUserWithIdRoute() {
+    $params = array('id' =&gt; null, 'action' =&gt; 'index', 'controller' =&gt; 'users');
+    $route = new Route(array(
+        'template' =&gt; '/users/{:id}',
+        'params' =&gt; $params
     ));
-    <span style="color: #000000">$request</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Request</span>();
+    $request = new Request();
 
-    <span style="color: #000000">$request-&gt;url</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;/users&#39;</span>;
-    <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">$route-&gt;parse</span>(<span style="color: #000000">$request</span>);
-    <span style="color: #000000">$this-&gt;assertEqual</span>(<span style="color: #000000">$params</span>, <span style="color: #000000">$result-&gt;params</span>);
-    <span style="color: #000000">$this-&gt;assertNull</span>(<span style="color: #000000">$result-&gt;params</span><span style="color: #633820">[</span><span style="color: #C41A16">&#39;id&#39;</span><span style="color: #633820">]</span>);
+    $request-&gt;url = '/users';
+    $result = $route-&gt;parse($request);
+    $this-&gt;assertEqual($params, $result-&gt;params);
+    $this-&gt;assertNull($result-&gt;params['id']);
 
-    <span style="color: #000000">$request-&gt;url</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;/users/4&#39;</span>;
-    <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">$route-&gt;parse</span>(<span style="color: #000000">$request</span>);
-    <span style="color: #000000">$this-&gt;assertEqual</span>(<span style="color: #1C01CE">4</span>, <span style="color: #000000">$result-&gt;params</span><span style="color: #633820">[</span><span style="color: #C41A16">&#39;id&#39;</span><span style="color: #633820">]</span>);
+    $request-&gt;url = '/users/4';
+    $result = $route-&gt;parse($request);
+    $this-&gt;assertEqual(4, $result-&gt;params['id']);
 }
-</pre></div>
+</code></pre>
 
 <p>We can also test for various HTTP parameters like the request type (typically GET, PUT, POST and DELETE). Let&rsquo;s assume we want to match <code>/cocktails/delete/{:id}</code> only when the id is present (non-optional), it is numeric and the request method is <code>delete</code>. The equivalent router call in our <code>routes.php</code> file would be <code>Router::connect('/cocktails/delete/{:id:\d+}, array('controller' =&gt; 'cocktails', 
 'action' =&gt; 'delete', 'http:method' =&gt; 'DELETE'));</code>.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">testCocktailDeleteRoute</span>() {
-    <span style="color: #000000">$params</span> <span style="color: #000000">=</span> <span style="color: #000000">array</span>(
-        <span style="color: #C41A16">&#39;controller&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;cocktails&#39;</span>,
-        <span style="color: #C41A16">&#39;action&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;delete&#39;</span>,
-        <span style="color: #C41A16">&#39;http:method&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;DELETE&#39;</span>
+
+<pre><code>public function testCocktailDeleteRoute() {
+    $params = array(
+        'controller' =&gt; 'cocktails',
+        'action' =&gt; 'delete',
+        'http:method' =&gt; 'DELETE'
     );
-    <span style="color: #000000">$route</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Route</span>(<span style="color: #000000">array</span>(
-        <span style="color: #C41A16">&#39;template&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;/cocktails/delete/{:id:\d+}&#39;</span>,
-        <span style="color: #C41A16">&#39;params&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">$params</span>
+    $route = new Route(array(
+        'template' =&gt; '/cocktails/delete/{:id:\d+}',
+        'params' =&gt; $params
     ));
 
-    <span style="color: #000000">$request</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Request</span>();
-    <span style="color: #000000">$request-&gt;url</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;/cocktails/delete/4&#39;</span>;
-    <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">$route-&gt;parse</span>(<span style="color: #000000">$request</span>);
-    <span style="color: #000000">$this-&gt;assertFalse</span>(<span style="color: #000000">$result</span>);
+    $request = new Request();
+    $request-&gt;url = '/cocktails/delete/4';
+    $result = $route-&gt;parse($request);
+    $this-&gt;assertFalse($result);
 
-    <span style="color: #000000">$request</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Request</span>(<span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;env&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;REQUEST_METHOD&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;DELETE&#39;</span>)));
-    <span style="color: #000000">$request-&gt;url</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;/cocktails/delete&#39;</span>;
-    <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">$route-&gt;parse</span>(<span style="color: #000000">$request</span>);
-    <span style="color: #000000">$this-&gt;assertFalse</span>(<span style="color: #000000">$result</span>);
+    $request = new Request(array('env' =&gt; array('REQUEST_METHOD' =&gt; 'DELETE')));
+    $request-&gt;url = '/cocktails/delete';
+    $result = $route-&gt;parse($request);
+    $this-&gt;assertFalse($result);
 
-    <span style="color: #000000">$request</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Request</span>(<span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;env&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;REQUEST_METHOD&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;DELETE&#39;</span>)));
-    <span style="color: #000000">$request-&gt;url</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;/cocktails/delete/4&#39;</span>;
-    <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">$route-&gt;parse</span>(<span style="color: #000000">$request</span>);
-    <span style="color: #000000">$this-&gt;assertEqual</span>(<span style="color: #1C01CE">4</span>, <span style="color: #000000">$result-&gt;params</span><span style="color: #633820">[</span><span style="color: #C41A16">&#39;id&#39;</span><span style="color: #633820">]</span>);
+    $request = new Request(array('env' =&gt; array('REQUEST_METHOD' =&gt; 'DELETE')));
+    $request-&gt;url = '/cocktails/delete/4';
+    $result = $route-&gt;parse($request);
+    $this-&gt;assertEqual(4, $result-&gt;params['id']);
 }
-</pre></div>
+</code></pre>
 
 <p>As stated in the first lines of this section, you won&rsquo;t need to do this in your application code, but writing this kind of tests has one more benefit: if something goes wrong, it is a great tool to understand the inner workings and also to test scenarios in isolation. If you encounter any bugs in the router, writing a unit test that shows the failure is also highly recommended, so that the core team is able to track down your problem and reproduce it in their environments. Also, writing failing test cases ensures that after a bug is fixed, it never happens again.</p>
 
 <p>A great way to inspect and debug routes is the <code>export()</code> method. With this method, you can inspect the full state of an route and run assertions against it. Let&rsquo;s try this in a test:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">testExport</span>() {
-    <span style="color: #000000">$params</span> <span style="color: #000000">=</span> <span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;controller&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;posts&#39;</span>, <span style="color: #C41A16">&#39;action&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;index&#39;</span>);
-    <span style="color: #000000">$route</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Route</span>(<span style="color: #000000">array</span>(
-        <span style="color: #C41A16">&#39;template&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;/read&#39;</span>,
-        <span style="color: #C41A16">&#39;params&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">$params</span>
+
+<pre><code>public function testExport() {
+    $params = array('controller' =&gt; 'posts', 'action' =&gt; 'index');
+    $route = new Route(array(
+        'template' =&gt; '/read',
+        'params' =&gt; $params
     ));
 
-    <span style="color: #000000">$exported</span> <span style="color: #000000">=</span> <span style="color: #000000">$route-&gt;</span><span style="color: #A90D91">export</span>();
-    <span style="color: #000000">$this-&gt;assertEqual</span>(<span style="color: #000000">$params</span>, <span style="color: #000000">$exported</span><span style="color: #633820">[</span><span style="color: #C41A16">&#39;params&#39;</span><span style="color: #633820">]</span>);
-    <span style="color: #000000">$this-&gt;assertEqual</span>(<span style="color: #C41A16">&#39;/read&#39;</span>, <span style="color: #000000">$exported</span><span style="color: #633820">[</span><span style="color: #C41A16">&#39;template&#39;</span><span style="color: #633820">]</span>);
-    <span style="color: #000000">$this-&gt;assertFalse</span>(<span style="color: #000000">$exported</span><span style="color: #633820">[</span><span style="color: #C41A16">&#39;handler&#39;</span><span style="color: #633820">]</span>);
+    $exported = $route-&gt;export();
+    $this-&gt;assertEqual($params, $exported['params']);
+    $this-&gt;assertEqual('/read', $exported['template']);
+    $this-&gt;assertFalse($exported['handler']);
 }
-</pre></div>
+</code></pre>
 
 <p>Now let&rsquo;s move on to something that we should really use in our applications, integration testing.</p>
 
-<h3 id="integration-testing:7d5f34c0cc895ef21f6fb009931e6d2c">Integration Testing</h3>
+<h3 id="integration-testing">Integration Testing</h3>
 
 <p>Now that we&rsquo;ve tested each route in isolation, it&rsquo;s time to get a higher-level view of our application. When we test more than one class in isolation, we call that &ldquo;Integration Testing&rdquo;. Technically, these tests are similar to normal unit tests, so you don&rsquo;t need to learn something new. In a typical framework request, the <code>Dispatcher</code> calls the <code>Router</code> with a <code>Request</code>, and the router matches it against all connected routes and checks if there is a match.</p>
 
 <p>The following code snippets are suited for a default installation. Create a <code>RouterTest.php</code> file in <code>app/tests/integration/net/http</code>. Additionally, you may also need to create the appropriate subdirectories in there.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #A90D91">namespace</span> <span style="color: #000000">app\tests\integration\net\http</span>;
-<span style="color: #A90D91">use</span> <span style="color: #000000">lithium\net\http\Router</span>;
 
-<span style="color: #A90D91">class</span> <span style="color: #3F6E75">RouterTest</span> <span style="color: #A90D91">extends</span> <span style="color: #000000">\lithium\test\Unit</span> {
+<pre><code>&lt;?php
+namespace app\tests\integration\net\http;
+use lithium\net\http\Router;
+
+class RouterTest extends \lithium\test\Unit {
 
 }
 
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>We can issue a request against the router and check that the output is correct. Let&rsquo;s do that for a subset of our default routes:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">testRootRoute</span>() {
-    <span style="color: #000000">$expected</span> <span style="color: #000000">=</span> <span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;controller&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;pages&#39;</span>, <span style="color: #C41A16">&#39;action&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;view&#39;</span>);
 
-    <span style="color: #000000">$request</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Request</span>();
-    <span style="color: #000000">$request-&gt;url</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;/&#39;</span>;
+<pre><code>public function testRootRoute() {
+    $expected = array('controller' =&gt; 'pages', 'action' =&gt; 'view');
 
-    <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">Router::process</span>(<span style="color: #000000">$request</span>);
-    <span style="color: #000000">$this-&gt;assertEqual</span>(<span style="color: #000000">$expected</span>, <span style="color: #000000">$result-&gt;params</span>);
+    $request = new Request();
+    $request-&gt;url = '/';
+
+    $result = Router::process($request);
+    $this-&gt;assertEqual($expected, $result-&gt;params);
 }
 
-<span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">testPagesRoutes</span>() {
-    <span style="color: #000000">$request</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Request</span>();
+public function testPagesRoutes() {
+    $request = new Request();
 
-    <span style="color: #000000">$request-&gt;url</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;/pages&#39;</span>;
-    <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">Router::process</span>(<span style="color: #000000">$request</span>);
-    <span style="color: #000000">$expected</span> <span style="color: #000000">=</span> <span style="color: #000000">array</span>(
-        <span style="color: #C41A16">&#39;controller&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;pages&#39;</span>,
-        <span style="color: #C41A16">&#39;action&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;view&#39;</span>
+    $request-&gt;url = '/pages';
+    $result = Router::process($request);
+    $expected = array(
+        'controller' =&gt; 'pages',
+        'action' =&gt; 'view'
     );
-    <span style="color: #000000">$this-&gt;assertEqual</span>(<span style="color: #000000">$expected</span>, <span style="color: #000000">$result-&gt;params</span>);
+    $this-&gt;assertEqual($expected, $result-&gt;params);
 
-    <span style="color: #000000">$request-&gt;url</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;/pages/1&#39;</span>;
-    <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">Router::process</span>(<span style="color: #000000">$request</span>);
-    <span style="color: #000000">$expected</span> <span style="color: #000000">=</span> <span style="color: #000000">array</span>(
-        <span style="color: #C41A16">&#39;args&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;1&#39;</span>),
-        <span style="color: #C41A16">&#39;controller&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;pages&#39;</span>,
-        <span style="color: #C41A16">&#39;action&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;view&#39;</span>
+    $request-&gt;url = '/pages/1';
+    $result = Router::process($request);
+    $expected = array(
+        'args' =&gt; array('1'),
+        'controller' =&gt; 'pages',
+        'action' =&gt; 'view'
     );
-    <span style="color: #000000">$this-&gt;assertEqual</span>(<span style="color: #000000">$expected</span>, <span style="color: #000000">$result-&gt;params</span>);
+    $this-&gt;assertEqual($expected, $result-&gt;params);
 }
 
-<span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">testDefaultRoutes</span>() {
-    <span style="color: #000000">$request</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Request</span>();
+public function testDefaultRoutes() {
+    $request = new Request();
 
-    <span style="color: #000000">$request-&gt;url</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;/foo&#39;</span>;
-    <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">Router::process</span>(<span style="color: #000000">$request</span>);
-    <span style="color: #000000">$expected</span> <span style="color: #000000">=</span> <span style="color: #000000">array</span>(
-        <span style="color: #C41A16">&#39;controller&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;foo&#39;</span>,
-        <span style="color: #C41A16">&#39;action&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;index&#39;</span>
+    $request-&gt;url = '/foo';
+    $result = Router::process($request);
+    $expected = array(
+        'controller' =&gt; 'foo',
+        'action' =&gt; 'index'
     );
-    <span style="color: #000000">$this-&gt;assertEqual</span>(<span style="color: #000000">$expected</span>, <span style="color: #000000">$result-&gt;params</span>);
+    $this-&gt;assertEqual($expected, $result-&gt;params);
 
-    <span style="color: #000000">$request-&gt;url</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;/foo/bar&#39;</span>;
-    <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">Router::process</span>(<span style="color: #000000">$request</span>);
-    <span style="color: #000000">$expected</span> <span style="color: #000000">=</span> <span style="color: #000000">array</span>(
-        <span style="color: #C41A16">&#39;controller&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;foo&#39;</span>,
-        <span style="color: #C41A16">&#39;action&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;bar&#39;</span>
+    $request-&gt;url = '/foo/bar';
+    $result = Router::process($request);
+    $expected = array(
+        'controller' =&gt; 'foo',
+        'action' =&gt; 'bar'
     );
-    <span style="color: #000000">$this-&gt;assertEqual</span>(<span style="color: #000000">$expected</span>, <span style="color: #000000">$result-&gt;params</span>);
+    $this-&gt;assertEqual($expected, $result-&gt;params);
 
-    <span style="color: #000000">$request-&gt;url</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;/foo/bar/1&#39;</span>;
-    <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">Router::process</span>(<span style="color: #000000">$request</span>);
-    <span style="color: #000000">$expected</span> <span style="color: #000000">=</span> <span style="color: #000000">array</span>(
-        <span style="color: #C41A16">&#39;controller&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;foo&#39;</span>,
-        <span style="color: #C41A16">&#39;action&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;bar&#39;</span>,
-        <span style="color: #C41A16">&#39;args&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;1&#39;</span>)
+    $request-&gt;url = '/foo/bar/1';
+    $result = Router::process($request);
+    $expected = array(
+        'controller' =&gt; 'foo',
+        'action' =&gt; 'bar',
+        'args' =&gt; array('1')
     );
-    <span style="color: #000000">$this-&gt;assertEqual</span>(<span style="color: #000000">$expected</span>, <span style="color: #000000">$result-&gt;params</span>);
+    $this-&gt;assertEqual($expected, $result-&gt;params);
 }
-</pre></div>
+</code></pre>
 
 <p>Most of the code should look familiar to you, the most interesting part is the call of <code>Router::process()</code>. This method is also called by the dispatcher (but with the actual Request object). For every call to the Router, we simulate a request by the client browser. This code contains a high amount of duplication, so you may want to compact this and create a helper method in your test class that wraps and simplifies the duplicated code.</p>
 
 <p>Here is another example for a route that we can test:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">use</span> <span style="color: #000000">app\models\Post</span>;
 
-<span style="color: #000000">Router::connect</span>(<span style="color: #C41A16">&#39;/{:slug:</span><span style="color: #633820">[</span><span style="color: #000000">\w\-</span><span style="color: #633820">]</span><span style="color: #C41A16">+}&#39;</span>, <span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;Posts::show&#39;</span>), <span style="color: #A90D91">function</span>(<span style="color: #000000">$request</span>) {
+<pre><code>use app\models\Post;
 
-    <span style="color: #000000">$conditions</span> <span style="color: #000000">=</span> <span style="color: #000000">array</span>(
-        <span style="color: #C41A16">&#39;conditions&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">array</span>(
-            <span style="color: #C41A16">&#39;slug&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">$request-&gt;params</span><span style="color: #633820">[</span><span style="color: #C41A16">&#39;slug&#39;</span><span style="color: #633820">]</span>
+Router::connect('/{:slug:[\w\-]+}', array('Posts::show'), function($request) {
+
+    $conditions = array(
+        'conditions' =&gt; array(
+            'slug' =&gt; $request-&gt;params['slug']
         )
     );
 
-    <span style="color: #A90D91">if</span>(<span style="color: #000000">Post::count</span>(<span style="color: #000000">$conditions</span>)) {
-        <span style="color: #A90D91">return</span> <span style="color: #000000">$request</span>;
-    } <span style="color: #A90D91">else</span> {
-        <span style="color: #A90D91">return</span> <span style="color: #A90D91">false</span>;
+    if(Post::count($conditions)) {
+        return $request;
+    } else {
+        return false;
     }
 
 });
-</pre></div>
+</code></pre>
 
 <p>When this route is placed right before the default routes, it should correctly match URLs like <code>/a-cool-article</code>. The code inside the closure calls the database and checks if the given slug really exists in the database. If it does, it returns the request (and false if not). The router iterates over each route and when false is returned, he tries the next route. So when we return the <code>Request</code>-object, we tell the router that our route is the one he has searched for. To ensure that everything works as expected, we can write some integration tests.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">testSlugRoute</span>() {
-    <span style="color: #000000">$request</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Request</span>();
 
-    <span style="color: #177500">// a correct slug (stored in the db)</span>
-    <span style="color: #000000">$request-&gt;url</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;/a-correct-slug&#39;</span>;
-    <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">Router::process</span>(<span style="color: #000000">$request</span>);
-    <span style="color: #000000">$expected</span> <span style="color: #000000">=</span> <span style="color: #000000">array</span>(
-        <span style="color: #C41A16">&#39;controller&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;posts&#39;</span>,
-        <span style="color: #C41A16">&#39;action&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;show&#39;</span>,
-        <span style="color: #C41A16">&#39;slug&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;a-correct-slug&#39;</span>
-    );
-    <span style="color: #000000">$this-&gt;assertEqual</span>(<span style="color: #000000">$expected</span>, <span style="color: #000000">$result-&gt;params</span>);
+<pre><code>public function testSlugRoute() {
+    $request = new Request();
 
-    <span style="color: #177500">// not a correct slug, renders a default route</span>
-    <span style="color: #000000">$request-&gt;url</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;/foobar-not-a-slug-here&#39;</span>;
-    <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">Router::process</span>(<span style="color: #000000">$request</span>);
-    <span style="color: #000000">$expected</span> <span style="color: #000000">=</span> <span style="color: #000000">array</span>(
-        <span style="color: #C41A16">&#39;controller&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;posts&#39;</span>,
-        <span style="color: #C41A16">&#39;action&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;show&#39;</span>,
-        <span style="color: #C41A16">&#39;slug&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;foobar-not-a-slug-here&#39;</span>
+    // a correct slug (stored in the db)
+    $request-&gt;url = '/a-correct-slug';
+    $result = Router::process($request);
+    $expected = array(
+        'controller' =&gt; 'posts',
+        'action' =&gt; 'show',
+        'slug' =&gt; 'a-correct-slug'
     );
-    <span style="color: #000000">$this-&gt;assertNotEqual</span>(<span style="color: #000000">$expected</span>, <span style="color: #000000">$result-&gt;params</span>);
-    <span style="color: #000000">$this-&gt;assertFalse</span>(<span style="color: #000000">isset</span>(<span style="color: #000000">$result-&gt;params</span><span style="color: #633820">[</span><span style="color: #C41A16">&#39;slug&#39;</span><span style="color: #633820">]</span>));
+    $this-&gt;assertEqual($expected, $result-&gt;params);
 
-    <span style="color: #177500">// tests should always come first</span>
-    <span style="color: #000000">$request-&gt;url</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;/test&#39;</span>;
-    <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">Router::process</span>(<span style="color: #000000">$request</span>);
-    <span style="color: #000000">$expected</span> <span style="color: #000000">=</span> <span style="color: #000000">array</span>(
-        <span style="color: #C41A16">&#39;controller&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;lithium\test\Controller&#39;</span>,
-        <span style="color: #C41A16">&#39;action&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;index&#39;</span>,
+    // not a correct slug, renders a default route
+    $request-&gt;url = '/foobar-not-a-slug-here';
+    $result = Router::process($request);
+    $expected = array(
+        'controller' =&gt; 'posts',
+        'action' =&gt; 'show',
+        'slug' =&gt; 'foobar-not-a-slug-here'
     );
-    <span style="color: #000000">$this-&gt;assertEqual</span>(<span style="color: #000000">$expected</span>, <span style="color: #000000">$result-&gt;params</span>);
-    <span style="color: #000000">$this-&gt;assertFalse</span>(<span style="color: #000000">isset</span>(<span style="color: #000000">$result-&gt;params</span><span style="color: #633820">[</span><span style="color: #C41A16">&#39;slug&#39;</span><span style="color: #633820">]</span>));
+    $this-&gt;assertNotEqual($expected, $result-&gt;params);
+    $this-&gt;assertFalse(isset($result-&gt;params['slug']));
+
+    // tests should always come first
+    $request-&gt;url = '/test';
+    $result = Router::process($request);
+    $expected = array(
+        'controller' =&gt; 'lithium\test\Controller',
+        'action' =&gt; 'index',
+    );
+    $this-&gt;assertEqual($expected, $result-&gt;params);
+    $this-&gt;assertFalse(isset($result-&gt;params['slug']));
 }
-</pre></div>
+</code></pre>
 
 <p>This code assumes that your database has a reproducible set of posts stored in it. I&rsquo;d recommend you to load a set of posts with the <a href="http://rad-dev.org/li3_fixtures">li3_fixtures</a> plugin and then populate the database in the <code>setUp()</code> method. If you want to play around with it some more, I&rsquo;d suggest you to check the current <a href="http://lithify.me/docs/lithium/core/Environment">Environment</a> and test the different behavior for different environments.</p>
 
 <p>With this tools at hand, you should be able to test everything that has to do with your routes and make sure that they are connected in the correct order and return the response you&rsquo;ve intended.</p>
 
-<h3 id="reverse-routing:7d5f34c0cc895ef21f6fb009931e6d2c">Reverse Routing</h3>
+<h3 id="reverse-routing">Reverse Routing</h3>
 
 <p>As the router also handles reverse routing (which is used by the HTML helper to generate links), we can test it here too. Because we look at the router and its routes, reverse routing fits well into our router integration tests.</p>
 
 <p>Testing reverse routing is straightforward, so let&rsquo;s start with some examples and work them through afterwards.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">testReverseRouting</span>() {
-    <span style="color: #000000">$expected</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;/foo/bar&#39;</span>;
-    <span style="color: #000000">$params</span> <span style="color: #000000">=</span> <span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;controller&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;foo&#39;</span>, <span style="color: #C41A16">&#39;action&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;bar&#39;</span>);
-    <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">Router::match</span>(<span style="color: #000000">$params</span>);
-    <span style="color: #000000">$this-&gt;assertEqual</span>(<span style="color: #000000">$expected</span>, <span style="color: #000000">$result</span>);
 
-    <span style="color: #000000">$expected</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;/pages&#39;</span>;
-    <span style="color: #000000">$params</span> <span style="color: #000000">=</span> <span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;controller&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;pages&#39;</span>, <span style="color: #C41A16">&#39;action&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;index&#39;</span>);
-    <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">Router::match</span>(<span style="color: #000000">$params</span>);
-    <span style="color: #000000">$this-&gt;assertEqual</span>(<span style="color: #000000">$expected</span>, <span style="color: #000000">$result</span>);
+<pre><code>public function testReverseRouting() {
+    $expected = '/foo/bar';
+    $params = array('controller' =&gt; 'foo', 'action' =&gt; 'bar');
+    $result = Router::match($params);
+    $this-&gt;assertEqual($expected, $result);
 
-    <span style="color: #000000">$expected</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;/pages/index/1&#39;</span>;
-    <span style="color: #000000">$params</span> <span style="color: #000000">=</span> <span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;controller&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;pages&#39;</span>, <span style="color: #C41A16">&#39;action&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;index&#39;</span>, <span style="color: #C41A16">&#39;args&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;1&#39;</span>));
-    <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">Router::match</span>(<span style="color: #000000">$params</span>);
-    <span style="color: #000000">$this-&gt;assertEqual</span>(<span style="color: #000000">$expected</span>, <span style="color: #000000">$result</span>);
+    $expected = '/pages';
+    $params = array('controller' =&gt; 'pages', 'action' =&gt; 'index');
+    $result = Router::match($params);
+    $this-&gt;assertEqual($expected, $result);
+
+    $expected = '/pages/index/1';
+    $params = array('controller' =&gt; 'pages', 'action' =&gt; 'index', 'args' =&gt; array('1'));
+    $result = Router::match($params);
+    $this-&gt;assertEqual($expected, $result);
 }
-</pre></div>
+</code></pre>
 
 <p>Here, we test the opposite direction. We pass the router a set of arguments and get an URL back. As it&rsquo;s the case with normal
 routing, if two routes compete for the same URL, the first one wins. We call <code>Router::match()</code> with our request params and get a URL as a string returned. This way, we can test that our HTML helper will return the desired URLs in our application. Of course, you can also add some tests to the HTML Helper (where you can make sure that the echoed HTML code is correct). If the router is not able to translate your params into a URL, it will raise an exception.</p>
 
-<h3 id="wrapping-up:7d5f34c0cc895ef21f6fb009931e6d2c">Wrapping up</h3>
+<h3 id="wrapping-up">Wrapping up</h3>
 
 <p>In part two of our series we&rsquo;ve looked at unit testing routes, running integration tests against them and also testing the reverse routing
 mechanism. Of course, these tests depend heavily on your application and will surely become more complex as the previous examples. The next higher level would be to do add some acceptance tests with <a href="http://seleniumhq.org/">Selenium</a>, so that you can test routes in combination with links and forms on your page, to make sure that the data flow works as expected between pages. Also, I&rsquo;m working on a BDD plugin for Lithium that works similar to <a href="http://cukes.info/">Cucumber</a>, so stay tuned.</p>
@@ -402,7 +414,7 @@ mechanism. Of course, these tests depend heavily on your application and will su
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

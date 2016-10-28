@@ -7,7 +7,7 @@
 
     <meta name="description" content="Want to know how to integrate SQL Server and ElasticSearch? Read on.">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="ElasticSearch and SQL Server are sitting in a tree... &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -74,11 +74,12 @@
                             
                         </p>
                     </header>
-
+                    
+                    
                     <div class="post-description">
                         
 
-<h2 id="motivation:630e61092221eea2f95d14f0b46fe598">Motivation</h2>
+<h2 id="motivation">Motivation</h2>
 
 <p>With modern NoSQL datastores on the rise, classical relational databases with their rigid data model get challenged every day. Nonetheless, they still own the market and therefore every developer needs to have solid skills in working with them in a reliable and performant way.</p>
 
@@ -92,34 +93,37 @@
 
 <p>First, we&rsquo;re going to install ElasticSearch and all the needed plugins and libraries. Then, we make sure everything is up and running and create a <code>river</code> (more on that later) that automatically pulls the data out of our SQL Server.</p>
 
-<h2 id="preparations:630e61092221eea2f95d14f0b46fe598">Preparations</h2>
+<h2 id="preparations">Preparations</h2>
 
 <p>The first thing we need to do is download and extract ElasticSearch. Since it is written in Java, we also need to have a JDK (1.6) installed and in our <code>PATH</code>. The code provided here is from my Ubuntu Linux machine, but this also works on Windows.</p>
 
 <p>Download the latest archive (zip or tgz) from <a href="http://www.elasticsearch.org/download/">here</a>. There are debian packages available, but I&rsquo;m using the self-contained archive here because this approach works on Windows as well and I want this post to target a broader audience.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">michael@daschl:~$ echo $<span style="color: #000000">JAVA_HOME</span>
+
+<pre><code>michael@daschl:~$ echo $JAVA_HOME
 /usr/lib/jvm/java-6-openjdk-i386/
 michael@daschl:~/Downloads$ tar -xvzpf elasticsearch-0.19.8.tar.gz 
 ...
 michael@daschl:~/Downloads$ cd elasticsearch-0.19.8/
-</pre></div>
+</code></pre>
 
 <p>That&rsquo;s it, your search engine is already prepared to do the magic. We&rsquo;ll start it in the foreground just to see what&rsquo;s going on on the console (if you leave the <code>-f</code> switch away, then ES starts as a daemon. You can still find the same output inside the <code>logs</code> directory):</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">michael</span>@<span style="color: #000000">daschl</span>:<span style="color: #000000">~/Downloads/elasticsearch-</span><span style="color: #1C01CE">0.19.8</span><span style="color: #000000">$</span> <span style="color: #000000">bin/elasticsearch</span> <span style="color: #000000">-f</span>
-[<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">08</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">19</span><span style="color: #000000">:</span><span style="color: #1C01CE">42</span><span style="color: #000000">:</span><span style="color: #1C01CE">47</span>,<span style="color: #1C01CE">719</span>][<span style="color: #000000">INFO</span> ][<span style="color: #000000">node</span>                     ] [<span style="color: #000000">Jackson</span> <span style="color: #000000">Arvad</span>] {<span style="color: #1C01CE">0.19.8</span>}[<span style="color: #1C01CE">3236</span>]<span style="color: #000000">:</span> <span style="color: #000000">initializing</span> ...
-[<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">08</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">19</span><span style="color: #000000">:</span><span style="color: #1C01CE">42</span><span style="color: #000000">:</span><span style="color: #1C01CE">47</span>,<span style="color: #1C01CE">725</span>][<span style="color: #000000">INFO</span> ][<span style="color: #000000">plugins</span>                  ] [<span style="color: #000000">Jackson</span> <span style="color: #000000">Arvad</span>] <span style="color: #000000">loaded</span> [], <span style="color: #000000">sites</span> []
-[<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">08</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">19</span><span style="color: #000000">:</span><span style="color: #1C01CE">42</span><span style="color: #000000">:</span><span style="color: #1C01CE">49</span>,<span style="color: #1C01CE">698</span>][<span style="color: #000000">INFO</span> ][<span style="color: #000000">node</span>                     ] [<span style="color: #000000">Jackson</span> <span style="color: #000000">Arvad</span>] {<span style="color: #1C01CE">0.19.8</span>}[<span style="color: #1C01CE">3236</span>]<span style="color: #000000">:</span> <span style="color: #000000">initialized</span>
-[<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">08</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">19</span><span style="color: #000000">:</span><span style="color: #1C01CE">42</span><span style="color: #000000">:</span><span style="color: #1C01CE">49</span>,<span style="color: #1C01CE">698</span>][<span style="color: #000000">INFO</span> ][<span style="color: #000000">node</span>                     ] [<span style="color: #000000">Jackson</span> <span style="color: #000000">Arvad</span>] {<span style="color: #1C01CE">0.19.8</span>}[<span style="color: #1C01CE">3236</span>]<span style="color: #000000">:</span> <span style="color: #000000">starting</span> ...
-[<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">08</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">19</span><span style="color: #000000">:</span><span style="color: #1C01CE">42</span><span style="color: #000000">:</span><span style="color: #1C01CE">49</span>,<span style="color: #1C01CE">777</span>][<span style="color: #000000">INFO</span> ][<span style="color: #000000">transport</span>                ] [<span style="color: #000000">Jackson</span> <span style="color: #000000">Arvad</span>] <span style="color: #000000">bound_address</span> {<span style="color: #000000">inet</span>[<span style="color: #000000">/</span><span style="color: #1C01CE">0</span><span style="color: #000000">:</span><span style="color: #1C01CE">0</span><span style="color: #000000">:</span><span style="color: #1C01CE">0</span><span style="color: #000000">:</span><span style="color: #1C01CE">0</span><span style="color: #000000">:</span><span style="color: #1C01CE">0</span><span style="color: #000000">:</span><span style="color: #1C01CE">0</span><span style="color: #000000">:</span><span style="color: #1C01CE">0</span><span style="color: #000000">:</span><span style="color: #1C01CE">0</span><span style="color: #000000">:</span><span style="color: #1C01CE">9300</span>]}, <span style="color: #000000">publish_address</span> {<span style="color: #000000">inet</span>[<span style="color: #000000">/</span><span style="color: #1C01CE">192.168.1.101</span><span style="color: #000000">:</span><span style="color: #1C01CE">9300</span>]}
-[<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">08</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">19</span><span style="color: #000000">:</span><span style="color: #1C01CE">42</span><span style="color: #000000">:</span><span style="color: #1C01CE">52</span>,<span style="color: #1C01CE">809</span>][<span style="color: #000000">INFO</span> ][<span style="color: #000000">cluster</span>.<span style="color: #000000">service</span>          ] [<span style="color: #000000">Jackson</span> <span style="color: #000000">Arvad</span>] <span style="color: #000000">new_master</span> [<span style="color: #000000">Jackson</span> <span style="color: #000000">Arvad</span>][<span style="color: #000000">TAnCKhf0RymniOxTrT8nww</span>][<span style="color: #000000">inet</span>[<span style="color: #000000">/</span><span style="color: #1C01CE">192.168.1.101</span><span style="color: #000000">:</span><span style="color: #1C01CE">9300</span>]], <span style="color: #000000">reason</span>: <span style="color: #000000">zen-disco-join</span> (<span style="color: #000000">elected_as_master</span>)
-[<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">08</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">19</span><span style="color: #000000">:</span><span style="color: #1C01CE">42</span><span style="color: #000000">:</span><span style="color: #1C01CE">52</span>,<span style="color: #1C01CE">888</span>][<span style="color: #000000">INFO</span> ][<span style="color: #000000">discovery</span>                ] [<span style="color: #000000">Jackson</span> <span style="color: #000000">Arvad</span>] <span style="color: #000000">elasticsearch/TAnCKhf0RymniOxTrT8nww</span>
-[<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">08</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">19</span><span style="color: #000000">:</span><span style="color: #1C01CE">42</span><span style="color: #000000">:</span><span style="color: #1C01CE">52</span>,<span style="color: #1C01CE">919</span>][<span style="color: #000000">INFO</span> ][<span style="color: #000000">http</span>                     ] [<span style="color: #000000">Jackson</span> <span style="color: #000000">Arvad</span>] <span style="color: #000000">bound_address</span> {<span style="color: #000000">inet</span>[<span style="color: #000000">/</span><span style="color: #1C01CE">0</span><span style="color: #000000">:</span><span style="color: #1C01CE">0</span><span style="color: #000000">:</span><span style="color: #1C01CE">0</span><span style="color: #000000">:</span><span style="color: #1C01CE">0</span><span style="color: #000000">:</span><span style="color: #1C01CE">0</span><span style="color: #000000">:</span><span style="color: #1C01CE">0</span><span style="color: #000000">:</span><span style="color: #1C01CE">0</span><span style="color: #000000">:</span><span style="color: #1C01CE">0</span><span style="color: #000000">:</span><span style="color: #1C01CE">9200</span>]}, <span style="color: #000000">publish_address</span> {<span style="color: #000000">inet</span>[<span style="color: #000000">/</span><span style="color: #1C01CE">192.168.1.101</span><span style="color: #000000">:</span><span style="color: #1C01CE">9200</span>]}
-[<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">08</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">19</span><span style="color: #000000">:</span><span style="color: #1C01CE">42</span><span style="color: #000000">:</span><span style="color: #1C01CE">52</span>,<span style="color: #1C01CE">919</span>][<span style="color: #000000">INFO</span> ][<span style="color: #000000">node</span>                     ] [<span style="color: #000000">Jackson</span> <span style="color: #000000">Arvad</span>] {<span style="color: #1C01CE">0.19.8</span>}[<span style="color: #1C01CE">3236</span>]<span style="color: #000000">:</span> <span style="color: #000000">started</span>
-[<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">08</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">19</span><span style="color: #000000">:</span><span style="color: #1C01CE">42</span><span style="color: #000000">:</span><span style="color: #1C01CE">53</span>,<span style="color: #1C01CE">012</span>][<span style="color: #000000">INFO</span> ][<span style="color: #000000">gateway</span>                  ] [<span style="color: #000000">Jackson</span> <span style="color: #000000">Arvad</span>] <span style="color: #000000">recovered</span> [<span style="color: #1C01CE">0</span>] <span style="color: #000000">indices</span> <span style="color: #000000">into</span> <span style="color: #000000">cluster_state</span>
-</pre></div>
+
+<pre><code>michael@daschl:~/Downloads/elasticsearch-0.19.8$ bin/elasticsearch -f
+[2012-08-17 19:42:47,719][INFO ][node                     ] [Jackson Arvad] {0.19.8}[3236]: initializing ...
+[2012-08-17 19:42:47,725][INFO ][plugins                  ] [Jackson Arvad] loaded [], sites []
+[2012-08-17 19:42:49,698][INFO ][node                     ] [Jackson Arvad] {0.19.8}[3236]: initialized
+[2012-08-17 19:42:49,698][INFO ][node                     ] [Jackson Arvad] {0.19.8}[3236]: starting ...
+[2012-08-17 19:42:49,777][INFO ][transport                ] [Jackson Arvad] bound_address {inet[/0:0:0:0:0:0:0:0:9300]}, publish_address {inet[/192.168.1.101:9300]}
+[2012-08-17 19:42:52,809][INFO ][cluster.service          ] [Jackson Arvad] new_master [Jackson Arvad][TAnCKhf0RymniOxTrT8nww][inet[/192.168.1.101:9300]], reason: zen-disco-join (elected_as_master)
+[2012-08-17 19:42:52,888][INFO ][discovery                ] [Jackson Arvad] elasticsearch/TAnCKhf0RymniOxTrT8nww
+[2012-08-17 19:42:52,919][INFO ][http                     ] [Jackson Arvad] bound_address {inet[/0:0:0:0:0:0:0:0:9200]}, publish_address {inet[/192.168.1.101:9200]}
+[2012-08-17 19:42:52,919][INFO ][node                     ] [Jackson Arvad] {0.19.8}[3236]: started
+[2012-08-17 19:42:53,012][INFO ][gateway                  ] [Jackson Arvad] recovered [0] indices into cluster_state
+</code></pre>
 
 <p>If you point your browser to <code>localhost:9200</code>, you should see a JSON response indicating that our instance is running:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">{
+
+<pre><code>{
   &quot;ok&quot; : true,
   &quot;status&quot; : 200,
   &quot;name&quot; : &quot;&lt;SOME COOL RANDOM NAME&gt;&quot;,
@@ -129,17 +133,18 @@ michael@daschl:~/Downloads$ cd elasticsearch-0.19.8/
   },
   &quot;tagline&quot; : &quot;You Know, for Search&quot;
 }
-</pre></div>
+</code></pre>
 
 <p>Okay, that wasn&rsquo;t rocket science but at least we are prepared to install everything else. We need two more things to get everything going: the JDBC river itself and the appropriate SQL Server JDBC driver.</p>
 
 <p>The river is available on <a href="https://github.com/jprante/elasticsearch-river-jdbc">GitHub</a>, but the easiest way is to install it through the <code>plugin</code> command, which is bundled with our ES installation:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">michael@daschl:~/Downloads/elasticsearch-0.19.8$ bin/plugin -install jprante/elasticsearch-river-jdbc/1.3.1
+
+<pre><code>michael@daschl:~/Downloads/elasticsearch-0.19.8$ bin/plugin -install jprante/elasticsearch-river-jdbc/1.3.1
 -&gt; Installing jprante/elasticsearch-river-jdbc/1.3.1...
 Trying https://github.com/downloads/jprante/elasticsearch-river-jdbc/elasticsearch-river-jdbc-1.3.1.zip...
 Downloading .............................DONE
 Installed river-jdbc
-</pre></div>
+</code></pre>
 
 <p>You can also <a href="https://github.com/jprante/elasticsearch-river-jdbc/downloads">download</a> the archive and extract it into the <code>plugins</code> directory, but you need to make sure the directory name is <code>river-jdbc</code>.</p>
 
@@ -148,7 +153,8 @@ Installed river-jdbc
 <p>If you&rsquo;re using an old SQL Server (like version <sup>8</sup>&frasl;<sub>2000</sub>) and the 1.6 JDK, you have to use the JDBC Driver version 3, otherwise you&rsquo;re good to go with the current version 4. <a href="http://www.microsoft.com/en-us/download/details.aspx?displaylang=en&amp;id=11774">Download</a>, extract and copy the <code>sqljdbc4.jar</code> into the <code>lib</code> directory. It doesn&rsquo;t have to be the <code>lib</code> directory by the way, just make sure it&rsquo;s in your classpatch so that ES is able to find it during runtime.</p>
 
 <p>We&rsquo;ve now installed all mandatory dependencies, but there is one more I&rsquo;d like to recommend: <a href="http://mobz.github.com/elasticsearch-head/">elasticsearch-head</a>. It&rsquo;s a very convenient frontend to work with your cluster, since it allows you to manipulate indexes and data through a pure HTML5-based interface. You can install it either as a plugin or just download the archive and open up the <code>index.html</code> file. Since we&rsquo;ve already used the <code>plugin</code> command, let&rsquo;s do it again:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">michael@daschl:~/Downloads/elasticsearch-0.19.8$ bin/plugin -install mobz/elasticsearch-head
+
+<pre><code>michael@daschl:~/Downloads/elasticsearch-0.19.8$ bin/plugin -install mobz/elasticsearch-head
 -&gt; Installing mobz/elasticsearch-head...
 Trying https://github.com/downloads/mobz/elasticsearch-head/elasticsearch-head-0.19.8.zip...
 Trying https://github.com/mobz/elasticsearch-head/zipball/v0.19.8...
@@ -156,67 +162,72 @@ Trying https://github.com/mobz/elasticsearch-head/zipball/master...
 Downloading ....................................DONE
 Identified as a _site plugin, moving to _site structure ...
 Installed head
-</pre></div>
+</code></pre>
 
 <p>Now, after you&rsquo;ve started ES again, head over to <code>http://localhost:9200/_plugin/head/</code> and enjoy the awesomeness!</p>
 
-<h2 id="configuring-the-river:630e61092221eea2f95d14f0b46fe598">Configuring the River</h2>
+<h2 id="configuring-the-river">Configuring the River</h2>
 
 <p>In ES, you command everything through the REST API. In practice, this means shuffling JSON documents around. I recommend you to read into the <a href="http://www.elasticsearch.org/guide/">ES documentation</a> first to get a feeling how everything works in general. Then, head over to the <a href="http://www.elasticsearch.org/guide/reference/river/">river</a> documentation to learn more about them.</p>
 
 <p>Basically, a river is a library to pull data from an external source into the cluster. There are lots of other rivers available, like the one for <a href="http://www.elasticsearch.org/guide/reference/river/couchdb.html">CouchDB</a> or for <a href="http://www.elasticsearch.org/guide/reference/river/twitter.html">twitter</a>.</p>
 
 <p>To create the river, we&rsquo;ll send the following PUT request to <code>localhost:9200/_river/my_jdbc_river/_meta</code>:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">{
-    <span style="color: #C41A16">&quot;type&quot;</span><span style="color: #000000">:</span><span style="color: #C41A16">&quot;jdbc&quot;</span><span style="color: #000000">,</span>
-    <span style="color: #C41A16">&quot;jdbc&quot;</span><span style="color: #000000">:</span> <span style="color: #000000">{</span>
-        <span style="color: #C41A16">&quot;driver&quot;</span><span style="color: #000000">:</span><span style="color: #C41A16">&quot;com.microsoft.sqlserver.jdbc.SQLServerDriver&quot;</span><span style="color: #000000">,</span> 
-        <span style="color: #C41A16">&quot;url&quot;</span><span style="color: #000000">:</span><span style="color: #C41A16">&quot;jdbc:sqlserver://127.0.0.1:1433;databaseName=myDatabase&quot;</span><span style="color: #000000">,</span>
-        <span style="color: #C41A16">&quot;user&quot;</span><span style="color: #000000">:</span><span style="color: #C41A16">&quot;username&quot;</span><span style="color: #000000">,</span><span style="color: #C41A16">&quot;password&quot;</span><span style="color: #000000">:</span><span style="color: #C41A16">&quot;password&quot;</span><span style="color: #000000">,</span>
-        <span style="color: #C41A16">&quot;sql&quot;</span><span style="color: #000000">:</span><span style="color: #C41A16">&quot;select * from tablename&quot;</span><span style="color: #000000">,</span>
-        <span style="color: #C41A16">&quot;poll&quot;</span><span style="color: #000000">:</span><span style="color: #C41A16">&quot;30s&quot;</span>
-    }<span style="color: #000000">,</span>
-    <span style="color: #C41A16">&quot;index&quot;</span><span style="color: #000000">:</span> {
-        <span style="color: #C41A16">&quot;index&quot;</span><span style="color: #000000">:</span><span style="color: #C41A16">&quot;indexname&quot;</span><span style="color: #000000">,</span>
-        <span style="color: #C41A16">&quot;type&quot;</span><span style="color: #000000">:</span><span style="color: #C41A16">&quot;typename&quot;</span><span style="color: #000000">,</span>
-        <span style="color: #C41A16">&quot;bulk_size&quot;</span><span style="color: #000000">:</span><span style="color: #1C01CE">500</span>
+
+<pre><code>{
+    &quot;type&quot;:&quot;jdbc&quot;,
+    &quot;jdbc&quot;: {
+        &quot;driver&quot;:&quot;com.microsoft.sqlserver.jdbc.SQLServerDriver&quot;, 
+        &quot;url&quot;:&quot;jdbc:sqlserver://127.0.0.1:1433;databaseName=myDatabase&quot;,
+        &quot;user&quot;:&quot;username&quot;,&quot;password&quot;:&quot;password&quot;,
+        &quot;sql&quot;:&quot;select * from tablename&quot;,
+        &quot;poll&quot;:&quot;30s&quot;
+    },
+    &quot;index&quot;: {
+        &quot;index&quot;:&quot;indexname&quot;,
+        &quot;type&quot;:&quot;typename&quot;,
+        &quot;bulk_size&quot;:500
     }
-<span style="color: #000000">}</span>
-</pre></div>
+}
+</code></pre>
 
 <p>The URL uniquely identifies our river since we are free to add more than one. Let&rsquo;s break the JSON document down a bit:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">&quot;type&quot;:&quot;jdbc&quot;,
-</pre></div>
+
+<pre><code>&quot;type&quot;:&quot;jdbc&quot;,
+</code></pre>
 
 <p>The <code>type</code> identifies the river plugin, since there are lots of different rivers available. For example, the CouchDb river is identified by a <code>couchdb</code> type.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #C41A16">&quot;jdbc&quot;</span><span style="color: #000000">:</span> {
-    <span style="color: #C41A16">&quot;driver&quot;</span><span style="color: #000000">:</span><span style="color: #C41A16">&quot;com.microsoft.sqlserver.jdbc.SQLServerDriver&quot;</span><span style="color: #000000">,</span> 
-    <span style="color: #C41A16">&quot;url&quot;</span><span style="color: #000000">:</span><span style="color: #C41A16">&quot;jdbc:sqlserver://127.0.0.1:1433;databaseName=myDatabase&quot;</span><span style="color: #000000">,</span>
-    <span style="color: #C41A16">&quot;user&quot;</span><span style="color: #000000">:</span><span style="color: #C41A16">&quot;username&quot;</span><span style="color: #000000">,</span>
-    <span style="color: #C41A16">&quot;password&quot;</span><span style="color: #000000">:</span><span style="color: #C41A16">&quot;password&quot;</span><span style="color: #000000">,</span>
-    <span style="color: #C41A16">&quot;sql&quot;</span><span style="color: #000000">:</span><span style="color: #C41A16">&quot;select * from tablename&quot;</span><span style="color: #000000">,</span>
-    <span style="color: #C41A16">&quot;poll&quot;</span><span style="color: #000000">:</span><span style="color: #C41A16">&quot;30s&quot;</span>
-}<span style="color: #000000">,</span>
-</pre></div>
+
+<pre><code>&quot;jdbc&quot;: {
+    &quot;driver&quot;:&quot;com.microsoft.sqlserver.jdbc.SQLServerDriver&quot;, 
+    &quot;url&quot;:&quot;jdbc:sqlserver://127.0.0.1:1433;databaseName=myDatabase&quot;,
+    &quot;user&quot;:&quot;username&quot;,
+    &quot;password&quot;:&quot;password&quot;,
+    &quot;sql&quot;:&quot;select * from tablename&quot;,
+    &quot;poll&quot;:&quot;30s&quot;
+},
+</code></pre>
 
 <p>This block provides the main configuration params for the river. The <code>driver</code> identifies the JDBC driver that we want to use, so if you&rsquo;re going to use jTDS you should use <code>net.sourceforge.jtds.jdbc.Driver</code> instead. The <code>url</code> represents the JDBC connection string, which also contains the database name at the end. These strings also vary from driver to driver. Since you always need to provide a username and a password, the river provides <code>user</code> and <code>password</code> fields accordingly.</p>
 
 <p>Now it starts to get interesting. The <code>sql</code> key is the statement that the river executes against the database to fetch the rows. If you only want to index a subset of your columns, just use the explicit column list (like <code>SELECT foo, bar FROM ...</code>). You are free to do everything in here that is valid SQL, so if you like you can add joins, conditions, aliases and ordering.</p>
 
 <p>The <code>poll</code> key defines the time interval between the data is pulled from the database. In this configuration, all rows are fetched every 30 seconds and (re)indexed in ES.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">&quot;index&quot;: {
+
+<pre><code>&quot;index&quot;: {
     &quot;index&quot;:&quot;indexname&quot;,
     &quot;type&quot;:&quot;typename&quot;,
     &quot;bulk_size&quot;:500
 }
-</pre></div>
+</code></pre>
 
 <p>The <code>index</code> configuration block allows you to customize your index metadata. If this concept is not familiar to you, think of the <code>indexname</code> as some kind of database and <code>typename</code> as the table name. You also need this information to locate your indexed data later. So, if you want to index tweets and users from twitter, a good approach would be to name the index <code>twitter</code> and define two types - one for <code>users</code> and one for <code>tweets</code>.</p>
 
 <p>The bulk size defines how many records are hold back until they&rsquo;re indexed in one batch. I don&rsquo;t know what bulk size is reasonable for your use-case, but you may want to start at <code>100</code> and test higher values if they provide performance increases.</p>
 
 <p>The easiest way to send the request is through the &ldquo;Any Request&rdquo; functionality in es-head, but you can also do it through CURL or even your favorite programming language. If everything went well, you should receive a response like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">{
+
+<pre><code>{
 
     ok: true
     _index: _river
@@ -224,25 +235,27 @@ Installed head
     _id: _meta
     _version: 1
 }
-</pre></div>
+</code></pre>
 
 <p>The <code>_version</code> increases every time you issue a new PUT request to update the river. The easiest way to start the indexing is to restart the server, since the river fires off immediately after restart (you can use the <code>kill -15</code> command to stop it in a controlled way). Your output should look roughly like this, indicating that the data gets pulled and indexed (you&rsquo;ll see nearly the same output after every <code>poll</code> interval):</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">michael</span><span style="color: #A90D91">@daschl</span><span style="color: #000000">$</span> <span style="color: #000000">sudo</span> <span style="color: #000000">bin/elasticsearch</span>
-<span style="color: #000000">michael</span><span style="color: #A90D91">@daschl</span><span style="color: #000000">$</span> <span style="color: #000000">tail</span> <span style="color: #000000">-f</span> <span style="color: #000000">logs/elasticsearch</span>
-<span style="color: #000000">....</span>
-<span style="color: #633820">[</span><span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">08</span><span style="color: #000000">-</span><span style="color: #1C01CE">20</span> <span style="color: #1C01CE">08</span>:<span style="color: #1C01CE">14</span>:<span style="color: #1C01CE">40</span>,<span style="color: #1C01CE">407</span><span style="color: #633820">][</span><span style="color: #000000">INFO</span> <span style="color: #633820">][</span><span style="color: #000000">river.jdbc</span>               <span style="color: #633820">]</span> <span style="color: #633820">[</span><span style="color: #000000">Perfection</span><span style="color: #633820">]</span> <span style="color: #633820">[</span><span style="color: #000000">jdbc</span><span style="color: #633820">][</span><span style="color: #000000">my_jdbc_river</span><span style="color: #633820">]</span> <span style="color: #000000">got</span> <span style="color: #000000">30561</span> <span style="color: #000000">rows</span> <span style="color: #000000">for</span> <span style="color: #000000">version</span> <span style="color: #000000">2710,</span> <span style="color: #000000">digest</span> <span style="color: #000000">=</span> <span style="color: #000000">RFEDCNwLdQabcedfegggRszqzy1MeroiGEejB88=</span>
-<span style="color: #633820">[</span><span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">08</span><span style="color: #000000">-</span><span style="color: #1C01CE">20</span> <span style="color: #1C01CE">08</span>:<span style="color: #1C01CE">14</span>:<span style="color: #1C01CE">40</span>,<span style="color: #1C01CE">407</span><span style="color: #633820">][</span><span style="color: #000000">INFO</span> <span style="color: #633820">][</span><span style="color: #000000">river.jdbc</span>               <span style="color: #633820">]</span> <span style="color: #633820">[</span><span style="color: #000000">Perfection</span><span style="color: #633820">]</span> <span style="color: #633820">[</span><span style="color: #000000">jdbc</span><span style="color: #633820">][</span><span style="color: #000000">my_jdbc_river</span><span style="color: #633820">]</span> <span style="color: #000000">submitting</span> <span style="color: #000000">new</span> <span style="color: #000000">bulk</span> <span style="color: #000000">request</span> <span style="color: #000000">(61</span> <span style="color: #000000">docs,</span> <span style="color: #000000">3</span> <span style="color: #000000">requests</span> <span style="color: #000000">currently</span> <span style="color: #000000">active)</span>
-<span style="color: #633820">[</span><span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">08</span><span style="color: #000000">-</span><span style="color: #1C01CE">20</span> <span style="color: #1C01CE">08</span>:<span style="color: #1C01CE">14</span>:<span style="color: #1C01CE">40</span>,<span style="color: #1C01CE">445</span><span style="color: #633820">][</span><span style="color: #000000">INFO</span> <span style="color: #633820">][</span><span style="color: #000000">river.jdbc</span>               <span style="color: #633820">]</span> <span style="color: #633820">[</span><span style="color: #000000">Perfection</span><span style="color: #633820">]</span> <span style="color: #633820">[</span><span style="color: #000000">jdbc</span><span style="color: #633820">][</span><span style="color: #000000">my_jdbc_river</span><span style="color: #633820">]</span> <span style="color: #000000">waiting</span> <span style="color: #000000">for</span> <span style="color: #000000">3</span> <span style="color: #000000">active</span> <span style="color: #000000">bulk</span> <span style="color: #000000">requests</span>
-<span style="color: #633820">[</span><span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">08</span><span style="color: #000000">-</span><span style="color: #1C01CE">20</span> <span style="color: #1C01CE">08</span>:<span style="color: #1C01CE">14</span>:<span style="color: #1C01CE">40</span>,<span style="color: #1C01CE">511</span><span style="color: #633820">][</span><span style="color: #000000">INFO</span> <span style="color: #633820">][</span><span style="color: #000000">river.jdbc</span>               <span style="color: #633820">]</span> <span style="color: #633820">[</span><span style="color: #000000">Perfection</span><span style="color: #633820">]</span> <span style="color: #633820">[</span><span style="color: #000000">jdbc</span><span style="color: #633820">][</span><span style="color: #000000">my_jdbc_river</span><span style="color: #633820">]</span> <span style="color: #000000">bulk</span> <span style="color: #000000">request</span> <span style="color: #000000">success</span> <span style="color: #000000">(104</span> <span style="color: #000000">millis,</span> <span style="color: #000000">61</span> <span style="color: #000000">docs,</span> <span style="color: #000000">total</span> <span style="color: #000000">of</span> <span style="color: #000000">23061</span> <span style="color: #000000">docs)</span>
-<span style="color: #633820">[</span><span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">08</span><span style="color: #000000">-</span><span style="color: #1C01CE">20</span> <span style="color: #1C01CE">08</span>:<span style="color: #1C01CE">14</span>:<span style="color: #1C01CE">40</span>,<span style="color: #1C01CE">511</span><span style="color: #633820">][</span><span style="color: #000000">INFO</span> <span style="color: #633820">][</span><span style="color: #000000">river.jdbc</span>               <span style="color: #633820">]</span> <span style="color: #633820">[</span><span style="color: #000000">Perfection</span><span style="color: #633820">]</span> <span style="color: #633820">[</span><span style="color: #000000">jdbc</span><span style="color: #633820">][</span><span style="color: #000000">my_jdbc_river</span><span style="color: #633820">]</span> <span style="color: #000000">waiting</span> <span style="color: #000000">for</span> <span style="color: #000000">2</span> <span style="color: #000000">active</span> <span style="color: #000000">bulk</span> <span style="color: #000000">requests</span>
-<span style="color: #633820">[</span><span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">08</span><span style="color: #000000">-</span><span style="color: #1C01CE">20</span> <span style="color: #1C01CE">08</span>:<span style="color: #1C01CE">14</span>:<span style="color: #1C01CE">40</span>,<span style="color: #1C01CE">513</span><span style="color: #633820">][</span><span style="color: #000000">INFO</span> <span style="color: #633820">][</span><span style="color: #000000">river.jdbc</span>               <span style="color: #633820">]</span> <span style="color: #633820">[</span><span style="color: #000000">Perfection</span><span style="color: #633820">]</span> <span style="color: #633820">[</span><span style="color: #000000">jdbc</span><span style="color: #633820">][</span><span style="color: #000000">my_jdbc_river</span><span style="color: #633820">]</span> <span style="color: #000000">bulk</span> <span style="color: #000000">request</span> <span style="color: #000000">success</span> <span style="color: #000000">(590</span> <span style="color: #000000">millis,</span> <span style="color: #000000">500</span> <span style="color: #000000">docs,</span> <span style="color: #000000">total</span> <span style="color: #000000">of</span> <span style="color: #000000">23561</span> <span style="color: #000000">docs)</span>
-<span style="color: #633820">[</span><span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">08</span><span style="color: #000000">-</span><span style="color: #1C01CE">20</span> <span style="color: #1C01CE">08</span>:<span style="color: #1C01CE">14</span>:<span style="color: #1C01CE">40</span>,<span style="color: #1C01CE">513</span><span style="color: #633820">][</span><span style="color: #000000">INFO</span> <span style="color: #633820">][</span><span style="color: #000000">river.jdbc</span>               <span style="color: #633820">]</span> <span style="color: #633820">[</span><span style="color: #000000">Perfection</span><span style="color: #633820">]</span> <span style="color: #633820">[</span><span style="color: #000000">jdbc</span><span style="color: #633820">][</span><span style="color: #000000">my_jdbc_river</span><span style="color: #633820">]</span> <span style="color: #000000">waiting</span> <span style="color: #000000">for</span> <span style="color: #000000">1</span> <span style="color: #000000">active</span> <span style="color: #000000">bulk</span> <span style="color: #000000">requests</span>
-<span style="color: #633820">[</span><span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">08</span><span style="color: #000000">-</span><span style="color: #1C01CE">20</span> <span style="color: #1C01CE">08</span>:<span style="color: #1C01CE">14</span>:<span style="color: #1C01CE">40</span>,<span style="color: #1C01CE">622</span><span style="color: #633820">][</span><span style="color: #000000">INFO</span> <span style="color: #633820">][</span><span style="color: #000000">river.jdbc</span>               <span style="color: #633820">]</span> <span style="color: #633820">[</span><span style="color: #000000">Perfection</span><span style="color: #633820">]</span> <span style="color: #633820">[</span><span style="color: #000000">jdbc</span><span style="color: #633820">][</span><span style="color: #000000">my_jdbc_river</span><span style="color: #633820">]</span> <span style="color: #000000">bulk</span> <span style="color: #000000">request</span> <span style="color: #000000">success</span> <span style="color: #000000">(274</span> <span style="color: #000000">millis,</span> <span style="color: #000000">500</span> <span style="color: #000000">docs,</span> <span style="color: #000000">total</span> <span style="color: #000000">of</span> <span style="color: #000000">24061</span> <span style="color: #000000">docs)</span>
-<span style="color: #633820">[</span><span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">08</span><span style="color: #000000">-</span><span style="color: #1C01CE">20</span> <span style="color: #1C01CE">08</span>:<span style="color: #1C01CE">14</span>:<span style="color: #1C01CE">40</span>,<span style="color: #1C01CE">624</span><span style="color: #633820">][</span><span style="color: #000000">INFO</span> <span style="color: #633820">][</span><span style="color: #000000">river.jdbc</span>               <span style="color: #633820">]</span> <span style="color: #633820">[</span><span style="color: #000000">Perfection</span><span style="color: #633820">]</span> <span style="color: #633820">[</span><span style="color: #000000">jdbc</span><span style="color: #633820">][</span><span style="color: #000000">my_jdbc_river</span><span style="color: #633820">]</span> <span style="color: #000000">next</span> <span style="color: #000000">run,</span> <span style="color: #000000">waiting</span> <span style="color: #000000">30s,</span> <span style="color: #000000">URL</span> <span style="color: #633820">[</span><span style="color: #000000">jdbc</span>:<span style="color: #000000">sqlserver</span>:<span style="color: #177500">//127.0.0.1:1433;databaseName=myDatabase] driver [com.microsoft.sqlserver.jdbc.SQLServerDriver] sql [select * from tablename] river table [false]</span>
-</pre></div>
+
+<pre><code>michael@daschl$ sudo bin/elasticsearch
+michael@daschl$ tail -f logs/elasticsearch
+....
+[2012-08-20 08:14:40,407][INFO ][river.jdbc               ] [Perfection] [jdbc][my_jdbc_river] got 30561 rows for version 2710, digest = RFEDCNwLdQabcedfegggRszqzy1MeroiGEejB88=
+[2012-08-20 08:14:40,407][INFO ][river.jdbc               ] [Perfection] [jdbc][my_jdbc_river] submitting new bulk request (61 docs, 3 requests currently active)
+[2012-08-20 08:14:40,445][INFO ][river.jdbc               ] [Perfection] [jdbc][my_jdbc_river] waiting for 3 active bulk requests
+[2012-08-20 08:14:40,511][INFO ][river.jdbc               ] [Perfection] [jdbc][my_jdbc_river] bulk request success (104 millis, 61 docs, total of 23061 docs)
+[2012-08-20 08:14:40,511][INFO ][river.jdbc               ] [Perfection] [jdbc][my_jdbc_river] waiting for 2 active bulk requests
+[2012-08-20 08:14:40,513][INFO ][river.jdbc               ] [Perfection] [jdbc][my_jdbc_river] bulk request success (590 millis, 500 docs, total of 23561 docs)
+[2012-08-20 08:14:40,513][INFO ][river.jdbc               ] [Perfection] [jdbc][my_jdbc_river] waiting for 1 active bulk requests
+[2012-08-20 08:14:40,622][INFO ][river.jdbc               ] [Perfection] [jdbc][my_jdbc_river] bulk request success (274 millis, 500 docs, total of 24061 docs)
+[2012-08-20 08:14:40,624][INFO ][river.jdbc               ] [Perfection] [jdbc][my_jdbc_river] next run, waiting 30s, URL [jdbc:sqlserver://127.0.0.1:1433;databaseName=myDatabase] driver [com.microsoft.sqlserver.jdbc.SQLServerDriver] sql [select * from tablename] river table [false]
+</code></pre>
 
 <p>The last log message indicates that the data has been indexed and ES patiently waits for the specified time interval before the new run starts. We can now fetch some documents, either through es-head or via curl. The following request returns the first 50 matches from all indexed documents under your <code>indexname</code>:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">POST to http://127.0.0.1:9200/indexname/_search
+
+<pre><code>POST to http://127.0.0.1:9200/indexname/_search
 {
   &quot;query&quot;: {
     &quot;bool&quot;: {
@@ -256,11 +269,11 @@ Installed head
   &quot;from&quot;: 0,
   &quot;size&quot;: 50
 }
-</pre></div>
+</code></pre>
 
 <p>The JDBC river provides a bunch of advanced options that you also want to look at, especially <a href="https://github.com/jprante/elasticsearch-river-jdbc#managing-updates-with-the-river-table">how to manage updates</a>. As far as I know, there is currently no support for incremental updates, but the author plans to implement it in one of the next versions.</p>
 
-<h2 id="wrapping-up:630e61092221eea2f95d14f0b46fe598">Wrapping Up</h2>
+<h2 id="wrapping-up">Wrapping Up</h2>
 
 <p>After reading this post, you should be able to install, configure and query ElasticSearch together with a JDBC river. We used SQL Server here, but the same principles apply to all other relational databases with a JDBC driver as well.</p>
 
@@ -289,7 +302,7 @@ Installed head
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

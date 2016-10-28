@@ -7,7 +7,7 @@
 
     <meta name="description" content="This post shows you how to encrypt your session data transparently and what is going on behind the scenes.">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Session Encryption with Lithium &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -74,36 +74,40 @@
                             
                         </p>
                     </header>
-
+                    
+                    
                     <div class="post-description">
                         
 
-<h2 id="the-basics:2a6783489cdbf95c96d62a3bcdf50b5d">The Basics</h2>
+<h2 id="the-basics">The Basics</h2>
 
 <p>If you check out the <code>master</code> branch, you can use the new <code>Encrypt</code> strategy to encrypt your session data automatically. This means that you can read and write session data in cleartext and they will be encrypted on the fly before getting stored (in a cookie, for example). You can read my post about &ldquo;baking cookies like a chef&rdquo; for  PHPAdvent 2011 <a href="http://phpadvent.org/2011/bake-cookies-like-a-chef-by-michael-nitschinger">here</a>. The article covers both HMAC signatures and encryption, and is a good place to start. This post will go a little bit deeper in how to use and configure the <code>Encrypt</code> strategy in Lithium. Note that you need to have the <a href="http://php.net/manual/en/book.mcrypt.php">mcrypt</a> extension installed and enabled for this to work.</p>
 
 <p>Here&rsquo;s the simplest configuration you can start with:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">Session::config(array(&#39;default&#39; =&gt; array(
-    &#39;adapter&#39; =&gt; &#39;Cookie&#39;,
-    &#39;strategies&#39; =&gt; array(&#39;Encrypt&#39; =&gt; array(&#39;secret&#39; =&gt; &#39;f00bar$<span style="color: #000000">l1thium</span>&#39;))
+
+<pre><code>Session::config(array('default' =&gt; array(
+    'adapter' =&gt; 'Cookie',
+    'strategies' =&gt; array('Encrypt' =&gt; array('secret' =&gt; 'f00bar$l1thium'))
 )));
-</pre></div>
+</code></pre>
 
 <p>This will store all your session data in a cookie. If you don&rsquo;t change anything else, your data will be encrypted with <a href="http://en.wikipedia.org/wiki/Advanced_Encryption_Standard">AES</a> in  <a href="http://en.wikipedia.org/wiki/Block_cipher_modes_of_operation#Cipher-block_chaining_.28CBC.29">CBC</a> mode with a block size of 256 bits (32 byte). This is a secure and sensible default, so if you don&rsquo;t need anything special just stick with the defaults.</p>
 
 <p>You can now read and write cleartext data and it will be encrypted on the fly for you. For example:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">Session::write(</span><span style="color: #C41A16">&#39;key&#39;</span><span style="color: #000000">,</span> <span style="color: #C41A16">&#39;my secret value&#39;</span><span style="color: #000000">);</span>
-</pre></div>
+
+<pre><code>Session::write('key', 'my secret value');
+</code></pre>
 
 <p>The result will look like this on the client side:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">appcookie[__encrypted]=c3Rqv%2FFYnuwAevxeseII7lOvyoOTi2foMfB%2FCoO4l4FcutRvBn7qq%2BZrPVWC%2FzEYEiSSFMWv7EhEx4ew99%2FmPQ%3D%3D
-</pre></div>
+
+<pre><code>appcookie[__encrypted]=c3Rqv%2FFYnuwAevxeseII7lOvyoOTi2foMfB%2FCoO4l4FcutRvBn7qq%2BZrPVWC%2FzEYEiSSFMWv7EhEx4ew99%2FmPQ%3D%3D
+</code></pre>
 
 <p>You can then read the value again with <code>Session::read('key');</code> or delete it with <code>Session::delete('key');</code>.</p>
 
 <p>That&rsquo;s it. If you don&rsquo;t want to dig into the internals, you can safely stop reading now and implement it in your own application.</p>
 
-<h2 id="further-discussion:2a6783489cdbf95c96d62a3bcdf50b5d">Further Discussion</h2>
+<h2 id="further-discussion">Further Discussion</h2>
 
 <p>Still here? Awesome!</p>
 
@@ -116,29 +120,31 @@ speaking, <code>MCRYPT_RIJNDAEL_256</code> is not part of the AES standard (beca
 <p>So to make sure we use the longest key possible, we hash the given secret with <code>sha256</code> and then substring the length we need. As <code>mcrypt</code> tells us which key lengths are supported for which cipher (through <a href="http://php.net/manual/en/function.mcrypt-enc-get-key-size.php">mcrypt_enc_get_key_size</a>), it is possible to determine the strongest key length. Note that this doesn&rsquo;t mean that you should use weak keys in the first place just because they get hashed anyway. In practice, you will only create them once so make sure they contain enough entropy.</p>
 
 <p>As always, the Lithium core provides sensible defaults but also lets you outgrow the framework if you need to. You can specify your own cipher or mode like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">Session::config(array(&#39;default&#39; =&gt; array(
-    &#39;adapter&#39; =&gt; &#39;Cookie&#39;,
-    &#39;strategies&#39; =&gt; array(&#39;Encrypt&#39; =&gt; array(
-        &#39;cipher&#39; =&gt; MCRYPT_RIJNDAEL_256,
-        &#39;mode&#39;   =&gt; MCRYPT_MODE_ECB, // Don&#39;t use ECB when you don&#39;t have to!
-        &#39;secret&#39;     =&gt; &#39;f00bar$<span style="color: #000000">l1thium</span>&#39;
+
+<pre><code>Session::config(array('default' =&gt; array(
+    'adapter' =&gt; 'Cookie',
+    'strategies' =&gt; array('Encrypt' =&gt; array(
+        'cipher' =&gt; MCRYPT_RIJNDAEL_256,
+        'mode'   =&gt; MCRYPT_MODE_ECB, // Don't use ECB when you don't have to!
+        'secret'     =&gt; 'f00bar$l1thium'
     ))
 )));
-</pre></div>
+</code></pre>
 
 <p>Here&rsquo;s a list of <a href="http://www.php.net/manual/en/mcrypt.ciphers.php">ciphers</a> and <a href="http://www.php.net/manual/en/mcrypt.constants.php">modes</a> you can use. Of course you need to make sure that your custom cipher/mode combination is supported.</p>
 
 <p>If you don&rsquo;t like how Lithium hashes your key or if you want to has it on your own, there&rsquo;s also a way to do this. If the length of your key is equal or longer than the longest key size supported by the algorithm, it gets passed through unchanged. Here&rsquo;s how it works:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">protected</span> <span style="color: #A90D91">function</span> <span style="color: #000000">_hashSecret</span>(<span style="color: #000000">$key</span>) {
-    <span style="color: #000000">$size</span> <span style="color: #000000">=</span> <span style="color: #000000">mcrypt_enc_get_key_size</span>(<span style="color: #A90D91">static</span><span style="color: #000000">::$_resource</span>);
 
-    <span style="color: #A90D91">if</span> (<span style="color: #000000">strlen</span>(<span style="color: #000000">$key</span>) <span style="color: #000000">&gt;=</span> <span style="color: #000000">$size</span>) {
-        <span style="color: #A90D91">return</span> <span style="color: #000000">$key</span>;
+<pre><code>protected function _hashSecret($key) {
+    $size = mcrypt_enc_get_key_size(static::$_resource);
+
+    if (strlen($key) &gt;= $size) {
+        return $key;
     }
 
-    <span style="color: #A90D91">return</span> <span style="color: #000000">substr</span>(<span style="color: #000000">hash</span>(<span style="color: #C41A16">&#39;sha256&#39;</span>, <span style="color: #000000">$key</span>, <span style="color: #A90D91">true</span>), <span style="color: #1C01CE">0</span>, <span style="color: #000000">$size</span>);
+    return substr(hash('sha256', $key, true), 0, $size);
 }
-</pre></div>
+</code></pre>
 
 <p>In my opinion, you should always encrypt your data if it gets stored on the client side. Lithium provides a convenient and transparent way to do it, so go ahead and use it in your own applications to make them more secure.</p>
 
@@ -163,7 +169,7 @@ speaking, <code>MCRYPT_RIJNDAEL_256</code> is not part of the AES standard (beca
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

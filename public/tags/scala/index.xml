@@ -24,16 +24,18 @@ up and running in minutes, so check it out if you haven&amp;rsquo;t already. For
 &lt;code&gt;localhost&lt;/code&gt;. If it runs elswhere, just modify the URI string later accordingly.&lt;/p&gt;
 
 &lt;p&gt;Let&amp;rsquo;s create the standard directory structure for our project. We&amp;rsquo;ll use sbt to manage our dependencies, so create a &lt;code&gt;build.sbt&lt;/code&gt; file too.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;/couchbase-scala
+
+&lt;pre&gt;&lt;code&gt;/couchbase-scala
     /src
         /main
             /scala
                 Main.scala
     build.sbt
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Let&amp;rsquo;s write the &lt;code&gt;build.sbt&lt;/code&gt; first:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;name := &amp;quot;couchbase-scala&amp;quot;
+
+&lt;pre&gt;&lt;code&gt;name := &amp;quot;couchbase-scala&amp;quot;
 
 version := &amp;quot;1.0&amp;quot;
 
@@ -42,81 +44,88 @@ scalaVersion := &amp;quot;2.9.2&amp;quot;
 resolvers += &amp;quot;Couchbase Maven Repository&amp;quot; at &amp;quot;http://files.couchbase.com/maven2&amp;quot;
 
 libraryDependencies += &amp;quot;couchbase&amp;quot; % &amp;quot;couchbase-client&amp;quot; % &amp;quot;1.1-dp&amp;quot;
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;We need to add the &lt;a href=&#34;http://files.couchbase.com/maven2&#34;&gt;Couchbase Maven Repository&lt;/a&gt; to our resolvers list, since it contains the Couchbase package and all
 its dependencies. The last line adds the actual dependency. If you want the (older) stable release, use &amp;ldquo;1.0.2&amp;rdquo; instead of &amp;ldquo;1.1-dp&amp;rdquo;. Tip: you can browse the
 repository directly in your browser and see what versions are available.&lt;/p&gt;
 
 &lt;p&gt;Let&amp;rsquo;s add a simple &lt;code&gt;Main&lt;/code&gt; object in &lt;code&gt;Main.scala&lt;/code&gt;:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;object Main extends App {
+
+&lt;pre&gt;&lt;code&gt;object Main extends App {
     println(&amp;quot;Hello World&amp;quot;)
 }
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Now, start sbt and run the application for the first time:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;couchbase-scala$ sbt
+
+&lt;pre&gt;&lt;code&gt;couchbase-scala$ sbt
 &amp;gt; run
 ** ((Omitting Fetch and Compile Output)) **
 [info] Running Main
 Hello World
 [success] Total time: 4 s, completed 24.04.2012 11:01:33
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;I&amp;rsquo;ve omited the part where sbt resolves our dependencies and compiles the libraries, but the output should look like the one above. Now that we have all our
 dependencies in place, we can start talking to the Couchbase server. Here&amp;rsquo;s a short example with synchronous set and get operations (note that no exception
 handling takes place here):&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;collection.JavaConversions._&lt;/span&gt; 
-&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;collection.mutable.ArrayBuffer&lt;/span&gt;
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;java.net.URI&lt;/span&gt;;
-&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;java.net.ConnectException&lt;/span&gt;;
+&lt;pre&gt;&lt;code&gt;import collection.JavaConversions._ 
+import collection.mutable.ArrayBuffer
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;com.couchbase.client.CouchbaseClient&lt;/span&gt;;
+import java.net.URI;
+import java.net.ConnectException;
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;object&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Main&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;extends&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;App&lt;/span&gt; {
-    &lt;span style=&#34;color: #000000&#34;&gt;val&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;uris&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;ArrayBuffer&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;URI.create&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;http://127.0.0.1:8091/pools&amp;quot;&lt;/span&gt;))
-    &lt;span style=&#34;color: #000000&#34;&gt;val&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;client&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;CouchbaseClient&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;uris&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;default&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;&amp;quot;&lt;/span&gt;)
+import com.couchbase.client.CouchbaseClient;
 
-    &lt;span style=&#34;color: #000000&#34;&gt;client.set&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;hello&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;world&amp;quot;&lt;/span&gt;)
-    &lt;span style=&#34;color: #000000&#34;&gt;println&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Receiving -&amp;gt; &amp;quot;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;client.get&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;hello&amp;quot;&lt;/span&gt;))
+object Main extends App {
+    val uris = ArrayBuffer(URI.create(&amp;quot;http://127.0.0.1:8091/pools&amp;quot;))
+    val client = new CouchbaseClient(uris, &amp;quot;default&amp;quot;, &amp;quot;&amp;quot;)
 
-    &lt;span style=&#34;color: #000000&#34;&gt;client.shutdown&lt;/span&gt;()
-    &lt;span style=&#34;color: #000000&#34;&gt;System.exit&lt;/span&gt;(&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;)
+    client.set(&amp;quot;hello&amp;quot;, 0, &amp;quot;world&amp;quot;)
+    println(&amp;quot;Receiving -&amp;gt; &amp;quot; + client.get(&amp;quot;hello&amp;quot;))
+
+    client.shutdown()
+    System.exit(0)
 }
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Save the file, type &lt;code&gt;run&lt;/code&gt; again in sbt and you should get the following output (you only need to leave the REPL if you&amp;rsquo;ve changed the &lt;code&gt;build.sbt&lt;/code&gt; file):&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;[&lt;span style=&#34;color: #000000&#34;&gt;info&lt;/span&gt;] &lt;span style=&#34;color: #000000&#34;&gt;Compiling&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Scala&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;source&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;to&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;Path\to\Sourcecode&amp;gt;\couchbase-scala\target\scala-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;2.9.2&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;\classes&lt;/span&gt;...
-[&lt;span style=&#34;color: #000000&#34;&gt;info&lt;/span&gt;] &lt;span style=&#34;color: #000000&#34;&gt;Running&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Main&lt;/span&gt;
-&lt;span style=&#34;color: #1C01CE&#34;&gt;2012&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;04&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;24&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;11&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;05&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;11.850&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;INFO&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;com&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;couchbase&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;client&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;CouchbaseConnection&lt;/span&gt;:  &lt;span style=&#34;color: #000000&#34;&gt;Added&lt;/span&gt; {&lt;span style=&#34;color: #000000&#34;&gt;QA&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;sa=/&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;127.0.0.1&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;11210&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;#Rops=&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;#Wops=&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;#iq=&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topRop=null&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topWop=null&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;toWrite=&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;interested=&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;} &lt;span style=&#34;color: #000000&#34;&gt;to&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;connect&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;queue&lt;/span&gt;
-&lt;span style=&#34;color: #1C01CE&#34;&gt;2012&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;04&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;24&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;11&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;05&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;11.856&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;INFO&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;com&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;couchbase&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;client&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;CouchbaseClient&lt;/span&gt;:  &lt;span style=&#34;color: #000000&#34;&gt;viewmode&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;property&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;isn&amp;#39;t&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;defined&lt;/span&gt;. &lt;span style=&#34;color: #000000&#34;&gt;Setting&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;viewmode&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;to&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;production&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;mode&lt;/span&gt;
-&lt;span style=&#34;color: #1C01CE&#34;&gt;2012&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;04&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;24&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;11&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;05&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;11.856&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;INFO&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;com&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;couchbase&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;client&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;CouchbaseConnection&lt;/span&gt;:  &lt;span style=&#34;color: #000000&#34;&gt;Connection&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;state&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;changed&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;sun&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;nio&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;ch&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;SelectionKeyImpl&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;@10319&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;d7&lt;/span&gt;
-&lt;span style=&#34;color: #1C01CE&#34;&gt;2012&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;04&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;24&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;11&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;05&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;11.926&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;INFO&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;com&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;couchbase&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;client&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;ViewConnection&lt;/span&gt;:  &lt;span style=&#34;color: #000000&#34;&gt;Added&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;daschl-notebook/&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;127.0.0.1&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;8092&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;to&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;connect&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;queue&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;Receiving&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;world&lt;/span&gt;
-&lt;span style=&#34;color: #1C01CE&#34;&gt;2012&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;04&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;24&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;11&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;05&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;12.360&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;INFO&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;com&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;couchbase&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;client&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;CouchbaseConnection&lt;/span&gt;:  &lt;span style=&#34;color: #000000&#34;&gt;Shut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;down&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Couchbase&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;client&lt;/span&gt;
-&lt;span style=&#34;color: #1C01CE&#34;&gt;2012&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;04&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;24&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;11&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;05&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;12.368&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;INFO&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;com&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;couchbase&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;client&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;ViewConnection&lt;/span&gt;:  &lt;span style=&#34;color: #000000&#34;&gt;Shut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;down&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Couchbase&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;client&lt;/span&gt;
-&lt;span style=&#34;color: #1C01CE&#34;&gt;2012&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;04&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;24&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;11&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;05&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;12.374&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;INFO&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;com&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;couchbase&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;client&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;ViewNode&lt;/span&gt;:  &lt;span style=&#34;color: #000000&#34;&gt;Couchbase&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;I/O&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;reactor&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;terminated&lt;/span&gt;
-[&lt;span style=&#34;color: #000000&#34;&gt;success&lt;/span&gt;] &lt;span style=&#34;color: #000000&#34;&gt;Total&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;time&lt;/span&gt;: &lt;span style=&#34;color: #1C01CE&#34;&gt;6&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;s&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;completed&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;24.04.2012&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;11&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;05&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;12&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+
+&lt;pre&gt;&lt;code&gt;[info] Compiling 1 Scala source to &amp;lt;Path\to\Sourcecode&amp;gt;\couchbase-scala\target\scala-2.9.2\classes...
+[info] Running Main
+2012-04-24 11:05:11.850 INFO com.couchbase.client.CouchbaseConnection:  Added {QA sa=/127.0.0.1:11210, #Rops=0, #Wops=0, #iq=0, topRop=null, topWop=null, toWrite=0, interested=0} to connect queue
+2012-04-24 11:05:11.856 INFO com.couchbase.client.CouchbaseClient:  viewmode property isn&#39;t defined. Setting viewmode to production mode
+2012-04-24 11:05:11.856 INFO com.couchbase.client.CouchbaseConnection:  Connection state changed for sun.nio.ch.SelectionKeyImpl@10319d7
+2012-04-24 11:05:11.926 INFO com.couchbase.client.ViewConnection:  Added daschl-notebook/127.0.0.1:8092 to connect queue
+Receiving -&amp;gt; world
+2012-04-24 11:05:12.360 INFO com.couchbase.client.CouchbaseConnection:  Shut down Couchbase client
+2012-04-24 11:05:12.368 INFO com.couchbase.client.ViewConnection:  Shut down Couchbase client
+2012-04-24 11:05:12.374 INFO com.couchbase.client.ViewNode:  Couchbase I/O reactor terminated
+[success] Total time: 6 s, completed 24.04.2012 11:05:12
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;You see all the Couchbase log messages here, because the default logger logs directly to STDOUT. Right in the middle you can see the output of our synchronous &lt;a href=&#34;http://www.couchbase.com/docs/couchbase-sdk-java-1.1/couchbase-sdk-java-retrieve-get.html#table-couchbase-sdk_java_get&#34;&gt;get&lt;/a&gt; operation. You should also see the
 created document in your Couchbase &lt;a href=&#34;http://localhost:8091/index.html#sec=documents&amp;amp;bucketName=default&#34;&gt;default bucket&lt;/a&gt;.&lt;/p&gt;
 
 &lt;p&gt;Let&amp;rsquo;s go through the main code line by line and see what&amp;rsquo;s going on.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;val uris = ArrayBuffer(URI.create(&amp;quot;http://127.0.0.1:8091/pools&amp;quot;))   
+
+&lt;pre&gt;&lt;code&gt;val uris = ArrayBuffer(URI.create(&amp;quot;http://127.0.0.1:8091/pools&amp;quot;))   
 val client = new CouchbaseClient(uris, &amp;quot;default&amp;quot;, &amp;quot;&amp;quot;)
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;The &lt;code&gt;CouchbaseClient&lt;/code&gt; accepts a list of URIs to communicate with as the first argument (you need to import &lt;code&gt;collection.JavaConversions._&lt;/code&gt;, so that &lt;code&gt;ÀrrayBuffer&lt;/code&gt; gets
 converted to a &lt;code&gt;java.util.List&lt;/code&gt;). The second argument is the bucket name, the third one is an optional bucket password (which is always empty for the &lt;code&gt;default&lt;/code&gt; one).&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;client.set(&amp;quot;hello&amp;quot;, 0, &amp;quot;world&amp;quot;)
+
+&lt;pre&gt;&lt;code&gt;client.set(&amp;quot;hello&amp;quot;, 0, &amp;quot;world&amp;quot;)
 println(&amp;quot;Receiving -&amp;gt; &amp;quot; + client.get(&amp;quot;hello&amp;quot;))
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;We can now throw all commands at the client, be it synchronous or asynchronous ones. You can find all supported methods &lt;a href=&#34;http://www.couchbase.com/docs/couchbase-sdk-java-1.1/api-reference-summary.html&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;client.shutdown()
-&lt;/pre&gt;&lt;/div&gt;
+
+&lt;pre&gt;&lt;code&gt;client.shutdown()
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Finally, we close the connection to the server. You can pass optional timeouts here, so that the client waits for the given amount of time before it finally closes the connection.
 This allows asynchronous commands to finish first.&lt;/p&gt;

@@ -7,7 +7,7 @@
 
     <meta name="description" content="This blog post shows how you can use the new Reactor library to create high performant TCP clients.">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Using the Reactor Processor for High-Performance TCP &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -74,7 +74,8 @@
                             
                         </p>
                     </header>
-
+                    
+                    
                     <div class="post-description">
                         
 
@@ -84,36 +85,39 @@
 
 <p>I&rsquo;m going to use a Couchbase server as an endpoint, but feel free to use whatever you want instead. The whole API is very generic and the consumers can be exchanged easily.</p>
 
-<h1 id="setup:d0fd33f9e81a57356bf42d8f49c136cf">Setup</h1>
+<h1 id="setup">Setup</h1>
 
 <p>Before we can get started, all we need to do is include the <code>reactor-tcp</code> artifact from maven. Now you can do this through gradle, maven, ivy or what you want, but at this point, I would recommend you to check out the <a href="https://github.com/reactor/reactor">reactor</a> project directly from github and build it on your own, so you&rsquo;ll have the latest and greatest code in your local repository:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>git clone https://github.com/reactor/reactor.git
-<span style="color: #000000">$ </span><span style="color: #A90D91">cd </span>reactor
-<span style="color: #000000">$ </span>./gradlew install
-</pre></div>
+
+<pre><code>$ git clone https://github.com/reactor/reactor.git
+$ cd reactor
+$ ./gradlew install
+</code></pre>
 
 <p>This will download and install everything you need. The next step is to create a maven or gradle project in your IDE, but I&rsquo;ll leave that part up to the reader. The maven dependency you need to include is:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">&lt;dependency&gt;</span>
-    <span style="color: #000000">&lt;groupId&gt;</span>org.projectreactor<span style="color: #000000">&lt;/groupId&gt;</span>
-    <span style="color: #000000">&lt;artifactId&gt;</span>reactor-tcp<span style="color: #000000">&lt;/artifactId&gt;</span>
-    <span style="color: #000000">&lt;version&gt;</span>1.0.0.BUILD-SNAPSHOT<span style="color: #000000">&lt;/version&gt;</span>
-<span style="color: #000000">&lt;/dependency&gt;</span>
-</pre></div>
+
+<pre><code>&lt;dependency&gt;
+    &lt;groupId&gt;org.projectreactor&lt;/groupId&gt;
+    &lt;artifactId&gt;reactor-tcp&lt;/artifactId&gt;
+    &lt;version&gt;1.0.0.BUILD-SNAPSHOT&lt;/version&gt;
+&lt;/dependency&gt;
+</code></pre>
 
 <p>Or, for all gradle folks:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">dependencies {
-    compile &#39;org.projectreactor:reactor-tcp:1.0.0.BUILD-SNAPSHOT&#39;
-}
-</pre></div>
 
-<h1 id="the-processor:d0fd33f9e81a57356bf42d8f49c136cf">The Processor</h1>
+<pre><code>dependencies {
+    compile 'org.projectreactor:reactor-tcp:1.0.0.BUILD-SNAPSHOT'
+}
+</code></pre>
+
+<h1 id="the-processor">The Processor</h1>
 
 <p>Now, let&rsquo;s get to some actual code. The Processor is a very lightweight abstraction over the <a href="https://github.com/LMAX-Exchange/disruptor">LMAX Disruptor</a> a high performant RingBuffer. A RingBuffer provides much better characteristics than a normal Queue, and the Disruptor is heavily optimized for dispatching tasks in the nanosecond area (which means millions of operations per second). I recommend you to read <a href="https://github.com/LMAX-Exchange/disruptor/blob/master/docs/Disruptor.docx">this paper</a> and also check out talks by <a href="http://mechanical-sympathy.blogspot.co.at/">Martin Thompson</a> if you are interested.</p>
 
 <p>The basic idea is that we decouple consumers from producers, so that each of them can work on their own pace (not blocking each other) and also benefiting from batching if the producers are faster than the consumers. We&rsquo;ll see why this is particularly important with TCP in a second.</p>
 
 <p>A <code>Processor</code> can be created by instantiating a <code>ProcessorSpec</code> and defining some mandatory options. Then, the <code>Processor</code> is built for us.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">ProcessorSpec&lt;Event&lt;Buffer&gt;&gt;</span> <span style="color: #000000">writeProcessor</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">ProcessorSpec&lt;Event&lt;Buffer&gt;&gt;()</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #000000">ProcessorSpec&lt;Event&lt;Buffer&gt;&gt;</span> <span style="color: #000000">writeProcessor</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">ProcessorSpec&lt;Event&lt;Buffer&gt;&gt;()</span>
 	<span style="color: #000000">.</span><span style="color: #836C28">dataSupplier</span><span style="color: #000000">(</span><span style="color: #A90D91">new</span> <span style="color: #000000">Supplier&lt;Event&lt;Buffer&gt;&gt;()</span> <span style="color: #000000">{</span>
 		<span style="color: #000000">@Override</span>
 		<span style="color: #A90D91">public</span> <span style="color: #000000">Event&lt;Buffer&gt;</span> <span style="color: #000000">get()</span> <span style="color: #000000">{</span>
@@ -133,7 +137,7 @@
 <p>Third, through the <code>consume</code> method we can tell the <code>Processor</code> who will be notified when new data is added to the RingBuffer. In our case, the <code>Node</code> represents the TCP client which we&rsquo;ll build in a second.</p>
 
 <p>Now, how do we write to the Processor? Let&rsquo;s add a simple method that does it for us:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">public</span> <span style="color: #A90D91">void</span> <span style="color: #000000">write(</span><span style="color: #A90D91">final</span> <span style="color: #000000">Buffer</span> <span style="color: #000000">data)</span> <span style="color: #000000">{</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">public</span> <span style="color: #A90D91">void</span> <span style="color: #000000">write(</span><span style="color: #A90D91">final</span> <span style="color: #000000">Buffer</span> <span style="color: #000000">data)</span> <span style="color: #000000">{</span>
 	<span style="color: #A90D91">final</span> <span style="color: #000000">Operation&lt;Event&lt;Buffer&gt;&gt;</span> <span style="color: #000000">op</span> <span style="color: #000000">=</span> <span style="color: #000000">writeProcessor.</span><span style="color: #836C28">get</span><span style="color: #000000">();</span>
 	<span style="color: #000000">op.</span><span style="color: #836C28">get</span><span style="color: #000000">().</span><span style="color: #836C28">setData</span><span style="color: #000000">(data);</span>
 	<span style="color: #000000">op.</span><span style="color: #836C28">commit</span><span style="color: #000000">();</span>
@@ -143,7 +147,7 @@
 <p>Here, we get a <code>Operation</code> out of the processor (that wraps our data) and override it with the data that we actually want to store this time. You can see that we are not allocating new objects in the RingBuffer, we just use the old one that has been provided for us. With the <code>commit</code> method we put it back into the RingBuffer. Actually, behind the scenes, it makes use of Sequences and Barriers inside the RingBuffer, but this is completely hidden from us.</p>
 
 <p>Here is the full code for the lazy reader:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">import</span> <span style="color: #000000">reactor.core.Environment;</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">import</span> <span style="color: #000000">reactor.core.Environment;</span>
 <span style="color: #A90D91">import</span> <span style="color: #000000">reactor.core.processor.Operation;</span>
 <span style="color: #A90D91">import</span> <span style="color: #000000">reactor.core.processor.Processor;</span>
 <span style="color: #A90D91">import</span> <span style="color: #000000">reactor.core.processor.spec.ProcessorSpec;</span>
@@ -187,10 +191,10 @@
 
 <p>One final note before we move on: did you spot the <code>Environment</code> here? This is also a common theme in the Reactor framework. The <code>Environment</code> is used in many places to signal information about - who would have thought that - the JVM environment. The general recommendation is to create only one <code>Environment</code> instance per JVM, so we happily pass it around in our small application.</p>
 
-<h1 id="the-consumer:d0fd33f9e81a57356bf42d8f49c136cf">The Consumer</h1>
+<h1 id="the-consumer">The Consumer</h1>
 
 <p>Before we get into the nitty-gritty network details, let&rsquo;s add a consumer that just prints out the data that he &ldquo;sees&rdquo;. If you want to try this sample, make sure to change the previous code temporarily from <code>.consume(new Node(...))</code> to <code>.consume(new EchoConsumer())</code>.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">public</span> <span style="color: #A90D91">class</span> <span style="color: #3F6E75">EchoConsumer</span> <span style="color: #A90D91">implements</span> <span style="color: #000000">Consumer&lt;Event&lt;Buffer&gt;&gt;</span> <span style="color: #000000">{</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">public</span> <span style="color: #A90D91">class</span> <span style="color: #3F6E75">EchoConsumer</span> <span style="color: #A90D91">implements</span> <span style="color: #000000">Consumer&lt;Event&lt;Buffer&gt;&gt;</span> <span style="color: #000000">{</span>
 
   <span style="color: #000000">@Override</span>
   <span style="color: #A90D91">public</span> <span style="color: #A90D91">void</span> <span style="color: #000000">accept(</span><span style="color: #A90D91">final</span> <span style="color: #000000">Event&lt;Buffer&gt;</span> <span style="color: #000000">bufferEvent)</span> <span style="color: #000000">{</span>
@@ -201,7 +205,7 @@
 </pre></div>
 
 <p>The <code>accept</code> method is always called once there is information available on the Processor. Let&rsquo;s add a simple test case to verify that this works:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">import</span> <span style="color: #000000">org.junit.Test;</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">import</span> <span style="color: #000000">org.junit.Test;</span>
 <span style="color: #A90D91">import</span> <span style="color: #000000">reactor.io.Buffer;</span>
 
 <span style="color: #A90D91">public</span> <span style="color: #A90D91">class</span> <span style="color: #3F6E75">MessageDispatcherTest</span> <span style="color: #000000">{</span>
@@ -218,7 +222,7 @@
 <p>Now if we run this test, we should see <code>[72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100, 33]</code> printed on the console - great! This is the byte array representation of our wrapped buffer. Of course we could make our lives easier and use <code>Strings</code> instead of <code>Buffer</code> in our implementation, but the <code>Buffer</code> works much better with network communication.</p>
 
 <p>The next step would be to send the data over the network. Let&rsquo;s replace our Consumer with a more intelligent one. Be aware that the <code>TcpClient</code> that you&rsquo;ll see doesn&rsquo;t communicate with Java NIO directly - it makes use of the excellent <a href="http://netty.io/">Netty</a> project which provides a convenient and performant wrapper around NIO and OIO (we use NIO here).</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">public</span> <span style="color: #A90D91">class</span> <span style="color: #3F6E75">Node</span> <span style="color: #A90D91">implements</span> <span style="color: #000000">Consumer&lt;Event&lt;Buffer&gt;&gt;</span> <span style="color: #000000">{</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">public</span> <span style="color: #A90D91">class</span> <span style="color: #3F6E75">Node</span> <span style="color: #A90D91">implements</span> <span style="color: #000000">Consumer&lt;Event&lt;Buffer&gt;&gt;</span> <span style="color: #000000">{</span>
 
   <span style="color: #A90D91">private</span> <span style="color: #A90D91">final</span> <span style="color: #000000">TcpClient&lt;Buffer,</span> <span style="color: #000000">Buffer&gt;</span> <span style="color: #000000">client;</span>
   <span style="color: #A90D91">private</span> <span style="color: #000000">TcpConnection&lt;Buffer,</span> <span style="color: #000000">Buffer&gt;</span> <span style="color: #000000">conn</span> <span style="color: #000000">=</span> <span style="color: #A90D91">null</span><span style="color: #000000">;</span>
@@ -264,7 +268,7 @@
 <p>Now that we have an open connection, we can write to it. Since everything is non-blocking in Reactor, so is socket writing. In order to not overwhelm the underlying infrastructure, we have to wait until it is actually finished before moving on to handle the next <code>Event</code> in the Processor. We do this by using a <code>CountDownLatch</code>, which will be counted down once the writing has finished. In our simple example we just fail if it took longer than one second. In a real application, one could report errors or retry with Backoff.</p>
 
 <p>Before we can run that code, we need to add a test case to make it all work.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">Buffer[]</span> <span style="color: #000000">buffers</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Buffer[</span><span style="color: #1C01CE">10</span><span style="color: #000000">];</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #000000">Buffer[]</span> <span style="color: #000000">buffers</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Buffer[</span><span style="color: #1C01CE">10</span><span style="color: #000000">];</span>
 
 <span style="color: #000000">@Before</span>
 <span style="color: #A90D91">public</span> <span style="color: #A90D91">void</span> <span style="color: #000000">initBuffers()</span> <span style="color: #000000">{</span>
@@ -297,12 +301,12 @@
 
 <p>To actually simulate something real, this test creates ten buffer instances with Couchbase messages. Those familiar with the memcached binary protocol can identify it as a GETQ request. This means it does not return anything when the key is not found (which is what we want, because in this case we want to benchmark the upper limit for write throughput and not concern us with parsing of error responses). Once the data is created, we run a given amount of operations and call the <code>write</code> method on the <code>MessageDispatcher</code>.</p>
 
-<h1 id="batch-all-the-things:d0fd33f9e81a57356bf42d8f49c136cf">Batch all the things!</h1>
+<h1 id="batch-all-the-things">Batch all the things!</h1>
 
 <p>If we run this, we get a - very disappointing - number of only 50K ops/s. In addition, we get lots of CPU usage on the Java process (100% and more on a quad core processor here). Why is it so slow? The answer is: network overhead. In our case, we send out 27 byte chunks over the network. With all the TCP, IP and Ethernet headers, there is lots of unnecessary overhead involved that puts down our performance. The answer to that is batching! If our producers are faster than the consumers, we can batch the intermediate data up into a buffer and send it over the wire in one chunk. This will give us a much better goodput ratio.</p>
 
 <p>To help us with batching the Disruptor and the Processor expose the start end end of a batching phase to our consumer. To get this information, we need to extend from the <code>BatchConsumer</code> instead of the regular <code>Consumer</code>. Let&rsquo;s refactor our node and add some batching characteristics:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">public</span> <span style="color: #A90D91">class</span> <span style="color: #3F6E75">BatchingNode</span> <span style="color: #A90D91">implements</span> <span style="color: #000000">BatchConsumer&lt;Event&lt;Buffer&gt;&gt;</span> <span style="color: #000000">{</span>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">public</span> <span style="color: #A90D91">class</span> <span style="color: #3F6E75">BatchingNode</span> <span style="color: #A90D91">implements</span> <span style="color: #000000">BatchConsumer&lt;Event&lt;Buffer&gt;&gt;</span> <span style="color: #000000">{</span>
 
   <span style="color: #A90D91">private</span> <span style="color: #A90D91">final</span> <span style="color: #000000">TcpClient&lt;Buffer,</span> <span style="color: #000000">Buffer&gt;</span> <span style="color: #000000">client;</span>
   <span style="color: #A90D91">private</span> <span style="color: #000000">TcpConnection&lt;Buffer,</span> <span style="color: #000000">Buffer&gt;</span> <span style="color: #000000">conn</span> <span style="color: #000000">=</span> <span style="color: #A90D91">null</span><span style="color: #000000">;</span>
@@ -368,7 +372,7 @@
 
 <p>Let&rsquo;s run the test case again&hellip; now we get 500k ops/s with only 40% CPU load on the java process! Now that&rsquo;s what I call an improvement!</p>
 
-<h1 id="summary:d0fd33f9e81a57356bf42d8f49c136cf">Summary</h1>
+<h1 id="summary">Summary</h1>
 
 <p>This was a very quick introduction into the Processor, just one piece in the very promising Reactor framework. There is so much more to blog about in the future, so stay tuned!</p>
 
@@ -393,7 +397,7 @@
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

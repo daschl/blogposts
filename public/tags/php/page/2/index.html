@@ -7,7 +7,7 @@
 
     <meta name="description" content="">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Php &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -88,131 +88,142 @@ future way of interacting with Couchbase, so it is definitely worth a look.</p>
 
 <p>The rest of this post guides you through the installation process of both Couchbase and the PHP SDKs.</p>
 
-<h2 id="installing-couchbase:ca12db3f5f62aaf868a124e77d2583ea">Installing Couchbase</h2>
+<h2 id="installing-couchbase">Installing Couchbase</h2>
 
 <p>The easiest way to install Couchbase is through a precompiled binary for Ubuntu, RedHat, Windows or Mac OS X. You can find all of them
 <a href="http://www.couchbase.com/download">here</a>. The installation process is really straightforward: you first need to install the binary and
 then configure Couchbase from a web interface. I recommend you to watch the webinar starting from minute 7 <a href="http://www.couchbase.com/webinar/couchbase-server-2.0-overview">here</a>, where Perry Krug describes the necessary steps in detail. For the purpose of this post, you can just stick with the default settings.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>sudo dpkg -i couchbase-server-community_x86_2.0.0-dev-preview-3.deb
-</pre></div>
+
+<pre><code>$ sudo dpkg -i couchbase-server-community_x86_2.0.0-dev-preview-3.deb
+</code></pre>
 
 <p>After the installation, you should have a Couchbase instance listening on <code>127.0.0.1:8091</code>.</p>
 
-<h2 id="installing-php-ext-couchbase:ca12db3f5f62aaf868a124e77d2583ea">Installing php-ext-couchbase</h2>
+<h2 id="installing-php-ext-couchbase">Installing php-ext-couchbase</h2>
 
 <p>The new PHP SDK ships as a PHP extension, so we need to compile it. Make sure you have both the build tools (like <code>build-essentials</code>) and the PHP development packages (<code>php5-dev php-pear</code>) installed. You also need to install <code>libssl0.9.8</code>. On Ubuntu it looks like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>sudo aptitude install libssl0.9.8 php5-dev php-pear
-</pre></div>
+
+<pre><code>$ sudo aptitude install libssl0.9.8 php5-dev php-pear
+</code></pre>
 
 <p>The extension also depends on the <code>libcouchbase</code> library, which can be installed through the Couchbase repository (for more information on this, look <a href="http://www.couchbase.com/develop/c/current">here</a>).</p>
 
 <p>Add this to your <code>/etc/apt/sources.list</code>:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500"># Ubuntu 11.10 Oneiric Ocelot (Debian unstable)</span>
-<span style="color: #A90D91">deb</span> <span style="color: #C41A16">http://packages.couchbase.com/ubuntu</span> <span style="color: #A90D91">oneiric</span> <span style="color: #A90D91">oneiric/main</span>
-</pre></div>
+
+<pre><code># Ubuntu 11.10 Oneiric Ocelot (Debian unstable)
+deb http://packages.couchbase.com/ubuntu oneiric oneiric/main
+</code></pre>
 
 <p>Then, import the key, update your repositories and install the package:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>wget -O- http://packages.couchbase.com/ubuntu/couchbase.key | sudo apt-key add -
-<span style="color: #000000">$ </span>sudo aptitude update <span style="color: #000000">&amp;&amp;</span> sudo aptitude install libcouchbase-dev
-</pre></div>
+
+<pre><code>$ wget -O- http://packages.couchbase.com/ubuntu/couchbase.key | sudo apt-key add -
+$ sudo aptitude update &amp;&amp; sudo aptitude install libcouchbase-dev
+</code></pre>
 
 <p>Now, we need to <a href="https://github.com/couchbaselabs/php-ext-couchbase/zipball/master">download</a> the extension and build it.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>unzip couchbaselabs-php-ext-couchbase-2680b64.zip
-<span style="color: #000000">$ </span><span style="color: #A90D91">cd </span>couchbaselabs-php-ext-couchbase-2680b64
 
-<span style="color: #000000">$ </span>phpize
-<span style="color: #000000">$ </span>./configure
-<span style="color: #000000">$ </span>make
-<span style="color: #000000">$ </span>sudo make install
+<pre><code>$ unzip couchbaselabs-php-ext-couchbase-2680b64.zip
+$ cd couchbaselabs-php-ext-couchbase-2680b64
+
+$ phpize
+$ ./configure
+$ make
+$ sudo make install
   Installing shared extensions:     /usr/lib/php5/20090626+lfs/
-</pre></div>
+</code></pre>
 
 <p>The last thing we need to do is create a new <code>couchbase.ini</code> file in <code>/etc/php5/conf.d</code> with the following content:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">extension=couchbase.so
-</pre></div>
+
+<pre><code>extension=couchbase.so
+</code></pre>
 
 <p>Now we can see that the couchbase extension is installed correctly:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>php -m | grep couch
+
+<pre><code>$ php -m | grep couch
 couchbase
-</pre></div>
+</code></pre>
 
 <p>Of course you&rsquo;ll need to restart your webserver or your fastcgi processes too.</p>
 
-<h2 id="installing-php-couchbase:ca12db3f5f62aaf868a124e77d2583ea">Installing php-couchbase</h2>
+<h2 id="installing-php-couchbase">Installing php-couchbase</h2>
 
 <p>If you want to work with the current stable SDK, you need to download the code from the <a href="https://github.com/couchbaselabs/php-couchbase">php-couchbase</a> repository. This SDK extends the <code>memcached</code> extension, which you can install directly through apt:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>sudo aptitude install php5-memcached
-</pre></div>
+
+<pre><code>$ sudo aptitude install php5-memcached
+</code></pre>
 
 <p>Documentation for the PHP 1.1 SDK can be found <a href="http://www.couchbase.com/docs/couchbase-sdk-php-1.1/getting-started.html">here</a>.</p>
 
 <p>Note that for the rest of this post I&rsquo;ll use the API provided by the <code>php-ext-couchbase</code> extension, but the one for <code>php-couchbase</code> shouldn&rsquo;t be much different.</p>
 
-<h2 id="basic-usage:ca12db3f5f62aaf868a124e77d2583ea">Basic Usage</h2>
+<h2 id="basic-usage">Basic Usage</h2>
 
 <p>Historically, communication with CouchDB was done over pure HTTP while memcached provided a custom protocol. Couchbase uses both methods, depending on the task you want to accomplish. Create, update and delete actions are done through the <code>memcached</code> protocol. If you want to read data, you can do that either based on the key (through the memcached protocol) or on a view (through HTTP). Thankfully, the SDK abstracts this away from you, but its always good if you know whats going on under the hood.</p>
 
 <p>You can access the API through an object-oriented interface or directly through their exported functions. I couldn&rsquo;t find any online documentation for now, but here&rsquo;s the function list from the source-code:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">/* {{{ couchbase_functions</span><span style="color: #633820">[]</span><span style="color: #177500"></span>
-<span style="color: #177500">*/</span>
-<span style="color: #A90D91">static</span> <span style="color: #000000">zend_function_entry</span> <span style="color: #000000">couchbase_functions</span><span style="color: #633820">[]</span> <span style="color: #000000">=</span> {
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_connect</span>, <span style="color: #000000">arginfo_connect</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_add</span>, <span style="color: #000000">arginfo_add</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_set</span>, <span style="color: #000000">arginfo_set</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_set_multi</span>, <span style="color: #000000">arginfo_set_multi</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_replace</span>, <span style="color: #000000">arginfo_replace</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_prepend</span>, <span style="color: #000000">arginfo_prepend</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_append</span>, <span style="color: #000000">arginfo_append</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_cas</span>, <span style="color: #000000">arginfo_cas</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_get</span>, <span style="color: #000000">arginfo_get</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_get_multi</span>, <span style="color: #000000">arginfo_get_multi</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_get_delayed</span>, <span style="color: #000000">arginfo_get_delayed</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_fetch</span>, <span style="color: #000000">arginfo_fetch</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_fetch_all</span>, <span style="color: #000000">arginfo_fetch_all</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_increment</span>, <span style="color: #000000">arginfo_increment</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_decrement</span>, <span style="color: #000000">arginfo_decrement</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_get_stats</span>, <span style="color: #000000">arginfo_get_stats</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_delete</span>, <span style="color: #000000">arginfo_delete</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_flush</span>, <span style="color: #000000">arginfo_flush</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_get_result_code</span>, <span style="color: #000000">arginfo_result_code</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_set_option</span>, <span style="color: #000000">arginfo_set_option</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_get_option</span>, <span style="color: #000000">arginfo_get_option</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_version</span>, <span style="color: #000000">arginfo_version</span>)
-    {<span style="color: #000000">NULL</span>, <span style="color: #000000">NULL</span>, <span style="color: #000000">NULL</span>}
+
+<pre><code>/* {{{ couchbase_functions[]
+*/
+static zend_function_entry couchbase_functions[] = {
+    PHP_FE(couchbase_connect, arginfo_connect)
+    PHP_FE(couchbase_add, arginfo_add)
+    PHP_FE(couchbase_set, arginfo_set)
+    PHP_FE(couchbase_set_multi, arginfo_set_multi)
+    PHP_FE(couchbase_replace, arginfo_replace)
+    PHP_FE(couchbase_prepend, arginfo_prepend)
+    PHP_FE(couchbase_append, arginfo_append)
+    PHP_FE(couchbase_cas, arginfo_cas)
+    PHP_FE(couchbase_get, arginfo_get)
+    PHP_FE(couchbase_get_multi, arginfo_get_multi)
+    PHP_FE(couchbase_get_delayed, arginfo_get_delayed)
+    PHP_FE(couchbase_fetch, arginfo_fetch)
+    PHP_FE(couchbase_fetch_all, arginfo_fetch_all)
+    PHP_FE(couchbase_increment, arginfo_increment)
+    PHP_FE(couchbase_decrement, arginfo_decrement)
+    PHP_FE(couchbase_get_stats, arginfo_get_stats)
+    PHP_FE(couchbase_delete, arginfo_delete)
+    PHP_FE(couchbase_flush, arginfo_flush)
+    PHP_FE(couchbase_get_result_code, arginfo_result_code)
+    PHP_FE(couchbase_set_option, arginfo_set_option)
+    PHP_FE(couchbase_get_option, arginfo_get_option)
+    PHP_FE(couchbase_version, arginfo_version)
+    {NULL, NULL, NULL}
 };
-</pre></div>
+</code></pre>
 
 <p>The <a href="https://github.com/couchbaselabs/php-ext-couchbase/tree/master/tests">test cases</a> also provide vital information on how to use the API.</p>
 
 <p>Let&rsquo;s create 10 JSON documents and store them in Couchbase:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
 
-<span style="color: #000000">$connection</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Couchbase</span>(<span style="color: #C41A16">&quot;127.0.0.1:8091&quot;</span>);
+<pre><code>&lt;?php
 
-<span style="color: #A90D91">for</span>(<span style="color: #000000">$i=</span><span style="color: #1C01CE">0</span>;<span style="color: #000000">$i&lt;</span><span style="color: #1C01CE">10</span>;<span style="color: #000000">$i++</span>) {
-    <span style="color: #000000">$doc</span> <span style="color: #000000">=</span> <span style="color: #A90D91">array</span>(
-        <span style="color: #C41A16">&#39;title&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;This is Post $i&quot;</span>
+$connection = new Couchbase(&quot;127.0.0.1:8091&quot;);
+
+for($i=0;$i&lt;10;$i++) {
+    $doc = array(
+        'title' =&gt; &quot;This is Post $i&quot;
     );
-    <span style="color: #000000">$connection-&gt;</span><span style="color: #836C28">set</span>(<span style="color: #C41A16">&quot;post_$i&quot;</span>, <span style="color: #A90D91">json_encode</span>(<span style="color: #000000">$doc</span>));
+    $connection-&gt;set(&quot;post_$i&quot;, json_encode($doc));
 }
 
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>You can view your stored documents instantly through the GUI (<a href="http://localhost:8091/index.html#sec=documents&amp;bucketName=default">http://localhost:8091/index.html#sec=documents&amp;bucketName=default</a>). Now we can retrieve all documents again by their keys:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
 
-<span style="color: #000000">$connection</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Couchbase</span>(<span style="color: #C41A16">&quot;127.0.0.1:8091&quot;</span>);
+<pre><code>&lt;?php
 
-<span style="color: #A90D91">echo</span> <span style="color: #C41A16">&quot;&lt;ul&gt;&quot;</span>;
-<span style="color: #A90D91">for</span>(<span style="color: #000000">$i=</span><span style="color: #1C01CE">0</span>;<span style="color: #000000">$i&lt;</span><span style="color: #1C01CE">10</span>;<span style="color: #000000">$i++</span>) {
-    <span style="color: #000000">$post</span> <span style="color: #000000">=</span> <span style="color: #A90D91">json_decode</span>(<span style="color: #000000">$connection-&gt;</span><span style="color: #836C28">get</span>(<span style="color: #C41A16">&quot;post_$i&quot;</span>));
-    <span style="color: #A90D91">echo</span> <span style="color: #C41A16">&quot;&lt;li&gt;&quot;</span> <span style="color: #000000">.</span> <span style="color: #000000">$post-&gt;</span><span style="color: #836C28">title</span> <span style="color: #000000">.</span>  <span style="color: #C41A16">&quot;&lt;/li&gt;&quot;</span>;
+$connection = new Couchbase(&quot;127.0.0.1:8091&quot;);
+
+echo &quot;&lt;ul&gt;&quot;;
+for($i=0;$i&lt;10;$i++) {
+    $post = json_decode($connection-&gt;get(&quot;post_$i&quot;));
+    echo &quot;&lt;li&gt;&quot; . $post-&gt;title .  &quot;&lt;/li&gt;&quot;;
 }
-<span style="color: #A90D91">echo</span> <span style="color: #C41A16">&quot;&lt;/ul&gt;&quot;</span>;
+echo &quot;&lt;/ul&gt;&quot;;
 
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>Note that we need to encode/decode our JSON documents by hand, because in Couchbase you can store pretty much what you want in a document.</p>
 
@@ -239,7 +250,7 @@ Jan <a href="https://twitter.com/#!/janl/status/179166150205259776">pointed out<
                     <div class="post-description">
                         
 
-<h1 id="introduction:67d4565097d1bde8073768640d3759a0">Introduction</h1>
+<h1 id="introduction">Introduction</h1>
 
 <p>The model relationship support in Lithium is one of the hottest topics on IRC lately, so I thought it would be a good idea to blog about it.</p>
 
@@ -247,17 +258,18 @@ Jan <a href="https://twitter.com/#!/janl/status/179166150205259776">pointed out<
 
 <p>This post gives you a little background on relationship types and their database representations before we implement a simple example in PHP.</p>
 
-<h1 id="basics-first:67d4565097d1bde8073768640d3759a0">Basics First</h1>
+<h1 id="basics-first">Basics First</h1>
 
 <p>If you know how the three &ldquo;big&rdquo; relationship types 1:1, 1:n and m:n are implemented on the database side, feel free to jump straight to the practical example. This is not a exhaustive guide to the relational database model and should only set the stage for the practical example later. Note that I didn&rsquo;t add any foreign key constraints on the database level to make it easier to follow along.</p>
 
 <p>If you work with a relational data model, and have a (more or less) <a href="http://en.wikipedia.org/wiki/Database_normalization">normalized</a> schema, you need to find a way to model relationships between relations (speak &ldquo;entities&rdquo; or &ldquo;tables&rdquo;). In pratice, these relationships fall into three categories:</p>
 
-<h2 id="1-1-relationships:67d4565097d1bde8073768640d3759a0">1:1 Relationships</h2>
+<h2 id="1-1-relationships">1:1 Relationships</h2>
 
 <p>Exactly one entity belongs to exactly one other entity. For example, think of a <code>people</code> relation and you want to model
 the relationship between married people. One husband can only belong to one wife and vice versa (depending from where you are reading this post this might be different ;)). In a physical database schema, it may look like this.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">mysql&gt; describe people;
+
+<pre><code>mysql&gt; describe people;
 +-----------+--------------+------+-----+---------+----------------+
 | Field     | Type         | Null | Key | Default | Extra          |
 +-----------+--------------+------+-----+---------+----------------+
@@ -266,10 +278,11 @@ the relationship between married people. One husband can only belong to one wife
 | spouse_id | int(11)      | YES  |     | NULL    |                |
 +-----------+--------------+------+-----+---------+----------------+
 3 rows in set (0.01 sec)
-</pre></div>
+</code></pre>
 
 <p>The <code>spouse_id</code> references a different person (note that it is not important if you reference an entity in the same or a different table. Here&rsquo;s some example data:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">mysql&gt; select * from people;
+
+<pre><code>mysql&gt; select * from people;
 +----+--------+-----------+
 | id | name   | spouse_id |
 +----+--------+-----------+
@@ -277,14 +290,15 @@ the relationship between married people. One husband can only belong to one wife
 |  2 | Alice  |         1 |
 +----+--------+-----------+
 4 rows in set (0.00 sec)
-</pre></div>
+</code></pre>
 
 <p><code>Bob</code> and <code>Alice</code> are married and their relationship is identified over the foreign key <code>spouse id</code>. In Lithium, this type of relation is called <code>hasOne</code>.</p>
 
-<h2 id="1-n-relationships:67d4565097d1bde8073768640d3759a0">1:n Relationships</h2>
+<h2 id="1-n-relationships">1:n Relationships</h2>
 
 <p>Exactly one entity belongs to zero or more other entites. This is easy: a user can write zero or more blog posts. Let&rsquo;s model this accordingly:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">mysql&gt; describe posts;
+
+<pre><code>mysql&gt; describe posts;
 +---------+--------------+------+-----+---------+----------------+
 | Field   | Type         | Null | Key | Default | Extra          |
 +---------+--------------+------+-----+---------+----------------+
@@ -302,10 +316,11 @@ mysql&gt; describe users;
 | name  | varchar(255) | NO   |     | NULL    |                |
 +-------+--------------+------+-----+---------+----------------+
 2 rows in set (0.01 sec)
-</pre></div>
+</code></pre>
 
 <p>Here&rsquo;s some example data to work with:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">mysql&gt; select * from posts;
+
+<pre><code>mysql&gt; select * from posts;
 +----+--------------+---------+
 | id | title        | user_id |
 +----+--------------+---------+
@@ -322,15 +337,16 @@ mysql&gt; select * from users;
 |  2 | Alice     |
 +----+-----------+
 1 row in set (0.00 sec)
-</pre></div>
+</code></pre>
 
 <p>It&rsquo;s easy to see that Bob wrote two posts while Alice didn&rsquo;t write a single one. We can look at these relations from two different angles (and can also answer two different questions): &ldquo;What posts did Bob write?&rdquo; and &ldquo;Who is the author of the first post?&rdquo;. To answer both questions
  orrectly, Lithium uses two different relation types for the models: <code>hasMany</code> and <code>belongsTo</code>. One user <code>hasMany</code> blog posts, but one post <code>belongsTo</code> only one user. The wording also implies where the foreign key is placed: in a <code>hasMany</code> relationship, the foreign key is expected on the other model, while <code>belongsTo</code> expects it in the current model. We&rsquo;ll see shortly how this works out in practice.</p>
 
-<h2 id="m-n-relationships:67d4565097d1bde8073768640d3759a0">m:n Relationships</h2>
+<h2 id="m-n-relationships">m:n Relationships</h2>
 
 <p>Lastly, zero or more entities can belong to zero or more other entities. This is a bit tricky, because we need a third table to model this relationship efficiently. For example, a user can belong to zero or more groups and groups can have zero or more members.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">mysql&gt; describe users;
+
+<pre><code>mysql&gt; describe users;
 +-------+--------------+------+-----+---------+----------------+
 | Field | Type         | Null | Key | Default | Extra          |
 +-------+--------------+------+-----+---------+----------------+
@@ -356,10 +372,11 @@ mysql&gt; describe users_groups;
 | user_id  | int(11) | NO   |     | NULL    |       |
 +----------+---------+------+-----+---------+-------+
 2 rows in set (0.01 sec)
-</pre></div>
+</code></pre>
 
 <p>You can see that we need a third table to &ldquo;glue&rdquo; the other two together. Here&rsquo;s some example data:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">mysql&gt; select * from users;
+
+<pre><code>mysql&gt; select * from users;
 +----+-----------+
 | id | name      |
 +----+-----------+
@@ -387,17 +404,18 @@ mysql&gt; select * from users_groups;
 |        2 |       2 |
 +----------+---------+
 3 rows in set (0.00 sec)
-</pre></div>
+</code></pre>
 
 <p><code>John</code> has access to both groups, while the <code>Administrator</code> group has two members. Lithium doesn&rsquo;t support this kind of relationship for now, but in CakePHP it is called <code>hasAndBelongsToMany</code>.</p>
 
-<h1 id="the-blog-example:67d4565097d1bde8073768640d3759a0">The Blog example</h1>
+<h1 id="the-blog-example">The Blog example</h1>
 
 <p>Now that we&rsquo;ve got the basics settled, let&rsquo;s get our hands on some code and implement the &ldquo;Hello World 2.0&rdquo; example -
 a blog. Along the way we can reuse some of the tables above.</p>
 
 <p>Let&rsquo;s assume we want to store blog posts and their authors. For simplicity, every author can belong to only one group and a group can only have one member. This way, we can practice 1:n and 1:1 relationships. Let&rsquo;s create the appropriate data model using the MySQL DDL:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">CREATE TABLE groups (
+
+<pre><code>CREATE TABLE groups (
     id integer auto_increment primary key,
     name varchar(255) not null
 );
@@ -415,148 +433,157 @@ CREATE TABLE posts (
     body text,
     author_id integer
 );
-</pre></div>
+</code></pre>
 
 <p>Let&rsquo;s insert some demo data to work with:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">insert into groups (name) values (&#39;Admins&#39;);
-insert into groups (name) values (&#39;Editors&#39;);
 
-insert into authors (firstname, lastname, group_id) values (&#39;Johnnie&#39;, &#39;Walker&#39;, 1);
-insert into authors (firstname, lastname, group_id) values (&#39;John&#39;, &#39;Jameson&#39;, 2);
-insert into authors (firstname, lastname, group_id) values (&#39;Jack&#39;, &#39;Daniels&#39;, 2);
+<pre><code>insert into groups (name) values ('Admins');
+insert into groups (name) values ('Editors');
 
-insert into posts (author_id, title, body) values (1, &#39;On whisky nosing&#39;, &#39;...&#39;);
-insert into posts (author_id, title, body) values (2, &#39;Irish on the ROCKS&#39;, &#39;...&#39;);
-insert into posts (author_id, title, body) values (2, &#39;Without fear.&#39;, &#39;...&#39;);
-insert into posts (author_id, title, body) values (3, &#39;On drinking Bourbon&#39;, &#39;...&#39;);
-</pre></div>
+insert into authors (firstname, lastname, group_id) values ('Johnnie', 'Walker', 1);
+insert into authors (firstname, lastname, group_id) values ('John', 'Jameson', 2);
+insert into authors (firstname, lastname, group_id) values ('Jack', 'Daniels', 2);
+
+insert into posts (author_id, title, body) values (1, 'On whisky nosing', '...');
+insert into posts (author_id, title, body) values (2, 'Irish on the ROCKS', '...');
+insert into posts (author_id, title, body) values (2, 'Without fear.', '...');
+insert into posts (author_id, title, body) values (3, 'On drinking Bourbon', '...');
+</code></pre>
 
 <p>Next, grab a fresh copy of Lithium and create a connection in <code>config/bootstrap/connections.php</code>:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">Connections::add(&#39;default&#39;, array(
-    &#39;type&#39; =&gt; &#39;database&#39;,
-    &#39;adapter&#39; =&gt; &#39;MySql&#39;,
-    &#39;host&#39; =&gt; &#39;localhost&#39;,
-    &#39;login&#39; =&gt; &#39;&lt;USER&gt;&#39;,
-    &#39;password&#39; =&gt; &#39;&lt;PASSWORD&gt;&#39;,
-    &#39;database&#39; =&gt; &#39;&lt;DBNAME&gt;&#39;,
-    &#39;encoding&#39; =&gt; &#39;UTF-8&#39;
+
+<pre><code>Connections::add('default', array(
+    'type' =&gt; 'database',
+    'adapter' =&gt; 'MySql',
+    'host' =&gt; 'localhost',
+    'login' =&gt; '&lt;USER&gt;',
+    'password' =&gt; '&lt;PASSWORD&gt;',
+    'database' =&gt; '&lt;DBNAME&gt;',
+    'encoding' =&gt; 'UTF-8'
 ));
-</pre></div>
+</code></pre>
 
 <p>Now, let&rsquo;s create three bare-bone models in <code>app\models</code> to start with:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #177500">// Filename: /app/models/Posts.php</span>
-<span style="color: #A90D91">namespace</span> <span style="color: #000000">app\models</span>;
 
-<span style="color: #A90D91">class</span> <span style="color: #3F6E75">Posts</span> <span style="color: #A90D91">extends</span> <span style="color: #000000">\lithium\data\Model</span> {
+<pre><code>&lt;?php
+// Filename: /app/models/Posts.php
+namespace app\models;
 
-}
-<span style="color: #633820">?&gt;</span>
-
-<span style="color: #633820">&lt;?php</span>
-<span style="color: #177500">// Filename: /app/models/Authors.php</span>
-<span style="color: #A90D91">namespace</span> <span style="color: #000000">app\models</span>;
-
-<span style="color: #A90D91">class</span> <span style="color: #3F6E75">Authors</span> <span style="color: #A90D91">extends</span> <span style="color: #000000">\lithium\data\Model</span> {
+class Posts extends \lithium\data\Model {
 
 }
-<span style="color: #633820">?&gt;</span>
+?&gt;
 
-<span style="color: #633820">&lt;?php</span>
-<span style="color: #177500">// Filename: /app/models/Groups.php</span>
-<span style="color: #A90D91">namespace</span> <span style="color: #000000">app\models</span>;
+&lt;?php
+// Filename: /app/models/Authors.php
+namespace app\models;
 
-<span style="color: #A90D91">class</span> <span style="color: #3F6E75">Groups</span> <span style="color: #A90D91">extends</span> <span style="color: #000000">\lithium\data\Model</span> {
+class Authors extends \lithium\data\Model {
 
 }
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+
+&lt;?php
+// Filename: /app/models/Groups.php
+namespace app\models;
+
+class Groups extends \lithium\data\Model {
+
+}
+?&gt;
+</code></pre>
 
 <p>To produce meaningful output in the browser, we&rsquo;d better add a controller and a view template.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #177500">// Filename: /app/controllers/PostsController.php</span>
-<span style="color: #A90D91">namespace</span> <span style="color: #000000">app\controllers</span>;
 
-<span style="color: #A90D91">use</span> <span style="color: #000000">app\models\Posts</span>;
-<span style="color: #A90D91">use</span> <span style="color: #000000">app\models\Authors</span>;
-<span style="color: #A90D91">use</span> <span style="color: #000000">app\models\Groups</span>;
+<pre><code>&lt;?php
+// Filename: /app/controllers/PostsController.php
+namespace app\controllers;
 
-<span style="color: #A90D91">class</span> <span style="color: #3F6E75">PostsController</span> <span style="color: #A90D91">extends</span> <span style="color: #000000">\lithium\action\Controller</span> {
+use app\models\Posts;
+use app\models\Authors;
+use app\models\Groups;
 
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">index</span>() {
+class PostsController extends \lithium\action\Controller {
+
+    public function index() {
 
     }
 
 }
-<span style="color: #633820">?&gt;</span>
+?&gt;
 
 
-<span style="color: #177500">&lt;!-- Filename: /app/views/posts/index.html.php --&gt;</span>
-<span style="color: #000000">&lt;h2&gt;</span>All Posts.<span style="color: #000000">&lt;/h2&gt;</span>
+&lt;!-- Filename: /app/views/posts/index.html.php --&gt;
+&lt;h2&gt;All Posts.&lt;/h2&gt;
 
 More stuff will be here soon.
-</pre></div>
+</code></pre>
 
 <p>Now that we have everything in place, we can define our relationships in Lithium. Place the following snippets in their appropriate models:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// Posts:
-public $<span style="color: #000000">belongsTo</span> = array(&#39;Authors&#39;);
+
+<pre><code>// Posts:
+public $belongsTo = array('Authors');
 
 // Authors:
-public $<span style="color: #000000">hasMany</span> = array(&#39;Posts&#39;);
+public $hasMany = array('Posts');
 
 // Groups:
-public $<span style="color: #000000">hasOne</span> = array(&#39;Authors&#39;);
-</pre></div>
+public $hasOne = array('Authors');
+</code></pre>
 
 <p>As our database tables rely on conventional column names, we don&rsquo;t have to provide more configuration params to Lithium. Now, let&rsquo;s read all posts, their corresponding authors and print them in the template.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// PostsController:
+
+<pre><code>// PostsController:
 public function index() {
-    $posts = Posts::all(array(&#39;with&#39; =&gt; &#39;Authors&#39;));
-    return compact(&#39;posts&#39;);
+    $posts = Posts::all(array('with' =&gt; 'Authors'));
+    return compact('posts');
 }
 
 
 // index.html.php:
-<span style="color: #000000">&lt;ul&gt;</span>
-    <span style="color: #633820">&lt;?php</span> <span style="color: #A90D91">foreach</span>(<span style="color: #000000">$posts</span> <span style="color: #A90D91">as</span> <span style="color: #000000">$post</span>)<span style="color: #000000">:</span> <span style="color: #633820">?&gt;</span>
-        <span style="color: #000000">&lt;li&gt;</span>
-            <span style="color: #000000">&lt;strong&gt;</span><span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #000000">$post-&gt;</span><span style="color: #836C28">title</span>; <span style="color: #633820">?&gt;</span><span style="color: #000000">&lt;/strong&gt;</span>, by 
-            <span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #000000">$post-&gt;</span><span style="color: #836C28">author</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">firstname</span>; <span style="color: #633820">?&gt;</span> <span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #000000">$post-&gt;</span><span style="color: #836C28">author</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">lastname</span>; <span style="color: #633820">?&gt;</span>
-        <span style="color: #000000">&lt;/li&gt;</span>
-    <span style="color: #633820">&lt;?php</span> <span style="color: #A90D91">endforeach</span>; <span style="color: #633820">?&gt;</span>
-<span style="color: #000000">&lt;/ul&gt;</span>
-</pre></div>
+&lt;ul&gt;
+    &lt;?php foreach($posts as $post): ?&gt;
+        &lt;li&gt;
+            &lt;strong&gt;&lt;?= $post-&gt;title; ?&gt;&lt;/strong&gt;, by 
+            &lt;?= $post-&gt;author-&gt;firstname; ?&gt; &lt;?= $post-&gt;author-&gt;lastname; ?&gt;
+        &lt;/li&gt;
+    &lt;?php endforeach; ?&gt;
+&lt;/ul&gt;
+</code></pre>
 
 <p>The <code>with</code> param controls what relationships you want to fetch. In this case, as a post belongs to one author, Lithium knows that only one <code>Record</code> is returned and you can use the <code>author</code> directly. If you don&rsquo;t provide the appropriate class there, Lithium won&rsquo;t call the associated model and an error will be raised (because <code>$post-&gt;author</code> isn&rsquo;t set, PHP complains that you want to access <code>firstname</code> from a non-object). This is a common mistake, so keep it in mind!</p>
 
 <p>Lithium is very flexible on the data layer, and you can write instance methods on your model and access them through the relation. Let&rsquo;s say we want to provide the full name at the model layer, so that we don&rsquo;t have to read both the first- and the lastname in the template.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// Authors:
+
+<pre><code>// Authors:
 public function fullName($entity) {
     return $entity-&gt;firstname.&quot; &quot;.$entity-&gt;lastname;
 }
 
 // index.html.php:
-<span style="color: #000000">&lt;strong&gt;</span><span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #000000">$post-&gt;</span><span style="color: #836C28">title</span>; <span style="color: #633820">?&gt;</span><span style="color: #000000">&lt;/strong&gt;</span>, by <span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #000000">$post-&gt;</span><span style="color: #836C28">author</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">fullName</span>(); <span style="color: #633820">?&gt;</span>
-</pre></div>
+&lt;strong&gt;&lt;?= $post-&gt;title; ?&gt;&lt;/strong&gt;, by &lt;?= $post-&gt;author-&gt;fullName(); ?&gt;
+</code></pre>
 
 <p>We can also read all posts that belong to a particular author:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">$<span style="color: #000000">posts</span> = Authors::first(array(
-    &#39;conditions&#39; =&gt; array(&#39;posts.id&#39; =&gt; $<span style="color: #000000">author_id</span>), 
-    &#39;with&#39; =&gt; &#39;Posts&#39;
+
+<pre><code>$posts = Authors::first(array(
+    'conditions' =&gt; array('posts.id' =&gt; $author_id), 
+    'with' =&gt; 'Posts'
 ))-&gt;posts;
-</pre></div>
+</code></pre>
 
 <p>To find data through our 1:1 relation, we can use the same mechanisms:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// Find the author name for a group:
-$<span style="color: #000000">name</span> = Groups::first(array(
-    &#39;conditions&#39; =&gt; array(&#39;groups.id&#39; =&gt; $<span style="color: #000000">group_id</span>),
-    &#39;with&#39; =&gt; array(&#39;Authors&#39;)
+
+<pre><code>// Find the author name for a group:
+$name = Groups::first(array(
+    'conditions' =&gt; array('groups.id' =&gt; $group_id),
+    'with' =&gt; array('Authors')
 ))-&gt;author-&gt;fullName();
-</pre></div>
+</code></pre>
 
 <p>Note that if we want to find the name of the associated group for an author, we would need to add a foreign key to the <code>groups</code> table (there is no real difference between <code>hasOne</code> and <code>hasMany</code>, just the fact that <code>hasOne</code> returns exactly one entity instead of zero or more and therefore no <code>Collection</code> is needed).</p>
 
-<h1 id="wrapping-up:67d4565097d1bde8073768640d3759a0">Wrapping up</h1>
+<h1 id="wrapping-up">Wrapping up</h1>
 
 <p>This post has covered the basics of model relationships and how to model the 1:1 and 1:n types in Lithium. We now set the stage for more advanced topics, including: form integration, faking the m:n relationship for relational databases, faking relationships for MongoDB and advanced relationship handling through the <code>Relationship</code> class. If you have any other interesting topics that you want to read about soon, share your ideas!</p>
 
@@ -582,7 +609,7 @@ $<span style="color: #000000">name</span> = Groups::first(array(
 
 <p>As far as I can see, there are three big use cases for fixtures:</p>
 
-<h2 id="unit-testing-models:6cff1db96cce95ed97eeab057e8d6618">Unit-Testing Models</h2>
+<h2 id="unit-testing-models">Unit-Testing Models</h2>
 
 <p>This seems to be the most common use case. To test models effectively, you need a bunch of demo data on which your tests rely on. This data includes both valid and invalid data to test if validations work as expected and how the application can handle large batches of data. The database itself is not mocked, but fixture data is used to populate it before or during the actual tests.</p>
 
@@ -594,21 +621,21 @@ $<span style="color: #000000">name</span> = Groups::first(array(
 <li>easy loading of fixture datasets into the database.</li>
 </ul>
 
-<h2 id="mocking-models:6cff1db96cce95ed97eeab057e8d6618">Mocking Models</h2>
+<h2 id="mocking-models">Mocking Models</h2>
 
 <p>When you test your controllers, you often need to work with data from your models. There are two different scenarios here: you can either write integration tests and populate your real database with data, or mock your models away and work with static data instead of touching the database (for unit-testing controller actions). This allows you to work independently on both layers and improves the performance of your tests.</p>
 
 <p>Lithium already uses Mocks extensively, so the plugin needs tight integration into them. It should be easy to load fixture data that acts like &ldquo;real&rdquo; data (like iterating over Document/RecordSets).</p>
 
-<h2 id="mocking-web-services-and-apis:6cff1db96cce95ed97eeab057e8d6618">Mocking Web-Services and APIs</h2>
+<h2 id="mocking-web-services-and-apis">Mocking Web-Services and APIs</h2>
 
 <p>The third use case is not really different from the two mentioned above, but works more with the <code>service</code> than the the <code>data</code> layer. As web services are often not inside the boundaries of the developer, the plugin should make it easy to provide demo data for mocks while testing web services.</p>
 
-<h2 id="additional-functionality:6cff1db96cce95ed97eeab057e8d6618">Additional Functionality</h2>
+<h2 id="additional-functionality">Additional Functionality</h2>
 
 <p>In terms of rapid application development, it would be great to generate fixture data automatically based on patterns or generation rules. There are great libraries like <a href="https://github.com/fzaninotto/Faker">Faker</a> out there, and it would be great to have a feature like this integrated (accessible from the command line). Also, fixture file generation should happen automatically when new models are created from the command line.</p>
 
-<h2 id="implementation-documentation:6cff1db96cce95ed97eeab057e8d6618">Implementation &amp; Documentation</h2>
+<h2 id="implementation-documentation">Implementation &amp; Documentation</h2>
 
 <p>I want to make extensive use of adapters and strategies, as they make a lot of sense in this context. I think it would be a good idea to use adapters for all input file types (JSON, XML and YAML) and strategies for their representation in the test classes (DocumentSets, RecordSets, Collections or plain arrays). This also makes it trivial to implement custom file types and representations.</p>
 
@@ -616,7 +643,7 @@ $<span style="color: #000000">name</span> = Groups::first(array(
 
 <p>Finally, the plugin will be usable through composer and uses it too to manage external dependencies (I plan to use the Symfony parser for the YAML format).</p>
 
-<h2 id="next-steps:6cff1db96cce95ed97eeab057e8d6618">Next Steps</h2>
+<h2 id="next-steps">Next Steps</h2>
 
 <p>Now it&rsquo;s your turn! Comment below and tell me wheter you like the ideas presented here or not. I&rsquo;m open to every suggestion!</p>
 
@@ -638,37 +665,41 @@ $<span style="color: #000000">name</span> = Groups::first(array(
                     <div class="post-description">
                         
 
-<h2 id="about-composer:9b0b3007165e4b1358dd5daea08bd362">About Composer</h2>
+<h2 id="about-composer">About Composer</h2>
 
 <p><a href="http://packagist.org/about-composer">Composer</a> is a command-line tool that helps you manage your application dependencies. It automatically
 fetches packages, resolves dependencies and is easy to configure. The really good thing about Composer is that it isn&rsquo;t bound to a specific framework and can be used with every kind of repository. Composer is similar to package managers like npm, so you may feel at home quickly.</p>
 
 <p>The default repository of Composer is <a href="http://packagist.org/">Packagist</a>. If you want to use Composer in your project, you basically need two things: a <code>composer.json</code> file in your application root and the <code>composer.phar</code> application file itself. The easiest way to get it is to download it <a href="http://getcomposer.org/composer.phar">directly</a> and drop it somewhere on your file system. A minimal <code>composer.json</code> file looks like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">{
+
+<pre><code>{
     &quot;name&quot;: &quot;my-project&quot;,
     &quot;version&quot;: &quot;1.0.0&quot;,
     &quot;require&quot;: {
         &quot;monolog/monolog&quot;: &quot;1.0.0&quot;
     }
 }
-</pre></div>
+</code></pre>
 
 <p>As Packagist acts as the default repository, this will fetch the <a href="http://packagist.org/packages/monolog/monolog">monolog</a> library from there into the <code>vendor</code> directory. There are a lot of configuration options that can be found <a href="https://raw.github.com/composer/composer/master/doc/composer-schema.json">here</a>.</p>
 
 <p>Let&rsquo;s go through a quick example hands-on. Consider the following directory structure:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">/web
+
+<pre><code>/web
     composer.phar
     /my-project
         composer.json
-</pre></div>
+</code></pre>
 
 <p>If you execute the following commands:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span><span style="color: #A90D91">cd </span>my-project/
-<span style="color: #000000">$ </span>php path/to/composer.phar install
-</pre></div>
+
+<pre><code>$ cd my-project/
+$ php path/to/composer.phar install
+</code></pre>
 
 <p>Your directory structure will look like this afterwards:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">/web
+
+<pre><code>/web
     composer.phar
     composer.lock
     /my-project
@@ -677,12 +708,13 @@ fetches packages, resolves dependencies and is easy to configure. The really goo
             /bin
             /monolog
                 ....
-</pre></div>
+</code></pre>
 
 <p>If you stick with the defaults, all your dependencies will be installed in the <code>vendor</code> directory. Lithium uses the <code>libraries</code> directory to store the dependencies instead, but composer makes it easy to change the default directory (as you&rsquo;ll see shortly). You may also notice that there&rsquo;s a <code>bin</code> directory, which contains executable files (of course only if the installed  dependencies provide some).</p>
 
 <p>Composer also creates a <code>composer.lock</code> file that contains a &ldquo;frozen&rdquo; state of the current dependency tree.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">{
+
+<pre><code>{
     &quot;hash&quot;: &quot;a725fb1bf93f5c534217bbce2897ddc9&quot;,
     &quot;packages&quot;: [
         {
@@ -691,24 +723,26 @@ fetches packages, resolves dependencies and is easy to configure. The really goo
         }
     ]
 }
-</pre></div>
+</code></pre>
 
-<h2 id="managing-lithium:9b0b3007165e4b1358dd5daea08bd362">Managing Lithium</h2>
+<h2 id="managing-lithium">Managing Lithium</h2>
 
 <p>Now that we know how to work with Composer, let&rsquo;s manage a Lithium application with it. Currently, Lithium doesn&rsquo;t provide Composer packages out of the box, but it&rsquo;s easy to write one.</p>
 
 <p>The first thing you want to do is clone (or download) the <code>framework</code> repository. You can also use the <code>li3 library extract</code> command but then you&rsquo;d have to change the <code>LITHIUM_LIBRARY_PATH</code> back to the default location.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>git clone git://github.com/UnionOfRAD/framework.git composer-test
+
+<pre><code>$ git clone git://github.com/UnionOfRAD/framework.git composer-test
 Cloning into composer-test...
-remote: Counting objects: 29794, <span style="color: #A90D91">done</span>.
-remote: Compressing objects: 100% <span style="color: #000000">(</span>8622/8622<span style="color: #000000">)</span>, <span style="color: #A90D91">done</span>.
-remote: Total <span style="color: #1C01CE">29794</span> <span style="color: #000000">(</span>delta 18425<span style="color: #000000">)</span>, reused <span style="color: #1C01CE">29672</span> <span style="color: #000000">(</span>delta 18332<span style="color: #000000">)</span>
-Receiving objects: 100% <span style="color: #000000">(</span>29794/29794<span style="color: #000000">)</span>, 3.94 MiB | 1.52 MiB/s, <span style="color: #A90D91">done</span>.
-Resolving deltas: 100% <span style="color: #000000">(</span>18425/18425<span style="color: #000000">)</span>, <span style="color: #A90D91">done</span>.
-</pre></div>
+remote: Counting objects: 29794, done.
+remote: Compressing objects: 100% (8622/8622), done.
+remote: Total 29794 (delta 18425), reused 29672 (delta 18332)
+Receiving objects: 100% (29794/29794), 3.94 MiB | 1.52 MiB/s, done.
+Resolving deltas: 100% (18425/18425), done.
+</code></pre>
 
 <p>Now, instead of initializing the git submodules (which would fetch the Lithium core the good old way), add this <code>composer.json</code> file to <code>/composer-test</code>.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">{
+
+<pre><code>{
     &quot;name&quot;: &quot;composer-test&quot;,
     &quot;version&quot;: &quot;0.1.0&quot;,
     &quot;config&quot;: {
@@ -734,43 +768,46 @@ Resolving deltas: 100% <span style="color: #000000">(</span>18425/18425<span sty
         &quot;lithium&quot;: &quot;master&quot;
     }
 }
-</pre></div>
+</code></pre>
 
 <p>The <code>vendor-dir</code> setting changes the default <code>vendor</code> directory to <code>libraries</code>, which is recognized automatically by the Lithium class loader. If you don&rsquo;t like this approach, you could also change the <code>LITHIUM_LIBRARY_PATH</code> and point it to the <code>vendor</code> directory or create a symlink, but we stick with it for now. The <code>repositories</code> setting
 adds the git repository of the lithium core (if Lithium would provide a package on Packagist, then you wouldn&rsquo;t have to do this). The <code>require</code> setting is where all your application dependencies go into. The key <code>lithium</code> here refers to the package name in the <code>repositories</code> setting above.</p>
 
 <p>Let&rsquo;s install the dependencies:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>php path/to/composer.phar install
+
+<pre><code>$ php path/to/composer.phar install
 Installing dependencies
 Writing lock file
 Generating autoload files
-</pre></div>
+</code></pre>
 
 <p>If you look into the <code>/composer-test/libraries</code> directory, you can see that the <code>lithium</code> directory has been added successfully.</p>
 
 <p>If we now want to install <a href="http://twig.sensiolabs.org/">twig</a>, we can modify our <code>composer.json</code> file accordingly:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">&quot;require&quot;: {
+
+<pre><code>&quot;require&quot;: {
     &quot;lithium&quot;: &quot;master&quot;,
     &quot;twig/extensions&quot;: &quot;master-dev&quot;
 }
-</pre></div>
+</code></pre>
 
 <p>Not that the twig library is already available on Packagist, so we don&rsquo;t have to tell Composer where to find it. We can now run <code>composer.phar update</code> to update our dependencies (and the <code>composer.lock</code> file):</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>php ../composer.phar update
+
+<pre><code>$ php ../composer.phar update
 Updating dependencies
-- Package twig/twig <span style="color: #000000">(</span>1.6.0-dev<span style="color: #000000">)</span>
+- Package twig/twig (1.6.0-dev)
     Downloading
     Unpacking archive
     Cleaning up
 
-- Package twig/extensions <span style="color: #000000">(</span>master-dev<span style="color: #000000">)</span>
+- Package twig/extensions (master-dev)
     Downloading
     Unpacking archive
     Cleaning up
 
 Writing lock file
 Generating autoload files
-</pre></div>
+</code></pre>
 
 <p>As you can see, Composer has automatically downloaded all dependencies needed by <code>twig/extensions</code> too!</p>
 
@@ -794,32 +831,35 @@ Generating autoload files
                     <div class="post-description">
                         
 
-<h2 id="the-basics:2a6783489cdbf95c96d62a3bcdf50b5d">The Basics</h2>
+<h2 id="the-basics">The Basics</h2>
 
 <p>If you check out the <code>master</code> branch, you can use the new <code>Encrypt</code> strategy to encrypt your session data automatically. This means that you can read and write session data in cleartext and they will be encrypted on the fly before getting stored (in a cookie, for example). You can read my post about &ldquo;baking cookies like a chef&rdquo; for  PHPAdvent 2011 <a href="http://phpadvent.org/2011/bake-cookies-like-a-chef-by-michael-nitschinger">here</a>. The article covers both HMAC signatures and encryption, and is a good place to start. This post will go a little bit deeper in how to use and configure the <code>Encrypt</code> strategy in Lithium. Note that you need to have the <a href="http://php.net/manual/en/book.mcrypt.php">mcrypt</a> extension installed and enabled for this to work.</p>
 
 <p>Here&rsquo;s the simplest configuration you can start with:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">Session::config(array(&#39;default&#39; =&gt; array(
-    &#39;adapter&#39; =&gt; &#39;Cookie&#39;,
-    &#39;strategies&#39; =&gt; array(&#39;Encrypt&#39; =&gt; array(&#39;secret&#39; =&gt; &#39;f00bar$<span style="color: #000000">l1thium</span>&#39;))
+
+<pre><code>Session::config(array('default' =&gt; array(
+    'adapter' =&gt; 'Cookie',
+    'strategies' =&gt; array('Encrypt' =&gt; array('secret' =&gt; 'f00bar$l1thium'))
 )));
-</pre></div>
+</code></pre>
 
 <p>This will store all your session data in a cookie. If you don&rsquo;t change anything else, your data will be encrypted with <a href="http://en.wikipedia.org/wiki/Advanced_Encryption_Standard">AES</a> in  <a href="http://en.wikipedia.org/wiki/Block_cipher_modes_of_operation#Cipher-block_chaining_.28CBC.29">CBC</a> mode with a block size of 256 bits (32 byte). This is a secure and sensible default, so if you don&rsquo;t need anything special just stick with the defaults.</p>
 
 <p>You can now read and write cleartext data and it will be encrypted on the fly for you. For example:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">Session::write(</span><span style="color: #C41A16">&#39;key&#39;</span><span style="color: #000000">,</span> <span style="color: #C41A16">&#39;my secret value&#39;</span><span style="color: #000000">);</span>
-</pre></div>
+
+<pre><code>Session::write('key', 'my secret value');
+</code></pre>
 
 <p>The result will look like this on the client side:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">appcookie[__encrypted]=c3Rqv%2FFYnuwAevxeseII7lOvyoOTi2foMfB%2FCoO4l4FcutRvBn7qq%2BZrPVWC%2FzEYEiSSFMWv7EhEx4ew99%2FmPQ%3D%3D
-</pre></div>
+
+<pre><code>appcookie[__encrypted]=c3Rqv%2FFYnuwAevxeseII7lOvyoOTi2foMfB%2FCoO4l4FcutRvBn7qq%2BZrPVWC%2FzEYEiSSFMWv7EhEx4ew99%2FmPQ%3D%3D
+</code></pre>
 
 <p>You can then read the value again with <code>Session::read('key');</code> or delete it with <code>Session::delete('key');</code>.</p>
 
 <p>That&rsquo;s it. If you don&rsquo;t want to dig into the internals, you can safely stop reading now and implement it in your own application.</p>
 
-<h2 id="further-discussion:2a6783489cdbf95c96d62a3bcdf50b5d">Further Discussion</h2>
+<h2 id="further-discussion">Further Discussion</h2>
 
 <p>Still here? Awesome!</p>
 
@@ -832,29 +872,31 @@ speaking, <code>MCRYPT_RIJNDAEL_256</code> is not part of the AES standard (beca
 <p>So to make sure we use the longest key possible, we hash the given secret with <code>sha256</code> and then substring the length we need. As <code>mcrypt</code> tells us which key lengths are supported for which cipher (through <a href="http://php.net/manual/en/function.mcrypt-enc-get-key-size.php">mcrypt_enc_get_key_size</a>), it is possible to determine the strongest key length. Note that this doesn&rsquo;t mean that you should use weak keys in the first place just because they get hashed anyway. In practice, you will only create them once so make sure they contain enough entropy.</p>
 
 <p>As always, the Lithium core provides sensible defaults but also lets you outgrow the framework if you need to. You can specify your own cipher or mode like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">Session::config(array(&#39;default&#39; =&gt; array(
-    &#39;adapter&#39; =&gt; &#39;Cookie&#39;,
-    &#39;strategies&#39; =&gt; array(&#39;Encrypt&#39; =&gt; array(
-        &#39;cipher&#39; =&gt; MCRYPT_RIJNDAEL_256,
-        &#39;mode&#39;   =&gt; MCRYPT_MODE_ECB, // Don&#39;t use ECB when you don&#39;t have to!
-        &#39;secret&#39;     =&gt; &#39;f00bar$<span style="color: #000000">l1thium</span>&#39;
+
+<pre><code>Session::config(array('default' =&gt; array(
+    'adapter' =&gt; 'Cookie',
+    'strategies' =&gt; array('Encrypt' =&gt; array(
+        'cipher' =&gt; MCRYPT_RIJNDAEL_256,
+        'mode'   =&gt; MCRYPT_MODE_ECB, // Don't use ECB when you don't have to!
+        'secret'     =&gt; 'f00bar$l1thium'
     ))
 )));
-</pre></div>
+</code></pre>
 
 <p>Here&rsquo;s a list of <a href="http://www.php.net/manual/en/mcrypt.ciphers.php">ciphers</a> and <a href="http://www.php.net/manual/en/mcrypt.constants.php">modes</a> you can use. Of course you need to make sure that your custom cipher/mode combination is supported.</p>
 
 <p>If you don&rsquo;t like how Lithium hashes your key or if you want to has it on your own, there&rsquo;s also a way to do this. If the length of your key is equal or longer than the longest key size supported by the algorithm, it gets passed through unchanged. Here&rsquo;s how it works:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">protected</span> <span style="color: #A90D91">function</span> <span style="color: #000000">_hashSecret</span>(<span style="color: #000000">$key</span>) {
-    <span style="color: #000000">$size</span> <span style="color: #000000">=</span> <span style="color: #000000">mcrypt_enc_get_key_size</span>(<span style="color: #A90D91">static</span><span style="color: #000000">::$_resource</span>);
 
-    <span style="color: #A90D91">if</span> (<span style="color: #000000">strlen</span>(<span style="color: #000000">$key</span>) <span style="color: #000000">&gt;=</span> <span style="color: #000000">$size</span>) {
-        <span style="color: #A90D91">return</span> <span style="color: #000000">$key</span>;
+<pre><code>protected function _hashSecret($key) {
+    $size = mcrypt_enc_get_key_size(static::$_resource);
+
+    if (strlen($key) &gt;= $size) {
+        return $key;
     }
 
-    <span style="color: #A90D91">return</span> <span style="color: #000000">substr</span>(<span style="color: #000000">hash</span>(<span style="color: #C41A16">&#39;sha256&#39;</span>, <span style="color: #000000">$key</span>, <span style="color: #A90D91">true</span>), <span style="color: #1C01CE">0</span>, <span style="color: #000000">$size</span>);
+    return substr(hash('sha256', $key, true), 0, $size);
 }
-</pre></div>
+</code></pre>
 
 <p>In my opinion, you should always encrypt your data if it gets stored on the client side. Lithium provides a convenient and transparent way to do it, so go ahead and use it in your own applications to make them more secure.</p>
 
@@ -875,34 +917,37 @@ speaking, <code>MCRYPT_RIJNDAEL_256</code> is not part of the AES standard (beca
 
                     <div class="post-description">
                         <p>While migrating <a href="https://github.com/UnionOfRAD/lithium_bin">lithium_bin</a> as part of research over to MongoDB (from CouchDB), I found the following snippet in the <code>routes.php</code> file:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">Router::connect</span>(<span style="color: #C41A16">&#39;/&#39;</span>, <span style="color: #000000">array</span>(), <span style="color: #A90D91">function</span>(<span style="color: #000000">$request</span>) {
-    <span style="color: #000000">$location</span> <span style="color: #000000">=</span> <span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;controller&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;pastes&#39;</span>, <span style="color: #C41A16">&#39;action&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;add&#39;</span>);
-    <span style="color: #A90D91">return</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Response</span>(<span style="color: #000000">compact</span>(<span style="color: #C41A16">&#39;location&#39;</span>));
+
+<pre><code>Router::connect('/', array(), function($request) {
+    $location = array('controller' =&gt; 'pastes', 'action' =&gt; 'add');
+    return new Response(compact('location'));
 });
-</pre></div>
+</code></pre>
 
 <p>This means that when the user enters the application via the root url (<code>/</code>), he instantly gets redirected to <code>/pastes/add</code> (or a different URL if you have custom routes configured).</p>
 
 <p>This may seem ok at first, but there&rsquo;s a problem. It doesn&rsquo;t take URLs into account that don&rsquo;t live directly under the document root. So if your application lives under <code>http://localhost/pastium/</code>, it will redirect you to <code>http://localhost/pastes/add/</code> which is not really what you want. Instead, do it like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">Router::connect</span>(<span style="color: #C41A16">&#39;/&#39;</span>, <span style="color: #000000">array</span>(), <span style="color: #A90D91">function</span>(<span style="color: #000000">$request</span>) {
-    <span style="color: #000000">$location</span> <span style="color: #000000">=</span> <span style="color: #000000">Router::match</span>(<span style="color: #C41A16">&#39;Pastes::add&#39;</span>, <span style="color: #000000">$request</span>);
-    <span style="color: #A90D91">return</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Response</span>(<span style="color: #000000">compact</span>(<span style="color: #C41A16">&#39;location&#39;</span>));
+
+<pre><code>Router::connect('/', array(), function($request) {
+    $location = Router::match('Pastes::add', $request);
+    return new Response(compact('location'));
 });
-</pre></div>
+</code></pre>
 
 <p>In this snippet, the <code>Router</code> takes the current <code>Request</code> into account and returns the correct location (based on the reverse routing information). Now it should redirect you correctly to <code>http://localhost/pastium/pastes/add/</code>.</p>
 
 <p>By the way, this is extracted from the <code>Controller::redirect</code> method, which is implemented in a similar way:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">redirect</span>(<span style="color: #000000">$url</span>, <span style="color: #000000">array</span> <span style="color: #000000">$options</span> <span style="color: #000000">=</span> <span style="color: #000000">array</span>()) {
-    <span style="color: #177500">//...</span>
-    <span style="color: #000000">$this-&gt;_filter</span>(<span style="color: #000000">__METHOD__</span>, <span style="color: #000000">$params</span>, <span style="color: #A90D91">function</span>(<span style="color: #000000">$self</span>, <span style="color: #000000">$params</span>) <span style="color: #000000">use</span> (<span style="color: #000000">$router</span>) {
-        <span style="color: #000000">$options</span> <span style="color: #000000">=</span> <span style="color: #000000">$params</span><span style="color: #633820">[</span><span style="color: #C41A16">&#39;options&#39;</span><span style="color: #633820">]</span>;
-        <span style="color: #000000">$location</span> <span style="color: #000000">=</span> <span style="color: #000000">$options</span><span style="color: #633820">[</span><span style="color: #C41A16">&#39;location&#39;</span><span style="color: #633820">]</span> <span style="color: #000000">?:</span> <span style="color: #000000">$router::match</span>(<span style="color: #000000">$params</span><span style="color: #633820">[</span><span style="color: #C41A16">&#39;url&#39;</span><span style="color: #633820">]</span>, <span style="color: #000000">$self-&gt;request</span>);
-        <span style="color: #000000">$self-&gt;render</span>(<span style="color: #000000">compact</span>(<span style="color: #C41A16">&#39;location&#39;</span>) <span style="color: #000000">+</span> <span style="color: #000000">$options</span>);
+
+<pre><code>public function redirect($url, array $options = array()) {
+    //...
+    $this-&gt;_filter(__METHOD__, $params, function($self, $params) use ($router) {
+        $options = $params['options'];
+        $location = $options['location'] ?: $router::match($params['url'], $self-&gt;request);
+        $self-&gt;render(compact('location') + $options);
     });
-    <span style="color: #177500">//...</span>
+    //...
 }
-</pre></div>
+</code></pre>
 
 <p>If you have any ideas on how to improve this further, feel free to comment below!</p>
 
@@ -924,28 +969,29 @@ speaking, <code>MCRYPT_RIJNDAEL_256</code> is not part of the AES standard (beca
                     <div class="post-description">
                         
 
-<h2 id="about:b4182e0f0db9b44aa8cf9721d0e799f0">About</h2>
+<h2 id="about">About</h2>
 
 <p>Letters from Lithium keeps you up to date about what happens in the Lithium core and community. If you have interesting news to share, comment below or ping me on <a href="http://twitter.com/daschl">twitter</a>.</p>
 
-<h2 id="core-news:b4182e0f0db9b44aa8cf9721d0e799f0">Core News</h2>
+<h2 id="core-news">Core News</h2>
 
 <p>Routing got a bit more awesome with <a href="https://github.com/UnionOfRAD/lithium/commit/792b916249052b87c368e2e25798a93dceaa0154#L3R636">route continuations</a>. They allow you match more routes in one request, which is very useful in many cases. Take a look at this test case:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">/**</span>
-<span style="color: #177500">* Tests that continuation routes properly fall through and aggregate multiple route parameters.</span>
-<span style="color: #177500">*/</span>
-<span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">testRouteContinuations</span>() {
-    <span style="color: #000000">Router::connect</span>(<span style="color: #C41A16">&#39;/{:locale:en|de|it|jp}/{:args}&#39;</span>, <span style="color: #000000">array</span>(), <span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;continue&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">true</span>));
-    <span style="color: #000000">Router::connect</span>(<span style="color: #C41A16">&#39;/{:controller}/{:action}/{:id:</span><span style="color: #633820">[</span><span style="color: #1C01CE">0</span><span style="color: #000000">-</span><span style="color: #1C01CE">9</span><span style="color: #633820">]</span><span style="color: #C41A16">+}&#39;</span>);
 
-    <span style="color: #000000">$request</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Request</span>(<span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;url&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;/en/posts/view/1138&#39;</span>));
-    <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">Router::process</span>(<span style="color: #000000">$request</span>)<span style="color: #000000">-&gt;params</span>;
-    <span style="color: #000000">$expected</span> <span style="color: #000000">=</span> <span style="color: #000000">array</span> (
-        <span style="color: #C41A16">&#39;controller&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;posts&#39;</span>, <span style="color: #C41A16">&#39;action&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;view&#39;</span>, <span style="color: #C41A16">&#39;id&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;1138&#39;</span>, <span style="color: #C41A16">&#39;locale&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;en&#39;</span>
+<pre><code>/**
+* Tests that continuation routes properly fall through and aggregate multiple route parameters.
+*/
+public function testRouteContinuations() {
+    Router::connect('/{:locale:en|de|it|jp}/{:args}', array(), array('continue' =&gt; true));
+    Router::connect('/{:controller}/{:action}/{:id:[0-9]+}');
+
+    $request = new Request(array('url' =&gt; '/en/posts/view/1138'));
+    $result = Router::process($request)-&gt;params;
+    $expected = array (
+        'controller' =&gt; 'posts', 'action' =&gt; 'view', 'id' =&gt; '1138', 'locale' =&gt; 'en'
     );
-    <span style="color: #000000">$this-&gt;assertEqual</span>(<span style="color: #000000">$expected</span>, <span style="color: #000000">$result</span>);
+    $this-&gt;assertEqual($expected, $result);
 }
-</pre></div>
+</code></pre>
 
 <p>The data branch has been <a href="https://github.com/UnionOfRAD/lithium/commit/107f596b3224b47cfe91a820bae5867a5e0aee6c">merged</a> recently, which should improve the overall stability of the model layer and add a few smaller features. Thanks to <a href="https://github.com/vesln">Veselin Todorov</a>, you <a href="https://github.com/UnionOfRAD/lithium/commit/0c35bef1a36f3ffd6baee3586bf8c3380dfabb81">can now use</a> the &ldquo;last&rdquo; option in validations. This lets you better control the validation stack.</p>
 
@@ -953,19 +999,19 @@ speaking, <code>MCRYPT_RIJNDAEL_256</code> is not part of the AES standard (beca
 
 <p>Of course, various other bugs have been fixed (including the <a href="https://github.com/UnionOfRAD/lithium/commit/cbd0c4d2c07837e2e5ea4f9e8ff8c6a0d1fa1c61">HMAC bug</a>) and small enhancements like <a href="https://github.com/UnionOfRAD/lithium/commit/74514b870c13aac98236111c524ab5c1bc04656f">collection sorting</a> and <a href="https://github.com/UnionOfRAD/lithium/commit/c0d4ff82b1b3bb662ed0e78ed9599437306ca068">Form::error() filtering</a> found their way into the core.</p>
 
-<h2 id="plugins:b4182e0f0db9b44aa8cf9721d0e799f0">Plugins</h2>
+<h2 id="plugins">Plugins</h2>
 
 <p><a href="https://github.com/eLod">eLod</a> (also known as &ldquo;smoking_kiddo&rdquo; on IRC) created a plugin called <a href="https://github.com/eLod/li3_console">li3_console</a> which provides a fully functional PHP <a href="http://en.wikipedia.org/wiki/Read-eval-print_loop">REPL</a> and also lets you interact with your Lithium environment (like models) from the command line.</p>
 
 <p>If you need to deploy your Lithium application to remote servers and are used to <a href="https://github.com/capistrano/capistrano">Capistrano</a>, you should take a look at <a href="https://github.com/mehlah/capium">capium</a>. It is a ruby gem that provides deploy recipes and rake tasks for Lithium.</p>
 
-<h2 id="blogs-and-media:b4182e0f0db9b44aa8cf9721d0e799f0">Blogs and Media</h2>
+<h2 id="blogs-and-media">Blogs and Media</h2>
 
 <p>For those new to Lithium, <a href="http://www.davidgolding.net/">David Golding</a> recently published a very informative introduction <a href="http://www.scribd.com/doc/62146078/New-to-Lithium-Part-1">here</a>. It gets you up and running quickly and walks you through the creation of models, controllers and views.</p>
 
 <p>Also, <a href="http://www.jblotus.com/">James Fuller</a> released a few blog posts in the last weeks, covering various topics around Lithium. Head over to his blog and read about <a href="http://www.jblotus.com/2011/08/17/adding-a-session-flash-message-to-your-site-in-lithium-php/">Flash Messages</a>, the <a href="http://www.jblotus.com/2011/08/19/how-to-add-a-html-button-element-using-lithium-phps-formhelper/">FormHelper</a>, <a href="http://www.jblotus.com/2011/08/20/super-simple-lithium-php-json-web-service-calls/">Web Service Calls</a>, <a href="http://www.jblotus.com/2011/08/27/understanding-filters-in-lithium-php/">Filters</a> and <a href="http://www.jblotus.com/2011/08/31/using-an-appcontroller-in-lithium-php-to-pass-data-to-the-layout/">AppControllers</a>.</p>
 
-<h2 id="universe:b4182e0f0db9b44aa8cf9721d0e799f0">Universe</h2>
+<h2 id="universe">Universe</h2>
 
 <p>Recently, <a href="http://www.engineyard.com/">Engine Yard</a> (mostly known for their knowledge and cloud platforms in the Ruby on Rails world) acquired <a href="http://orchestra.io">Orchestra</a> to extend their language support. Orchestra is a great platform to deploy your PHP and Lithium applications on to, so give it a try (they also provide free accounts) if you haven&rsquo;t already. The <a href="http://lithify.me/docs/manual/cloud/readme.wiki">manual</a> also provides a short guide if you need help.</p>
 
@@ -989,11 +1035,11 @@ speaking, <code>MCRYPT_RIJNDAEL_256</code> is not part of the AES standard (beca
                     <div class="post-description">
                         
 
-<h2 id="about:ee82dedf484a67ec02efb082c30c3644">About</h2>
+<h2 id="about">About</h2>
 
 <p>&ldquo;Letters from Lithium&rdquo; will be published on a regular basis to give you an update on what happens in the Lithium community. If you have interesting topics/plugins/stuff you want to read about, feel free to contact me through twitter or email.</p>
 
-<h2 id="core-news:ee82dedf484a67ec02efb082c30c3644">Core News</h2>
+<h2 id="core-news">Core News</h2>
 
 <p>The <a href="https://github.com/UnionOfRAD/lithium/wiki/Roadmap">Roadmap</a> to 1.0 is going pretty well so far, and relationship support for relational databases has been already merged into master. For the impatient, there is also some documentation for it underway which can be found <a href="https://github.com/UnionOfRAD/manual/blob/master/en/working-with-data/relationships.wiki">here</a>. As the docs are not finished yet, you&rsquo;ll have to clone the repository locally to view them in their full glory (don&rsquo;t forget to clone <code>li3_docs</code> too). The core team is also working on relationship support for MongoDB, which will also ship before 1.0. For those who come from CakePHP: there won&rsquo;t be a <code>hasAndBelongsToMany</code> relationship, because we&rsquo;ll add support for nested relationships which can be used to achieve the same result in a better and cleaner way.</p>
 
@@ -1001,7 +1047,7 @@ speaking, <code>MCRYPT_RIJNDAEL_256</code> is not part of the AES standard (beca
 
 <p>Lithium wants to be a first-class citizen on Windows, so there&rsquo;s a <a href="https://github.com/UnionOfRAD/lithium/tree/windows">branch</a> open that tries to track, find and fix all bugs and test-cases on Windows. If you&rsquo;re developing on Windows and have some spare time, contact one of the core members on IRC and we&rsquo;ll get you started. We aim to make all test cases run on Windows before the 1.0 release.</p>
 
-<h2 id="plugins:ee82dedf484a67ec02efb082c30c3644">Plugins</h2>
+<h2 id="plugins">Plugins</h2>
 
 <p>I&rsquo;ve recently <a href="http://nitschinger.at/Lithium-plugin-roundup">compiled a list of plugins</a> and readers also posted their additions in the comments below. There are plans to bring the <a href="http://lab.lithify.me">Lithium Lab</a> up to date and integrate it even better with the Lithium framework so in the future you should be able to install and share plugins right from there. I&rsquo;ll cover this in greater detail in one of the next letters.</p>
 
@@ -1009,13 +1055,13 @@ speaking, <code>MCRYPT_RIJNDAEL_256</code> is not part of the AES standard (beca
 
 <p>If you don&rsquo;t know which plugins are available, try <a href="https://github.com/search?langOverride=&amp;language=PHP&amp;q=li3_&amp;repo=&amp;start_value=1&amp;type=Repositories&amp;x=32&amp;y=21">this</a> search on Github!</p>
 
-<h2 id="blogs-media:ee82dedf484a67ec02efb082c30c3644">Blogs &amp; Media</h2>
+<h2 id="blogs-media">Blogs &amp; Media</h2>
 
 <p>For those who don&rsquo;t know yet, <a href="http://raymondjulin.com/">Raymond Julin</a> did compile a list of useful resources back in January which can be found <a href="http://blog.raymondjulin.com/2011/01/06/list-of-useful-lithium-li3-resources/">here</a>. In addition to that, <a href="http://www.shift8creative.com/about">Tom Maiaroto</a> wrote a <a href="http://www.shift8creative.com/blog/getting-started-with-minerva">blog post</a> that helps you to get up and running with <a href="https://github.com/tmaiaroto/minerva">Minerva</a>, his CMS based on Lithium.</p>
 
 <p>Lithium now has <a href="http://vimeo.com/channels/li3">Vimeo Channel</a> which also contains the <a href="http://vimeo.com/26183322">Introducing Lithium</a> talk by Nate. You should definitely check that out if you&rsquo;re new to Lithium and need a one-hour introduction.</p>
 
-<h2 id="universe:ee82dedf484a67ec02efb082c30c3644">Universe</h2>
+<h2 id="universe">Universe</h2>
 
 <p>As a side note, the <a href="http://www.union-of-rad.com/">UnionOfRAD</a> is looking for client work (preferrably in the NY area), so if you need talented developers that know Lithium and its surroundings from the inside out please contact <a href="http://www.nateabele.com">Nate Abele</a> on <a href="http://www.twitter.com/nateabele">twitter</a> or IRC.</p>
 
@@ -1037,136 +1083,145 @@ speaking, <code>MCRYPT_RIJNDAEL_256</code> is not part of the AES standard (beca
                     <div class="post-description">
                         
 
-<h2 id="introduction:e0f9419424a6c42fa55bfd9ca82fe108">Introduction</h2>
+<h2 id="introduction">Introduction</h2>
 
 <p>Environments help you to manage multiple configurations for your application. Maybe you have a different database for testing than for production or you use file caching in development but <a href="http://www.php.net/manual/en/intro.apc.php">APC</a> in production. If your framework does not support this (or a similar) concept, it can be a pain to code this overhead for yourself. Therefore, Lithium frees you from this by providing a <code>Environment</code> class (in the <code>\lithium\core</code> namespace) which handles everything for you automatically. Other concepts like <code>adapters</code> integrate with your environments and give you a high flexibility while maintaining a set of sensible defaults.</p>
 
 <p>The next chapter is a whirlwind tour on how to use environments in many places in the framework. Once you know how to work with them, we&rsquo;ll see how you can change the behavior and adapt it further to the needs of your application.</p>
 
-<h2 id="using-environments:e0f9419424a6c42fa55bfd9ca82fe108">Using environments</h2>
+<h2 id="using-environments">Using environments</h2>
 
 <p>Let&rsquo;s start with the most common use case of environments: define a separate database connection for <code>development</code>, <code>test</code> and <code>production</code>:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">Connections::add(&#39;default&#39;, array(
-    &#39;development&#39; =&gt; array(
-        &#39;type&#39; =&gt; &#39;MongoDb&#39;,
-        &#39;host&#39; =&gt; &#39;localhost&#39;,
-        &#39;database&#39; =&gt; &#39;blog_dev&#39;
+
+<pre><code>Connections::add('default', array(
+    'development' =&gt; array(
+        'type' =&gt; 'MongoDb',
+        'host' =&gt; 'localhost',
+        'database' =&gt; 'blog_dev'
     ), 
-    &#39;test&#39; =&gt; array(
-        &#39;type&#39; =&gt; &#39;MongoDb&#39;,
-        &#39;host&#39; =&gt; &#39;localhost&#39;,
-        &#39;database&#39; =&gt; &#39;blog_test&#39;
+    'test' =&gt; array(
+        'type' =&gt; 'MongoDb',
+        'host' =&gt; 'localhost',
+        'database' =&gt; 'blog_test'
     ),
-    &#39;production&#39; =&gt; array(
-        &#39;type&#39; =&gt; &#39;MongoDb&#39;,
-        &#39;host&#39; =&gt; &#39;localhost&#39;,
-        &#39;database&#39; =&gt; &#39;blog_prod&#39;
+    'production' =&gt; array(
+        'type' =&gt; 'MongoDb',
+        'host' =&gt; 'localhost',
+        'database' =&gt; 'blog_prod'
     )
 ));
-</pre></div>
+</code></pre>
 
 <p>As you can see, we don&rsquo;t work with the <code>Environment</code> class here directly. Instead, the <code>Adaptable</code> class (from which the <code>Connections</code> class derives) takes care for us. To understand what&rsquo;s going on, investigate <code>_config()</code> method inside the <code>Adaptable</code> class.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">/**</span>
-<span style="color: #177500"> * Gets an array of settings for the given named configuration in the current</span>
-<span style="color: #177500"> * environment.</span>
-<span style="color: #177500"> *</span>
-<span style="color: #177500"> * The default types of settings for all adapters will contain keys for:</span>
-<span style="color: #177500"> * `adapter` - The class name of the adapter</span>
-<span style="color: #177500"> * `filters` - An array of filters to be applied to the adapter methods</span>
-<span style="color: #177500"> *</span>
-<span style="color: #177500"> * @see lithium\core\Environment</span>
-<span style="color: #177500"> * @param string $name Named configuration.</span>
-<span style="color: #177500"> * @return array Settings for the named configuration.</span>
-<span style="color: #177500"> */</span>
-<span style="color: #A90D91">protected</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">function</span> <span style="color: #000000">_config</span>(<span style="color: #000000">$name</span>) {
-    <span style="color: #177500">//...</span>
-    <span style="color: #000000">$env</span> <span style="color: #000000">=</span> <span style="color: #000000">Environment::get</span>();
-    <span style="color: #000000">$config</span> <span style="color: #000000">=</span> <span style="color: #000000">isset</span>(<span style="color: #000000">$settings</span><span style="color: #633820">[</span><span style="color: #000000">$env</span><span style="color: #633820">]</span>) <span style="color: #000000">?</span> <span style="color: #000000">$settings</span><span style="color: #633820">[</span><span style="color: #000000">$env</span><span style="color: #633820">]</span> <span style="color: #000000">:</span> <span style="color: #000000">$settings</span>;
-    <span style="color: #177500">//...</span>
+
+<pre><code>/**
+ * Gets an array of settings for the given named configuration in the current
+ * environment.
+ *
+ * The default types of settings for all adapters will contain keys for:
+ * `adapter` - The class name of the adapter
+ * `filters` - An array of filters to be applied to the adapter methods
+ *
+ * @see lithium\core\Environment
+ * @param string $name Named configuration.
+ * @return array Settings for the named configuration.
+ */
+protected static function _config($name) {
+    //...
+    $env = Environment::get();
+    $config = isset($settings[$env]) ? $settings[$env] : $settings;
+    //...
 }
-</pre></div>
+</code></pre>
 
 <p>The important part is done in the middle of the method. The <code>Environment::get()</code> method is called and based on the result it either uses the appropriate environment configuration or uses the whole array. This means that you are free to use environments or not.</p>
 
 <p>You can use the <code>Environment::get()</code> method for yourself to check out the current environment.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">use</span> <span style="color: #000000">lithium\core\Environment;</span>
-<span style="color: #000000">echo</span> <span style="color: #000000">Environment::get();</span>
-</pre></div>
+
+<pre><code>use lithium\core\Environment;
+echo Environment::get();
+</code></pre>
 
 <p>For most of you, this will return <code>development</code> (if not, the next chapter will show you why). In addition to the <code>get()</code> method, there is also the <code>is()</code> method. This method takes a string as the param and returns either true or false if the environment matches your string. There are a lot of use cases for this, one can be found in your <code>routes.php</code> file:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">/**</span>
-<span style="color: #177500">* Test routes.</span>
-<span style="color: #177500">*/</span>
-<span style="color: #000000">if</span> <span style="color: #000000">(!Environment::is(</span><span style="color: #C41A16">&#39;production&#39;</span><span style="color: #000000">))</span> {
-    <span style="color: #000000">Router::connect</span>(<span style="color: #C41A16">&#39;/test/{:args}&#39;</span><span style="color: #000000">,</span> <span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;controller&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;lithium\test\Controller&#39;</span>));
-    <span style="color: #000000">Router::connect</span>(<span style="color: #C41A16">&#39;/test&#39;</span><span style="color: #000000">,</span> <span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;controller&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;lithium\test\Controller&#39;</span>));
+
+<pre><code>/**
+* Test routes.
+*/
+if (!Environment::is('production')) {
+    Router::connect('/test/{:args}', array('controller' =&gt; 'lithium\test\Controller'));
+    Router::connect('/test', array('controller' =&gt; 'lithium\test\Controller'));
 }
-</pre></div>
+</code></pre>
 
 <p>This code snippet only includes the <code>test</code> routes if you&rsquo;re not running a production setup. Here&rsquo;s another one:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">if(Environment::is(</span><span style="color: #C41A16">&#39;development&#39;</span><span style="color: #000000">))</span> {
-    <span style="color: #000000">Libraries::add</span>(<span style="color: #C41A16">&#39;li3_docs&#39;</span>);
+
+<pre><code>if(Environment::is('development')) {
+    Libraries::add('li3_docs');
 }
-</pre></div>
+</code></pre>
 
 <p>This only includes the <code>li3_docs</code> library during development, because you generally won&rsquo;t need it in production or testing. And the last one:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$default</span> <span style="color: #000000">=</span> <span style="color: #000000">array(</span><span style="color: #C41A16">&#39;adapter&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;File&#39;</span><span style="color: #000000">,</span> <span style="color: #C41A16">&#39;strategies&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">array(</span><span style="color: #C41A16">&#39;Serializer&#39;</span><span style="color: #000000">));</span>
 
-<span style="color: #000000">if</span> <span style="color: #000000">($apcEnabled</span> <span style="color: #000000">&amp;&amp;</span> <span style="color: #000000">Environment::is(</span><span style="color: #C41A16">&#39;production&#39;</span><span style="color: #000000">))</span> {
-    <span style="color: #000000">$</span><span style="color: #A90D91">default</span> <span style="color: #000000">=</span> <span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;adapter&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;Apc&#39;</span>);
+<pre><code>$default = array('adapter' =&gt; 'File', 'strategies' =&gt; array('Serializer'));
+
+if ($apcEnabled &amp;&amp; Environment::is('production')) {
+    $default = array('adapter' =&gt; 'Apc');
 }
-<span style="color: #000000">Cache::config(compact(</span><span style="color: #C41A16">&#39;default&#39;</span><span style="color: #000000">));</span>
-</pre></div>
+Cache::config(compact('default'));
+</code></pre>
 
 <p>This snippet tells Lithium to use file caching in development and APC for production (this is a modified version of the code you can find by default in <code>app/config/cache.php</code>). I won&rsquo;t give another example here, I think you get the point.</p>
 
-<h2 id="advanced-usage:e0f9419424a6c42fa55bfd9ca82fe108">Advanced usage</h2>
+<h2 id="advanced-usage">Advanced usage</h2>
 
 <p>Now that we know how to use environments, let&rsquo;s see how we can tailor them to our needs. Most of the time you have either different environments or the default detection mechanism doesn&rsquo;t work as expected.</p>
 
 <p>Before we start to modify the environment detection mechanism, we should look at how it is implemented by default:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">protected</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">function</span> <span style="color: #000000">_detector</span>() {
-    <span style="color: #A90D91">return</span> <span style="color: #A90D91">static</span><span style="color: #000000">::$_detector</span> <span style="color: #000000">?:</span> <span style="color: #A90D91">function</span>(<span style="color: #000000">$request</span>) {
-        <span style="color: #A90D91">switch</span> (<span style="color: #A90D91">true</span>) {
-            <span style="color: #A90D91">case</span> (<span style="color: #000000">in_array</span>(<span style="color: #000000">$request-&gt;env</span>(<span style="color: #C41A16">&#39;SERVER_ADDR&#39;</span>), <span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;::1&#39;</span>, <span style="color: #C41A16">&#39;127.0.0.1&#39;</span>)))<span style="color: #000000">:</span>
-                <span style="color: #A90D91">return</span> <span style="color: #C41A16">&#39;development&#39;</span>;
-            <span style="color: #A90D91">case</span> (<span style="color: #000000">preg_match</span>(<span style="color: #C41A16">&#39;/^test/&#39;</span>, <span style="color: #000000">$request-&gt;env</span>(<span style="color: #C41A16">&#39;HTTP_HOST&#39;</span>)))<span style="color: #000000">:</span>
-                <span style="color: #A90D91">return</span> <span style="color: #C41A16">&#39;test&#39;</span>;
-            <span style="color: #A90D91">default</span><span style="color: #000000">:</span>
-                <span style="color: #A90D91">return</span> <span style="color: #C41A16">&#39;production&#39;</span>;
+
+<pre><code>protected static function _detector() {
+    return static::$_detector ?: function($request) {
+        switch (true) {
+            case (in_array($request-&gt;env('SERVER_ADDR'), array('::1', '127.0.0.1'))):
+                return 'development';
+            case (preg_match('/^test/', $request-&gt;env('HTTP_HOST'))):
+                return 'test';
+            default:
+                return 'production';
         }
     };
 }
-</pre></div>
+</code></pre>
 
 <p>You can see that if the server address is &ldquo;127.0.0.1&rdquo; (which basically means you&rsquo;re running on localhost) then the environment defaults to &ldquo;devlopment&rdquo;. If this isn&rsquo;t the case, it tries to find <code>test</code> in the <code>HTTP_HOST</code> settings. This is also used by the testing framework so you may want to keep this as it is. If none of these checks match, you&rsquo;re running in production mode.</p>
 
 <p>Let&rsquo;s say we want to add a <code>staging</code> environment which is identified by its ip address <code>192.168.100.22</code>:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">use</span> <span style="color: #000000">lithium\core\Environment</span>;
-<span style="color: #000000">Environment::is</span>(<span style="color: #A90D91">function</span>(<span style="color: #000000">$request</span>) {
-    <span style="color: #A90D91">switch</span> (<span style="color: #A90D91">true</span>) {
-        <span style="color: #A90D91">case</span> (<span style="color: #000000">in_array</span>(<span style="color: #000000">$request-&gt;env</span>(<span style="color: #C41A16">&#39;SERVER_ADDR&#39;</span>), <span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;::1&#39;</span>, <span style="color: #C41A16">&#39;127.0.0.1&#39;</span>)))<span style="color: #000000">:</span>
-            <span style="color: #A90D91">return</span> <span style="color: #C41A16">&#39;development&#39;</span>;
-        <span style="color: #A90D91">case</span> (<span style="color: #000000">$request-&gt;env</span>(<span style="color: #C41A16">&#39;SERVER_ADDR&#39;</span>) <span style="color: #000000">==</span> <span style="color: #C41A16">&#39;192.168.100.22&#39;</span>)<span style="color: #000000">:</span>
-            <span style="color: #A90D91">return</span> <span style="color: #C41A16">&#39;staging&#39;</span>;
-        <span style="color: #A90D91">case</span> (<span style="color: #000000">preg_match</span>(<span style="color: #C41A16">&#39;/^test/&#39;</span>, <span style="color: #000000">$request-&gt;env</span>(<span style="color: #C41A16">&#39;HTTP_HOST&#39;</span>)))<span style="color: #000000">:</span>
-            <span style="color: #A90D91">return</span> <span style="color: #C41A16">&#39;test&#39;</span>;
-        <span style="color: #A90D91">default</span><span style="color: #000000">:</span>
-            <span style="color: #A90D91">return</span> <span style="color: #C41A16">&#39;production&#39;</span>;
+
+<pre><code>use lithium\core\Environment;
+Environment::is(function($request) {
+    switch (true) {
+        case (in_array($request-&gt;env('SERVER_ADDR'), array('::1', '127.0.0.1'))):
+            return 'development';
+        case ($request-&gt;env('SERVER_ADDR') == '192.168.100.22'):
+            return 'staging';
+        case (preg_match('/^test/', $request-&gt;env('HTTP_HOST'))):
+            return 'test';
+        default:
+            return 'production';
     }
 });
-</pre></div>
+</code></pre>
 
 <p>Easy enough, so here&rsquo;s a final example: assume we don&rsquo;t want to rely on this detection mechanisms. Instead, we set the <code>LITHIUM_ENVIRONMENT</code> variable in our apache config (maybe through <code>SetEnv LITHIUM_ENVIRONMENT &quot;development&quot;</code>) and use it in our application. If no config variable is set, let&rsquo;s default to <code>development</code>:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">use</span> <span style="color: #000000">lithium\core\Environment</span>;
-<span style="color: #000000">Environment::is</span>(<span style="color: #A90D91">function</span>(<span style="color: #000000">$request</span>) {
-    <span style="color: #A90D91">return</span> <span style="color: #000000">$request-&gt;env</span>(<span style="color: #C41A16">&#39;lithium_environment&#39;</span>) <span style="color: #000000">?:</span> <span style="color: #C41A16">&#39;development&#39;</span>;
+
+<pre><code>use lithium\core\Environment;
+Environment::is(function($request) {
+    return $request-&gt;env('lithium_environment') ?: 'development';
 });
-</pre></div>
+</code></pre>
 
 <p>Of course, you have to make sure that your custom environment routines get executed before the dependent parts get bootstrapped. You can either put it at the bottom of <code>app/config/boostrap/libraries.php</code> or add a new config file that gets loaded afterwards.</p>
 
-<h2 id="wrapping-up:e0f9419424a6c42fa55bfd9ca82fe108">Wrapping up</h2>
+<h2 id="wrapping-up">Wrapping up</h2>
 
 <p>After reading this post you should have a basic idea on how environments work in Lithium, how to use them and also how to tailor them to your needs. Keep in mind that they are also reused in other classes and patterns like <code>Adaptable</code>.</p>
 
@@ -1192,21 +1247,23 @@ speaking, <code>MCRYPT_RIJNDAEL_256</code> is not part of the AES standard (beca
 
 <p>The main purpose of this post is to show you how core tests work and were the core team needs help to improve things further. At the end of this post you should be able to write new and extend existing test cases. A side effect of this is that you&rsquo;ll learn parts of the core from the inside out while you&rsquo;re testing them.</p>
 
-<h2 id="introducing-core-tests:ecedfe84f7ffd774ecf4f5159f0f34ea">Introducing core tests</h2>
+<h2 id="introducing-core-tests">Introducing core tests</h2>
 
 <p>Before you start writing your own tests, make sure the existing cases work as expected (without any <code>Exceptions</code> or <code>Errors</code>). For developing directly in the core, I&rsquo;d recommend you a slightly different setup than the default one. You should clone the <code>framework</code> and the <code>lithium</code> repository in different directories so you can quickly exchange functionality and symlink stuff if you have to. My setup looks similar to this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">- web
+
+<pre><code>- web
     - framework
     - libraries
         - lithium
         - li3_docs
         - manual
         - lithium_qa
-</pre></div>
+</code></pre>
 
 <p>Now tell your <code>framework</code> to look at the right path, hop into <code>app/config/bootstrap/libraries.php</code> and modify the <code>LITHIUM_LIBRARY_PATH</code>.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">define(&#39;LITHIUM_LIBRARY_PATH&#39;, dirname(dirname(LITHIUM_APP_PATH)) . &#39;/libraries&#39;);
-</pre></div>
+
+<pre><code>define('LITHIUM_LIBRARY_PATH', dirname(dirname(LITHIUM_APP_PATH)) . '/libraries');
+</code></pre>
 
 <p>If you haven&rsquo;t already, make sure that the <code>app/resources</code> folder is writable.</p>
 
@@ -1216,7 +1273,7 @@ speaking, <code>MCRYPT_RIJNDAEL_256</code> is not part of the AES standard (beca
 
 <p>If you have any failing tests, try to track down if it is your setup or some test cases are not working correctly. If you&rsquo;re unsure, you can always get feedback on #li3 at freenode.</p>
 
-<h2 id="understanding-test-filters:ecedfe84f7ffd774ecf4f5159f0f34ea">Understanding test filters</h2>
+<h2 id="understanding-test-filters">Understanding test filters</h2>
 
 <p>Now that existing tests are running as expected, take a look at the buttons on the top. The <code>Affected</code>, <code>Complexity</code>, <code>Coverage</code> and <code>Profiler</code> labeled buttons are called &ldquo;test filters&rdquo; and perform specific tasks on the selected group of test cases.</p>
 
@@ -1233,86 +1290,90 @@ speaking, <code>MCRYPT_RIJNDAEL_256</code> is not part of the AES standard (beca
 
 <p>Make sure to get familiar with these filters as they are crucial in verifying and investigating your written tests.</p>
 
-<h2 id="investigating-core-tests:ecedfe84f7ffd774ecf4f5159f0f34ea">Investigating core tests</h2>
+<h2 id="investigating-core-tests">Investigating core tests</h2>
 
 <p>The best way to get familiar with core tests is to look at existing ones. Let&rsquo;s investigate one test case of the <code>ValidatorTest</code> class.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">/**</span>
-<span style="color: #177500"> * Tests that new methods can be called on Validator by adding rules using Validator::add().</span>
-<span style="color: #177500"> *</span>
-<span style="color: #177500"> * @return void</span>
-<span style="color: #177500"> */</span>
-<span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">testAddCustomRegexMethods</span>() {
-    <span style="color: #000000">$this-&gt;assertNull</span>(<span style="color: #000000">Validator::rules</span>(<span style="color: #C41A16">&#39;foo&#39;</span>));
 
-    <span style="color: #000000">Validator::add</span>(<span style="color: #C41A16">&#39;foo&#39;</span>, <span style="color: #C41A16">&#39;/^foo$/&#39;</span>);
-    <span style="color: #000000">$this-&gt;assertTrue</span>(<span style="color: #000000">Validator::isFoo</span>(<span style="color: #C41A16">&#39;foo&#39;</span>));
-    <span style="color: #000000">$this-&gt;assertFalse</span>(<span style="color: #000000">Validator::isFoo</span>(<span style="color: #C41A16">&#39;bar&#39;</span>));
-    <span style="color: #000000">$this-&gt;assertTrue</span>(<span style="color: #000000">in_array</span>(<span style="color: #C41A16">&#39;foo&#39;</span>, <span style="color: #000000">Validator::rules</span>()));
-    <span style="color: #000000">$this-&gt;assertEqual</span>(<span style="color: #C41A16">&#39;/^foo$/&#39;</span>, <span style="color: #000000">Validator::rules</span>(<span style="color: #C41A16">&#39;foo&#39;</span>));
+<pre><code>/**
+ * Tests that new methods can be called on Validator by adding rules using Validator::add().
+ *
+ * @return void
+ */
+public function testAddCustomRegexMethods() {
+    $this-&gt;assertNull(Validator::rules('foo'));
 
-    <span style="color: #000000">$this-&gt;expectException</span>(<span style="color: #C41A16">&quot;Rule `bar` is not a validation rule.&quot;</span>);
-    <span style="color: #000000">$this-&gt;assertNull</span>(<span style="color: #000000">Validator::isBar</span>(<span style="color: #C41A16">&#39;foo&#39;</span>));
+    Validator::add('foo', '/^foo$/');
+    $this-&gt;assertTrue(Validator::isFoo('foo'));
+    $this-&gt;assertFalse(Validator::isFoo('bar'));
+    $this-&gt;assertTrue(in_array('foo', Validator::rules()));
+    $this-&gt;assertEqual('/^foo$/', Validator::rules('foo'));
+
+    $this-&gt;expectException(&quot;Rule `bar` is not a validation rule.&quot;);
+    $this-&gt;assertNull(Validator::isBar('foo'));
 }
-</pre></div>
+</code></pre>
 
 <p>If you look closely, you can identify a pattern here that will come frequently. Before you test a specific functionality/value, make sure it isn&rsquo;t already set. You can do this with <code>assertFalse</code>, <code>assertNull</code> or maybe <code>assertTrue(empty(..))</code>. Next, perform the piece of code you want to test (like adding a custom regex rule here) and then perform checks on the entity again. A good rule of thumb is to test normal cases first and then exceptional cases (which often raise <code>Exceptions</code>). You can also break down complicated tests in smaller ones and add helper methods that get called from the main test case.</p>
 
 <p>If your tests contain dependencies, make sure to initialize them in <code>setUp()</code> and remove/reset them in <code>tearDown()</code>. These methods get called before/after all tests in the test class and should leave the environment in a clean state. This prevents unexpected failures in later tests and also keeps the memory usage on a normal level. Here&rsquo;s an example of the <code>MongoDb</code> test class:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">setUp</span>() {
-    <span style="color: #000000">Connections::config</span>(<span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;lithium_mongo_test&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">$this-&gt;_testConfig</span>));
-    <span style="color: #000000">$this-&gt;db</span> <span style="color: #000000">=</span> <span style="color: #000000">Connections::get</span>(<span style="color: #C41A16">&#39;lithium_mongo_test&#39;</span>);
-    <span style="color: #000000">$model</span> <span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;_model</span>;
-    <span style="color: #000000">$model::config</span>(<span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;key&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;_id&#39;</span>));
-    <span style="color: #000000">$model::resetConnection</span>(<span style="color: #A90D91">false</span>);
 
-    <span style="color: #000000">$this-&gt;query</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Query</span>(<span style="color: #000000">compact</span>(<span style="color: #C41A16">&#39;model&#39;</span>) <span style="color: #000000">+</span> <span style="color: #000000">array</span>(
-        <span style="color: #C41A16">&#39;entity&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Document</span>(<span style="color: #000000">compact</span>(<span style="color: #C41A16">&#39;model&#39;</span>))
+<pre><code>public function setUp() {
+    Connections::config(array('lithium_mongo_test' =&gt; $this-&gt;_testConfig));
+    $this-&gt;db = Connections::get('lithium_mongo_test');
+    $model = $this-&gt;_model;
+    $model::config(array('key' =&gt; '_id'));
+    $model::resetConnection(false);
+
+    $this-&gt;query = new Query(compact('model') + array(
+        'entity' =&gt; new Document(compact('model'))
     ));
 }
 
-<span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">tearDown</span>() {
-    <span style="color: #A90D91">try</span> {
-        <span style="color: #000000">$this-&gt;db-&gt;</span><span style="color: #A90D91">delete</span>(<span style="color: #000000">$this-&gt;query</span>);
-    } <span style="color: #A90D91">catch</span> (<span style="color: #000000">Exception</span> <span style="color: #000000">$e</span>) {}
-    <span style="color: #000000">unset</span>(<span style="color: #000000">$this-&gt;query</span>);
+public function tearDown() {
+    try {
+        $this-&gt;db-&gt;delete($this-&gt;query);
+    } catch (Exception $e) {}
+    unset($this-&gt;query);
 }
-</pre></div>
+</code></pre>
 
 <p>The <code>setUp()</code> method initializes a test connection to the database and <code>tearDown()</code> makes sure that the test database gets deleted and the <code>$this-&gt;query</code> object is freed.</p>
 
 <p>There are a lot more patterns that you&rsquo;ll learn while writing core tests, but this should give you a start.</p>
 
-<h2 id="qa-your-code:ecedfe84f7ffd774ecf4f5159f0f34ea">QA your code</h2>
+<h2 id="qa-your-code">QA your code</h2>
 
 <p>To ensure a high-quality codebase, Lithium enforces a set of coding standards which can be found <a href="https://github.com/UnionOfRAD/lithium/wiki/Coding-Standards">here</a>. You don&rsquo;t have to know every part of the standard by heart, because Lithium provides a plugin called <a href="https://github.com/UnionOfRAD/lithium_qa">lithium_qa</a>. This plugin checks your code if it complies to the standards and shows you what parts of it are wrong. I recommend you to clone it into the <code>libraries</code> directory shown above. It is also a good idea to add the <code>li3</code> command to your <code>PATH</code> so your calls don&rsquo;t get too verbose.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span><span style="color: #A90D91">cd</span> /usr/local/bin
-<span style="color: #000000">$ </span>sudo ln -s /path/to/lithium/console/li3 li3
-</pre></div>
+
+<pre><code>$ cd /usr/local/bin
+$ sudo ln -s /path/to/lithium/console/li3 li3
+</code></pre>
 
 <p>Let&rsquo;s assume we want to check classes in the <code>lithium\core</code> namespace:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span><span style="color: #A90D91">cd </span>lithium_qa
-<span style="color: #000000">$ </span>li3 syntax ../lithium/core
-<span style="color: #000000">[</span>Passed <span style="color: #000000">]</span> syntax check of <span style="color: #C41A16">`</span>core/Object.php<span style="color: #C41A16">`</span>
-<span style="color: #000000">[</span>Passed <span style="color: #000000">]</span> syntax check of <span style="color: #C41A16">`</span>core/Adaptable.php<span style="color: #C41A16">`</span>
-<span style="color: #000000">[</span>Failed <span style="color: #000000">]</span> syntax check of <span style="color: #C41A16">`</span>core/StaticObject.php<span style="color: #C41A16">`</span>
+
+<pre><code>$ cd lithium_qa
+$ li3 syntax ../lithium/core
+[Passed ] syntax check of `core/Object.php`
+[Passed ] syntax check of `core/Adaptable.php`
+[Failed ] syntax check of `core/StaticObject.php`
 59| 101| Maximum line length exceeded
-<span style="color: #000000">[</span>Passed <span style="color: #000000">]</span> syntax check of <span style="color: #C41A16">`</span>core/Environment.php<span style="color: #C41A16">`</span>
-<span style="color: #000000">[</span>Passed <span style="color: #000000">]</span> syntax check of <span style="color: #C41A16">`</span>core/ConfigException.php<span style="color: #C41A16">`</span>
-<span style="color: #000000">[</span>Passed <span style="color: #000000">]</span> syntax check of <span style="color: #C41A16">`</span>core/ClassNotFoundException.php<span style="color: #C41A16">`</span>
-<span style="color: #000000">[</span>Passed <span style="color: #000000">]</span> syntax check of <span style="color: #C41A16">`</span>core/NetworkException.php<span style="color: #C41A16">`</span>
-<span style="color: #000000">[</span>Passed <span style="color: #000000">]</span> syntax check of <span style="color: #C41A16">`</span>core/ErrorHandler.php<span style="color: #C41A16">`</span>
-<span style="color: #000000">[</span>Passed <span style="color: #000000">]</span> syntax check of <span style="color: #C41A16">`</span>core/Libraries.php<span style="color: #C41A16">`</span>
-</pre></div>
+[Passed ] syntax check of `core/Environment.php`
+[Passed ] syntax check of `core/ConfigException.php`
+[Passed ] syntax check of `core/ClassNotFoundException.php`
+[Passed ] syntax check of `core/NetworkException.php`
+[Passed ] syntax check of `core/ErrorHandler.php`
+[Passed ] syntax check of `core/Libraries.php`
+</code></pre>
 
 <p>There you can see that each core class passed the test except the <code>StaticObject</code> class which has one line (59) that is too long. Now you can edit that file and modify it accordingly. If you&rsquo;re not sure what the output means, head back to the <a href="https://github.com/UnionOfRAD/lithium/wiki/Coding-Standards">official standard</a> and look for the corresponding entry.</p>
 
 <p>Please make sure that all code you want to see in the core respects these standards. You can also use it to test your own code as well!</p>
 
-<h2 id="getting-help:ecedfe84f7ffd774ecf4f5159f0f34ea">Getting help</h2>
+<h2 id="getting-help">Getting help</h2>
 
 <p>If you&rsquo;re new to code testing in Lithium, make sure to read the official guide in the <a href="http://lithify.me/docs/manual/10_testing/readme.wiki">manual</a> first. Next, check out the main <a href="https://github.com/UnionOfRAD/lithium/issues/17">testing ticket on GitHub</a> which is constantly updated and shows what classes need testing. If you need help on testing the core, make sure to join #li3-core on freenode and ping one of the core developers. You can also contact me directly and I&rsquo;ll make sure to help you out or point you in the right direction.</p>
 
-<h2 id="wrapping-up:ecedfe84f7ffd774ecf4f5159f0f34ea">Wrapping up</h2>
+<h2 id="wrapping-up">Wrapping up</h2>
 
 <p>You should now be able to run the core tests, extend and write your own and also pass your code through the official code quality assurance tool. Please help out and fork the core, run it on your machine, check for errors, extend current tests, write new ones and correct QA issues. If we all work together, I&rsquo;m sure we can make Lithium the best tested web framework out there. If you want to see more information regarding this topic on my blog, comment down below and I&rsquo;ll see what I can provide.</p>
 
@@ -1343,7 +1404,7 @@ speaking, <code>MCRYPT_RIJNDAEL_256</code> is not part of the AES standard (beca
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

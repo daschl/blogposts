@@ -17,7 +17,7 @@
       <guid>http://nitschinger.at/Benchmarking-Cache-Transcoders-in-PHP/</guid>
       <description>
 
-&lt;h2 id=&#34;motivation:1588be44ecdc8dc6ecb17e0152c89754&#34;&gt;Motivation&lt;/h2&gt;
+&lt;h2 id=&#34;motivation&#34;&gt;Motivation&lt;/h2&gt;
 
 &lt;p&gt;Storing PHP objects (or simpler data types like arrays) in caches always requires some kind of transformation. You need a way of encoding/decoding data so that it can be stored and loaded properly. In most languages, this process is known as object &lt;a href=&#34;http://en.wikipedia.org/wiki/Serialization&#34;&gt;serialization&lt;/a&gt;. PHP provides a mechanism for this out of the box, but in this article we&amp;rsquo;ll also look at &lt;a href=&#34;http://pecl.php.net/package/igbinary&#34;&gt;igbinary&lt;/a&gt; as a drop-in replacement for the default serializer. We also compare the results to object transcoding based on &lt;a href=&#34;http://json.org/&#34;&gt;JSON&lt;/a&gt;, which is not really an object serialization mechanism but commonly used as a data chache structure which has its own benefits and drawbacks.&lt;/p&gt;
 
@@ -25,188 +25,198 @@
 
 &lt;p&gt;If you want to compare your results to mine, I&amp;rsquo;m using a MacBook Pro on Mac OS X 10.8.2 with the 2.3 GHz i7 and 16GB RAM. I&amp;rsquo;m using PHP 5.4.11 (through &lt;a href=&#34;https://github.com/josegonzalez/homebrew-php&#34;&gt;homebrew-php&lt;/a&gt;) instead of the shipped 5.3.&lt;/p&gt;
 
-&lt;h2 id=&#34;the-php-serializer:1588be44ecdc8dc6ecb17e0152c89754&#34;&gt;The PHP Serializer&lt;/h2&gt;
+&lt;h2 id=&#34;the-php-serializer&#34;&gt;The PHP Serializer&lt;/h2&gt;
 
 &lt;p&gt;Out of the box, PHP provides a serialization mechanism on top of the &lt;a href=&#34;http://php.net/manual/de/function.serialize.php&#34;&gt;serialize&lt;/a&gt; and &lt;a href=&#34;http://www.php.net/manual/de/function.unserialize.php&#34;&gt;unserialize&lt;/a&gt; methods. By applying this method on a variable, it gets encoded to a byte stream and neither the type nor the structure gets lost (you can&amp;rsquo;t store &lt;a href=&#34;http://www.php.net/manual/en/language.types.resource.php&#34;&gt;resources&lt;/a&gt;).&lt;/p&gt;
 
 &lt;p&gt;So, let&amp;rsquo;s look at a simple and a more complex example on how the transformation looks like:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;Person&lt;/span&gt; {
-    &lt;span style=&#34;color: #A90D91&#34;&gt;private&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$name&lt;/span&gt;;
+&lt;pre&gt;&lt;code&gt;&amp;lt;?php
 
-    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;__construct&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$name&lt;/span&gt;) {
-        &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;name&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$name&lt;/span&gt;;
+class Person {
+    private $name;
+
+    public function __construct($name) {
+        $this-&amp;gt;name = $name;
     }
 
-    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;getName&lt;/span&gt;() {
-        &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;name&lt;/span&gt;;
+    public function getName() {
+        return $this-&amp;gt;name;
     }
 }
 
-&lt;span style=&#34;color: #000000&#34;&gt;$simple&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;key&amp;quot;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;value&amp;quot;&lt;/span&gt;);
-&lt;span style=&#34;color: #000000&#34;&gt;$complex&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Person&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Michael&amp;quot;&lt;/span&gt;);
+$simple = array(&amp;quot;key&amp;quot; =&amp;gt; &amp;quot;value&amp;quot;);
+$complex = new Person(&amp;quot;Michael&amp;quot;);
 
-&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+?&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;If we&amp;rsquo;re calling &lt;code&gt;serialize()&lt;/code&gt; on both variables, the output (as a string representation) looks like this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$simpleSerialized&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;serialize&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$simple&lt;/span&gt;);
-&lt;span style=&#34;color: #000000&#34;&gt;$complexSerialized&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;serialize&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$complex&lt;/span&gt;);
 
-&lt;span style=&#34;color: #177500&#34;&gt;// string(28) &amp;quot;a:1:{s:3:&amp;quot;key&amp;quot;;s:5:&amp;quot;value&amp;quot;;}&amp;quot;&lt;/span&gt;
-&lt;span style=&#34;color: #A90D91&#34;&gt;var_dump&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;serialize&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$simple&lt;/span&gt;));
+&lt;pre&gt;&lt;code&gt;&amp;lt;?php
+$simpleSerialized = serialize($simple);
+$complexSerialized = serialize($complex);
 
-&lt;span style=&#34;color: #177500&#34;&gt;// string(51) &amp;quot;O:6:&amp;quot;Person&amp;quot;:1:{s:12:&amp;quot;\000Person\000name&amp;quot;;s:7:&amp;quot;Michael&amp;quot;;}&amp;quot;&lt;/span&gt;
-&lt;span style=&#34;color: #A90D91&#34;&gt;var_dump&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;serialize&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$complex&lt;/span&gt;));
-&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+// string(28) &amp;quot;a:1:{s:3:&amp;quot;key&amp;quot;;s:5:&amp;quot;value&amp;quot;;}&amp;quot;
+var_dump(serialize($simple));
+
+// string(51) &amp;quot;O:6:&amp;quot;Person&amp;quot;:1:{s:12:&amp;quot;\000Person\000name&amp;quot;;s:7:&amp;quot;Michael&amp;quot;;}&amp;quot;
+var_dump(serialize($complex));
+?&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;While the resulting string is not designed for readability, you can clearly see that some metadata is added in order to make the unserialization possible. For example, the &lt;code&gt;key&lt;/code&gt; string is serialized to &lt;code&gt;s:3:&amp;quot;key&amp;quot;&lt;/code&gt; where the &lt;code&gt;s&lt;/code&gt; means &lt;code&gt;string&lt;/code&gt; and &lt;code&gt;3&lt;/code&gt; is the string length. Also, &lt;code&gt;a&lt;/code&gt; points to an &lt;code&gt;array&lt;/code&gt; and &lt;code&gt;O&lt;/code&gt; to an &lt;code&gt;object&lt;/code&gt;.&lt;/p&gt;
 
 &lt;p&gt;We can now &lt;code&gt;unserialize()&lt;/code&gt; the values and work with them as if they&amp;rsquo;ve never been stored somewhere else:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$simpleUnserialized&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;unserialize&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$simpleSerialized&lt;/span&gt;);
-&lt;span style=&#34;color: #000000&#34;&gt;$complexUnserialized&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;unserialize&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$complexSerialized&lt;/span&gt;);
 
-&lt;span style=&#34;color: #177500&#34;&gt;// array(1) {&amp;#39;key&amp;#39; =&amp;gt; string(5) &amp;quot;value&amp;quot;}&lt;/span&gt;
-&lt;span style=&#34;color: #A90D91&#34;&gt;var_dump&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$simpleUnserialized&lt;/span&gt;);
+&lt;pre&gt;&lt;code&gt;&amp;lt;?php
+$simpleUnserialized = unserialize($simpleSerialized);
+$complexUnserialized = unserialize($complexSerialized);
 
-&lt;span style=&#34;color: #177500&#34;&gt;// string(7) &amp;quot;Michael&amp;quot;&lt;/span&gt;
-&lt;span style=&#34;color: #A90D91&#34;&gt;var_dump&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$complexUnserialized-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;getName&lt;/span&gt;());
-&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+// array(1) {&#39;key&#39; =&amp;gt; string(5) &amp;quot;value&amp;quot;}
+var_dump($simpleUnserialized);
+
+// string(7) &amp;quot;Michael&amp;quot;
+var_dump($complexUnserialized-&amp;gt;getName());
+?&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;In practice, two characteristics are important: size of the serialized value and performance. While from a developer perspective performance is fun to explore, the size of the serialized object is what matters most. Performance differences are only measurable when running it in a loop with lots of iterations, while in practice you may only work with a few objects at a time per request.&lt;/p&gt;
 
 &lt;p&gt;Let&amp;rsquo;s use a common caching scenario: imagine we&amp;rsquo;re caching entity responses from an ORM framework like &lt;a href=&#34;http://www.doctrine-project.org/&#34;&gt;Doctrine&lt;/a&gt;. Here is a blog post class that will be filled with life:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
-&lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;BlogPost&lt;/span&gt; {
 
-    &lt;span style=&#34;color: #A90D91&#34;&gt;private&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$title&lt;/span&gt;;
-    &lt;span style=&#34;color: #A90D91&#34;&gt;private&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$teaser&lt;/span&gt;;
-    &lt;span style=&#34;color: #A90D91&#34;&gt;private&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$author&lt;/span&gt;;
-    &lt;span style=&#34;color: #A90D91&#34;&gt;private&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$body&lt;/span&gt;;
+&lt;pre&gt;&lt;code&gt;&amp;lt;?php
+class BlogPost {
 
-    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;__construct&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$title&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$teaser&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$author&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$body&lt;/span&gt;) {
-        &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;title&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$title&lt;/span&gt;;
-        &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;teaser&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$teaser&lt;/span&gt;;
-        &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;author&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$author&lt;/span&gt;;
-        &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;body&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$body&lt;/span&gt;;
+    private $title;
+    private $teaser;
+    private $author;
+    private $body;
+
+    public function __construct($title, $teaser, $author, $body) {
+        $this-&amp;gt;title = $title;
+        $this-&amp;gt;teaser = $teaser;
+        $this-&amp;gt;author = $author;
+        $this-&amp;gt;body = $body;
     }
 
-    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;getTitle&lt;/span&gt;() { &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;title&lt;/span&gt;; }
-    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;getTeaser&lt;/span&gt;() { &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;teaser&lt;/span&gt;; }
-    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;getAuthor&lt;/span&gt;() { &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;author&lt;/span&gt;; }
-    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;getBody&lt;/span&gt;() { &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;body&lt;/span&gt;; }
+    public function getTitle() { return $this-&amp;gt;title; }
+    public function getTeaser() { return $this-&amp;gt;teaser; }
+    public function getAuthor() { return $this-&amp;gt;author; }
+    public function getBody() { return $this-&amp;gt;body; }
 
 }
-&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+?&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Please take this with a grain of salt, because since JSON transcoding is not able to store a 1:1 representation like &lt;code&gt;serialize&lt;/code&gt;, we need to work around that a bit. More details and discussion will be provided in the JSON section.&lt;/p&gt;
 
 &lt;p&gt;Assume that a blog post with content has around 10k characters and about 10kb in size, lets create a crafted blog post:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$randomString&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;$length&lt;/span&gt;) {
-    &lt;span style=&#34;color: #000000&#34;&gt;$chars&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .&amp;quot;&lt;/span&gt;;    
-    &lt;span style=&#34;color: #000000&#34;&gt;$str&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;&amp;quot;&lt;/span&gt;;
-    &lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt;( &lt;span style=&#34;color: #000000&#34;&gt;$i&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;; &lt;span style=&#34;color: #000000&#34;&gt;$i&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$length&lt;/span&gt;; &lt;span style=&#34;color: #000000&#34;&gt;$i++&lt;/span&gt; ) {
-        &lt;span style=&#34;color: #000000&#34;&gt;$str&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;.=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$chars&lt;/span&gt;[&lt;span style=&#34;color: #A90D91&#34;&gt;rand&lt;/span&gt;(&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color: #A90D91&#34;&gt;strlen&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$chars&lt;/span&gt;)&lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;)];
+
+&lt;pre&gt;&lt;code&gt;&amp;lt;?php
+$randomString = function ($length) {
+    $chars = &amp;quot;abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .&amp;quot;;    
+    $str = &amp;quot;&amp;quot;;
+    for( $i = 0; $i &amp;lt; $length; $i++ ) {
+        $str .= $chars[rand(0, strlen($chars)-1)];
     }
-    &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$str&lt;/span&gt;;
+    return $str;
 };
 
-&lt;span style=&#34;color: #000000&#34;&gt;$title&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;How to measure caching transcoders&amp;quot;&lt;/span&gt;;
-&lt;span style=&#34;color: #000000&#34;&gt;$teaser&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;This is a much longer introduction on how to measure caching transcoders. Feel free to post your own findings.&amp;quot;&lt;/span&gt;;
-&lt;span style=&#34;color: #000000&#34;&gt;$author&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;daschl&amp;quot;&lt;/span&gt;;
-&lt;span style=&#34;color: #000000&#34;&gt;$body&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$randomString&lt;/span&gt;(&lt;span style=&#34;color: #1C01CE&#34;&gt;10000&lt;/span&gt;);
+$title = &amp;quot;How to measure caching transcoders&amp;quot;;
+$teaser = &amp;quot;This is a much longer introduction on how to measure caching transcoders. Feel free to post your own findings.&amp;quot;;
+$author = &amp;quot;daschl&amp;quot;;
+$body = $randomString(10000);
 
-&lt;span style=&#34;color: #000000&#34;&gt;$post&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;BlogPost&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$title&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$teaser&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$author&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$body&lt;/span&gt;);
-&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+$post = new BlogPost($title, $teaser, $author, $body);
+?&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Now run &lt;code&gt;serialize&lt;/code&gt; and &lt;code&gt;unserialize&lt;/code&gt; in loops to measure performance as well as determine the resulting size of the object:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$iterations&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;10000&lt;/span&gt;;
-&lt;span style=&#34;color: #000000&#34;&gt;$start&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;microtime&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;);
-&lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$i=&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;;&lt;span style=&#34;color: #000000&#34;&gt;$i&amp;lt;$iterations&lt;/span&gt;;&lt;span style=&#34;color: #000000&#34;&gt;$i++&lt;/span&gt;) {
-    &lt;span style=&#34;color: #000000&#34;&gt;$serialized&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;serialize&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$post&lt;/span&gt;);
-}
-&lt;span style=&#34;color: #000000&#34;&gt;$end&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;microtime&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;);
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;echo&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Size: &amp;quot;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;strlen&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$serialized&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;\n&amp;quot;&lt;/span&gt;;
-&lt;span style=&#34;color: #A90D91&#34;&gt;echo&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;$end&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$start&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1000&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Milliseconds\n&amp;quot;&lt;/span&gt;;
-&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+&lt;pre&gt;&lt;code&gt;&amp;lt;?php
+$iterations = 10000;
+$start = microtime(true);
+for($i=0;$i&amp;lt;$iterations;$i++) {
+    $serialized = serialize($post);
+}
+$end = microtime(true);
+
+echo &amp;quot;Size: &amp;quot; . strlen($serialized) . &amp;quot;\n&amp;quot;;
+echo ($end - $start) * 1000 . &amp;quot;Milliseconds\n&amp;quot;;
+?&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;On my machine, to serialize 10000 objects it took about 33 milliseconds. The length of the resulting object (its string representation) is 10297 characters. This is kind of expected because the bulk of the object is the long article body. Before start comparing, we can already make one observation: its pretty fast. Now, let&amp;rsquo;s move on to igbinary serialization and see how these results compare.&lt;/p&gt;
 
-&lt;h2 id=&#34;serializing-with-igbinary:1588be44ecdc8dc6ecb17e0152c89754&#34;&gt;Serializing with igbinary&lt;/h2&gt;
+&lt;h2 id=&#34;serializing-with-igbinary&#34;&gt;Serializing with igbinary&lt;/h2&gt;
 
 &lt;p&gt;The &lt;a href=&#34;http://pecl.php.net/package/igbinary&#34;&gt;igbinary&lt;/a&gt; extension was developed as a drop-in replacement for the default PHP serializer. Instead of storing the serialized object as a text, it is stored as binary data. You can install it either through PECL or compile it from source, either way before running the tests make sure you have the &lt;code&gt;igbinary&lt;/code&gt; extension enabled:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;michael@daschlbook ~ $ php -m | grep igbinary
+
+&lt;pre&gt;&lt;code&gt;michael@daschlbook ~ $ php -m | grep igbinary
 igbinary
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Instead of using &lt;code&gt;serialize&lt;/code&gt; or &lt;code&gt;unserialize&lt;/code&gt;, igbinary provides us with appropriate &lt;code&gt;igbinary_serialize&lt;/code&gt; and &lt;code&gt;igbinary_unserialize&lt;/code&gt; functions. Now we can apply the same microbenchmark and see the results:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$iterations&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;10000&lt;/span&gt;;
-&lt;span style=&#34;color: #000000&#34;&gt;$start&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;microtime&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;);
-&lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$i=&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;;&lt;span style=&#34;color: #000000&#34;&gt;$i&amp;lt;$iterations&lt;/span&gt;;&lt;span style=&#34;color: #000000&#34;&gt;$i++&lt;/span&gt;) {
-    &lt;span style=&#34;color: #000000&#34;&gt;$serialized&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;igbinary_serialize&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$post&lt;/span&gt;);
-}
-&lt;span style=&#34;color: #000000&#34;&gt;$end&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;microtime&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;);
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;echo&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Size: &amp;quot;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;strlen&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$serialized&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;\n&amp;quot;&lt;/span&gt;;
-&lt;span style=&#34;color: #A90D91&#34;&gt;echo&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;$end&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$start&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1000&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Milliseconds\n&amp;quot;&lt;/span&gt;;
-&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+&lt;pre&gt;&lt;code&gt;&amp;lt;?php
+$iterations = 10000;
+$start = microtime(true);
+for($i=0;$i&amp;lt;$iterations;$i++) {
+    $serialized = igbinary_serialize($post);
+}
+$end = microtime(true);
+
+echo &amp;quot;Size: &amp;quot; . strlen($serialized) . &amp;quot;\n&amp;quot;;
+echo ($end - $start) * 1000 . &amp;quot;Milliseconds\n&amp;quot;;
+?&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;With default settings, to serialize 10000 objects with igbinary it took 678 milliseconds. The length of the resulting object is 10244 characters. If you compare it with the default serialization mechanism, that is 20 times slower and the resulting object isn&amp;rsquo;t much smaller either. Bummer - or not? Let&amp;rsquo;s look at why this is happening.&lt;/p&gt;
 
 &lt;p&gt;Let&amp;rsquo;s look at a different workload. Let&amp;rsquo;s create a data structure which consist of 30 smaller blog posts and measure the statistics for both again (only doing 1000 iterations instead of 10000):&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$posts&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;array&lt;/span&gt;();
-&lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$i=&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;;&lt;span style=&#34;color: #000000&#34;&gt;$i&amp;lt;&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;30&lt;/span&gt;;&lt;span style=&#34;color: #000000&#34;&gt;$i++&lt;/span&gt;) {
-    &lt;span style=&#34;color: #000000&#34;&gt;$posts&lt;/span&gt;[] &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;BlogPost&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$title&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$teaser&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$author&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$randomString&lt;/span&gt;(&lt;span style=&#34;color: #1C01CE&#34;&gt;50&lt;/span&gt;));
+
+&lt;pre&gt;&lt;code&gt;&amp;lt;?php
+$posts = array();
+for($i=0;$i&amp;lt;30;$i++) {
+    $posts[] = new BlogPost($title, $teaser, $author, $randomString(50));
 }
-&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+?&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;The results are more interesting: on my machine igbinary takes about 95 milliseconds while serialize needs only 41 milliseconds. Now it&amp;rsquo;s just 2 times slower. But here comes the important part: the resulting size of igbinary is 2385 characters, while serialize is 10467 characters! That&amp;rsquo;s about 5 times smaller. Note that this gap increases the larger your PHP object gets (not in terms of long character strings but speaking of complexity like methods).&lt;/p&gt;
 
 &lt;p&gt;Note that the igbinary docs say you should set &lt;code&gt;igbinary.compact_strings&lt;/code&gt; to &lt;code&gt;Off&lt;/code&gt; to increase performance, but there was no real measurable difference in my testings.&lt;/p&gt;
 
 &lt;p&gt;There is one more thing we haven&amp;rsquo;t compared: deserializing of previously serialized objects. We can take the same code from above, use the serialized part as input and measure the timings once again (not that we don&amp;rsquo;t need to measure the size of the resulting object because we&amp;rsquo;re creating a &amp;ldquo;live&amp;rdquo; object again):&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$posts&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;array&lt;/span&gt;();
-&lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$i=&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;;&lt;span style=&#34;color: #000000&#34;&gt;$i&amp;lt;&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;30&lt;/span&gt;;&lt;span style=&#34;color: #000000&#34;&gt;$i++&lt;/span&gt;) {
-    &lt;span style=&#34;color: #000000&#34;&gt;$posts&lt;/span&gt;[] &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;BlogPost&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$title&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$teaser&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$author&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$randomString&lt;/span&gt;(&lt;span style=&#34;color: #1C01CE&#34;&gt;50&lt;/span&gt;));
+
+&lt;pre&gt;&lt;code&gt;&amp;lt;?php
+$posts = array();
+for($i=0;$i&amp;lt;30;$i++) {
+    $posts[] = new BlogPost($title, $teaser, $author, $randomString(50));
 }
 
-&lt;span style=&#34;color: #000000&#34;&gt;$serializedIgbinary&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;igbinary_serialize&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$posts&lt;/span&gt;);
-&lt;span style=&#34;color: #000000&#34;&gt;$serializedClassic&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;serialize&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$posts&lt;/span&gt;);
+$serializedIgbinary = igbinary_serialize($posts);
+$serializedClassic = serialize($posts);
 
-&lt;span style=&#34;color: #000000&#34;&gt;$iterations&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1000&lt;/span&gt;;
-&lt;span style=&#34;color: #000000&#34;&gt;$start&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;microtime&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;);
-&lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$i=&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;;&lt;span style=&#34;color: #000000&#34;&gt;$i&amp;lt;$iterations&lt;/span&gt;;&lt;span style=&#34;color: #000000&#34;&gt;$i++&lt;/span&gt;) {
-    &lt;span style=&#34;color: #000000&#34;&gt;$unserialized&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;igbinary_unserialize&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$serializedIgbinary&lt;/span&gt;);
+$iterations = 1000;
+$start = microtime(true);
+for($i=0;$i&amp;lt;$iterations;$i++) {
+    $unserialized = igbinary_unserialize($serializedIgbinary);
 }
-&lt;span style=&#34;color: #000000&#34;&gt;$end&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;microtime&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;);
+$end = microtime(true);
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;echo&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;$end&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$start&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1000&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Milliseconds\n&amp;quot;&lt;/span&gt;;
+echo ($end - $start) * 1000 . &amp;quot;Milliseconds\n&amp;quot;;
 
-&lt;span style=&#34;color: #000000&#34;&gt;$start&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;microtime&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;);
-&lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$i=&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;;&lt;span style=&#34;color: #000000&#34;&gt;$i&amp;lt;$iterations&lt;/span&gt;;&lt;span style=&#34;color: #000000&#34;&gt;$i++&lt;/span&gt;) {
-    &lt;span style=&#34;color: #000000&#34;&gt;$unserialized&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;unserialize&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$serializedClassic&lt;/span&gt;);
+$start = microtime(true);
+for($i=0;$i&amp;lt;$iterations;$i++) {
+    $unserialized = unserialize($serializedClassic);
 }
-&lt;span style=&#34;color: #000000&#34;&gt;$end&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;microtime&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;);
+$end = microtime(true);
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;echo&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;$end&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$start&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1000&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Milliseconds\n&amp;quot;&lt;/span&gt;;
-&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+echo ($end - $start) * 1000 . &amp;quot;Milliseconds\n&amp;quot;;
+?&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;This is giving us very interesting results: igbinary takes 65 milliseconds while classic unserialize needs 82 milliseconds! So igbinary is faster here. This is pretty good news, because in practice you will need to unserialize (speak &amp;ldquo;fetch from cache&amp;rdquo;) much more often than to serialize (speak &amp;ldquo;store in cache&amp;rdquo;). That&amp;rsquo;s the whole point of a cache.&lt;/p&gt;
 
@@ -215,58 +225,61 @@ igbinary
 &lt;p&gt;Finally, when you are storing very long strings in objects, both have pretty much the same overhead (because you can&amp;rsquo;t &amp;ldquo;compact&amp;rdquo; this long string very well). One workaround may be to compress and decompress the string as needed, using a mixture of gzip and base64 encoding. When serializing PHP objects, you can use the &lt;a href=&#34;http://www.php.net/manual/en/language.oop5.magic.php#object.sleep&#34;&gt;__sleep&lt;/a&gt; and &lt;a href=&#34;http://www.php.net/manual/en/language.oop5.magic.php#object.wakeup&#34;&gt;__wakeup&lt;/a&gt; methods to perform these kind of transformations.&lt;/p&gt;
 
 &lt;p&gt;Adding these two methods to our &lt;code&gt;BlogPost&lt;/code&gt; class results in a 20% saving when using the 10k random string again:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
-&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;__sleep&lt;/span&gt;() {
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;body&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;gzdeflate&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;body&lt;/span&gt;, &lt;span style=&#34;color: #1C01CE&#34;&gt;9&lt;/span&gt;);
-    &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;title&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;teaser&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;author&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;body&amp;#39;&lt;/span&gt;);
+
+&lt;pre&gt;&lt;code&gt;&amp;lt;?php
+public function __sleep() {
+    $this-&amp;gt;body = gzdeflate($this-&amp;gt;body, 9);
+    return array(&#39;title&#39;, &#39;teaser&#39;, &#39;author&#39;, &#39;body&#39;);
 }
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;__wakeup&lt;/span&gt;() {
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;body&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;gzinflate&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;body&lt;/span&gt;);
+public function __wakeup() {
+    $this-&amp;gt;body = gzinflate($this-&amp;gt;body);
 }
-&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+?&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Note that compressing takes time too, so measure if it makes sense in your case and the space savings are good enough. You also need the &lt;code&gt;zblib&lt;/code&gt; extension to make this work properly.&lt;/p&gt;
 
-&lt;h2 id=&#34;transcoding-on-top-of-json:1588be44ecdc8dc6ecb17e0152c89754&#34;&gt;Transcoding on top of JSON&lt;/h2&gt;
+&lt;h2 id=&#34;transcoding-on-top-of-json&#34;&gt;Transcoding on top of JSON&lt;/h2&gt;
 
 &lt;p&gt;First of all, JSON has not the same characteristics as serialization. This is just because JSON only supports a subset of the available data types that PHP supports and therefore encoding/decoding takes some extra steps on the application side. So why are we comparing it here? Well, JSON is used very often for storing data in caches. Not only is it human readable, it can also be used in combination with other languages and applications. Using JSON allows you to store cache information from a Java backend and use it in your PHP application. That doesn&amp;rsquo;t work with traditional serialization approaches.&lt;/p&gt;
 
 &lt;p&gt;If you need a primer on JSON and PHP, &lt;a href=&#34;http://nitschinger.at/Handling-JSON-like-a-boss-in-PHP&#34;&gt;read&lt;/a&gt; my other article first. PHP allows you to transcode all objects (except resources) through the &lt;a href=&#34;http://www.php.net/manual/en/function.json-encode.php&#34;&gt;json_encode&lt;/a&gt; and &lt;a href=&#34;http://www.php.net/manual/en/function.json-decode.php&#34;&gt;json_decode&lt;/a&gt; functions. Private and protected variables are not converted, so we either need to make them public or provide a custom method that exports a storable object structure. While we&amp;rsquo;re at it, we can provide a static factory method that initializes our BlogPost from the returned JSON string:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
-&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;toJson&lt;/span&gt;() {
-    &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;array&lt;/span&gt;(
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;title&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;title&lt;/span&gt;,
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;teaser&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;teaser&lt;/span&gt;,
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;author&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;author&lt;/span&gt;,
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;body&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;body&lt;/span&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;lt;?php
+public function toJson() {
+    return array(
+        &#39;title&#39; =&amp;gt; $this-&amp;gt;title,
+        &#39;teaser&#39; =&amp;gt; $this-&amp;gt;teaser,
+        &#39;author&#39; =&amp;gt; $this-&amp;gt;author,
+        &#39;body&#39; =&amp;gt; $this-&amp;gt;body
     );
 }
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;fromJson&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$json&lt;/span&gt;) {
-    &lt;span style=&#34;color: #000000&#34;&gt;$d&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;json_decode&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$json&lt;/span&gt;, &lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;);
-    &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;BlogPost&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$d&lt;/span&gt;[&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;title&amp;#39;&lt;/span&gt;], &lt;span style=&#34;color: #000000&#34;&gt;$d&lt;/span&gt;[&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;teaser&amp;#39;&lt;/span&gt;], &lt;span style=&#34;color: #000000&#34;&gt;$d&lt;/span&gt;[&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;author&amp;#39;&lt;/span&gt;], &lt;span style=&#34;color: #000000&#34;&gt;$d&lt;/span&gt;[&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;body&amp;#39;&lt;/span&gt;]);
+public static function fromJson($json) {
+    $d = json_decode($json, true);
+    return new BlogPost($d[&#39;title&#39;], $d[&#39;teaser&#39;], $d[&#39;author&#39;], $d[&#39;body&#39;]);
 }
-&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+?&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Note that the &lt;code&gt;toJson()&lt;/code&gt; method returns a simple representation of the object, which is much less complicated than a full serialization approach. Let&amp;rsquo;s run our benchmark again:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$post&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;BlogPost&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$title&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$teaser&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$author&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$randomString&lt;/span&gt;(&lt;span style=&#34;color: #1C01CE&#34;&gt;10000&lt;/span&gt;));
-&lt;span style=&#34;color: #000000&#34;&gt;$post&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$post-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;toJson&lt;/span&gt;();
 
-&lt;span style=&#34;color: #000000&#34;&gt;$iterations&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;10000&lt;/span&gt;;
-&lt;span style=&#34;color: #000000&#34;&gt;$start&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;microtime&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;);
-&lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$i=&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;;&lt;span style=&#34;color: #000000&#34;&gt;$i&amp;lt;$iterations&lt;/span&gt;;&lt;span style=&#34;color: #000000&#34;&gt;$i++&lt;/span&gt;) {
-    &lt;span style=&#34;color: #000000&#34;&gt;$encoded&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;json_encode&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$post&lt;/span&gt;);
+&lt;pre&gt;&lt;code&gt;&amp;lt;?php
+$post = new BlogPost($title, $teaser, $author, $randomString(10000));
+$post = $post-&amp;gt;toJson();
+
+$iterations = 10000;
+$start = microtime(true);
+for($i=0;$i&amp;lt;$iterations;$i++) {
+    $encoded = json_encode($post);
 }
-&lt;span style=&#34;color: #A90D91&#34;&gt;echo&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Size: &amp;quot;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;strlen&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$serialized&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;\n&amp;quot;&lt;/span&gt;;
-&lt;span style=&#34;color: #000000&#34;&gt;$end&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;microtime&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;);
+echo &amp;quot;Size: &amp;quot; . strlen($serialized) . &amp;quot;\n&amp;quot;;
+$end = microtime(true);
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;echo&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;$end&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$start&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1000&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Milliseconds\n&amp;quot;&lt;/span&gt;;
-&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+echo ($end - $start) * 1000 . &amp;quot;Milliseconds\n&amp;quot;;
+?&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;On my machine it takes 1.7 seconds (!) to complete the encoding. The resulting object size is 10196 bytes which is comparable to our earlier measurements (again, the large value dominates here). Testing it against complex objects is not interesting because we can&amp;rsquo;t restore them anyway without further modifications. Running &lt;code&gt;json_decode&lt;/code&gt; on the encoded object also takes around 1.5 seconds, so there is no major difference here.&lt;/p&gt;
 
@@ -276,7 +289,7 @@ igbinary
 
 &lt;p&gt;Edit2: another reader pointed out that naming a method &lt;code&gt;toJson()&lt;/code&gt; which does not return JSON but an array is misleading. I agree, so if you adapt this approach in your environment choose a better name like &lt;code&gt;prepareForJson()&lt;/code&gt;, &lt;code&gt;toArray()&lt;/code&gt; or use the &lt;code&gt;JsonSerializable&lt;/code&gt; Interface as shown above.&lt;/p&gt;
 
-&lt;h2 id=&#34;conclusion:1588be44ecdc8dc6ecb17e0152c89754&#34;&gt;Conclusion&lt;/h2&gt;
+&lt;h2 id=&#34;conclusion&#34;&gt;Conclusion&lt;/h2&gt;
 
 &lt;p&gt;After running these microbenchmarks, my conclusion is that when you need object serialization, go with igbinary. It provides good enough serialization performance and huge wins on object sizes. Decoding performance is also much better than out-ouf-the-box serialization. If you need interoperability with other applications or if you don&amp;rsquo;t want to limit yourself to serialized PHP blobs, go with JSON. JSON requires much more hand wiring but you&amp;rsquo;ll gain a lot of flexibility.&lt;/p&gt;
 </description>
@@ -290,7 +303,7 @@ igbinary
       <guid>http://nitschinger.at/Caching-Doctrine-Entities-with-Couchbase/</guid>
       <description>
 
-&lt;h2 id=&#34;motivation:cf67ea8c1c378f2ec2474b9e0692d877&#34;&gt;Motivation&lt;/h2&gt;
+&lt;h2 id=&#34;motivation&#34;&gt;Motivation&lt;/h2&gt;
 
 &lt;p&gt;As part of our ongoing efforts to make Couchbase more integrated with frameworks and libraries, we added caching support for the &lt;a href=&#34;http://www.doctrine-project.org/&#34;&gt;Doctrine ORM&lt;/a&gt;. Recently, the pull request has been merged into the master branch and is scheduled to be published along with the &lt;a href=&#34;http://doctrine-project.org/jira/browse/DCOM/fixforversion/10327&#34;&gt;2.4&lt;/a&gt; release.&lt;/p&gt;
 
@@ -298,72 +311,78 @@ igbinary
 
 &lt;p&gt;Since 2.4 has not been released yet, we need to work against the &lt;code&gt;2.4.x-dev&lt;/code&gt; branch. We&amp;rsquo;ll be using &lt;a href=&#34;http://getcomposer.org/&#34;&gt;Composer&lt;/a&gt; to fetch our dependencies, so just need change the version number if you want to pin it down to 2.4 later.&lt;/p&gt;
 
-&lt;h2 id=&#34;simple-caching:cf67ea8c1c378f2ec2474b9e0692d877&#34;&gt;Simple Caching&lt;/h2&gt;
+&lt;h2 id=&#34;simple-caching&#34;&gt;Simple Caching&lt;/h2&gt;
 
 &lt;p&gt;Our first example shows how the caching API can be used directly. If you are familiar with the Couchbase API, you may think that it&amp;rsquo;s more or less just a different API with the same (and maybe less) semantics, but the point is that it uses the Doctrine Cache API interface and as a result you can switch between different caching implementations very easily.&lt;/p&gt;
 
 &lt;p&gt;Create a directory called &lt;code&gt;couchbase-doctrine-simple&lt;/code&gt; with the following &lt;code&gt;composer.json&lt;/code&gt; inside:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;{
+
+&lt;pre&gt;&lt;code&gt;{
     &amp;quot;require&amp;quot;: {
         &amp;quot;doctrine/common&amp;quot;: &amp;quot;2.4.x-dev&amp;quot;,
         &amp;quot;ext-couchbase&amp;quot;: &amp;quot;1.1.x&amp;quot;
     }
 }
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;This installs the &lt;a href=&#34;https://packagist.org/packages/doctrine/common&#34;&gt;doctrine/common&lt;/a&gt; package and also makes sure that we have the &lt;code&gt;couchbase.so&lt;/code&gt; extension in place. If you haven&amp;rsquo;t installed the Couchbase PHP extension already, head over to the &lt;a href=&#34;http://www.couchbase.com/develop/php/current&#34;&gt;official website&lt;/a&gt; and install it based on the tutorial and the docs.&lt;/p&gt;
 
 &lt;p&gt;Create a &lt;code&gt;index.php&lt;/code&gt; with the following content (we&amp;rsquo;ll break up the code afterwards):&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
-&lt;span style=&#34;color: #177500&#34;&gt;// 0: Composer Autoloader&lt;/span&gt;
-&lt;span style=&#34;color: #A90D91&#34;&gt;require&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;vendor/autoload.php&amp;#39;&lt;/span&gt;;
 
-&lt;span style=&#34;color: #177500&#34;&gt;// 1: Open the Couchbase Connection&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$couchbase&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Couchbase&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;127.0.0.1&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;default&amp;quot;&lt;/span&gt;);
+&lt;pre&gt;&lt;code&gt;&amp;lt;?php
+// 0: Composer Autoloader
+require &#39;vendor/autoload.php&#39;;
 
-&lt;span style=&#34;color: #177500&#34;&gt;// 2: Instantiate the Driver &amp;amp; Inject the Connection&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$cacheDriver&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;\Doctrine\Common\Cache\CouchbaseCache&lt;/span&gt;();
-&lt;span style=&#34;color: #000000&#34;&gt;$cacheDriver-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;setCouchbase&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$couchbase&lt;/span&gt;);
+// 1: Open the Couchbase Connection
+$couchbase = new Couchbase(&amp;quot;127.0.0.1&amp;quot;, &amp;quot;&amp;quot;, &amp;quot;&amp;quot;, &amp;quot;default&amp;quot;);
 
-&lt;span style=&#34;color: #177500&#34;&gt;// 3: Execute your commands!&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;my-cache-item&amp;quot;&lt;/span&gt;;
+// 2: Instantiate the Driver &amp;amp; Inject the Connection
+$cacheDriver = new \Doctrine\Common\Cache\CouchbaseCache();
+$cacheDriver-&amp;gt;setCouchbase($couchbase);
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;!$cacheDriver-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;contains&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt;)) {
-    &lt;span style=&#34;color: #000000&#34;&gt;$cacheDriver-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;save&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;my_data&amp;quot;&lt;/span&gt;);
-} &lt;span style=&#34;color: #A90D91&#34;&gt;else&lt;/span&gt; {
-    &lt;span style=&#34;color: #A90D91&#34;&gt;echo&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$cacheDriver-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;fetch&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt;);
+// 3: Execute your commands!
+$key = &amp;quot;my-cache-item&amp;quot;;
+
+if(!$cacheDriver-&amp;gt;contains($key)) {
+    $cacheDriver-&amp;gt;save($key, &amp;quot;my_data&amp;quot;);
+} else {
+    echo $cacheDriver-&amp;gt;fetch($key);
 }
-&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+?&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;First, we need to bootstrap the composer autoloader so we don&amp;rsquo;t have to write all &lt;code&gt;require&lt;/code&gt; statements on our own. The next thing we need to do is actually connect to the Couchbase cluster:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;// 1: Open the Couchbase Connection
-$&lt;span style=&#34;color: #000000&#34;&gt;couchbase&lt;/span&gt; = new Couchbase(&amp;quot;127.0.0.1&amp;quot;, &amp;quot;&amp;quot;, &amp;quot;&amp;quot;, &amp;quot;default&amp;quot;);
-&lt;/pre&gt;&lt;/div&gt;
+
+&lt;pre&gt;&lt;code&gt;// 1: Open the Couchbase Connection
+$couchbase = new Couchbase(&amp;quot;127.0.0.1&amp;quot;, &amp;quot;&amp;quot;, &amp;quot;&amp;quot;, &amp;quot;default&amp;quot;);
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Here, we&amp;rsquo;re connecting to a node in the cluster which points at &lt;code&gt;localhost&lt;/code&gt;, but you can pass in an array of nodes as well. We connect to the &lt;code&gt;default&lt;/code&gt; bucket, which has no password. Now that we have our connection established, we can instantiate the cache driver and inject our Couchbase client:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;// 2: Instantiate the Driver &amp;amp; Inject the Connection
-$&lt;span style=&#34;color: #000000&#34;&gt;cacheDriver&lt;/span&gt; = new \Doctrine\Common\Cache\CouchbaseCache();
-$&lt;span style=&#34;color: #000000&#34;&gt;cacheDriver&lt;/span&gt;-&amp;gt;setCouchbase($&lt;span style=&#34;color: #000000&#34;&gt;couchbase&lt;/span&gt;);
-&lt;/pre&gt;&lt;/div&gt;
+
+&lt;pre&gt;&lt;code&gt;// 2: Instantiate the Driver &amp;amp; Inject the Connection
+$cacheDriver = new \Doctrine\Common\Cache\CouchbaseCache();
+$cacheDriver-&amp;gt;setCouchbase($couchbase);
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;From here on, the API is the same for all cache drivers. The following code checks if the cache contains a key. If it is present, it prints out the document but if it isn&amp;rsquo;t it creates a new one. This is a very simple example but shows how you can start to use Couchbase caching in your own projects with just a few lines of bootstrapping!&lt;/p&gt;
 
 &lt;p&gt;Aside from these three methods, there is also a &lt;code&gt;delete&lt;/code&gt; method available. Finally, you can pass an optional third param on &lt;code&gt;save&lt;/code&gt; with a &lt;code&gt;$lifeTime&lt;/code&gt; so that the cache item vanishes automatically.&lt;/p&gt;
 
 &lt;p&gt;Since Couchbase Server doesn&amp;rsquo;t care what you store, you can also save and fetch any kind of datatype (aside from resources):&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;$&lt;span style=&#34;color: #000000&#34;&gt;cacheDriver&lt;/span&gt;-&amp;gt;save($&lt;span style=&#34;color: #000000&#34;&gt;key&lt;/span&gt;, array(&amp;#39;foo&amp;#39; =&amp;gt; &amp;#39;bar&amp;#39;));
-var_dump($&lt;span style=&#34;color: #000000&#34;&gt;cacheDriver&lt;/span&gt;-&amp;gt;fetch($&lt;span style=&#34;color: #000000&#34;&gt;key&lt;/span&gt;));
-&lt;/pre&gt;&lt;/div&gt;
+
+&lt;pre&gt;&lt;code&gt;$cacheDriver-&amp;gt;save($key, array(&#39;foo&#39; =&amp;gt; &#39;bar&#39;));
+var_dump($cacheDriver-&amp;gt;fetch($key));
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Note that when you use the driver at this level, try to store JSON strings when you can (use &lt;code&gt;json_encode&lt;/code&gt;/&lt;code&gt;json_decode&lt;/code&gt; on your datastructures) This way you can take advantage of the brand new view engine inside Couchbase Server 2.0. You can always just store serialized objects as well (like we need to do with ORM integration) since for Couchbase Server it&amp;rsquo;s just a byte stream.&lt;/p&gt;
 
 &lt;p&gt;We can now build on this foundation and see how this works with ORM integration.&lt;/p&gt;
 
-&lt;h2 id=&#34;orm-integration:cf67ea8c1c378f2ec2474b9e0692d877&#34;&gt;ORM Integration&lt;/h2&gt;
+&lt;h2 id=&#34;orm-integration&#34;&gt;ORM Integration&lt;/h2&gt;
 
 &lt;p&gt;Create a new directory called &lt;code&gt;couchbase-doctrine-orm&lt;/code&gt; with the following &lt;code&gt;composer.json&lt;/code&gt;:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;{
+
+&lt;pre&gt;&lt;code&gt;{
     &amp;quot;require&amp;quot;: {
         &amp;quot;doctrine/orm&amp;quot;: &amp;quot;2.4.x-dev&amp;quot;,
         &amp;quot;doctrine/dbal&amp;quot;: &amp;quot;2.4.x-dev&amp;quot;,
@@ -376,138 +395,144 @@ var_dump($&lt;span style=&#34;color: #000000&#34;&gt;cacheDriver&lt;/span&gt;-&a
         }
     }
 }
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;This time our &lt;code&gt;composer.json&lt;/code&gt; file is a little bit longer, because we need to define all of our dependencies by hand (since we don&amp;rsquo;t want to work against the stable release). Since we need to define Doctrine Entities we pass the composer autoloader the custom directory (&lt;code&gt;src/&lt;/code&gt;).&lt;/p&gt;
 
 &lt;p&gt;The next thing we need is our actual entity that we want to manage through Doctrine. Go ahead and create a &lt;code&gt;Person.php&lt;/code&gt; file inside the &lt;code&gt;src/Entities&lt;/code&gt; directory with the following content:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;namespace&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Entities&lt;/span&gt;;
+&lt;pre&gt;&lt;code&gt;&amp;lt;?php
 
-&lt;span style=&#34;color: #C41A16&#34;&gt;/** @Entity */&lt;/span&gt;
-&lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;Person&lt;/span&gt; {
+namespace Entities;
 
-    &lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
-&lt;span style=&#34;color: #C41A16&#34;&gt;     * @Id @Column(type=&amp;quot;integer&amp;quot;) @GeneratedValue(strategy=&amp;quot;AUTO&amp;quot;)&lt;/span&gt;
-&lt;span style=&#34;color: #C41A16&#34;&gt;     */&lt;/span&gt;
-    &lt;span style=&#34;color: #A90D91&#34;&gt;private&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$id&lt;/span&gt;;
+/** @Entity */
+class Person {
 
-    &lt;span style=&#34;color: #C41A16&#34;&gt;/** @Column(type=&amp;quot;string&amp;quot;) */&lt;/span&gt;
-    &lt;span style=&#34;color: #A90D91&#34;&gt;private&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$firstname&lt;/span&gt;;
+    /**
+     * @Id @Column(type=&amp;quot;integer&amp;quot;) @GeneratedValue(strategy=&amp;quot;AUTO&amp;quot;)
+     */
+    private $id;
 
-    &lt;span style=&#34;color: #C41A16&#34;&gt;/** @Column(type=&amp;quot;string&amp;quot;) */&lt;/span&gt;
-    &lt;span style=&#34;color: #A90D91&#34;&gt;private&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$lastname&lt;/span&gt;;
+    /** @Column(type=&amp;quot;string&amp;quot;) */
+    private $firstname;
 
-    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;setFirstname&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$firstname&lt;/span&gt;) {
-        &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;firstname&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$firstname&lt;/span&gt;;
+    /** @Column(type=&amp;quot;string&amp;quot;) */
+    private $lastname;
+
+    public function setFirstname($firstname) {
+        $this-&amp;gt;firstname = $firstname;
     }
 
-    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;getFirstname&lt;/span&gt;() {
-        &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;firstname&lt;/span&gt;;
+    public function getFirstname() {
+        return $this-&amp;gt;firstname;
     }
 
-    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;setLastname&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$lastname&lt;/span&gt;) {
-        &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;lastname&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$lastname&lt;/span&gt;;
+    public function setLastname($lastname) {
+        $this-&amp;gt;lastname = $lastname;
     }
 
-    &lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;getLastname&lt;/span&gt;() {
-        &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;lastname&lt;/span&gt;;
+    public function getLastname() {
+        return $this-&amp;gt;lastname;
     }
 
 }
 
-&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+?&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;This is a very simple Doctrine Entity that has some properties and also a autogenerated &lt;code&gt;ID&lt;/code&gt; field. I&amp;rsquo;m going to use &lt;a href=&#34;http://www.sqlite.org/&#34;&gt;SQLite&lt;/a&gt; in the following example, but feel free to use MySQL or any other relational database that you have available.&lt;/p&gt;
 
 &lt;p&gt;To wire everything together, we&amp;rsquo;re going to create a &lt;code&gt;index.php&lt;/code&gt; file in the root directory of the project. Again, here is the full content and we&amp;rsquo;re going to break it apart afterwards:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;&amp;lt;?php&lt;/span&gt;
-&lt;span style=&#34;color: #177500&#34;&gt;// Composer autoloader.&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$loader&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;require&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;vendor/autoload.php&amp;#39;&lt;/span&gt;;
 
-&lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
-&lt;span style=&#34;color: #C41A16&#34;&gt; * Initialize Couchbase &amp;amp; the Cache.&lt;/span&gt;
-&lt;span style=&#34;color: #C41A16&#34;&gt; */&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$couchbase&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Couchbase&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;127.0.0.1&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;default&amp;quot;&lt;/span&gt;);
-&lt;span style=&#34;color: #000000&#34;&gt;$cacheDriver&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;\Doctrine\Common\Cache\CouchbaseCache&lt;/span&gt;();
-&lt;span style=&#34;color: #000000&#34;&gt;$cacheDriver-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;setCouchbase&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$couchbase&lt;/span&gt;);
+&lt;pre&gt;&lt;code&gt;&amp;lt;?php
+// Composer autoloader.
+$loader = require &#39;vendor/autoload.php&#39;;
+
+/**
+ * Initialize Couchbase &amp;amp; the Cache.
+ */
+$couchbase = new Couchbase(&amp;quot;127.0.0.1&amp;quot;, &amp;quot;&amp;quot;, &amp;quot;&amp;quot;, &amp;quot;default&amp;quot;);
+$cacheDriver = new \Doctrine\Common\Cache\CouchbaseCache();
+$cacheDriver-&amp;gt;setCouchbase($couchbase);
 
 
-&lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
-&lt;span style=&#34;color: #C41A16&#34;&gt; * Initialize the Entity Manager.&lt;/span&gt;
-&lt;span style=&#34;color: #C41A16&#34;&gt; */&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$paths&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;__DIR__&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/src/Entities/&amp;#39;&lt;/span&gt;);
-&lt;span style=&#34;color: #000000&#34;&gt;$isDevMode&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;;
-&lt;span style=&#34;color: #000000&#34;&gt;$dbParams&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;array&lt;/span&gt;(
-    &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;driver&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;pdo_sqlite&amp;#39;&lt;/span&gt;,
-    &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;user&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;root&amp;#39;&lt;/span&gt;,
-    &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;password&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;&amp;#39;&lt;/span&gt;,
-    &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;path&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;__DIR__&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/cbexample.sqlite&amp;#39;&lt;/span&gt;
+/**
+ * Initialize the Entity Manager.
+ */
+$paths = array(__DIR__ . &#39;/src/Entities/&#39;);
+$isDevMode = true;
+$dbParams = array(
+    &#39;driver&#39; =&amp;gt; &#39;pdo_sqlite&#39;,
+    &#39;user&#39; =&amp;gt; &#39;root&#39;,
+    &#39;password&#39; =&amp;gt; &#39;&#39;,
+    &#39;path&#39; =&amp;gt; __DIR__ . &#39;/cbexample.sqlite&#39;
 );
 
-&lt;span style=&#34;color: #000000&#34;&gt;$config&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;\Doctrine\ORM\Tools\Setup::&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;createAnnotationMetadataConfiguration&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$paths&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$isDevMode&lt;/span&gt;, &lt;span style=&#34;color: #A90D91&#34;&gt;null&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$cacheDriver&lt;/span&gt;);
-&lt;span style=&#34;color: #000000&#34;&gt;$em&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;\Doctrine\ORM\EntityManager::&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;create&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$dbParams&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$config&lt;/span&gt;);
+$config = \Doctrine\ORM\Tools\Setup::createAnnotationMetadataConfiguration($paths, $isDevMode, null, $cacheDriver);
+$em = \Doctrine\ORM\EntityManager::create($dbParams, $config);
 
-&lt;span style=&#34;color: #C41A16&#34;&gt;/**&lt;/span&gt;
-&lt;span style=&#34;color: #C41A16&#34;&gt; * Work with our Entities.&lt;/span&gt;
-&lt;span style=&#34;color: #C41A16&#34;&gt; */&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$person&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;\Entities\Person&lt;/span&gt;();
-&lt;span style=&#34;color: #000000&#34;&gt;$person-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;setFirstname&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Michael&amp;quot;&lt;/span&gt;);
-&lt;span style=&#34;color: #000000&#34;&gt;$person-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;setLastname&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Nitschinger&amp;quot;&lt;/span&gt;);
+/**
+ * Work with our Entities.
+ */
+$person = new \Entities\Person();
+$person-&amp;gt;setFirstname(&amp;quot;Michael&amp;quot;);
+$person-&amp;gt;setLastname(&amp;quot;Nitschinger&amp;quot;);
 
-&lt;span style=&#34;color: #000000&#34;&gt;$em-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;persist&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$person&lt;/span&gt;);
-&lt;span style=&#34;color: #000000&#34;&gt;$em-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;flush&lt;/span&gt;();
+$em-&amp;gt;persist($person);
+$em-&amp;gt;flush();
 
-&lt;span style=&#34;color: #177500&#34;&gt;// Query with Result Cache&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$query&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$em-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;createQuery&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;select p from Entities\Person p&amp;#39;&lt;/span&gt;);
-&lt;span style=&#34;color: #000000&#34;&gt;$query-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;useResultCache&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;true&lt;/span&gt;);
-&lt;span style=&#34;color: #000000&#34;&gt;$results&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$query-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;getResult&lt;/span&gt;();
+// Query with Result Cache
+$query = $em-&amp;gt;createQuery(&#39;select p from Entities\Person p&#39;);
+$query-&amp;gt;useResultCache(true);
+$results = $query-&amp;gt;getResult();
 
-&lt;span style=&#34;color: #633820&#34;&gt;?&amp;gt;&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+?&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Since this may be a lot to grasp, let&amp;rsquo;s break it into smaller sized chunks.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;$&lt;span style=&#34;color: #000000&#34;&gt;couchbase&lt;/span&gt; = new Couchbase(&amp;quot;127.0.0.1&amp;quot;, &amp;quot;&amp;quot;, &amp;quot;&amp;quot;, &amp;quot;default&amp;quot;);
-$&lt;span style=&#34;color: #000000&#34;&gt;cacheDriver&lt;/span&gt; = new \Doctrine\Common\Cache\CouchbaseCache();
-$&lt;span style=&#34;color: #000000&#34;&gt;cacheDriver&lt;/span&gt;-&amp;gt;setCouchbase($&lt;span style=&#34;color: #000000&#34;&gt;couchbase&lt;/span&gt;);
-&lt;/pre&gt;&lt;/div&gt;
+
+&lt;pre&gt;&lt;code&gt;$couchbase = new Couchbase(&amp;quot;127.0.0.1&amp;quot;, &amp;quot;&amp;quot;, &amp;quot;&amp;quot;, &amp;quot;default&amp;quot;);
+$cacheDriver = new \Doctrine\Common\Cache\CouchbaseCache();
+$cacheDriver-&amp;gt;setCouchbase($couchbase);
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;After our bootstrapping the autoloader, we&amp;rsquo;re initializing the cache driver. You already know what this means because we&amp;rsquo;ve used the same code in the simple example before.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$paths&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array(__DIR__&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/src/Entities/&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$isDevMode&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;true;&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$dbParams&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array(&lt;/span&gt;
-    &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;driver&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;pdo_sqlite&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt;
-    &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;user&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;root&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt;
-    &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;password&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt;
-    &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;path&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;__DIR__&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/cbexample.sqlite&amp;#39;&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
 
-&lt;span style=&#34;color: #000000&#34;&gt;$config&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;\Doctrine\ORM\Tools\Setup::createAnnotationMetadataConfiguration($paths,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$isDevMode,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;null,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$cacheDriver);&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;$em&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;\Doctrine\ORM\EntityManager::create($dbParams,&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$config);&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+&lt;pre&gt;&lt;code&gt;$paths = array(__DIR__ . &#39;/src/Entities/&#39;);
+$isDevMode = true;
+$dbParams = array(
+    &#39;driver&#39; =&amp;gt; &#39;pdo_sqlite&#39;,
+    &#39;user&#39; =&amp;gt; &#39;root&#39;,
+    &#39;password&#39; =&amp;gt; &#39;&#39;,
+    &#39;path&#39; =&amp;gt; __DIR__ . &#39;/cbexample.sqlite&#39;
+);
+
+$config = \Doctrine\ORM\Tools\Setup::createAnnotationMetadataConfiguration($paths, $isDevMode, null, $cacheDriver);
+$em = \Doctrine\ORM\EntityManager::create($dbParams, $config);
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;The &lt;code&gt;\Doctrine\ORM\EntityManager&lt;/code&gt; is one of the major building blocks inside Doctrine and needs to be initialized accordingly. Therefore, we need to provide it a valid configuration. Here we&amp;rsquo;re going to use annotations (as seen on the Doctrine Entity, but you can also do it through XML or YAML). We also need to provide our database connection and the path to the entities. The important part here is that we pass the &lt;code&gt;$cacheDriver&lt;/code&gt; to the factory method. This automatically initializes our &lt;code&gt;CouchbaseCache&lt;/code&gt; to be used for all kinds of caching (Query, Metadata and Result caching).&lt;/p&gt;
 
 &lt;p&gt;Now we can go ahead and create a record:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;$&lt;span style=&#34;color: #000000&#34;&gt;person&lt;/span&gt; = new \Entities\Person();
-$&lt;span style=&#34;color: #000000&#34;&gt;person&lt;/span&gt;-&amp;gt;setFirstname(&amp;quot;Michael&amp;quot;);
-$&lt;span style=&#34;color: #000000&#34;&gt;person&lt;/span&gt;-&amp;gt;setLastname(&amp;quot;Nitschinger&amp;quot;);
 
-$&lt;span style=&#34;color: #000000&#34;&gt;em&lt;/span&gt;-&amp;gt;persist($&lt;span style=&#34;color: #000000&#34;&gt;person&lt;/span&gt;);
-$&lt;span style=&#34;color: #000000&#34;&gt;em&lt;/span&gt;-&amp;gt;flush();
-&lt;/pre&gt;&lt;/div&gt;
+&lt;pre&gt;&lt;code&gt;$person = new \Entities\Person();
+$person-&amp;gt;setFirstname(&amp;quot;Michael&amp;quot;);
+$person-&amp;gt;setLastname(&amp;quot;Nitschinger&amp;quot;);
+
+$em-&amp;gt;persist($person);
+$em-&amp;gt;flush();
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Afterwards, we can fetch it back through a query:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;$&lt;span style=&#34;color: #000000&#34;&gt;query&lt;/span&gt; = $&lt;span style=&#34;color: #000000&#34;&gt;em&lt;/span&gt;-&amp;gt;createQuery(&amp;#39;select p from Entities\Person p&amp;#39;);
-$&lt;span style=&#34;color: #000000&#34;&gt;query&lt;/span&gt;-&amp;gt;useResultCache(true);
-$&lt;span style=&#34;color: #000000&#34;&gt;results&lt;/span&gt; = $&lt;span style=&#34;color: #000000&#34;&gt;query&lt;/span&gt;-&amp;gt;getResult();
-&lt;/pre&gt;&lt;/div&gt;
+
+&lt;pre&gt;&lt;code&gt;$query = $em-&amp;gt;createQuery(&#39;select p from Entities\Person p&#39;);
+$query-&amp;gt;useResultCache(true);
+$results = $query-&amp;gt;getResult();
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Note that we explicitely tell it to cache this query result for us (by default, result caching won&amp;rsquo;t be used). If open the browser and point it to your Couchbase Server 2.0 management UI, you can see that Doctrine did create lots of documents behind the scenes. These are subsequently used to boost your application performance.&lt;/p&gt;
 
-&lt;h2 id=&#34;summary:cf67ea8c1c378f2ec2474b9e0692d877&#34;&gt;Summary&lt;/h2&gt;
+&lt;h2 id=&#34;summary&#34;&gt;Summary&lt;/h2&gt;
 
 &lt;p&gt;As you can see, using Couchbase as a Cache for Doctrine is not hard. You just need to initialize it and pass it into the configuration. From this point on, everything happens behind the scenes. And don&amp;rsquo;t forget that you not only get exceptional performance, but also persistence, scalability and all the cool stuff that Couchbase Server provides out of the box.&lt;/p&gt;
 
@@ -522,21 +547,22 @@ $&lt;span style=&#34;color: #000000&#34;&gt;results&lt;/span&gt; = $&lt;span sty
       
       <guid>http://nitschinger.at/Caching-responses-in-Lithium/</guid>
       <description>&lt;p&gt;If you need to cache full &lt;code&gt;Response&lt;/code&gt; objects in Lithium (which means that your controllers don&amp;rsquo;t even get called when there&amp;rsquo;s a cache hit), you can place this in your &lt;code&gt;app/config/bootstrap/cache.php&lt;/code&gt; file (note that this is certainly not &amp;ldquo;production ready&amp;rdquo;, but it should give you a starting point):&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #177500&#34;&gt;/**&lt;/span&gt;
-&lt;span style=&#34;color: #177500&#34;&gt; * Cache full Responses&lt;/span&gt;
-&lt;span style=&#34;color: #177500&#34;&gt; */&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;Dispatcher::applyFilter&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;run&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$self&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$chain&lt;/span&gt;) {
-    &lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;md5&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;LITHIUM_APP_PATH&lt;/span&gt;) . &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;.app.cache.&amp;#39;&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;md5&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;request&amp;#39;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;]&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;url&lt;/span&gt;);
-    &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$cache&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Cache::read&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;default&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt;)) {
-        &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$cache&lt;/span&gt;;
+
+&lt;pre&gt;&lt;code&gt;/**
+ * Cache full Responses
+ */
+Dispatcher::applyFilter(&#39;run&#39;, function($self, $params, $chain) {
+    $key = md5(LITHIUM_APP_PATH) . &#39;.app.cache.&#39;.md5($params[&#39;request&#39;]-&amp;gt;url);
+    if($cache = Cache::read(&#39;default&#39;, $key)) {
+        return $cache;
     }
 
-    &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$chain-&amp;gt;next&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$self&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$params&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$chain&lt;/span&gt;);
+    $result = $chain-&amp;gt;next($self, $params, $chain);
 
-    &lt;span style=&#34;color: #000000&#34;&gt;Cache::write&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;default&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$key&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;+1 day&amp;#39;&lt;/span&gt;);
-    &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$result&lt;/span&gt;;
+    Cache::write(&#39;default&#39;, $key, $result, &#39;+1 day&#39;);
+    return $result;
 });
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;It filters the &lt;code&gt;Dispatcher&lt;/code&gt; and first checks if the &lt;code&gt;Response&lt;/code&gt; object is already stored in the cache. The cache key is based on the requested URL, so if your &lt;code&gt;/&lt;/code&gt; URL points to `&lt;code&gt;/posts/index&lt;/code&gt;, both requests will be cached seperately (you could modify the code snipped so that it talks to the &lt;code&gt;Router&lt;/code&gt; and checks for the corresponding controller/action object and cache on this key).&lt;/p&gt;
 

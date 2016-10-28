@@ -17,7 +17,7 @@
       <guid>http://nitschinger.at/A-Couchbase-Cluster-in-Minutes-with-Vagrant-and-Puppet/</guid>
       <description>
 
-&lt;h2 id=&#34;motivation:01658584694d0b54df263036a63ffc32&#34;&gt;Motivation&lt;/h2&gt;
+&lt;h2 id=&#34;motivation&#34;&gt;Motivation&lt;/h2&gt;
 
 &lt;p&gt;Since I work as part of the engineering team at Couchbase, I need to run my code against a variety of server deployments. We run a multitude of operating systems and software versions, and so do our customers. In order to fix bugs reliably and build new features, it is critical to get a cluster up and running that resembles these deployments as good as possible. I know that I can run all of these combinations on EC2, but the cost for this would be very high and most of the time its overkill.&lt;/p&gt;
 
@@ -25,12 +25,13 @@
 
 &lt;p&gt;This morning I sat down to take a closer look on how these tools can help me to get more productive - and to my huge surprise I got a 4 node Couchbase Server cluster running in less than 30 minutes (with looking up all the configuration details). Since its so easy, I want to share it with you.&lt;/p&gt;
 
-&lt;h2 id=&#34;prerequisites:01658584694d0b54df263036a63ffc32&#34;&gt;Prerequisites&lt;/h2&gt;
+&lt;h2 id=&#34;prerequisites&#34;&gt;Prerequisites&lt;/h2&gt;
 
 &lt;p&gt;Before we can provision our nodes, you need to make sure to have Vagrant and VirtualBox installed. If you use MacOS like me, just download the &lt;code&gt;.dmg&lt;/code&gt; files for both and you&amp;rsquo;re set. Now, create a directory somewhere to store the configuration files - I called mine &amp;lsquo;vagrants&amp;rsquo;.&lt;/p&gt;
 
 &lt;p&gt;In this directory, you need to create a &lt;code&gt;Vagrantfile&lt;/code&gt;. Its like the Vagrants &lt;code&gt;makefile&lt;/code&gt; and it will pick it up to learn how you want to have your nodes provisioned. Note that this doesn&amp;rsquo;t configure the software on top of the OS (like installing Couchbase), this is handled by puppet in a separate step. Here is the full config:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;Vagrant.configure(&amp;quot;2&amp;quot;) do |config|
+
+&lt;pre&gt;&lt;code&gt;Vagrant.configure(&amp;quot;2&amp;quot;) do |config|
 
     # Number of nodes to provision
     numNodes = 4
@@ -62,35 +63,40 @@
     end
 
 end
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;This file is just ruby code that configures Vagrant. Let&amp;rsquo;s go through each directive and see what it does for us.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;# Number of nodes to provision
+
+&lt;pre&gt;&lt;code&gt;# Number of nodes to provision
 numNodes = 4
 
 # IP Address Base for private network
 ipAddrPrefix = &amp;quot;192.168.56.10&amp;quot;
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;You can change these values, I just created them to fit my environment here. Depending on the amount of &lt;code&gt;numNodes&lt;/code&gt; set, VMs will be created. I added a loop down below depending on this setting, so I don&amp;rsquo;t have to duplicate code a lot. The ip address prefix is used to easily determine the (static) IP address for the server. The numbers will be counted upwards incrementally, so you will end up with four servers accessible through &lt;code&gt;192.168.56.101&lt;/code&gt; to &lt;code&gt;192.168.56.104&lt;/code&gt;.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;# Define Number of RAM for each node
+
+&lt;pre&gt;&lt;code&gt;# Define Number of RAM for each node
 config.vm.provider &amp;quot;virtualbox&amp;quot; do |v|
     v.customize [&amp;quot;modifyvm&amp;quot;, :id, &amp;quot;--memory&amp;quot;, 1024]
 end
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;This config block is needed to increase the memory size of the VM. By default its less than that (I believe around 512MB), and I want to have 1 gig of RAM for each. Of course, feel free to tune that value or remove it completely.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;# Provision the server itself with puppet
+
+&lt;pre&gt;&lt;code&gt;# Provision the server itself with puppet
 config.vm.provision :puppet
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Because we&amp;rsquo;ll be using puppet to provision the server software, we need to tell Vagrant to use it.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;# Download the initial box from this url
+
+&lt;pre&gt;&lt;code&gt;# Download the initial box from this url
 config.vm.box_url = &amp;quot;http://files.vagrantup.com/precise64.box&amp;quot;
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Vagrant reuses predefined images so you don&amp;rsquo;t have to reinstall everything from scratch. Here we use a predefined Ubuntu 12.04 64bit box.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;# Provision Config for each of the nodes
+
+&lt;pre&gt;&lt;code&gt;# Provision Config for each of the nodes
 1.upto(numNodes) do |num|
     nodeName = (&amp;quot;node&amp;quot; + num.to_s).to_sym
     config.vm.define nodeName do |node|
@@ -101,21 +107,22 @@ config.vm.box_url = &amp;quot;http://files.vagrantup.com/precise64.box&amp;quot;
         end
     end
 end
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;This code block configures each virtual machine. Given the number of nodes we want to create, for each of them it assigns an IP address and gives it a descriptive name inside Virtualbox. If you want to add server-dependent settings, the &amp;ldquo;node&amp;rdquo; block is the right place for it. Otherwise it will pick the cluster wide settings defined in the &amp;ldquo;config&amp;rdquo; block.&lt;/p&gt;
 
 &lt;p&gt;Now if we would run &lt;code&gt;vagrant up&lt;/code&gt; from the command line in this directory, we&amp;rsquo;d get four Ubuntu machines setup where we could SSH into, but nothing else would be installed. In order to make them do something, we want to install Couchbase Server. Puppet is a system automation software and very good at provisioning systems. Vagrant has amazing support for it, all we need to is create a &lt;code&gt;default.pp&lt;/code&gt; file inside a &lt;code&gt;manifests&lt;/code&gt; directory that looks like this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;exec { &amp;quot;couchbase-server-source&amp;quot;: 
+
+&lt;pre&gt;&lt;code&gt;exec { &amp;quot;couchbase-server-source&amp;quot;: 
     command =&amp;gt; &amp;quot;/usr/bin/wget http://packages.couchbase.com/releases/2.0.1/couchbase-server-enterprise_x86_64_2.0.1.deb&amp;quot;,
     cwd =&amp;gt; &amp;quot;/home/vagrant/&amp;quot;,
     creates =&amp;gt; &amp;quot;/home/vagrant/couchbase-server-enterprise_x86_64_2.0.1.deb&amp;quot;,
-    before =&amp;gt; Package[&amp;#39;couchbase-server&amp;#39;]
+    before =&amp;gt; Package[&#39;couchbase-server&#39;]
 }
 
 exec { &amp;quot;install-deps&amp;quot;:
     command =&amp;gt; &amp;quot;/usr/bin/apt-get install libssl0.9.8&amp;quot;,
-    before =&amp;gt; Package[&amp;#39;couchbase-server&amp;#39;]
+    before =&amp;gt; Package[&#39;couchbase-server&#39;]
 }
 
 package { &amp;quot;couchbase-server&amp;quot;:
@@ -123,31 +130,34 @@ package { &amp;quot;couchbase-server&amp;quot;:
     ensure =&amp;gt; installed,
     source =&amp;gt; &amp;quot;/home/vagrant/couchbase-server-enterprise_x86_64_2.0.1.deb&amp;quot;
 }
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Let&amp;rsquo;s go over the internals once more.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;exec { &amp;quot;couchbase-server-source&amp;quot;: 
+
+&lt;pre&gt;&lt;code&gt;exec { &amp;quot;couchbase-server-source&amp;quot;: 
     command =&amp;gt; &amp;quot;/usr/bin/wget http://packages.couchbase.com/releases/2.0.1/couchbase-server-enterprise_x86_64_2.0.1.deb&amp;quot;,
     cwd =&amp;gt; &amp;quot;/home/vagrant/&amp;quot;,
     creates =&amp;gt; &amp;quot;/home/vagrant/couchbase-server-enterprise_x86_64_2.0.1.deb&amp;quot;,
-    before =&amp;gt; Package[&amp;#39;couchbase-server&amp;#39;]
+    before =&amp;gt; Package[&#39;couchbase-server&#39;]
 }
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;In puppet, we define some tasks that we want to run. This task executes a shell command &lt;code&gt;wget&lt;/code&gt; and stores the file inside the home directory of the user. We tell puppet to download the debian package of the server. Note that there is a &lt;code&gt;before&lt;/code&gt; dependency to the package installation task, because we can&amp;rsquo;t install it before the file wasn&amp;rsquo;t downloaded.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;exec { &amp;quot;install-deps&amp;quot;:
+
+&lt;pre&gt;&lt;code&gt;exec { &amp;quot;install-deps&amp;quot;:
     command =&amp;gt; &amp;quot;/usr/bin/apt-get install libssl0.9.8&amp;quot;,
-    before =&amp;gt; Package[&amp;#39;couchbase-server&amp;#39;]
+    before =&amp;gt; Package[&#39;couchbase-server&#39;]
 }
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;We also need to install &lt;code&gt;libssl0.9.8&lt;/code&gt; on the server, this is the only dependency it has. We use the command line tool &lt;code&gt;apt-get&lt;/code&gt; for this.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;package { &amp;quot;couchbase-server&amp;quot;:
+
+&lt;pre&gt;&lt;code&gt;package { &amp;quot;couchbase-server&amp;quot;:
     provider =&amp;gt; dpkg,
     ensure =&amp;gt; installed,
     source =&amp;gt; &amp;quot;/home/vagrant/couchbase-server-enterprise_x86_64_2.0.1.deb&amp;quot;
 }
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Finally, we can install the debian package from couchbase-server, because the file is in place and all dependencies are satisfied.&lt;/p&gt;
 
@@ -156,10 +166,11 @@ package { &amp;quot;couchbase-server&amp;quot;:
 &lt;p&gt;Now if we run &lt;code&gt;vagrant up&lt;/code&gt; again, much more happens. Note that if you want to play with your puppet files, you can also use &lt;code&gt;vagrant provision&lt;/code&gt; to apply the changes while the node is running.&lt;/p&gt;
 
 &lt;p&gt;If everything is okay, the output should look like this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;Bringing machine &amp;#39;node1&amp;#39; up with &amp;#39;virtualbox&amp;#39; provider...
-Bringing machine &amp;#39;node2&amp;#39; up with &amp;#39;virtualbox&amp;#39; provider...
-Bringing machine &amp;#39;node3&amp;#39; up with &amp;#39;virtualbox&amp;#39; provider...
-Bringing machine &amp;#39;node4&amp;#39; up with &amp;#39;virtualbox&amp;#39; provider...
+
+&lt;pre&gt;&lt;code&gt;Bringing machine &#39;node1&#39; up with &#39;virtualbox&#39; provider...
+Bringing machine &#39;node2&#39; up with &#39;virtualbox&#39; provider...
+Bringing machine &#39;node3&#39; up with &#39;virtualbox&#39; provider...
+Bringing machine &#39;node4&#39; up with &#39;virtualbox&#39; provider...
 [node1] Clearing any previously set forwarded ports...
 [node1] Creating shared folders metadata...
 [node1] Clearing any previously set network interfaces...
@@ -180,7 +191,7 @@ stdin: is not a tty
 notice: /Stage[main]//Exec[install-deps]/returns: executed successfully
 notice: Finished catalog run in 0.77 seconds
 .... more for all the other nodes.
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;You can then point your browser to &lt;code&gt;192.168.56.10[1-4]&lt;/code&gt; and work with your Couchbase cluster. If you are done with it, you can use the &lt;code&gt;vagrant halt&lt;/code&gt; command to shut it down cleanly. Very handy is also &lt;code&gt;vagrant suspend&lt;/code&gt;, which will save the state of the nodes instead of shutting them down completely.&lt;/p&gt;
 

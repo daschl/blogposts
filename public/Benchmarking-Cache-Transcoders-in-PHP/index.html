@@ -7,7 +7,7 @@
 
     <meta name="description" content="This post analyses and benchmarks classical object serialization, igbinary and JSON. It compares them and shows their benefits and shortcomings.">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Benchmarking Cache Transcoders in PHP &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -74,11 +74,12 @@
                             
                         </p>
                     </header>
-
+                    
+                    
                     <div class="post-description">
                         
 
-<h2 id="motivation:1588be44ecdc8dc6ecb17e0152c89754">Motivation</h2>
+<h2 id="motivation">Motivation</h2>
 
 <p>Storing PHP objects (or simpler data types like arrays) in caches always requires some kind of transformation. You need a way of encoding/decoding data so that it can be stored and loaded properly. In most languages, this process is known as object <a href="http://en.wikipedia.org/wiki/Serialization">serialization</a>. PHP provides a mechanism for this out of the box, but in this article we&rsquo;ll also look at <a href="http://pecl.php.net/package/igbinary">igbinary</a> as a drop-in replacement for the default serializer. We also compare the results to object transcoding based on <a href="http://json.org/">JSON</a>, which is not really an object serialization mechanism but commonly used as a data chache structure which has its own benefits and drawbacks.</p>
 
@@ -86,188 +87,198 @@
 
 <p>If you want to compare your results to mine, I&rsquo;m using a MacBook Pro on Mac OS X 10.8.2 with the 2.3 GHz i7 and 16GB RAM. I&rsquo;m using PHP 5.4.11 (through <a href="https://github.com/josegonzalez/homebrew-php">homebrew-php</a>) instead of the shipped 5.3.</p>
 
-<h2 id="the-php-serializer:1588be44ecdc8dc6ecb17e0152c89754">The PHP Serializer</h2>
+<h2 id="the-php-serializer">The PHP Serializer</h2>
 
 <p>Out of the box, PHP provides a serialization mechanism on top of the <a href="http://php.net/manual/de/function.serialize.php">serialize</a> and <a href="http://www.php.net/manual/de/function.unserialize.php">unserialize</a> methods. By applying this method on a variable, it gets encoded to a byte stream and neither the type nor the structure gets lost (you can&rsquo;t store <a href="http://www.php.net/manual/en/language.types.resource.php">resources</a>).</p>
 
 <p>So, let&rsquo;s look at a simple and a more complex example on how the transformation looks like:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
 
-<span style="color: #A90D91">class</span> <span style="color: #3F6E75">Person</span> {
-    <span style="color: #A90D91">private</span> <span style="color: #000000">$name</span>;
+<pre><code>&lt;?php
 
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">__construct</span>(<span style="color: #000000">$name</span>) {
-        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">name</span> <span style="color: #000000">=</span> <span style="color: #000000">$name</span>;
+class Person {
+    private $name;
+
+    public function __construct($name) {
+        $this-&gt;name = $name;
     }
 
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">getName</span>() {
-        <span style="color: #A90D91">return</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">name</span>;
+    public function getName() {
+        return $this-&gt;name;
     }
 }
 
-<span style="color: #000000">$simple</span> <span style="color: #000000">=</span> <span style="color: #A90D91">array</span>(<span style="color: #C41A16">&quot;key&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;value&quot;</span>);
-<span style="color: #000000">$complex</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Person</span>(<span style="color: #C41A16">&quot;Michael&quot;</span>);
+$simple = array(&quot;key&quot; =&gt; &quot;value&quot;);
+$complex = new Person(&quot;Michael&quot;);
 
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>If we&rsquo;re calling <code>serialize()</code> on both variables, the output (as a string representation) looks like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #000000">$simpleSerialized</span> <span style="color: #000000">=</span> <span style="color: #A90D91">serialize</span>(<span style="color: #000000">$simple</span>);
-<span style="color: #000000">$complexSerialized</span> <span style="color: #000000">=</span> <span style="color: #A90D91">serialize</span>(<span style="color: #000000">$complex</span>);
 
-<span style="color: #177500">// string(28) &quot;a:1:{s:3:&quot;key&quot;;s:5:&quot;value&quot;;}&quot;</span>
-<span style="color: #A90D91">var_dump</span>(<span style="color: #A90D91">serialize</span>(<span style="color: #000000">$simple</span>));
+<pre><code>&lt;?php
+$simpleSerialized = serialize($simple);
+$complexSerialized = serialize($complex);
 
-<span style="color: #177500">// string(51) &quot;O:6:&quot;Person&quot;:1:{s:12:&quot;\000Person\000name&quot;;s:7:&quot;Michael&quot;;}&quot;</span>
-<span style="color: #A90D91">var_dump</span>(<span style="color: #A90D91">serialize</span>(<span style="color: #000000">$complex</span>));
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+// string(28) &quot;a:1:{s:3:&quot;key&quot;;s:5:&quot;value&quot;;}&quot;
+var_dump(serialize($simple));
+
+// string(51) &quot;O:6:&quot;Person&quot;:1:{s:12:&quot;\000Person\000name&quot;;s:7:&quot;Michael&quot;;}&quot;
+var_dump(serialize($complex));
+?&gt;
+</code></pre>
 
 <p>While the resulting string is not designed for readability, you can clearly see that some metadata is added in order to make the unserialization possible. For example, the <code>key</code> string is serialized to <code>s:3:&quot;key&quot;</code> where the <code>s</code> means <code>string</code> and <code>3</code> is the string length. Also, <code>a</code> points to an <code>array</code> and <code>O</code> to an <code>object</code>.</p>
 
 <p>We can now <code>unserialize()</code> the values and work with them as if they&rsquo;ve never been stored somewhere else:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #000000">$simpleUnserialized</span> <span style="color: #000000">=</span> <span style="color: #A90D91">unserialize</span>(<span style="color: #000000">$simpleSerialized</span>);
-<span style="color: #000000">$complexUnserialized</span> <span style="color: #000000">=</span> <span style="color: #A90D91">unserialize</span>(<span style="color: #000000">$complexSerialized</span>);
 
-<span style="color: #177500">// array(1) {&#39;key&#39; =&gt; string(5) &quot;value&quot;}</span>
-<span style="color: #A90D91">var_dump</span>(<span style="color: #000000">$simpleUnserialized</span>);
+<pre><code>&lt;?php
+$simpleUnserialized = unserialize($simpleSerialized);
+$complexUnserialized = unserialize($complexSerialized);
 
-<span style="color: #177500">// string(7) &quot;Michael&quot;</span>
-<span style="color: #A90D91">var_dump</span>(<span style="color: #000000">$complexUnserialized-&gt;</span><span style="color: #836C28">getName</span>());
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+// array(1) {'key' =&gt; string(5) &quot;value&quot;}
+var_dump($simpleUnserialized);
+
+// string(7) &quot;Michael&quot;
+var_dump($complexUnserialized-&gt;getName());
+?&gt;
+</code></pre>
 
 <p>In practice, two characteristics are important: size of the serialized value and performance. While from a developer perspective performance is fun to explore, the size of the serialized object is what matters most. Performance differences are only measurable when running it in a loop with lots of iterations, while in practice you may only work with a few objects at a time per request.</p>
 
 <p>Let&rsquo;s use a common caching scenario: imagine we&rsquo;re caching entity responses from an ORM framework like <a href="http://www.doctrine-project.org/">Doctrine</a>. Here is a blog post class that will be filled with life:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #A90D91">class</span> <span style="color: #3F6E75">BlogPost</span> {
 
-    <span style="color: #A90D91">private</span> <span style="color: #000000">$title</span>;
-    <span style="color: #A90D91">private</span> <span style="color: #000000">$teaser</span>;
-    <span style="color: #A90D91">private</span> <span style="color: #000000">$author</span>;
-    <span style="color: #A90D91">private</span> <span style="color: #000000">$body</span>;
+<pre><code>&lt;?php
+class BlogPost {
 
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">__construct</span>(<span style="color: #000000">$title</span>, <span style="color: #000000">$teaser</span>, <span style="color: #000000">$author</span>, <span style="color: #000000">$body</span>) {
-        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">title</span> <span style="color: #000000">=</span> <span style="color: #000000">$title</span>;
-        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">teaser</span> <span style="color: #000000">=</span> <span style="color: #000000">$teaser</span>;
-        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">author</span> <span style="color: #000000">=</span> <span style="color: #000000">$author</span>;
-        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">body</span> <span style="color: #000000">=</span> <span style="color: #000000">$body</span>;
+    private $title;
+    private $teaser;
+    private $author;
+    private $body;
+
+    public function __construct($title, $teaser, $author, $body) {
+        $this-&gt;title = $title;
+        $this-&gt;teaser = $teaser;
+        $this-&gt;author = $author;
+        $this-&gt;body = $body;
     }
 
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">getTitle</span>() { <span style="color: #A90D91">return</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">title</span>; }
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">getTeaser</span>() { <span style="color: #A90D91">return</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">teaser</span>; }
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">getAuthor</span>() { <span style="color: #A90D91">return</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">author</span>; }
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">getBody</span>() { <span style="color: #A90D91">return</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">body</span>; }
+    public function getTitle() { return $this-&gt;title; }
+    public function getTeaser() { return $this-&gt;teaser; }
+    public function getAuthor() { return $this-&gt;author; }
+    public function getBody() { return $this-&gt;body; }
 
 }
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>Please take this with a grain of salt, because since JSON transcoding is not able to store a 1:1 representation like <code>serialize</code>, we need to work around that a bit. More details and discussion will be provided in the JSON section.</p>
 
 <p>Assume that a blog post with content has around 10k characters and about 10kb in size, lets create a crafted blog post:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #000000">$randomString</span> <span style="color: #000000">=</span> <span style="color: #A90D91">function</span> (<span style="color: #000000">$length</span>) {
-    <span style="color: #000000">$chars</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .&quot;</span>;    
-    <span style="color: #000000">$str</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;&quot;</span>;
-    <span style="color: #A90D91">for</span>( <span style="color: #000000">$i</span> <span style="color: #000000">=</span> <span style="color: #1C01CE">0</span>; <span style="color: #000000">$i</span> <span style="color: #000000">&lt;</span> <span style="color: #000000">$length</span>; <span style="color: #000000">$i++</span> ) {
-        <span style="color: #000000">$str</span> <span style="color: #000000">.=</span> <span style="color: #000000">$chars</span>[<span style="color: #A90D91">rand</span>(<span style="color: #1C01CE">0</span>, <span style="color: #A90D91">strlen</span>(<span style="color: #000000">$chars</span>)<span style="color: #000000">-</span><span style="color: #1C01CE">1</span>)];
+
+<pre><code>&lt;?php
+$randomString = function ($length) {
+    $chars = &quot;abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .&quot;;    
+    $str = &quot;&quot;;
+    for( $i = 0; $i &lt; $length; $i++ ) {
+        $str .= $chars[rand(0, strlen($chars)-1)];
     }
-    <span style="color: #A90D91">return</span> <span style="color: #000000">$str</span>;
+    return $str;
 };
 
-<span style="color: #000000">$title</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;How to measure caching transcoders&quot;</span>;
-<span style="color: #000000">$teaser</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;This is a much longer introduction on how to measure caching transcoders. Feel free to post your own findings.&quot;</span>;
-<span style="color: #000000">$author</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;daschl&quot;</span>;
-<span style="color: #000000">$body</span> <span style="color: #000000">=</span> <span style="color: #000000">$randomString</span>(<span style="color: #1C01CE">10000</span>);
+$title = &quot;How to measure caching transcoders&quot;;
+$teaser = &quot;This is a much longer introduction on how to measure caching transcoders. Feel free to post your own findings.&quot;;
+$author = &quot;daschl&quot;;
+$body = $randomString(10000);
 
-<span style="color: #000000">$post</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">BlogPost</span>(<span style="color: #000000">$title</span>, <span style="color: #000000">$teaser</span>, <span style="color: #000000">$author</span>, <span style="color: #000000">$body</span>);
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+$post = new BlogPost($title, $teaser, $author, $body);
+?&gt;
+</code></pre>
 
 <p>Now run <code>serialize</code> and <code>unserialize</code> in loops to measure performance as well as determine the resulting size of the object:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #000000">$iterations</span> <span style="color: #000000">=</span> <span style="color: #1C01CE">10000</span>;
-<span style="color: #000000">$start</span> <span style="color: #000000">=</span> <span style="color: #A90D91">microtime</span>(<span style="color: #A90D91">true</span>);
-<span style="color: #A90D91">for</span>(<span style="color: #000000">$i=</span><span style="color: #1C01CE">0</span>;<span style="color: #000000">$i&lt;$iterations</span>;<span style="color: #000000">$i++</span>) {
-    <span style="color: #000000">$serialized</span> <span style="color: #000000">=</span> <span style="color: #A90D91">serialize</span>(<span style="color: #000000">$post</span>);
-}
-<span style="color: #000000">$end</span> <span style="color: #000000">=</span> <span style="color: #A90D91">microtime</span>(<span style="color: #A90D91">true</span>);
 
-<span style="color: #A90D91">echo</span> <span style="color: #C41A16">&quot;Size: &quot;</span> <span style="color: #000000">.</span> <span style="color: #A90D91">strlen</span>(<span style="color: #000000">$serialized</span>) <span style="color: #000000">.</span> <span style="color: #C41A16">&quot;\n&quot;</span>;
-<span style="color: #A90D91">echo</span> (<span style="color: #000000">$end</span> <span style="color: #000000">-</span> <span style="color: #000000">$start</span>) <span style="color: #000000">*</span> <span style="color: #1C01CE">1000</span> <span style="color: #000000">.</span> <span style="color: #C41A16">&quot;Milliseconds\n&quot;</span>;
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+<pre><code>&lt;?php
+$iterations = 10000;
+$start = microtime(true);
+for($i=0;$i&lt;$iterations;$i++) {
+    $serialized = serialize($post);
+}
+$end = microtime(true);
+
+echo &quot;Size: &quot; . strlen($serialized) . &quot;\n&quot;;
+echo ($end - $start) * 1000 . &quot;Milliseconds\n&quot;;
+?&gt;
+</code></pre>
 
 <p>On my machine, to serialize 10000 objects it took about 33 milliseconds. The length of the resulting object (its string representation) is 10297 characters. This is kind of expected because the bulk of the object is the long article body. Before start comparing, we can already make one observation: its pretty fast. Now, let&rsquo;s move on to igbinary serialization and see how these results compare.</p>
 
-<h2 id="serializing-with-igbinary:1588be44ecdc8dc6ecb17e0152c89754">Serializing with igbinary</h2>
+<h2 id="serializing-with-igbinary">Serializing with igbinary</h2>
 
 <p>The <a href="http://pecl.php.net/package/igbinary">igbinary</a> extension was developed as a drop-in replacement for the default PHP serializer. Instead of storing the serialized object as a text, it is stored as binary data. You can install it either through PECL or compile it from source, either way before running the tests make sure you have the <code>igbinary</code> extension enabled:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">michael@daschlbook ~ $ php -m | grep igbinary
+
+<pre><code>michael@daschlbook ~ $ php -m | grep igbinary
 igbinary
-</pre></div>
+</code></pre>
 
 <p>Instead of using <code>serialize</code> or <code>unserialize</code>, igbinary provides us with appropriate <code>igbinary_serialize</code> and <code>igbinary_unserialize</code> functions. Now we can apply the same microbenchmark and see the results:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #000000">$iterations</span> <span style="color: #000000">=</span> <span style="color: #1C01CE">10000</span>;
-<span style="color: #000000">$start</span> <span style="color: #000000">=</span> <span style="color: #A90D91">microtime</span>(<span style="color: #A90D91">true</span>);
-<span style="color: #A90D91">for</span>(<span style="color: #000000">$i=</span><span style="color: #1C01CE">0</span>;<span style="color: #000000">$i&lt;$iterations</span>;<span style="color: #000000">$i++</span>) {
-    <span style="color: #000000">$serialized</span> <span style="color: #000000">=</span> <span style="color: #000000">igbinary_serialize</span>(<span style="color: #000000">$post</span>);
-}
-<span style="color: #000000">$end</span> <span style="color: #000000">=</span> <span style="color: #A90D91">microtime</span>(<span style="color: #A90D91">true</span>);
 
-<span style="color: #A90D91">echo</span> <span style="color: #C41A16">&quot;Size: &quot;</span> <span style="color: #000000">.</span> <span style="color: #A90D91">strlen</span>(<span style="color: #000000">$serialized</span>) <span style="color: #000000">.</span> <span style="color: #C41A16">&quot;\n&quot;</span>;
-<span style="color: #A90D91">echo</span> (<span style="color: #000000">$end</span> <span style="color: #000000">-</span> <span style="color: #000000">$start</span>) <span style="color: #000000">*</span> <span style="color: #1C01CE">1000</span> <span style="color: #000000">.</span> <span style="color: #C41A16">&quot;Milliseconds\n&quot;</span>;
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+<pre><code>&lt;?php
+$iterations = 10000;
+$start = microtime(true);
+for($i=0;$i&lt;$iterations;$i++) {
+    $serialized = igbinary_serialize($post);
+}
+$end = microtime(true);
+
+echo &quot;Size: &quot; . strlen($serialized) . &quot;\n&quot;;
+echo ($end - $start) * 1000 . &quot;Milliseconds\n&quot;;
+?&gt;
+</code></pre>
 
 <p>With default settings, to serialize 10000 objects with igbinary it took 678 milliseconds. The length of the resulting object is 10244 characters. If you compare it with the default serialization mechanism, that is 20 times slower and the resulting object isn&rsquo;t much smaller either. Bummer - or not? Let&rsquo;s look at why this is happening.</p>
 
 <p>Let&rsquo;s look at a different workload. Let&rsquo;s create a data structure which consist of 30 smaller blog posts and measure the statistics for both again (only doing 1000 iterations instead of 10000):</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #000000">$posts</span> <span style="color: #000000">=</span> <span style="color: #A90D91">array</span>();
-<span style="color: #A90D91">for</span>(<span style="color: #000000">$i=</span><span style="color: #1C01CE">0</span>;<span style="color: #000000">$i&lt;</span><span style="color: #1C01CE">30</span>;<span style="color: #000000">$i++</span>) {
-    <span style="color: #000000">$posts</span>[] <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">BlogPost</span>(<span style="color: #000000">$title</span>, <span style="color: #000000">$teaser</span>, <span style="color: #000000">$author</span>, <span style="color: #000000">$randomString</span>(<span style="color: #1C01CE">50</span>));
+
+<pre><code>&lt;?php
+$posts = array();
+for($i=0;$i&lt;30;$i++) {
+    $posts[] = new BlogPost($title, $teaser, $author, $randomString(50));
 }
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>The results are more interesting: on my machine igbinary takes about 95 milliseconds while serialize needs only 41 milliseconds. Now it&rsquo;s just 2 times slower. But here comes the important part: the resulting size of igbinary is 2385 characters, while serialize is 10467 characters! That&rsquo;s about 5 times smaller. Note that this gap increases the larger your PHP object gets (not in terms of long character strings but speaking of complexity like methods).</p>
 
 <p>Note that the igbinary docs say you should set <code>igbinary.compact_strings</code> to <code>Off</code> to increase performance, but there was no real measurable difference in my testings.</p>
 
 <p>There is one more thing we haven&rsquo;t compared: deserializing of previously serialized objects. We can take the same code from above, use the serialized part as input and measure the timings once again (not that we don&rsquo;t need to measure the size of the resulting object because we&rsquo;re creating a &ldquo;live&rdquo; object again):</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #000000">$posts</span> <span style="color: #000000">=</span> <span style="color: #A90D91">array</span>();
-<span style="color: #A90D91">for</span>(<span style="color: #000000">$i=</span><span style="color: #1C01CE">0</span>;<span style="color: #000000">$i&lt;</span><span style="color: #1C01CE">30</span>;<span style="color: #000000">$i++</span>) {
-    <span style="color: #000000">$posts</span>[] <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">BlogPost</span>(<span style="color: #000000">$title</span>, <span style="color: #000000">$teaser</span>, <span style="color: #000000">$author</span>, <span style="color: #000000">$randomString</span>(<span style="color: #1C01CE">50</span>));
+
+<pre><code>&lt;?php
+$posts = array();
+for($i=0;$i&lt;30;$i++) {
+    $posts[] = new BlogPost($title, $teaser, $author, $randomString(50));
 }
 
-<span style="color: #000000">$serializedIgbinary</span> <span style="color: #000000">=</span> <span style="color: #000000">igbinary_serialize</span>(<span style="color: #000000">$posts</span>);
-<span style="color: #000000">$serializedClassic</span> <span style="color: #000000">=</span> <span style="color: #A90D91">serialize</span>(<span style="color: #000000">$posts</span>);
+$serializedIgbinary = igbinary_serialize($posts);
+$serializedClassic = serialize($posts);
 
-<span style="color: #000000">$iterations</span> <span style="color: #000000">=</span> <span style="color: #1C01CE">1000</span>;
-<span style="color: #000000">$start</span> <span style="color: #000000">=</span> <span style="color: #A90D91">microtime</span>(<span style="color: #A90D91">true</span>);
-<span style="color: #A90D91">for</span>(<span style="color: #000000">$i=</span><span style="color: #1C01CE">0</span>;<span style="color: #000000">$i&lt;$iterations</span>;<span style="color: #000000">$i++</span>) {
-    <span style="color: #000000">$unserialized</span> <span style="color: #000000">=</span> <span style="color: #000000">igbinary_unserialize</span>(<span style="color: #000000">$serializedIgbinary</span>);
+$iterations = 1000;
+$start = microtime(true);
+for($i=0;$i&lt;$iterations;$i++) {
+    $unserialized = igbinary_unserialize($serializedIgbinary);
 }
-<span style="color: #000000">$end</span> <span style="color: #000000">=</span> <span style="color: #A90D91">microtime</span>(<span style="color: #A90D91">true</span>);
+$end = microtime(true);
 
-<span style="color: #A90D91">echo</span> (<span style="color: #000000">$end</span> <span style="color: #000000">-</span> <span style="color: #000000">$start</span>) <span style="color: #000000">*</span> <span style="color: #1C01CE">1000</span> <span style="color: #000000">.</span> <span style="color: #C41A16">&quot;Milliseconds\n&quot;</span>;
+echo ($end - $start) * 1000 . &quot;Milliseconds\n&quot;;
 
-<span style="color: #000000">$start</span> <span style="color: #000000">=</span> <span style="color: #A90D91">microtime</span>(<span style="color: #A90D91">true</span>);
-<span style="color: #A90D91">for</span>(<span style="color: #000000">$i=</span><span style="color: #1C01CE">0</span>;<span style="color: #000000">$i&lt;$iterations</span>;<span style="color: #000000">$i++</span>) {
-    <span style="color: #000000">$unserialized</span> <span style="color: #000000">=</span> <span style="color: #A90D91">unserialize</span>(<span style="color: #000000">$serializedClassic</span>);
+$start = microtime(true);
+for($i=0;$i&lt;$iterations;$i++) {
+    $unserialized = unserialize($serializedClassic);
 }
-<span style="color: #000000">$end</span> <span style="color: #000000">=</span> <span style="color: #A90D91">microtime</span>(<span style="color: #A90D91">true</span>);
+$end = microtime(true);
 
-<span style="color: #A90D91">echo</span> (<span style="color: #000000">$end</span> <span style="color: #000000">-</span> <span style="color: #000000">$start</span>) <span style="color: #000000">*</span> <span style="color: #1C01CE">1000</span> <span style="color: #000000">.</span> <span style="color: #C41A16">&quot;Milliseconds\n&quot;</span>;
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+echo ($end - $start) * 1000 . &quot;Milliseconds\n&quot;;
+?&gt;
+</code></pre>
 
 <p>This is giving us very interesting results: igbinary takes 65 milliseconds while classic unserialize needs 82 milliseconds! So igbinary is faster here. This is pretty good news, because in practice you will need to unserialize (speak &ldquo;fetch from cache&rdquo;) much more often than to serialize (speak &ldquo;store in cache&rdquo;). That&rsquo;s the whole point of a cache.</p>
 
@@ -276,58 +287,61 @@ igbinary
 <p>Finally, when you are storing very long strings in objects, both have pretty much the same overhead (because you can&rsquo;t &ldquo;compact&rdquo; this long string very well). One workaround may be to compress and decompress the string as needed, using a mixture of gzip and base64 encoding. When serializing PHP objects, you can use the <a href="http://www.php.net/manual/en/language.oop5.magic.php#object.sleep">__sleep</a> and <a href="http://www.php.net/manual/en/language.oop5.magic.php#object.wakeup">__wakeup</a> methods to perform these kind of transformations.</p>
 
 <p>Adding these two methods to our <code>BlogPost</code> class results in a 20% saving when using the 10k random string again:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">__sleep</span>() {
-    <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">body</span> <span style="color: #000000">=</span> <span style="color: #A90D91">gzdeflate</span>(<span style="color: #000000">$this-&gt;</span><span style="color: #836C28">body</span>, <span style="color: #1C01CE">9</span>);
-    <span style="color: #A90D91">return</span> <span style="color: #A90D91">array</span>(<span style="color: #C41A16">&#39;title&#39;</span>, <span style="color: #C41A16">&#39;teaser&#39;</span>, <span style="color: #C41A16">&#39;author&#39;</span>, <span style="color: #C41A16">&#39;body&#39;</span>);
+
+<pre><code>&lt;?php
+public function __sleep() {
+    $this-&gt;body = gzdeflate($this-&gt;body, 9);
+    return array('title', 'teaser', 'author', 'body');
 }
 
-<span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">__wakeup</span>() {
-    <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">body</span> <span style="color: #000000">=</span> <span style="color: #A90D91">gzinflate</span>(<span style="color: #000000">$this-&gt;</span><span style="color: #836C28">body</span>);
+public function __wakeup() {
+    $this-&gt;body = gzinflate($this-&gt;body);
 }
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>Note that compressing takes time too, so measure if it makes sense in your case and the space savings are good enough. You also need the <code>zblib</code> extension to make this work properly.</p>
 
-<h2 id="transcoding-on-top-of-json:1588be44ecdc8dc6ecb17e0152c89754">Transcoding on top of JSON</h2>
+<h2 id="transcoding-on-top-of-json">Transcoding on top of JSON</h2>
 
 <p>First of all, JSON has not the same characteristics as serialization. This is just because JSON only supports a subset of the available data types that PHP supports and therefore encoding/decoding takes some extra steps on the application side. So why are we comparing it here? Well, JSON is used very often for storing data in caches. Not only is it human readable, it can also be used in combination with other languages and applications. Using JSON allows you to store cache information from a Java backend and use it in your PHP application. That doesn&rsquo;t work with traditional serialization approaches.</p>
 
 <p>If you need a primer on JSON and PHP, <a href="http://nitschinger.at/Handling-JSON-like-a-boss-in-PHP">read</a> my other article first. PHP allows you to transcode all objects (except resources) through the <a href="http://www.php.net/manual/en/function.json-encode.php">json_encode</a> and <a href="http://www.php.net/manual/en/function.json-decode.php">json_decode</a> functions. Private and protected variables are not converted, so we either need to make them public or provide a custom method that exports a storable object structure. While we&rsquo;re at it, we can provide a static factory method that initializes our BlogPost from the returned JSON string:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">toJson</span>() {
-    <span style="color: #A90D91">return</span> <span style="color: #A90D91">array</span>(
-        <span style="color: #C41A16">&#39;title&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">title</span>,
-        <span style="color: #C41A16">&#39;teaser&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">teaser</span>,
-        <span style="color: #C41A16">&#39;author&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">author</span>,
-        <span style="color: #C41A16">&#39;body&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">body</span>
+
+<pre><code>&lt;?php
+public function toJson() {
+    return array(
+        'title' =&gt; $this-&gt;title,
+        'teaser' =&gt; $this-&gt;teaser,
+        'author' =&gt; $this-&gt;author,
+        'body' =&gt; $this-&gt;body
     );
 }
 
-<span style="color: #A90D91">public</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">function</span> <span style="color: #000000">fromJson</span>(<span style="color: #000000">$json</span>) {
-    <span style="color: #000000">$d</span> <span style="color: #000000">=</span> <span style="color: #A90D91">json_decode</span>(<span style="color: #000000">$json</span>, <span style="color: #A90D91">true</span>);
-    <span style="color: #A90D91">return</span> <span style="color: #A90D91">new</span> <span style="color: #000000">BlogPost</span>(<span style="color: #000000">$d</span>[<span style="color: #C41A16">&#39;title&#39;</span>], <span style="color: #000000">$d</span>[<span style="color: #C41A16">&#39;teaser&#39;</span>], <span style="color: #000000">$d</span>[<span style="color: #C41A16">&#39;author&#39;</span>], <span style="color: #000000">$d</span>[<span style="color: #C41A16">&#39;body&#39;</span>]);
+public static function fromJson($json) {
+    $d = json_decode($json, true);
+    return new BlogPost($d['title'], $d['teaser'], $d['author'], $d['body']);
 }
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>Note that the <code>toJson()</code> method returns a simple representation of the object, which is much less complicated than a full serialization approach. Let&rsquo;s run our benchmark again:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #000000">$post</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">BlogPost</span>(<span style="color: #000000">$title</span>, <span style="color: #000000">$teaser</span>, <span style="color: #000000">$author</span>, <span style="color: #000000">$randomString</span>(<span style="color: #1C01CE">10000</span>));
-<span style="color: #000000">$post</span> <span style="color: #000000">=</span> <span style="color: #000000">$post-&gt;</span><span style="color: #836C28">toJson</span>();
 
-<span style="color: #000000">$iterations</span> <span style="color: #000000">=</span> <span style="color: #1C01CE">10000</span>;
-<span style="color: #000000">$start</span> <span style="color: #000000">=</span> <span style="color: #A90D91">microtime</span>(<span style="color: #A90D91">true</span>);
-<span style="color: #A90D91">for</span>(<span style="color: #000000">$i=</span><span style="color: #1C01CE">0</span>;<span style="color: #000000">$i&lt;$iterations</span>;<span style="color: #000000">$i++</span>) {
-    <span style="color: #000000">$encoded</span> <span style="color: #000000">=</span> <span style="color: #A90D91">json_encode</span>(<span style="color: #000000">$post</span>);
+<pre><code>&lt;?php
+$post = new BlogPost($title, $teaser, $author, $randomString(10000));
+$post = $post-&gt;toJson();
+
+$iterations = 10000;
+$start = microtime(true);
+for($i=0;$i&lt;$iterations;$i++) {
+    $encoded = json_encode($post);
 }
-<span style="color: #A90D91">echo</span> <span style="color: #C41A16">&quot;Size: &quot;</span> <span style="color: #000000">.</span> <span style="color: #A90D91">strlen</span>(<span style="color: #000000">$serialized</span>) <span style="color: #000000">.</span> <span style="color: #C41A16">&quot;\n&quot;</span>;
-<span style="color: #000000">$end</span> <span style="color: #000000">=</span> <span style="color: #A90D91">microtime</span>(<span style="color: #A90D91">true</span>);
+echo &quot;Size: &quot; . strlen($serialized) . &quot;\n&quot;;
+$end = microtime(true);
 
-<span style="color: #A90D91">echo</span> (<span style="color: #000000">$end</span> <span style="color: #000000">-</span> <span style="color: #000000">$start</span>) <span style="color: #000000">*</span> <span style="color: #1C01CE">1000</span> <span style="color: #000000">.</span> <span style="color: #C41A16">&quot;Milliseconds\n&quot;</span>;
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+echo ($end - $start) * 1000 . &quot;Milliseconds\n&quot;;
+?&gt;
+</code></pre>
 
 <p>On my machine it takes 1.7 seconds (!) to complete the encoding. The resulting object size is 10196 bytes which is comparable to our earlier measurements (again, the large value dominates here). Testing it against complex objects is not interesting because we can&rsquo;t restore them anyway without further modifications. Running <code>json_decode</code> on the encoded object also takes around 1.5 seconds, so there is no major difference here.</p>
 
@@ -337,7 +351,7 @@ igbinary
 
 <p>Edit2: another reader pointed out that naming a method <code>toJson()</code> which does not return JSON but an array is misleading. I agree, so if you adapt this approach in your environment choose a better name like <code>prepareForJson()</code>, <code>toArray()</code> or use the <code>JsonSerializable</code> Interface as shown above.</p>
 
-<h2 id="conclusion:1588be44ecdc8dc6ecb17e0152c89754">Conclusion</h2>
+<h2 id="conclusion">Conclusion</h2>
 
 <p>After running these microbenchmarks, my conclusion is that when you need object serialization, go with igbinary. It provides good enough serialization performance and huge wins on object sizes. Decoding performance is also much better than out-ouf-the-box serialization. If you need interoperability with other applications or if you don&rsquo;t want to limit yourself to serialized PHP blobs, go with JSON. JSON requires much more hand wiring but you&rsquo;ll gain a lot of flexibility.</p>
 
@@ -362,7 +376,7 @@ igbinary
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

@@ -6,8 +6,209 @@
     <description>Recent content in Rust on daschl writes. sometimes.</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Fri, 19 Feb 2016 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Wed, 15 Jun 2016 00:00:00 +0000</lastBuildDate>
     <atom:link href="http://nitschinger.at/tags/rust/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Scheduling Timers on OS X with Rust and Kqueue</title>
+      <link>http://nitschinger.at/Scheduling-Timers-on-OS-X-with-Rust-and-Kqueue/</link>
+      <pubDate>Wed, 15 Jun 2016 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/Scheduling-Timers-on-OS-X-with-Rust-and-Kqueue/</guid>
+      <description>
+
+&lt;p&gt;As a more or less POSIX compatible system I would&amp;rsquo;ve expected
+&lt;a href=&#34;http://man7.org/linux/man-pages/man2/timer_create.2.html&#34;&gt;timer_create&lt;/a&gt; and
+friends to be available on OS X, but it turns out those functions are not
+available (at least I couldn&amp;rsquo;t find them after hours of research).&lt;/p&gt;
+
+&lt;p&gt;Looking into alternatives (spoiler: there are not many I think if you want to
+work from C/Rust) I settled on &lt;a href=&#34;https://en.wikipedia.org/wiki/Kqueue&#34;&gt;Kqueue&lt;/a&gt;.
+It doesn&amp;rsquo;t have all the features that the &lt;code&gt;timer_&lt;/code&gt; functions provide, but for
+what I need it seems to be good enough. Also, there are a bunch of crates like
+&lt;a href=&#34;https://crates.io/crates/mio&#34;&gt;mio&lt;/a&gt; and &lt;a href=&#34;https://crates.io/crates/nix&#34;&gt;nix&lt;/a&gt;
+available that either provide abstractions or use Kqueue already so I had
+something to refer to.&lt;/p&gt;
+
+&lt;p&gt;I didn&amp;rsquo;t find documentation or blog posts on this topic so I decided it is
+time to write one. This doesn&amp;rsquo;t go into all the details since, frankly, I don&amp;rsquo;t
+know all of them yet too. It should be enough to get you started though.&lt;/p&gt;
+
+&lt;h2 id=&#34;a-kqueue-primer&#34;&gt;A Kqueue primer&lt;/h2&gt;
+
+&lt;p&gt;Kqueue is a event notification system originally introduced in FreeBSD and
+subsequently supported in many more BSD variants as well as OS X. It can be used
+for similar tasks (like handling network connections) as the
+&lt;a href=&#34;https://en.wikipedia.org/wiki/Epoll&#34;&gt;epoll&lt;/a&gt; system on Linux or the
+&lt;a href=&#34;https://en.wikipedia.org/wiki/Input/output_completion_port&#34;&gt;IOCP&lt;/a&gt; framework on
+Windows. You can also schedule timers with it, and this is what we are doing in
+this blog post.&lt;/p&gt;
+
+&lt;p&gt;There are two main functions you need to work with:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;kqueue&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt;);
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;kevent&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;kq&lt;/span&gt;, &lt;span style=&#34;color: #A90D91&#34;&gt;const&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;kevent&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;*changelist&lt;/span&gt;, &lt;span style=&#34;color: #A90D91&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;nchanges&lt;/span&gt;,
+    &lt;span style=&#34;color: #A90D91&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;kevent&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;*eventlist&lt;/span&gt;, &lt;span style=&#34;color: #A90D91&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;nevents&lt;/span&gt;, &lt;span style=&#34;color: #A90D91&#34;&gt;const&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;timespec&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;*timeout&lt;/span&gt;);
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;which translate to the following rust signatures (from &lt;code&gt;nix&lt;/code&gt;):&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;kqueue&lt;/span&gt;() &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;Result&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;RawFd&amp;gt;&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;kevent&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;kq:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;RawFd&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;changelist:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;[&lt;span style=&#34;color: #000000&#34;&gt;KEvent&lt;/span&gt;], &lt;span style=&#34;color: #000000&#34;&gt;eventlist:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; [&lt;span style=&#34;color: #000000&#34;&gt;KEvent&lt;/span&gt;], &lt;span style=&#34;color: #000000&#34;&gt;timeout_ms:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;Result&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The &lt;code&gt;kqueue&lt;/code&gt; function translates into a system call and creates a   new kernel
+event queue and returns a descriptor. The &lt;code&gt;kevent&lt;/code&gt; function is used to both
+register new &lt;code&gt;KEvents&lt;/code&gt; as well as check if any of them are currently pending.&lt;/p&gt;
+
+&lt;p&gt;The &lt;code&gt;KEvent&lt;/code&gt; is a generic struct that describes the type of event to monitor
+and looks like this in rust (also from &lt;code&gt;nix&lt;/code&gt;):&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;KEvent&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;ident:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;uintptr_t&lt;/span&gt;,
+    &lt;span style=&#34;color: #A90D91&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;filter:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;EventFilter&lt;/span&gt;,
+    &lt;span style=&#34;color: #A90D91&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;flags:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;EventFlag&lt;/span&gt;,
+    &lt;span style=&#34;color: #A90D91&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;fflags:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;FilterFlag&lt;/span&gt;,
+    &lt;span style=&#34;color: #A90D91&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;data:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;intptr_t&lt;/span&gt;,
+    &lt;span style=&#34;color: #A90D91&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;udata:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;,
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The &lt;code&gt;ident&lt;/code&gt; holds a value which is used to identify the event. Depending on the
+configured filter its type and meaning can change (but is very often a file
+descriptor). The &lt;code&gt;filter&lt;/code&gt; is important since it determines the kernel filter to
+process this event. For our timers we&amp;rsquo;ll use &lt;code&gt;EventFilter::EVFILT_TIMER&lt;/code&gt;, but
+there are many more available. The &lt;code&gt;flags&lt;/code&gt; define which actions to perform
+on the given event. The &lt;code&gt;fflags&lt;/code&gt; allow you to configure filter-specific flags,
+in our example we won&amp;rsquo;t use them. Finally &lt;code&gt;data&lt;/code&gt; allows to set filter-specific
+values and &lt;code&gt;udata&lt;/code&gt; is opaque user-defined data that is passed through the kernel
+unchanged.&lt;/p&gt;
+
+&lt;p&gt;Check out &lt;a href=&#34;http://rustdoc.s3-website-us-east-1.amazonaws.com/nix/master/osx/nix/sys/event/index.html&#34;&gt;the docs in nix&lt;/a&gt;
+for all the different values on &lt;code&gt;EventFlag&lt;/code&gt;, &lt;code&gt;EventFilter&lt;/code&gt; and &lt;code&gt;FilterFlag&lt;/code&gt;. Also,
+the original documentation on &lt;a href=&#34;https://www.freebsd.org/cgi/man.cgi?query=kqueue&#34;&gt;kqueue&lt;/a&gt;
+provides lots of insights into the flags and their functionality.&lt;/p&gt;
+
+&lt;p&gt;The last thing you need to know before diving into the actual code is the difference
+between &lt;code&gt;changelist&lt;/code&gt; and &lt;code&gt;eventlist&lt;/code&gt;: Both take a slice of &lt;code&gt;KEvents&lt;/code&gt;, but only
+&lt;code&gt;eventlist&lt;/code&gt; is mutable.&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;The &lt;code&gt;changelist&lt;/code&gt; is used to register events with kqueue.&lt;/li&gt;
+&lt;li&gt;The &lt;code&gt;eventlist&lt;/code&gt; contains all the events which are currently active at the
+time of polling.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Note that the same slice underlying container (like a &lt;code&gt;Vec&lt;/code&gt;) can be used to
+ maintain both lists.&lt;/p&gt;
+
+&lt;p&gt;With the basics covered, let&amp;rsquo;s dive into the code.&lt;/p&gt;
+
+&lt;h2 id=&#34;scheduling-timers&#34;&gt;Scheduling Timers&lt;/h2&gt;
+
+&lt;p&gt;Create a new (&lt;code&gt;--bin&lt;/code&gt;) project through &lt;code&gt;cargo&lt;/code&gt; and add &lt;code&gt;nix&lt;/code&gt; as a dependency:&lt;/p&gt;
+[dependencies]
+nix = &#34;0.6.0&#34;
+
+&lt;p&gt;Add this to the top of your &lt;code&gt;main.rs&lt;/code&gt; file so we have the imports out of the
+way:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;nix&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;nix::sys::event::&lt;/span&gt;{&lt;span style=&#34;color: #000000&#34;&gt;KEvent&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;kqueue&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;kevent&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;EventFilter&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;FilterFlag&lt;/span&gt;};
+&lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;nix::sys::event::&lt;/span&gt;{&lt;span style=&#34;color: #000000&#34;&gt;EV_ADD&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;EV_ENABLE&lt;/span&gt;};
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Next, we add a helper function that encapsulates the &lt;code&gt;KEvent&lt;/code&gt; creation:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;event&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;id:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;timer:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;isize&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;KEvent&lt;/span&gt; {
+    &lt;span style=&#34;color: #000000&#34;&gt;KEvent&lt;/span&gt; {
+        &lt;span style=&#34;color: #000000&#34;&gt;ident:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;id&lt;/span&gt;,
+        &lt;span style=&#34;color: #000000&#34;&gt;filter:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;EventFilter::EVFILT_TIMER&lt;/span&gt;,
+        &lt;span style=&#34;color: #000000&#34;&gt;flags:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;EV_ADD&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;|&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;EV_ENABLE&lt;/span&gt;,
+        &lt;span style=&#34;color: #000000&#34;&gt;fflags:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;FilterFlag::empty&lt;/span&gt;(),
+        &lt;span style=&#34;color: #000000&#34;&gt;data:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;timer&lt;/span&gt;,
+        &lt;span style=&#34;color: #000000&#34;&gt;udata:&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;,
+    }
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Here the caller passes in the event id as well as the timer in milliseconds. Since
+we want to get a timer event we need to use the &lt;code&gt;EventFilter::EVFILT_TIMER&lt;/code&gt; filter.
+The &lt;code&gt;EV_ADD | EV_ENABLE&lt;/code&gt; indicates we want to add and enable the timer at the same
+time. No flag filters are needed and the &lt;code&gt;data&lt;/code&gt; payload for our timer event is the
+time provided by the caller. We also don&amp;rsquo;t set any opaque user data here.&lt;/p&gt;
+
+&lt;p&gt;Inside our &lt;code&gt;main&lt;/code&gt; function we first need to grab a &lt;code&gt;kqueue&lt;/code&gt; and then register
+events. We make use of our &lt;code&gt;event&lt;/code&gt; function here and create one event that
+runs each second and one that runs every 1.5 seconds:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #177500&#34;&gt;// Initialize the Kqueue&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;kq&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;kqueue&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;expect&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Could not get kqueue&amp;quot;&lt;/span&gt;);
+
+&lt;span style=&#34;color: #177500&#34;&gt;// Create a Vec&amp;lt;KEvent&amp;gt; with both events&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;changes&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;vec!&lt;/span&gt;[&lt;span style=&#34;color: #000000&#34;&gt;event&lt;/span&gt;(&lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;, &lt;span style=&#34;color: #1C01CE&#34;&gt;1000&lt;/span&gt;), &lt;span style=&#34;color: #000000&#34;&gt;event&lt;/span&gt;(&lt;span style=&#34;color: #1C01CE&#34;&gt;2&lt;/span&gt;, &lt;span style=&#34;color: #1C01CE&#34;&gt;1500&lt;/span&gt;)];
+
+&lt;span style=&#34;color: #177500&#34;&gt;// Register the events in the `changelist`.&lt;/span&gt;
+&lt;span style=&#34;color: #000000&#34;&gt;kevent&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;kq&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;changes&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;as_slice&lt;/span&gt;(), &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; [], &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;();
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Kqueue now knows about the events we are interested in, so it&amp;rsquo;s time to run
+a loop and poll until they happen:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;loop&lt;/span&gt; {
+  &lt;span style=&#34;color: #A90D91&#34;&gt;match&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;kevent&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;kq&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;[], &lt;span style=&#34;color: #000000&#34;&gt;changes&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;as_mut_slice&lt;/span&gt;(), &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;) {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;Ok&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;v&lt;/span&gt;) &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;v&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; {
+      &lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;---&amp;quot;&lt;/span&gt;);
+      &lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;..&lt;span style=&#34;color: #000000&#34;&gt;v&lt;/span&gt; {
+        &lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Event with ID {:?} triggered&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;changes&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;ident&lt;/span&gt;);
+      }
+    }
+    &lt;span style=&#34;color: #A90D91&#34;&gt;Err&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;panic!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;{:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;), &lt;span style=&#34;color: #177500&#34;&gt;// Panic on Errors&lt;/span&gt;
+    &lt;span style=&#34;color: #000000&#34;&gt;_&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; () &lt;span style=&#34;color: #177500&#34;&gt;// Ignore Ok(0),&lt;/span&gt;
+  }
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We poll &lt;code&gt;kevent&lt;/code&gt; and the &lt;code&gt;changes&lt;/code&gt; slice is updated with the results on each
+poll with the &lt;code&gt;eventlist&lt;/code&gt;. &lt;code&gt;kevent&lt;/code&gt; returns either an &lt;code&gt;Err&lt;/code&gt; or &lt;code&gt;Ok&lt;/code&gt; with the
+number of events that are available now. Note that &lt;code&gt;Ok(0)&lt;/code&gt; is a special case
+that nothing is available, so we move on. If we have at least one event pending
+we iterate through all pending events and print their ID.&lt;/p&gt;
+
+&lt;p&gt;So if you run this example what you&amp;rsquo;ll see is:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ cargo run
+       Fresh bitflags v0.4.0
+       Fresh semver v0.1.20
+       Fresh void v1.0.2
+       Fresh cfg-if v0.1.0
+       Fresh libc v0.2.12
+       Fresh rustc_version v0.1.7
+       Fresh nix v0.6.0
+       Fresh kqueue-samples v0.1.0
+     Running `target/debug/kqueue-samples`
+---
+Event with ID 1 triggered
+---
+Event with ID 2 triggered
+---
+Event with ID 1 triggered
+---
+Event with ID 1 triggered
+Event with ID 2 triggered
+---
+Event with ID 1 triggered
+---
+Event with ID 2 triggered
+---
+^C
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Since our timers fire at different intervals (and occasionally fire together) you
+can see that every time the different events are available to process by your
+application.&lt;/p&gt;
+
+&lt;p&gt;Of course this is barely scratching the surface of what you can do with &lt;code&gt;kqueue&lt;/code&gt;
+but I&amp;rsquo;d like to mention one final thing: as you can see even if you just
+registered the events once they fire over and over again. If you want to fire
+them just once you can use &lt;code&gt;flags: EV_ADD | EV_ENABLE | EV_ONESHOT&lt;/code&gt; instead.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>First Steps with Rust and JNI</title>
@@ -24,31 +225,34 @@
 &lt;p&gt;Note that all steps performed in this blog post were done on OSX, but with little adaption they should also work on Linux. Maybe even on Windows, but I&amp;rsquo;m not so sure there since my experience with Windows is very limited. Any recent Rust version should suffice, I&amp;rsquo;m using 1.6.0 stable.&lt;/p&gt;
 
 &lt;p&gt;The first step is to create a &lt;code&gt;cargo&lt;/code&gt; library project:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;~/rust $ cargo new highperf-adder
-&lt;/pre&gt;&lt;/div&gt;
+
+&lt;pre&gt;&lt;code&gt;~/rust $ cargo new highperf-adder
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Open the generated &lt;code&gt;Cargo.toml&lt;/code&gt; and add &lt;code&gt;libc&lt;/code&gt; as a dependency. When interacting with &lt;a href=&#34;https://docs.oracle.com/javase/8/docs/technotes/guides/jni/spec/jniTOC.html&#34;&gt;JNI&lt;/a&gt;, Rust needs to dress up a bit to look like C, and &lt;code&gt;libc&lt;/code&gt; helps with that.&lt;/p&gt;
 
 &lt;p&gt;While you&amp;rsquo;re in there, tell &lt;code&gt;cargo&lt;/code&gt; that you want to build the crate as a &lt;code&gt;dylib&lt;/code&gt; and also give it an explicit name:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;[lib]&lt;/span&gt;
-&lt;span style=&#34;color: #836C28&#34;&gt;name&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;hpa&amp;quot;&lt;/span&gt;
-&lt;span style=&#34;color: #836C28&#34;&gt;crate-type&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;[&amp;quot;dylib&amp;quot;]&lt;/span&gt;
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;[dependencies]&lt;/span&gt;
-&lt;span style=&#34;color: #836C28&#34;&gt;libc&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;0.2.7&amp;quot;&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+&lt;pre&gt;&lt;code&gt;[lib]
+name = &amp;quot;hpa&amp;quot;
+crate-type = [&amp;quot;dylib&amp;quot;]
+
+[dependencies]
+libc = &amp;quot;0.2.7&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;If you don&amp;rsquo;t specify that you want a &lt;code&gt;dylib&lt;/code&gt;, it will build a &lt;code&gt;rlib&lt;/code&gt; which is not intended for external use. Also don&amp;rsquo;t use &lt;code&gt;staticlib&lt;/code&gt;, since this fail to link as well.&lt;/p&gt;
 
 &lt;p&gt;To make sure all is well so far we can build the project:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;cargo build
-Updating registry &lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;https://github.com/rust-lang/crates.io-index&lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;
+
+&lt;pre&gt;&lt;code&gt;$ cargo build
+Updating registry `https://github.com/rust-lang/crates.io-index`
 Compiling libc v0.2.7
-Compiling highperf-adder v0.1.0 &lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;file:///Users/michael/rust/highperf-adder&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+Compiling highperf-adder v0.1.0 (file:///Users/michael/rust/highperf-adder)
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Instead of diving straight into Rust code, let&amp;rsquo;s work on the Java code first. To keep it simple, create a &lt;code&gt;Adder.java&lt;/code&gt; file in the root of the project directory and add the following code:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;java.nio.file.Path;&lt;/span&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;java.nio.file.Path;&lt;/span&gt;
 &lt;span style=&#34;color: #A90D91&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;java.nio.file.Paths;&lt;/span&gt;
 
 &lt;span style=&#34;color: #A90D91&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color: #3F6E75&#34;&gt;Adder&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
@@ -68,20 +272,20 @@ Compiling highperf-adder v0.1.0 &lt;span style=&#34;color: #000000&#34;&gt;(&lt;
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Let&amp;rsquo;s break the code up into digestible chunks.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
     &lt;span style=&#34;color: #000000&#34;&gt;Path&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Paths.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;get&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;target/debug/libhpa.dylib&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;);&lt;/span&gt;
     &lt;span style=&#34;color: #000000&#34;&gt;System.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;load&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(p.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;toAbsolutePath&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;().&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;toString&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;());&lt;/span&gt;
 &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;We need to tell the JVM to pick up our shared library that got built by Rust. If you are running &lt;code&gt;cargo build&lt;/code&gt; with the &lt;code&gt;--release&lt;/code&gt; flag to optimize, make sure to point it towards &lt;code&gt;target/release/libhpa.dylib&lt;/code&gt; instead.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;native&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;add(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;v1,&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;v2);&lt;/span&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;native&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;add(&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;v1,&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;v2);&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Next up we define all our native methods that we want to call through JNI. It works a little bit like implementing an abstract class, but you are implementing the actual code in Rust intead of Java userland. The name of the method and its calling class will become important in a bit, so if you want to follow along make sure you keep the same names.&lt;/p&gt;
 
 &lt;p&gt;In our case we define one &lt;code&gt;add&lt;/code&gt; method which takes two integers as arguments and returns the result as an integer.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;main(String...&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;args)&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;void&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;main(String...&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;args)&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
     &lt;span style=&#34;color: #000000&#34;&gt;System.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;out&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;2 + 3 = &amp;quot;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Adder.&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;add&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;2&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;3&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;));&lt;/span&gt;
 &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
@@ -89,17 +293,18 @@ Compiling highperf-adder v0.1.0 &lt;span style=&#34;color: #000000&#34;&gt;(&lt;
 &lt;p&gt;The &lt;code&gt;main&lt;/code&gt; method calls our static JNI method and prints the result to &lt;code&gt;stdout&lt;/code&gt;.&lt;/p&gt;
 
 &lt;p&gt;Let&amp;rsquo;s run it straight away:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;javac Adder.java 
-&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;java Adder
-Exception in thread &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;main&amp;quot;&lt;/span&gt; java.lang.UnsatisfiedLinkError: Adder.add&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;II&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt;I
-    at Adder.add&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;Native Method&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt;
-    at Adder.main&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;Adder.java:14&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+
+&lt;pre&gt;&lt;code&gt;$ javac Adder.java 
+$ java Adder
+Exception in thread &amp;quot;main&amp;quot; java.lang.UnsatisfiedLinkError: Adder.add(II)I
+    at Adder.add(Native Method)
+    at Adder.main(Adder.java:14)
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;It compiles without errors, but at runtime it breaks apart. This doesn&amp;rsquo;t come as a huge surprise since we didn&amp;rsquo;t write a single line of Rust code yet. The JVM just tells us it can&amp;rsquo;t link the method we&amp;rsquo;re looking for.&lt;/p&gt;
 
 &lt;p&gt;To fix that, open the &lt;code&gt;src/lib.rs&lt;/code&gt; file and insert the following Rust code:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;libc&lt;/span&gt;;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;libc&lt;/span&gt;;
 
 &lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;libc::&lt;/span&gt;{&lt;span style=&#34;color: #000000&#34;&gt;c_void&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;c_int&lt;/span&gt;};
 
@@ -122,7 +327,7 @@ Exception in thread &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;main&am
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Alright, so what&amp;rsquo;s going on here?&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;#[repr(C)]&lt;/span&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;#[repr(C)]&lt;/span&gt;
 &lt;span style=&#34;color: #A90D91&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;JNINativeInterface&lt;/span&gt; {
     &lt;span style=&#34;color: #000000&#34;&gt;reserved0:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;c_void&lt;/span&gt;,
     &lt;span style=&#34;color: #000000&#34;&gt;reserved1:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;c_void&lt;/span&gt;,
@@ -137,8 +342,8 @@ Exception in thread &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;main&am
 &lt;p&gt;The JVM exports a &lt;code&gt;jni.h&lt;/code&gt; header file which contains its primary interfaces when interacting through JNI. Normally we&amp;rsquo;d write a proper Rust C FFI binding here and keep our code idiomatic, but for now all we need is a pointer to the &lt;code&gt;JNIEnv&lt;/code&gt; (even if we don&amp;rsquo;t actually use it, it gets passed in to our &lt;code&gt;add&lt;/code&gt; method as an argument). If you take a look at the &lt;a href=&#34;http://hg.openjdk.java.net/jdk8/jdk8/jdk/file/687fd7c7986d/src/share/javavm/export/jni.h#l214&#34;&gt;actual jni.h&lt;/a&gt; you can see that we get away with lots of handwaving for now.&lt;/p&gt;
 
 &lt;p&gt;Btw, how on earth did we know that the JVM expects a method with the signature of &lt;code&gt;fn Java_Adder_add(jre: *mut JNIEnv, class: *const c_void, v1: c_int, v2: c_int) -&amp;gt; c_int&lt;/code&gt;? The answer lies in the &lt;code&gt;javah&lt;/code&gt; command and some conversion of C to Rust. If you run &lt;code&gt;javah Adder&lt;/code&gt; you get a &lt;code&gt;Adder.h&lt;/code&gt; file which looks like:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #177500&#34;&gt;/* DO NOT EDIT THIS FILE - it is machine generated */&lt;/span&gt;
-&lt;span style=&#34;color: #633820&#34;&gt;#include &amp;lt;jni.h&amp;gt;&lt;/span&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #177500&#34;&gt;/* DO NOT EDIT THIS FILE - it is machine generated */&lt;/span&gt;
+&lt;span style=&#34;color: #633820&#34;&gt;#include&lt;/span&gt; &lt;span style=&#34;color: #177500&#34;&gt;&amp;lt;jni.h&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;&lt;/span&gt;
 &lt;span style=&#34;color: #177500&#34;&gt;/* Header for class Adder */&lt;/span&gt;
 
 &lt;span style=&#34;color: #633820&#34;&gt;#ifndef _Included_Adder&lt;/span&gt;
@@ -161,36 +366,38 @@ Exception in thread &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;main&am
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;The important part is this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;JNIEXPORT&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;jint&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;JNICALL&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Java_Adder_add&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;JNIEnv&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;jclass&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;jint&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;jint&lt;/span&gt;);
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;JNIEXPORT&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;jint&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;JNICALL&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Java_Adder_add&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;JNIEnv&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;jclass&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;jint&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;jint&lt;/span&gt;);
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;The type &lt;code&gt;jint&lt;/code&gt; is defined per plattform. For OSX you can find it &lt;a href=&#34;http://hg.openjdk.java.net/jdk8/jdk8/jdk/file/687fd7c7986d/src/macosx/javavm/export/jni_md.h#l33&#34;&gt;here&lt;/a&gt; and it maps to an &lt;code&gt;int&lt;/code&gt;. The rust &lt;code&gt;libc&lt;/code&gt; exports this type through &lt;code&gt;libc::c_int&lt;/code&gt;, which we can utilize in our code. &lt;code&gt;jclass&lt;/code&gt; is a reference type which we ignore for now, since we don&amp;rsquo;t need it.&lt;/p&gt;
 
 &lt;p&gt;All we need to do is add the two numbers and return the result:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #633820&#34;&gt;#[no_mangle]&lt;/span&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;#[no_mangle]&lt;/span&gt;
 &lt;span style=&#34;color: #A90D91&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Java_Adder_add&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;jre:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;JNIEnv&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;class:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;const&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;c_void&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;v1:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;c_int&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;v2:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;c_int&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;c_int&lt;/span&gt; {
     &lt;span style=&#34;color: #000000&#34;&gt;v1&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;v2&lt;/span&gt;
 }
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Make sure you don&amp;rsquo;t forget the &lt;code&gt;#[no_mangle]&lt;/code&gt; which tells Rust to turn off its name mangling so that there are no issues while linking (try it out and you&amp;rsquo;ll see the &lt;code&gt;UnsatisfiedLinkError&lt;/code&gt; again). Finally its time to compile the &lt;code&gt;crate&lt;/code&gt; once more and run the Java class again. Note that you don&amp;rsquo;t need to recompile the Java code every time you make a change to the Rust code. Just rebuild with cargo and run the Java file again, it will pick up the freshly created &lt;code&gt;dylib&lt;/code&gt;.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;cargo build
+
+&lt;pre&gt;&lt;code&gt;$ cargo build
    Compiling libc v0.2.7
-   Compiling highperf-adder v0.1.0 &lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;file:///Users/michael/rust/highperf-adder&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt;
-src/lib.rs:18:30: 18:33 warning: unused variable: &lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;jre&lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;, &lt;span style=&#34;color: #177500&#34;&gt;#[warn(unused_variables)] on by default&lt;/span&gt;
-src/lib.rs:18 pub extern fn Java_Adder_add&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;jre: *mut JNIEnv, class: *const c_void, v1: c_int, v2: c_int&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt; -&amp;gt; c_int &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+   Compiling highperf-adder v0.1.0 (file:///Users/michael/rust/highperf-adder)
+src/lib.rs:18:30: 18:33 warning: unused variable: `jre`, #[warn(unused_variables)] on by default
+src/lib.rs:18 pub extern fn Java_Adder_add(jre: *mut JNIEnv, class: *const c_void, v1: c_int, v2: c_int) -&amp;gt; c_int {
                                            ^~~
-src/lib.rs:18:48: 18:53 warning: unused variable: &lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;class&lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;, &lt;span style=&#34;color: #177500&#34;&gt;#[warn(unused_variables)] on by default&lt;/span&gt;
-src/lib.rs:18 pub extern fn Java_Adder_add&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;jre: *mut JNIEnv, class: *const c_void, v1: c_int, v2: c_int&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt; -&amp;gt; c_int &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+src/lib.rs:18:48: 18:53 warning: unused variable: `class`, #[warn(unused_variables)] on by default
+src/lib.rs:18 pub extern fn Java_Adder_add(jre: *mut JNIEnv, class: *const c_void, v1: c_int, v2: c_int) -&amp;gt; c_int {
                                                              ^~~~~
-src/lib.rs:18:1: 20:2 warning: &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;Java_Adder_add&lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt; should have a snake &lt;span style=&#34;color: #A90D91&#34;&gt;case&lt;/span&gt; name such as &lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;java_adder_add&lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;, &lt;span style=&#34;color: #177500&#34;&gt;#[warn(non_snake_case)] on by default&lt;/span&gt;
-src/lib.rs:18 pub extern fn Java_Adder_add&lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;jre: *mut JNIEnv, class: *const c_void, v1: c_int, v2: c_int&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt; -&amp;gt; c_int &lt;span style=&#34;color: #000000&#34;&gt;{&lt;/span&gt;
+src/lib.rs:18:1: 20:2 warning: function `Java_Adder_add` should have a snake case name such as `java_adder_add`, #[warn(non_snake_case)] on by default
+src/lib.rs:18 pub extern fn Java_Adder_add(jre: *mut JNIEnv, class: *const c_void, v1: c_int, v2: c_int) -&amp;gt; c_int {
 src/lib.rs:19     v1 + v2
-src/lib.rs:20 &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;java Adder
-&lt;span style=&#34;color: #1C01CE&#34;&gt;2&lt;/span&gt; + &lt;span style=&#34;color: #000000&#34;&gt;3&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; 5
-&lt;/pre&gt;&lt;/div&gt;
+src/lib.rs:20 }
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;pre&gt;&lt;code&gt;$ java Adder
+2 + 3 = 5
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;It works! The warnings from &lt;code&gt;rustc&lt;/code&gt; are there because the rust compiler is as always super correct and tells us we are neither making use of the &lt;code&gt;jre&lt;/code&gt; nor of the &lt;code&gt;class&lt;/code&gt; function arguments. Also, our method signature is not named like idiomatic rust code is. You can turn off those warnings by adding the attributes the compiler suggests.&lt;/p&gt;
 
@@ -215,78 +422,82 @@ src/lib.rs:20 &lt;span style=&#34;color: #000000&#34;&gt;}&lt;/span&gt;
 &lt;p&gt;As always with such low-level concerns like this, the APIs differ across operating systems and some platforms don&amp;rsquo;t even support CPU binding at all. This is where &lt;code&gt;hwloc&lt;/code&gt; shines again - it provides us with easy to use abstractions that we can readily use in our rust code. The following blog post explains the different options (checking for support, process binding, thread binding) in greater detail.&lt;/p&gt;
 
 &lt;p&gt;The &lt;a href=&#34;http://nitschinger.at/hwloc-rs/rustdoc/0.3.0/hwloc/index.html&#34;&gt;docs&lt;/a&gt; provide helpful instructions to get started, but make sure you pick up at least version &lt;code&gt;0.3.0&lt;/code&gt; if you want to try it out:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;[dependencies]&lt;/span&gt;
-&lt;span style=&#34;color: #836C28&#34;&gt;hwloc&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;0.3.0&amp;quot;&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
 
-&lt;h2 id=&#34;checking-for-support:52f762053f3e7d8d6ef28b0780de78e6&#34;&gt;Checking for Support&lt;/h2&gt;
+&lt;pre&gt;&lt;code&gt;[dependencies]
+hwloc = &amp;quot;0.3.0&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h2 id=&#34;checking-for-support&#34;&gt;Checking for Support&lt;/h2&gt;
 
 &lt;p&gt;Before even thinking about binding your thread or process to a specific core you need to check whether your target platform supports it. Spoiler: if you are thinking about trying this on OSX, you are out of luck. But this gives us a chance to compare the output of the following code on Linux and OSX:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc&lt;/span&gt;;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc&lt;/span&gt;;
 
 &lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc::Topology&lt;/span&gt;;
 
-&lt;span style=&#34;color: #177500&#34;&gt;/// Example on how to check for specific topology support of a feature.&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;/// Example on how to check for specific topology support of a feature.&lt;/span&gt;
 &lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;main&lt;/span&gt;() {
     &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Topology::new&lt;/span&gt;();
 
     &lt;span style=&#34;color: #177500&#34;&gt;// Check if Process Binding for CPUs is supported&lt;/span&gt;
-    &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;CPU Binding (current process) supported: {}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;support&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;cpu&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;set_current_process&lt;/span&gt;());
-    &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;CPU Binding (any process) supported: {}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;support&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;cpu&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;set_process&lt;/span&gt;());
+    &lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;CPU Binding (current process) supported: {}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;support&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;cpu&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;set_current_process&lt;/span&gt;());
+    &lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;CPU Binding (any process) supported: {}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;support&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;cpu&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;set_process&lt;/span&gt;());
 
     &lt;span style=&#34;color: #177500&#34;&gt;// Check if Thread Binding for CPUs is supported&lt;/span&gt;
-    &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;CPU Binding (current thread) supported: {}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;support&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;cpu&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;set_current_thread&lt;/span&gt;());
-    &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;CPU Binding (any thread) supported: {}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;support&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;cpu&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;set_thread&lt;/span&gt;());
+    &lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;CPU Binding (current thread) supported: {}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;support&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;cpu&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;set_current_thread&lt;/span&gt;());
+    &lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;CPU Binding (any thread) supported: {}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;support&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;cpu&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;set_thread&lt;/span&gt;());
 
     &lt;span style=&#34;color: #177500&#34;&gt;// Debug Print all the Support Flags&lt;/span&gt;
-    &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;All Flags:\n{:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;support&lt;/span&gt;());
+    &lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;All Flags:\n{:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;support&lt;/span&gt;());
 }
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;On Linux:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;CPU Binding (current process) supported: true
+
+&lt;pre&gt;&lt;code&gt;CPU Binding (current process) supported: true
 CPU Binding (any process) supported: true
 CPU Binding (current thread) supported: true
 CPU Binding (any thread) supported: true
 All Flags:
 TopologyDiscoverySupport { pu: 1 }, TopologyCpuBindSupport { set_thisproc_cpubind: 1, get_thisproc_cpubind: 1, set_proc_cpubind: 1, get_proc_cpubind: 1, set_thisthread_cpubind: 1, get_thisthread_cpubind: 1, set_thread_cpubind: 1, get_thread_cpubind: 1, get_thisproc_last_cpu_location: 1, get_proc_last_cpu_location: 1, get_thisthread_last_cpu_location: 1 }, TopologyMemBindSupport { (omitted) }
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;On OSX:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;CPU Binding (current process) supported: false
+
+&lt;pre&gt;&lt;code&gt;CPU Binding (current process) supported: false
 CPU Binding (any process) supported: false
 CPU Binding (current thread) supported: false
 CPU Binding (any thread) supported: false
 All Flags:
 TopologyDiscoverySupport { pu: 1 }, TopologyCpuBindSupport { set_thisproc_cpubind: 0, get_thisproc_cpubind: 0, set_proc_cpubind: 0, get_proc_cpubind: 0, set_thisthread_cpubind: 0, get_thisthread_cpubind: 0, set_thread_cpubind: 0, get_thread_cpubind: 0, get_thisproc_last_cpu_location: 0, get_proc_last_cpu_location: 0, get_thisthread_last_cpu_location: 0 }, TopologyMemBindSupport { (omitted) }
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;As a result, the following sections use a (virtual) Linux machine with 4 cores to demonstrate the binding capabilities. To give you some context, here is the &lt;code&gt;lstopo&lt;/code&gt; output of the VM:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;uname -a
-Linux vagrant-ubuntu-trusty-64 3.13.0-71-generic &lt;span style=&#34;color: #177500&#34;&gt;#114-Ubuntu SMP Tue Dec 1 02:34:22 UTC 2015 x86_64 x86_64 x86_64 GNU/Linux&lt;/span&gt;
 
-&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;lstopo -p --no-io
-Machine &lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;490MB&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt; + Socket P#0 + L2d &lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;6144KB&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt;
-  L1d &lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;32KB&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt; + Core P#0 + PU P#0
-  L1d &lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;32KB&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt; + Core P#1 + PU P#1
-  L1d &lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;32KB&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt; + Core P#2 + PU P#2
-  L1d &lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;32KB&lt;span style=&#34;color: #000000&#34;&gt;)&lt;/span&gt; + Core P#3 + PU P#3  
-&lt;/pre&gt;&lt;/div&gt;
+&lt;pre&gt;&lt;code&gt;$ uname -a
+Linux vagrant-ubuntu-trusty-64 3.13.0-71-generic #114-Ubuntu SMP Tue Dec 1 02:34:22 UTC 2015 x86_64 x86_64 x86_64 GNU/Linux
 
-&lt;h2 id=&#34;the-cpuset:52f762053f3e7d8d6ef28b0780de78e6&#34;&gt;The CpuSet&lt;/h2&gt;
+$ lstopo -p --no-io
+Machine (490MB) + Socket P#0 + L2d (6144KB)
+  L1d (32KB) + Core P#0 + PU P#0
+  L1d (32KB) + Core P#1 + PU P#1
+  L1d (32KB) + Core P#2 + PU P#2
+  L1d (32KB) + Core P#3 + PU P#3  
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h2 id=&#34;the-cpuset&#34;&gt;The CpuSet&lt;/h2&gt;
 
 &lt;p&gt;One important type to know when performing CPU binding operations is the &lt;a href=&#34;http://nitschinger.at/hwloc-rs/rustdoc/0.3.0/hwloc/type.CpuSet.html&#34;&gt;CpuSet&lt;/a&gt;. The &lt;code&gt;CpuSet&lt;/code&gt; is just a type alias for a generic &lt;a href=&#34;http://nitschinger.at/hwloc-rs/rustdoc/0.3.0/hwloc/struct.Bitmap.html&#34;&gt;Bitmap&lt;/a&gt; which has its bits set according to CPU physical OS indexes.&lt;/p&gt;
 
 &lt;p&gt;You can create a &lt;code&gt;CpuSets&lt;/code&gt; instance too, but in general you will retrieve them through the topology or its objects, then copy/modify it and finally use it for your custom CPU binding. Every bitmap implements the &lt;code&gt;Display&lt;/code&gt; and the &lt;code&gt;Debug&lt;/code&gt; trait (amongst others), so printing their values is often a good idea. The next examples will make heavy use of &lt;code&gt;CpuSets&lt;/code&gt;, so make sure to browse around the API a bit and make yourself familiar with it.&lt;/p&gt;
 
-&lt;h2 id=&#34;process-binding:52f762053f3e7d8d6ef28b0780de78e6&#34;&gt;Process Binding&lt;/h2&gt;
+&lt;h2 id=&#34;process-binding&#34;&gt;Process Binding&lt;/h2&gt;
 
 &lt;p&gt;If your platform supports it as well, &lt;code&gt;hwloc&lt;/code&gt; provides two different ways to bind a process. You can either bind the current process or an arbitrary process identified by its process ID (commonly referred to as &lt;code&gt;pid&lt;/code&gt;).&lt;/p&gt;
 
-&lt;h3 id=&#34;binding-the-current-process:52f762053f3e7d8d6ef28b0780de78e6&#34;&gt;Binding the Current Process&lt;/h3&gt;
+&lt;h3 id=&#34;binding-the-current-process&#34;&gt;Binding the Current Process&lt;/h3&gt;
 
 &lt;p&gt;Here is an example which binds the current process to the last core available:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc&lt;/span&gt;;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc&lt;/span&gt;;
 
 &lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc::&lt;/span&gt;{&lt;span style=&#34;color: #000000&#34;&gt;Topology&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;TopologyObject&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;ObjectType&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;};
 
@@ -296,19 +507,19 @@ Machine &lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;490MB&lt;span s
     &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cpuset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;last_core&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;cpuset&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;();
     &lt;span style=&#34;color: #000000&#34;&gt;cpuset&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;singlify&lt;/span&gt;();
 
-    &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Cpu Binding before explicit bind: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get_cpubind&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;));
-    &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Cpu Location before explicit bind: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get_cpu_location&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;));
+    &lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Cpu Binding before explicit bind: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get_cpubind&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;));
+    &lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Cpu Location before explicit bind: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get_cpu_location&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;));
 
     &lt;span style=&#34;color: #A90D91&#34;&gt;match&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;set_cpubind&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;cpuset&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;) {
-        &lt;span style=&#34;color: #A90D91&#34;&gt;Ok&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;_&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Correctly bound to last core&amp;quot;&lt;/span&gt;),
-        &lt;span style=&#34;color: #A90D91&#34;&gt;Err&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Failed to bind: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;)
+        &lt;span style=&#34;color: #A90D91&#34;&gt;Ok&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;_&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Correctly bound to last core&amp;quot;&lt;/span&gt;),
+        &lt;span style=&#34;color: #A90D91&#34;&gt;Err&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Failed to bind: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;)
     }
 
-    &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Cpu Binding after explicit bind: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get_cpubind&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;));
-    &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Cpu Location after explicit bind: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get_cpu_location&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;));
+    &lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Cpu Binding after explicit bind: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get_cpubind&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;));
+    &lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Cpu Location after explicit bind: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get_cpu_location&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;));
 }
 
-&lt;span style=&#34;color: #177500&#34;&gt;/// Helper method to find the last core&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;/// Helper method to find the last core&lt;/span&gt;
 &lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;last_core&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;topo:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Topology&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;TopologyObject&lt;/span&gt; {
     &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;core_depth&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;depth_or_below_for_type&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;ObjectType::Core&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;();
     &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;all_cores&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;objects_at_depth&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;core_depth&lt;/span&gt;);
@@ -317,15 +528,16 @@ Machine &lt;span style=&#34;color: #000000&#34;&gt;(&lt;/span&gt;490MB&lt;span s
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;This prints the following on the linux machine:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;Cpu Binding before explicit bind: Some(0-3)
+
+&lt;pre&gt;&lt;code&gt;Cpu Binding before explicit bind: Some(0-3)
 Cpu Location before explicit bind: Some(2)
 Correctly bound to last core
 Cpu Binding after explicit bind: Some(3)
 Cpu Location after explicit bind: Some(3)
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;So let&amp;rsquo;s break it apart a bit. The first thing we need to do is find the &lt;code&gt;CpuSet&lt;/code&gt; for the last core so we have a reference to bind it to. Note that this &lt;code&gt;singlify&lt;/code&gt; call here is useful so that the process does not have a chance of migrating between multiple logical CPUs in the original mask.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cpuset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;last_core&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;cpuset&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;();
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cpuset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;last_core&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;cpuset&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;();
 &lt;span style=&#34;color: #000000&#34;&gt;cpuset&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;singlify&lt;/span&gt;();
 
 &lt;span style=&#34;color: #177500&#34;&gt;//...&lt;/span&gt;
@@ -338,26 +550,26 @@ Cpu Location after explicit bind: Some(3)
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Now that we have our &amp;ldquo;target&amp;rdquo;, we can start binding the current process there. To visualise what&amp;rsquo;s going on, we also print the binding and location for the current process before and after the explicit binding:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Cpu Binding before explicit bind: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get_cpubind&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;));
-&lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Cpu Location before explicit bind: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get_cpu_location&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;));
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Cpu Binding before explicit bind: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get_cpubind&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;));
+&lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Cpu Location before explicit bind: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get_cpu_location&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;));
 
 &lt;span style=&#34;color: #A90D91&#34;&gt;match&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;set_cpubind&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;cpuset&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;) {
-    &lt;span style=&#34;color: #A90D91&#34;&gt;Ok&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;_&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Correctly bound to last core&amp;quot;&lt;/span&gt;),
-    &lt;span style=&#34;color: #A90D91&#34;&gt;Err&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Failed to bind: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;)
+    &lt;span style=&#34;color: #A90D91&#34;&gt;Ok&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;_&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Correctly bound to last core&amp;quot;&lt;/span&gt;),
+    &lt;span style=&#34;color: #A90D91&#34;&gt;Err&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Failed to bind: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;)
 }
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Cpu Binding after explicit bind: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get_cpubind&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;));
-&lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Cpu Location after explicit bind: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get_cpu_location&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;));
+&lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Cpu Binding after explicit bind: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get_cpubind&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;));
+&lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Cpu Location after explicit bind: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get_cpu_location&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;));
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;The current &lt;code&gt;CpuSet&lt;/code&gt; of the process (which you can retrieve through &lt;code&gt;get_cpubind(CPUBIND_PROCESS)&lt;/code&gt;) contains all possibles cores where the operating system might dispatch the process on. In our case it prints &lt;code&gt;0-3&lt;/code&gt; which means all four cores are possible. The call to &lt;code&gt;get_cpu_location()&lt;/code&gt; gives us the current core location, but this can change between subsequent calls as the operating system moves the process around.&lt;/p&gt;
 
 &lt;p&gt;Finally we override the current binding with our custom one (the new &lt;code&gt;CpuSet&lt;/code&gt; only contains the last core rather than all four) and apply some simple matching to make sure the binding didn&amp;rsquo;t fail for some reason. The last &lt;code&gt;println!&lt;/code&gt; calls are just there to visually validate the new binding.&lt;/p&gt;
 
-&lt;h3 id=&#34;binding-an-arbitrary-process:52f762053f3e7d8d6ef28b0780de78e6&#34;&gt;Binding an Arbitrary Process&lt;/h3&gt;
+&lt;h3 id=&#34;binding-an-arbitrary-process&#34;&gt;Binding an Arbitrary Process&lt;/h3&gt;
 
 &lt;p&gt;Binding any process works very similar to binding the current process, but there is one difference - we need to find the &lt;code&gt;pid&lt;/code&gt; of the process we want to bind. This is a little out of scope for this blog post, but since our own process also has a &lt;code&gt;pid&lt;/code&gt; we can use that one for our examples. Unfortunately we need a little bit of unsafe &lt;code&gt;libc&lt;/code&gt; magic there:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;libc&lt;/span&gt;;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;libc&lt;/span&gt;;
 
 &lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;main&lt;/span&gt;() {
   &lt;span style=&#34;color: #177500&#34;&gt;//...&lt;/span&gt;
@@ -367,13 +579,13 @@ Cpu Location after explicit bind: Some(3)
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Once we have our pid, we will reuse the code from the last example to get the last core where we want to bind the process to:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;main&lt;/span&gt;() {
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;main&lt;/span&gt;() {
   &lt;span style=&#34;color: #177500&#34;&gt;//...&lt;/span&gt;
   &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cpuset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;last_core&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;cpuset&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;();
   &lt;span style=&#34;color: #177500&#34;&gt;//...&lt;/span&gt;
 }
 
-&lt;span style=&#34;color: #177500&#34;&gt;/// Find the last core&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;/// Find the last core&lt;/span&gt;
 &lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;last_core&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;topo:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Topology&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;TopologyObject&lt;/span&gt; {
     &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;core_depth&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;depth_or_below_for_type&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;ObjectType::Core&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;();
     &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;all_cores&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;objects_at_depth&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;core_depth&lt;/span&gt;);
@@ -382,8 +594,8 @@ Cpu Location after explicit bind: Some(3)
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Now we can use the same methods as previously, but with the &lt;code&gt;for_process()&lt;/code&gt; suffix. Here is the full example, again with some debug print statements to visualise what&amp;rsquo;s going on:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc&lt;/span&gt;;
-&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;libc&lt;/span&gt;;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc&lt;/span&gt;;
+&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;libc&lt;/span&gt;;
 
 &lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc::&lt;/span&gt;{&lt;span style=&#34;color: #000000&#34;&gt;Topology&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;TopologyObject&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;ObjectType&lt;/span&gt;};
 
@@ -391,21 +603,21 @@ Cpu Location after explicit bind: Some(3)
     &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Topology::new&lt;/span&gt;();
 
     &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;pid&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;unsafe&lt;/span&gt; { &lt;span style=&#34;color: #000000&#34;&gt;libc::getpid&lt;/span&gt;() };
-    &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Binding Process with PID {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;pid&lt;/span&gt;);
+    &lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Binding Process with PID {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;pid&lt;/span&gt;);
 
     &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cpuset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;last_core&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;cpuset&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;();
     &lt;span style=&#34;color: #000000&#34;&gt;cpuset&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;singlify&lt;/span&gt;();
 
-    &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Before Bind: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get_cpubind_for_process&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;pid&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;());
-    &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Last Known CPU Location: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get_cpu_location_for_process&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;pid&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;());
+    &lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Before Bind: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get_cpubind_for_process&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;pid&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;());
+    &lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Last Known CPU Location: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get_cpu_location_for_process&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;pid&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;());
 
     &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;set_cpubind_for_process&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;pid&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;cpuset&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;();
 
-    &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;After Bind: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get_cpubind_for_process&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;pid&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;());
-    &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Last Known CPU Location: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get_cpu_location_for_process&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;pid&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;());
+    &lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;After Bind: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get_cpubind_for_process&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;pid&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;());
+    &lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Last Known CPU Location: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get_cpu_location_for_process&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;pid&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_PROCESS&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;());
 }
 
-&lt;span style=&#34;color: #177500&#34;&gt;/// Find the last core&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;/// Find the last core&lt;/span&gt;
 &lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;last_core&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;topo:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Topology&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;TopologyObject&lt;/span&gt; {
     &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;core_depth&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;depth_or_below_for_type&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;ObjectType::Core&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;();
     &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;all_cores&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;objects_at_depth&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;core_depth&lt;/span&gt;);
@@ -414,22 +626,23 @@ Cpu Location after explicit bind: Some(3)
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;If we run this on our linux box, this is the output:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;Binding Process with PID 3034
+
+&lt;pre&gt;&lt;code&gt;Binding Process with PID 3034
 Before Bind: 0-3
 Last Known CPU Location: 3
 After Bind: 3
 Last Known CPU Location: 3
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;So as long as you have the process ID available and the operating system supports it, you can bind every process to any number of cores you want. This is especially helpful if you need to bind forked processes or if you need to write some kind of babysitter service that needs to keep track and orchestrate a number of processes.&lt;/p&gt;
 
-&lt;h2 id=&#34;thread-binding:52f762053f3e7d8d6ef28b0780de78e6&#34;&gt;Thread Binding&lt;/h2&gt;
+&lt;h2 id=&#34;thread-binding&#34;&gt;Thread Binding&lt;/h2&gt;
 
 &lt;p&gt;In addition to bind the process as a whole, it is also possible to pin individual threads inside a process to cores. Every thread has a unique thread ID (&lt;code&gt;tid&lt;/code&gt;) which is used to bind a thread to a core.&lt;/p&gt;
 
 &lt;p&gt;The following example will spawn one thread for each core in the system and then bind each thread to one of the cores. Here is the full code in its beauty, we&amp;rsquo;ll break it apart afterwards:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc&lt;/span&gt;;
-&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;libc&lt;/span&gt;;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc&lt;/span&gt;;
+&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;libc&lt;/span&gt;;
 
 &lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc::&lt;/span&gt;{&lt;span style=&#34;color: #000000&#34;&gt;Topology&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;ObjectType&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_THREAD&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;CpuSet&lt;/span&gt;};
 &lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;std::thread&lt;/span&gt;;
@@ -443,11 +656,11 @@ Last Known CPU Location: 3
         &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo_locked&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo_rc&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;lock&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;();
         (&lt;span style=&#34;color: #000000&#34;&gt;*topo_locked&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;objects_with_type&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;ObjectType::Core&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;len&lt;/span&gt;()
     };
-    &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Found {} cores.&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;num_cores&lt;/span&gt;);
+    &lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Found {} cores.&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;num_cores&lt;/span&gt;);
 
-    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;handles:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Vec&amp;lt;_&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; (&lt;span style=&#34;color: #1C01CE&#34;&gt;0.&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;num_cores&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;map&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;|i|&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;handles:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;Vec&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;_&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; (&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;..&lt;span style=&#34;color: #000000&#34;&gt;num_cores&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;map&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;|i|&lt;/span&gt; {
             &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;child_topo&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;clone&lt;/span&gt;();
-            &lt;span style=&#34;color: #000000&#34;&gt;thread::&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;spawn&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;move&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;||&lt;/span&gt; {
+            &lt;span style=&#34;color: #000000&#34;&gt;thread::spawn&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;move&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;||&lt;/span&gt; {
                 &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;tid&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;unsafe&lt;/span&gt; { &lt;span style=&#34;color: #000000&#34;&gt;libc::pthread_self&lt;/span&gt;() };
                 &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;locked_topo&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;child_topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;lock&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;();
 
@@ -459,7 +672,7 @@ Last Known CPU Location: 3
 
                 &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;after&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;locked_topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get_cpubind_for_thread&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;tid&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_THREAD&lt;/span&gt;);
 
-                &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Thread {}: Before {:?}, After {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;before&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;after&lt;/span&gt;);
+                &lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Thread {}: Before {:?}, After {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;before&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;after&lt;/span&gt;);
             })
         }).&lt;span style=&#34;color: #000000&#34;&gt;collect&lt;/span&gt;();
 
@@ -468,7 +681,7 @@ Last Known CPU Location: 3
         }
 }
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cpuset_for_core&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;topology:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;Topology&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;idx:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;usize&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;CpuSet&lt;/span&gt; {
+&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cpuset_for_core&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;topology:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;Topology&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;idx:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;CpuSet&lt;/span&gt; {
     &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cores&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;*topology&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;objects_with_type&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;ObjectType::Core&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;();
     &lt;span style=&#34;color: #A90D91&#34;&gt;match&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cores&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;idx&lt;/span&gt;) {
         &lt;span style=&#34;color: #A90D91&#34;&gt;Some&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;val&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;val&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;cpuset&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;(),
@@ -478,20 +691,20 @@ Last Known CPU Location: 3
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Before the binding we need to identify the number of cores - that&amp;rsquo;s an easy task for &lt;code&gt;hwloc&lt;/code&gt;:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;num_cores&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; {
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;num_cores&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; {
     &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo_rc&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;clone&lt;/span&gt;();
     &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo_locked&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo_rc&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;lock&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;();
     (&lt;span style=&#34;color: #000000&#34;&gt;*topo_locked&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;objects_with_type&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;ObjectType::Core&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;len&lt;/span&gt;()
 };
-&lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Found {} cores.&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;num_cores&lt;/span&gt;);
+&lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Found {} cores.&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;num_cores&lt;/span&gt;);
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;The code finds all cores through &lt;code&gt;objects_with_type(&amp;amp;ObjectType::Core)&lt;/code&gt; and counts them. Note that we need to do use proper rust synchronization mechanisms around our &lt;code&gt;Topology&lt;/code&gt; since we are accessing it from multiple threads in the code.&lt;/p&gt;
 
 &lt;p&gt;The next piece spawns one thread for each core and joins on the main thread to wait until they complete:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;handles:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Vec&amp;lt;_&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; (&lt;span style=&#34;color: #1C01CE&#34;&gt;0.&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;num_cores&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;map&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;|i|&lt;/span&gt; {
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;handles:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;Vec&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;_&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; (&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;..&lt;span style=&#34;color: #000000&#34;&gt;num_cores&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;map&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;|i|&lt;/span&gt; {
         &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;child_topo&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;clone&lt;/span&gt;();
-        &lt;span style=&#34;color: #000000&#34;&gt;thread::&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;spawn&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;move&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;||&lt;/span&gt; {
+        &lt;span style=&#34;color: #000000&#34;&gt;thread::spawn&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;move&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;||&lt;/span&gt; {
             &lt;span style=&#34;color: #177500&#34;&gt;// do our other stuff&lt;/span&gt;
         })
     }).&lt;span style=&#34;color: #000000&#34;&gt;collect&lt;/span&gt;();
@@ -502,14 +715,14 @@ Last Known CPU Location: 3
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Next up we load the current thread ID through some &lt;code&gt;libc&lt;/code&gt; unsafe magic, lock the &lt;code&gt;Topology&lt;/code&gt; for safety and then read the current &lt;code&gt;CpuSet&lt;/code&gt; for the thread (to print it out later):&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;tid&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;unsafe&lt;/span&gt; { &lt;span style=&#34;color: #000000&#34;&gt;libc::pthread_self&lt;/span&gt;() };
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;tid&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;unsafe&lt;/span&gt; { &lt;span style=&#34;color: #000000&#34;&gt;libc::pthread_self&lt;/span&gt;() };
 &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;locked_topo&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;child_topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;lock&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;();
 
 &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;before&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;locked_topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get_cpubind_for_thread&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;tid&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_THREAD&lt;/span&gt;);
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;The next part is important:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;bind_to&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cpuset_for_core&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;*locked_topo&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt;);
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;bind_to&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cpuset_for_core&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;*locked_topo&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt;);
 
 &lt;span style=&#34;color: #000000&#34;&gt;locked_topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;set_cpubind_for_thread&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;tid&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;bind_to&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_THREAD&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;();
 &lt;/pre&gt;&lt;/div&gt;
@@ -517,20 +730,21 @@ Last Known CPU Location: 3
 &lt;p&gt;The helper function &lt;code&gt;cpuset_for_core&lt;/code&gt; accepts an integer which represents the thread number (not the &lt;code&gt;tid&lt;/code&gt;) and loops through the cores available on the &lt;code&gt;Topology&lt;/code&gt;. It then returns the right &lt;code&gt;CpuSet&lt;/code&gt; for the given index, so the first thread will be pinned to Core 0, the second one to Core 1 and so forth. Then, we use the &lt;code&gt;set_cpubind_for_thread()&lt;/code&gt; method to bass in the current thread id as well as the &lt;code&gt;CpuSet&lt;/code&gt; to apply and the &lt;code&gt;CPUBIND_THREAD&lt;/code&gt; identifier which is needed.&lt;/p&gt;
 
 &lt;p&gt;Finally we just collect the new binding and then print it out for visualisation:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;after&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;locked_topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get_cpubind_for_thread&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;tid&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_THREAD&lt;/span&gt;);
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;after&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;locked_topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;get_cpubind_for_thread&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;tid&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;CPUBIND_THREAD&lt;/span&gt;);
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Thread {}: Before {:?}, After {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;before&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;after&lt;/span&gt;);
+&lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Thread {}: Before {:?}, After {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;before&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;after&lt;/span&gt;);
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Running this on our 4-core machine prints:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;Found 4 cores.
+
+&lt;pre&gt;&lt;code&gt;Found 4 cores.
 Thread 0: Before Some(0-3), After Some(0)
 Thread 1: Before Some(0-3), After Some(1)
 Thread 2: Before Some(0-3), After Some(2)
 Thread 3: Before Some(0-3), After Some(3)
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
-&lt;h2 id=&#34;conclusion:52f762053f3e7d8d6ef28b0780de78e6&#34;&gt;Conclusion&lt;/h2&gt;
+&lt;h2 id=&#34;conclusion&#34;&gt;Conclusion&lt;/h2&gt;
 
 &lt;p&gt;Which processes or threads to bind is purely an application concern, but the underlying mechanics are greatly simplified through the &lt;code&gt;hwloc&lt;/code&gt; abstractions. Combining the topology discovery with the CPU binding support allows you to choose the most optimised deployment option at runtime and giving you reasonable fallback options if the most performant way is not supported on the target.&lt;/p&gt;
 
@@ -565,7 +779,7 @@ efficiently.&lt;/em&gt;&lt;/p&gt;
 
 &lt;p&gt;I assume that you have basic rust skills, if not you want to check out &lt;a href=&#34;https://doc.rust-lang.org/stable/book/&#34;&gt;the book&lt;/a&gt; first. All the examples shown here should work on Linux and OSX, I never tested rust binding on windows (hwloc itself supports windows). If you want to help out adding support for it, that would be awesome!&lt;/p&gt;
 
-&lt;h2 id=&#34;setup:59d60ae1f01cc6eb214b28fbb3277422&#34;&gt;Setup&lt;/h2&gt;
+&lt;h2 id=&#34;setup&#34;&gt;Setup&lt;/h2&gt;
 
 &lt;p&gt;You need to have rust (for example 1.5.0) installed, as well as the &lt;code&gt;hwloc&lt;/code&gt; C library. Please refer to the &lt;a href=&#34;https://github.com/daschl/hwloc-rs#install-hwloc-on-os-x&#34;&gt;README&lt;/a&gt; for detailed instructions on how to install it. On linux, most of the time you can find recent packages in your package manager, on OSX you want to install it from source. For example, here is all you need to do on OSX:&lt;/p&gt;
 
@@ -577,16 +791,19 @@ efficiently.&lt;/em&gt;&lt;/p&gt;
 &lt;/ul&gt;
 
 &lt;p&gt;The next step is to create a rust project which will be runnable from the command line:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;~/rust $ cargo new hwloc-playground --bin
-&lt;/pre&gt;&lt;/div&gt;
+
+&lt;pre&gt;&lt;code&gt;~/rust $ cargo new hwloc-playground --bin
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Go modify your &lt;code&gt;Cargo.toml&lt;/code&gt; and add &lt;code&gt;hwloc&lt;/code&gt; as a dependency:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;[dependencies]&lt;/span&gt;
-&lt;span style=&#34;color: #836C28&#34;&gt;hwloc&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;0.2.0&amp;quot;&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+
+&lt;pre&gt;&lt;code&gt;[dependencies]
+hwloc = &amp;quot;0.2.0&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Execute &lt;code&gt;cargo run&lt;/code&gt; to make sure the dependency compiles correctly before we move on:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;~/rust/hwloc-playground $ cargo run
+
+&lt;pre&gt;&lt;code&gt;~/rust/hwloc-playground $ cargo run
    Compiling winapi-build v0.1.1
    Compiling libc v0.2.4
    Compiling rustc-serialize v0.3.16
@@ -602,14 +819,14 @@ efficiently.&lt;/em&gt;&lt;/p&gt;
    Compiling hwloc-playground v0.1.0 (file:///Users/michael/rust/hwloc-playground)
      Running `target/debug/hwloc-playground`
 Hello, world!
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;&lt;code&gt;hwloc-rs&lt;/code&gt; also provides rustdoc which you can find &lt;a href=&#34;http://nitschinger.at/hwloc-rs/rustdoc&#34;&gt;here&lt;/a&gt; for the different versions.&lt;/p&gt;
 
-&lt;h3 id=&#34;cores-and-processing-units:59d60ae1f01cc6eb214b28fbb3277422&#34;&gt;Cores and Processing Units&lt;/h3&gt;
+&lt;h3 id=&#34;cores-and-processing-units&#34;&gt;Cores and Processing Units&lt;/h3&gt;
 
 &lt;p&gt;As a first simple example, we&amp;rsquo;ll find out how many physical cores we have on the machine. This introduces some basic concepts of &lt;code&gt;hwloc&lt;/code&gt;. The full code sample looks like this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc&lt;/span&gt;;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc&lt;/span&gt;;
 
 &lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc::&lt;/span&gt;{&lt;span style=&#34;color: #000000&#34;&gt;Topology&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;ObjectType&lt;/span&gt;};
 
@@ -622,54 +839,56 @@ Hello, world!
 
     &lt;span style=&#34;color: #177500&#34;&gt;// Match on the returned Result and print the length if successful.&lt;/span&gt;
     &lt;span style=&#34;color: #A90D91&#34;&gt;match&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cores&lt;/span&gt; {
-        &lt;span style=&#34;color: #A90D91&#34;&gt;Ok&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;There are {} cores on this machine.&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;len&lt;/span&gt;()),
+        &lt;span style=&#34;color: #A90D91&#34;&gt;Ok&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;There are {} cores on this machine.&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;len&lt;/span&gt;()),
         &lt;span style=&#34;color: #A90D91&#34;&gt;Err&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;panic!&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;format!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Could not load cores because of: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;))
     }
 }
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Let&amp;rsquo;s break the code apart a bit. The first thing you always need to do is create a &lt;a href=&#34;http://nitschinger.at/hwloc-rs/rustdoc/0.2.0/hwloc/struct.Topology.html&#34;&gt;Topology&lt;/a&gt;. The &lt;code&gt;Topology&lt;/code&gt; is your logical representation of the actual mapped hardware.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Topology::new&lt;/span&gt;();
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Topology::new&lt;/span&gt;();
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Now that we have the &lt;code&gt;Topology&lt;/code&gt;, we can ask it to return all &lt;a href=&#34;http://nitschinger.at/hwloc-rs/rustdoc/0.2.0/hwloc/struct.TopologyObject.html&#34;&gt;TopologyObjects&lt;/a&gt; with a specific &lt;a href=&#34;http://nitschinger.at/hwloc-rs/rustdoc/0.2.0/hwloc/enum.ObjectType.html&#34;&gt;ObjectType&lt;/a&gt;. One type is &lt;code&gt;Core&lt;/code&gt; which maps to a computation unit on the physical hardware (most of the time a CPU Core).&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cores&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;objects_with_type&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;ObjectType::Core&lt;/span&gt;);
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cores&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;objects_with_type&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;ObjectType::Core&lt;/span&gt;);
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Since not every ObjectType is available on every hardware, it might not be possible to figure out the actual objects. Because of this, the &lt;code&gt;objects_with_type&lt;/code&gt; method returns a &lt;code&gt;Result&amp;lt;Vec&amp;lt;&amp;amp;TopologyObject&amp;gt;, TypeDepthError&amp;gt;&lt;/code&gt;. We can now utilize pattern matching to distinguish between success and error, and if it is successful print out the length of the &lt;a href=&#34;https://doc.rust-lang.org/std/vec/struct.Vec.html#method.len&#34;&gt;Vector&lt;/a&gt;:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;match&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cores&lt;/span&gt; {
-    &lt;span style=&#34;color: #A90D91&#34;&gt;Ok&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;There are {} cores on this machine.&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;len&lt;/span&gt;()),
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;match&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cores&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;Ok&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;There are {} cores on this machine.&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;len&lt;/span&gt;()),
     &lt;span style=&#34;color: #A90D91&#34;&gt;Err&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;panic!&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;format!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Could not load cores because of: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;))
 }
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;If you run the code you should see an output like this (My machine is equipped with an i7 quadcore):&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;~/rust/hwloc-playground $ cargo run
+
+&lt;pre&gt;&lt;code&gt;~/rust/hwloc-playground $ cargo run
    Compiling hwloc-playground v0.1.0 (file:///Users/michael/rust/hwloc-playground)
      Running `target/debug/hwloc-playground`
 There are 4 cores on this machine.
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Hwloc allows you to differentiate between cores and actual processing units. For example if your CPU has hyperthreading enabled, you&amp;rsquo;ll end up with more logical processing units than physical cores. Let&amp;rsquo;s modify the code to print the number of logical processing units instead:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #177500&#34;&gt;// Get all objects with type &amp;quot;PU&amp;quot;&lt;/span&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #177500&#34;&gt;// Get all objects with type &amp;quot;PU&amp;quot;&lt;/span&gt;
 &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cores&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;objects_with_type&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;ObjectType::PU&lt;/span&gt;);
 
 &lt;span style=&#34;color: #177500&#34;&gt;// Match on the returned Result and print the length if successful.&lt;/span&gt;
 &lt;span style=&#34;color: #A90D91&#34;&gt;match&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cores&lt;/span&gt; {
-    &lt;span style=&#34;color: #A90D91&#34;&gt;Ok&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;There are {} processing units on this machine.&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;len&lt;/span&gt;()),
+    &lt;span style=&#34;color: #A90D91&#34;&gt;Ok&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;There are {} processing units on this machine.&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;len&lt;/span&gt;()),
     &lt;span style=&#34;color: #A90D91&#34;&gt;Err&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;panic!&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;format!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Could not load processing units because of: {:?}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;e&lt;/span&gt;))
 }
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;My i7 indeed has hyperthreading enabled, so this prints:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;~/rust/hwloc-playground $ cargo run
+
+&lt;pre&gt;&lt;code&gt;~/rust/hwloc-playground $ cargo run
    Compiling hwloc-playground v0.1.0 (file:///Users/michael/rust/hwloc-playground)
      Running `target/debug/hwloc-playground`
 There are 8 processing units on this machine.
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;The library also allows us to walk the topology in tree form, so the logical processing units (&amp;ldquo;PU&amp;rdquo;) are &amp;ldquo;below&amp;rdquo; the actual cores. If we want to determine how many PUs every core has, we can print that as well:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc&lt;/span&gt;;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc&lt;/span&gt;;
 
 &lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc::&lt;/span&gt;{&lt;span style=&#34;color: #000000&#34;&gt;Topology&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;ObjectType&lt;/span&gt;};
 
@@ -683,13 +902,13 @@ There are 8 processing units on this machine.
     &lt;span style=&#34;color: #177500&#34;&gt;// Iterate through each PU&lt;/span&gt;
     &lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;pu&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;pus&lt;/span&gt; {
         &lt;span style=&#34;color: #177500&#34;&gt;// Print the PU&amp;#39;s logical index.&lt;/span&gt;
-        &lt;span style=&#34;color: #A90D91&#34;&gt;print&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;PU #{} is on Core &amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;pu&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;logical_index&lt;/span&gt;());
+        &lt;span style=&#34;color: #000000&#34;&gt;print!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;PU #{} is on Core &amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;pu&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;logical_index&lt;/span&gt;());
 
         &lt;span style=&#34;color: #177500&#34;&gt;// Walk up the parent chain until the Core is found and print its id.&lt;/span&gt;
         &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;pu&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt;();
         &lt;span style=&#34;color: #A90D91&#34;&gt;while&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;Some&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; {
             &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;object_type&lt;/span&gt;() &lt;span style=&#34;color: #000000&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;ObjectType::Core&lt;/span&gt; {
-                &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;{}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;logical_index&lt;/span&gt;());
+                &lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;{}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;logical_index&lt;/span&gt;());
                 &lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;None&lt;/span&gt;;
             } &lt;span style=&#34;color: #A90D91&#34;&gt;else&lt;/span&gt; {
                 &lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt;();
@@ -700,25 +919,25 @@ There are 8 processing units on this machine.
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;First, we load all the processing units:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;pus&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;objects_with_type&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;ObjectType::PU&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;ok&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;expect&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Could not load PUs!&amp;quot;&lt;/span&gt;);
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;pus&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;objects_with_type&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;ObjectType::PU&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;ok&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;expect&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Could not load PUs!&amp;quot;&lt;/span&gt;);
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Next up, we iterate through each unit and print its logical index:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #177500&#34;&gt;// Iterate through each PU&lt;/span&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #177500&#34;&gt;// Iterate through each PU&lt;/span&gt;
 &lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;pu&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;pus&lt;/span&gt; {
     &lt;span style=&#34;color: #177500&#34;&gt;// Print the PU&amp;#39;s logical index.&lt;/span&gt;
-    &lt;span style=&#34;color: #A90D91&#34;&gt;print&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;PU #{} is on Core &amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;pu&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;logical_index&lt;/span&gt;());
+    &lt;span style=&#34;color: #000000&#34;&gt;print!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;PU #{} is on Core &amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;pu&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;logical_index&lt;/span&gt;());
 
     &lt;span style=&#34;color: #177500&#34;&gt;// ...&lt;/span&gt;
 }
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Finally, we can walk up the tree of parents for each unit until we arrive at the Core level and print out its logical index as well. Notice how easy the walking is with the &lt;code&gt;while let&lt;/code&gt; construct. This works because &lt;code&gt;TopologyObject#parent()&lt;/code&gt; returns an &lt;code&gt;Option&amp;lt;&amp;amp;TopologyOption&amp;gt;&lt;/code&gt;.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #177500&#34;&gt;// Walk up the parent chain until the Core is found and print its id.&lt;/span&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #177500&#34;&gt;// Walk up the parent chain until the Core is found and print its id.&lt;/span&gt;
 &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;pu&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt;();
 &lt;span style=&#34;color: #A90D91&#34;&gt;while&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;Some&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; {
     &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;object_type&lt;/span&gt;() &lt;span style=&#34;color: #000000&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;ObjectType::Core&lt;/span&gt; {
-        &lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;{}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;logical_index&lt;/span&gt;());
+        &lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;{}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;logical_index&lt;/span&gt;());
         &lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;None&lt;/span&gt;;
     } &lt;span style=&#34;color: #A90D91&#34;&gt;else&lt;/span&gt; {
         &lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;p&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;parent&lt;/span&gt;();
@@ -727,7 +946,8 @@ There are 8 processing units on this machine.
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;On my machine this prints:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt; ~/rust/hwloc-playground $ cargo run
+
+&lt;pre&gt;&lt;code&gt; ~/rust/hwloc-playground $ cargo run
    Compiling hwloc-playground v0.1.0 (file:///Users/michael/rust/hwloc-playground)
      Running `target/debug/hwloc-playground`
 PU #0 is on Core 0
@@ -738,14 +958,14 @@ PU #4 is on Core 2
 PU #5 is on Core 2
 PU #6 is on Core 3
 PU #7 is on Core 3
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;You can see that each Core has two PUs attached to it.&lt;/p&gt;
 
-&lt;h2 id=&#34;walking-the-tree:59d60ae1f01cc6eb214b28fbb3277422&#34;&gt;Walking The Tree&lt;/h2&gt;
+&lt;h2 id=&#34;walking-the-tree&#34;&gt;Walking The Tree&lt;/h2&gt;
 
 &lt;p&gt;If you want to understand the topology as a whole, you can walk it in two ways: either level by level (by depth) or in tree form. Here is a full example to walk it by level:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc&lt;/span&gt;;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc&lt;/span&gt;;
 
 &lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc::Topology&lt;/span&gt;;
 
@@ -754,19 +974,20 @@ PU #7 is on Core 3
     &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Topology::new&lt;/span&gt;();
 
     &lt;span style=&#34;color: #177500&#34;&gt;// Loop through the complete topology depth.&lt;/span&gt;
-    &lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0.&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;depth&lt;/span&gt;() {
-		&lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;*** Objects at level {}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt;);
+    &lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;..&lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;depth&lt;/span&gt;() {
+		&lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;*** Objects at level {}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt;);
 
         &lt;span style=&#34;color: #177500&#34;&gt;// Print each object at each level.&lt;/span&gt;
 		&lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;idx&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;object&lt;/span&gt;) &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topology&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;objects_at_depth&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;iter&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;enumerate&lt;/span&gt;() {
-			&lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;{}: {}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;idx&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;object&lt;/span&gt;);
+			&lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;{}: {}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;idx&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;object&lt;/span&gt;);
 		}
 	}
 }
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;The code iterates through each level until the final topology depth is reached and on each level it prints all the TopologyObjects. This is the result on my machine:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;*** Objects at level 0
+
+&lt;pre&gt;&lt;code&gt;*** Objects at level 0
 0: Machine ()
 *** Objects at level 1
 0: NUMANode16GB (16GB)
@@ -796,12 +1017,12 @@ PU #7 is on Core 3
 5: PU ()
 6: PU ()
 7: PU ()
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Here you can see new ObjectTypes in action. My machine has one NUMANode with 16GB of RAM. Then you can see the L3, L2 and L1 caches, as well as the individual Cores and logical processing units.&lt;/p&gt;
 
 &lt;p&gt;A different way to visualize it is through a tree representation:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc&lt;/span&gt;;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc&lt;/span&gt;;
 
 &lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc::&lt;/span&gt;{&lt;span style=&#34;color: #000000&#34;&gt;Topology&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;TopologyObject&lt;/span&gt;};
 
@@ -810,33 +1031,33 @@ PU #7 is on Core 3
 	&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Topology::new&lt;/span&gt;();
 
     &lt;span style=&#34;color: #177500&#34;&gt;// Print the tree and start at the root&lt;/span&gt;
-	&lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;*** Printing overall tree&amp;quot;&lt;/span&gt;);
+	&lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;*** Printing overall tree&amp;quot;&lt;/span&gt;);
 	&lt;span style=&#34;color: #000000&#34;&gt;print_children&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;topo&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;object_at_root&lt;/span&gt;(), &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;);
 }
 
 &lt;span style=&#34;color: #177500&#34;&gt;// Print children recursively&lt;/span&gt;
-&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;print_children&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;topo:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;Topology&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;obj:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;TopologyObject&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;depth:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;usize&lt;/span&gt;) {
+&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;print_children&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;topo:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;Topology&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;obj:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;TopologyObject&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;depth:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;) {
     &lt;span style=&#34;color: #177500&#34;&gt;// some padding for the tree print&lt;/span&gt;
-	&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;padding&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;std::iter::repeat&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot; &amp;quot;&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;take&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;depth&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;collect::&amp;lt;String&amp;gt;&lt;/span&gt;();
-	&lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;{}{}: #{}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;padding&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;obj&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;obj&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;os_index&lt;/span&gt;());
+	&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;padding&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;std::iter::repeat&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot; &amp;quot;&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;take&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;depth&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;collect::&amp;lt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;String&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;&lt;/span&gt;();
+	&lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;{}{}: #{}&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;padding&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;obj&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;obj&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;os_index&lt;/span&gt;());
 
-	&lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0.&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;obj&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;arity&lt;/span&gt;() {
-		&lt;span style=&#34;color: #000000&#34;&gt;print_children&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;obj&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;children&lt;/span&gt;()[&lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;as&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;usize&lt;/span&gt;], &lt;span style=&#34;color: #000000&#34;&gt;depth&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;);
+	&lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;..&lt;span style=&#34;color: #000000&#34;&gt;obj&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;arity&lt;/span&gt;() {
+		&lt;span style=&#34;color: #000000&#34;&gt;print_children&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;topo&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;obj&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;children&lt;/span&gt;()[&lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;as&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;], &lt;span style=&#34;color: #000000&#34;&gt;depth&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;);
 	}
 }
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;We define a method called &lt;code&gt;print_children&lt;/code&gt; which is called recursively:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;print_children&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;topo:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;Topology&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;obj:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;TopologyObject&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;depth:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;usize&lt;/span&gt;)
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;print_children&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;topo:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;Topology&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;obj:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;TopologyObject&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;depth:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;)
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Note the funky padding variable is just there to create a left-padding for the tree view:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;padding&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;std::iter::repeat&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot; &amp;quot;&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;take&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;depth&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;collect::&amp;lt;String&amp;gt;&lt;/span&gt;();
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;padding&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;std::iter::repeat&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot; &amp;quot;&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;take&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;depth&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;collect::&amp;lt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;String&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;&lt;/span&gt;();
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Running the code above gives the same information but in a different style:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt; &lt;span style=&#34;color: #000000&#34;&gt;~/rust/hwloc-playground&lt;/span&gt; &lt;span style=&#34;color: #633820&#34;&gt;$&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cargo&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;run&lt;/span&gt;
-   &lt;span style=&#34;color: #000000&#34;&gt;Compiling&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc-playground&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;v0&lt;/span&gt;.&lt;span style=&#34;color: #1C01CE&#34;&gt;1.0&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;file:&lt;/span&gt;&lt;span style=&#34;color: #177500&#34;&gt;///Users/michael/rust/hwloc-playground)&lt;/span&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;~/rust/hwloc-playground&lt;/span&gt; &lt;span style=&#34;color: #633820&#34;&gt;$&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cargo&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;run&lt;/span&gt;
+   &lt;span style=&#34;color: #000000&#34;&gt;Compiling&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc-playground&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;v0&lt;/span&gt;.&lt;span style=&#34;color: #1C01CE&#34;&gt;1.0&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;file:&lt;/span&gt;&lt;span style=&#34;color: #C41A16&#34;&gt;///Users/michael/rust/hwloc-playground)&lt;/span&gt;
      &lt;span style=&#34;color: #000000&#34;&gt;Running&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;`target/debug/hwloc-playground`&lt;/span&gt;
 &lt;span style=&#34;color: #000000&#34;&gt;***&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Printing&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;overall&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;tree&lt;/span&gt;
 &lt;span style=&#34;color: #000000&#34;&gt;Machine&lt;/span&gt; ()&lt;span style=&#34;color: #000000&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;#&lt;/span&gt;&lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;
@@ -866,12 +1087,12 @@ PU #7 is on Core 3
 
 &lt;p&gt;What you can spot here immediately is that each core has its own L2 cache (as well as a L1 data cache) while at the same time they all share the same L3 cache.&lt;/p&gt;
 
-&lt;h2 id=&#34;cpu-caches:59d60ae1f01cc6eb214b28fbb3277422&#34;&gt;CPU Caches&lt;/h2&gt;
+&lt;h2 id=&#34;cpu-caches&#34;&gt;CPU Caches&lt;/h2&gt;
 
 &lt;p&gt;Speaking of caches, it is often quite helpful to know how much memory and cache is available to each core/processing unit. This can be used to aid cpu and memory binding decisions which are concerned with data locality.&lt;/p&gt;
 
 &lt;p&gt;Let&amp;rsquo;s say we want to know how much cache our first logical processing unit has available:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc&lt;/span&gt;;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;extern&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;crate&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc&lt;/span&gt;;
 
 &lt;span style=&#34;color: #A90D91&#34;&gt;use&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;hwloc::&lt;/span&gt;{&lt;span style=&#34;color: #000000&#34;&gt;Topology&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;ObjectType&lt;/span&gt;};
 
@@ -896,18 +1117,20 @@ PU #7 is on Core 3
 	}
 
     &lt;span style=&#34;color: #177500&#34;&gt;// Print out the result&lt;/span&gt;
-	&lt;span style=&#34;color: #A90D91&#34;&gt;println&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;*** Logical processor 0 has {} caches totalling {} KB&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;levels&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;size&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;/&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1024&lt;/span&gt;);
+	&lt;span style=&#34;color: #000000&#34;&gt;println!&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;*** Logical processor 0 has {} caches totalling {} KB&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;levels&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;size&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;/&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1024&lt;/span&gt;);
 }
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;We are using a similar technique as in the examples above, but this time we just add up all the capacity for each cache and then print it out.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt; ~/rust/hwloc-playground $ cargo run
+
+&lt;pre&gt;&lt;code&gt; ~/rust/hwloc-playground $ cargo run
      Running `target/debug/hwloc-playground`
 *** Logical processor 0 has 3 caches totalling 6432 KB
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;This output is not surprising given we have seen the topology before:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;...
+
+&lt;pre&gt;&lt;code&gt;...
   L3 (6144KB): #0
    L2 (256KB): #0
     L1d (32KB): #0
@@ -915,19 +1138,20 @@ PU #7 is on Core 3
       PU (): #0 &amp;lt;----
       PU (): #1
 ...
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;For a quick crosscheck, this is what OSX shows in its &lt;code&gt;System Report&lt;/code&gt;:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;Processor Name:	Intel Core i7
+
+&lt;pre&gt;&lt;code&gt;Processor Name:	Intel Core i7
 Processor Speed:	2,3 GHz
 Number of Processors:	1
 Total Number of Cores:	4
 L2 Cache (per Core):	256 KB
 L3 Cache:	6 MB
 Memory:	16 GB
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
-&lt;h2 id=&#34;conclusion:59d60ae1f01cc6eb214b28fbb3277422&#34;&gt;Conclusion&lt;/h2&gt;
+&lt;h2 id=&#34;conclusion&#34;&gt;Conclusion&lt;/h2&gt;
 
 &lt;p&gt;Hwloc and the rust binding provide a very convenient way to identify hardware topology characteristics. While hwloc has much more to offer, this post should have given you an easy introduction and should motivate you discovering your own topologies. In a followup post I&amp;rsquo;ll show you how you can utilize the binding API to perform CPU binding if your OS supports it.&lt;/p&gt;
 

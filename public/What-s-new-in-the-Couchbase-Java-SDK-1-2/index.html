@@ -7,7 +7,7 @@
 
     <meta name="description" content="Read on to see whats new in the latest Couchbase Java SDK!">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="What&#39;s new in the Couchbase Java SDK 1.2 &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -74,7 +74,8 @@
                             
                         </p>
                     </header>
-
+                    
+                    
                     <div class="post-description">
                         
 
@@ -82,32 +83,35 @@
 
 <p>Note that this blog post assumes you are running the 1.2.1 release, because there have been some slight changes between 1.2.0 and 1.2.1 that affect for example the listener support and metrics collection.</p>
 
-<h2 id="maven-central-distribution:bba8f429639593fb86790d014f89fcf2">Maven Central Distribution</h2>
+<h2 id="maven-central-distribution">Maven Central Distribution</h2>
 
 <p>From the 1.2.0 release forward, the Java SDK is distributed directly from Maven Central. This means that you don&rsquo;t need to include the Couchbase repository anymore. The following maven code is enough to get started (note that the groupId has changed):</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">&lt;dependencies&gt;</span>
-    <span style="color: #000000">&lt;dependency&gt;</span>
-        <span style="color: #000000">&lt;groupId&gt;</span>com.couchbase.client<span style="color: #000000">&lt;/groupId&gt;</span>
-        <span style="color: #000000">&lt;artifactId&gt;</span>couchbase-client<span style="color: #000000">&lt;/artifactId&gt;</span>
-        <span style="color: #000000">&lt;version&gt;</span>1.2.1<span style="color: #000000">&lt;/version&gt;</span>
-    <span style="color: #000000">&lt;/dependency&gt;</span>
-<span style="color: #000000">&lt;/dependencies&gt;</span>
-</pre></div>
+
+<pre><code>&lt;dependencies&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;com.couchbase.client&lt;/groupId&gt;
+        &lt;artifactId&gt;couchbase-client&lt;/artifactId&gt;
+        &lt;version&gt;1.2.1&lt;/version&gt;
+    &lt;/dependency&gt;
+&lt;/dependencies&gt;
+</code></pre>
 
 <p>This will automatically load the latest spymemcached dependency in as well (for 1.2.0 it&rsquo;s 2.10.0). Before we dig into what has changed, <a href="http://docs.couchbase.com/couchbase-sdk-java-1.2/#release-notes-for-couchbase-client-library-java-120-ga-13-september-2013">here</a> are the release notes for a quick reference.</p>
 
-<h2 id="listener-support:bba8f429639593fb86790d014f89fcf2">Listener Support</h2>
+<h2 id="listener-support">Listener Support</h2>
 
 <p>Until now, there were two ways to get the result of an asynchronous request. Either by blocking the current thread like so:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// do an async operation (returns immediately)
+
+<pre><code>// do an async operation (returns immediately)
 OperationFuture&lt;Boolean&gt; setFuture = client.set(&quot;key&quot;, &quot;value&quot;);
 
 // block the current thread
 Boolean result = setFuture.get();
-</pre></div>
+</code></pre>
 
 <p>Or to loop on the non-blocking future methods. This is especially helpful if you are dealing with a list of futures.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">List&lt;OperationFuture&lt;Boolean&gt;&gt; futures = new ArrayList&lt;OperationFuture&lt;Boolean&gt;&gt;();
+
+<pre><code>List&lt;OperationFuture&lt;Boolean&gt;&gt; futures = new ArrayList&lt;OperationFuture&lt;Boolean&gt;&gt;();
 for (int i = 0; i &lt; 100; i++) {
   futures.add(client.set(&quot;key-&quot; + i, &quot;value&quot;));
 }
@@ -121,36 +125,39 @@ while (!futures.isEmpty()) {
     }
   }
 }
-</pre></div>
+</code></pre>
 
 <p>Now since 1.2.0, there is a new way to deal with responses - adding listeners. The idea is to supply a callback to the future which will be executed once the operation is done. A simple example is shown here:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">OperationFuture&lt;</span><span style="color: #A90D91">Boolean</span><span style="color: #000000">&gt;</span> <span style="color: #000000">setFuture</span> <span style="color: #000000">=</span> <span style="color: #000000">client</span>.<span style="color: #000000">set</span>(<span style="color: #C41A16">&quot;key&quot;</span>, <span style="color: #C41A16">&quot;value&quot;</span>);
-<span style="color: #000000">setFuture</span>.<span style="color: #000000">addListener</span>(<span style="color: #A90D91">new</span> <span style="color: #000000">OperationCompletionListener</span>() {
-  <span style="color: #000000">@Override</span>
-  <span style="color: #A90D91">public</span> <span style="color: #A90D91">void</span> <span style="color: #000000">onComplete</span>(<span style="color: #000000">OperationFuture</span><span style="color: #633820">&lt;?</span><span style="color: #000000">&gt;</span> <span style="color: #000000">future</span>) <span style="color: #000000">throws</span> <span style="color: #000000">Exception</span> {
-    <span style="color: #000000">System.out.println</span>(<span style="color: #000000">future.get</span>());
+
+<pre><code>OperationFuture&lt;Boolean&gt; setFuture = client.set(&quot;key&quot;, &quot;value&quot;);
+setFuture.addListener(new OperationCompletionListener() {
+  @Override
+  public void onComplete(OperationFuture&lt;?&gt; future) throws Exception {
+    System.out.println(future.get());
   }
 });
-</pre></div>
+</code></pre>
 
 <p>Note that the <code>.get()</code> method on the future will not block anymore because the result is already computed. Whatever you put in the callback method will be executed asynchronously on the thread pool. To see how flexible that approach is, let&rsquo;s rewrite the example from above waiting until the 100 futures are done.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">final</span> <span style="color: #000000">CountDownLatch</span> <span style="color: #000000">latch</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">CountDownLatch</span>(<span style="color: #1C01CE">100</span>);
-<span style="color: #A90D91">for</span> (<span style="color: #A90D91">int</span> <span style="color: #000000">i</span> <span style="color: #000000">=</span> <span style="color: #1C01CE">0</span>; <span style="color: #000000">i</span> <span style="color: #000000">&lt;</span> <span style="color: #1C01CE">100</span>; <span style="color: #000000">i++</span>) {
-  <span style="color: #000000">OperationFuture&lt;</span><span style="color: #A90D91">Boolean</span><span style="color: #000000">&gt;</span> <span style="color: #000000">future</span> <span style="color: #000000">=</span> <span style="color: #000000">client</span>.<span style="color: #000000">set</span>(<span style="color: #C41A16">&quot;key-&quot;</span> <span style="color: #000000">+</span> <span style="color: #000000">i</span>, <span style="color: #C41A16">&quot;value&quot;</span>);
-  <span style="color: #000000">future</span>.<span style="color: #000000">addListener</span>(<span style="color: #A90D91">new</span> <span style="color: #000000">OperationCompletionListener</span>() {
-    <span style="color: #000000">@Override</span>
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">void</span> <span style="color: #000000">onComplete</span>(<span style="color: #000000">OperationFuture</span><span style="color: #633820">&lt;?</span><span style="color: #000000">&gt;</span> <span style="color: #000000">future</span>) <span style="color: #000000">throws</span> <span style="color: #000000">Exception</span> {
-      <span style="color: #000000">latch.countDown</span>();
+
+<pre><code>final CountDownLatch latch = new CountDownLatch(100);
+for (int i = 0; i &lt; 100; i++) {
+  OperationFuture&lt;Boolean&gt; future = client.set(&quot;key-&quot; + i, &quot;value&quot;);
+  future.addListener(new OperationCompletionListener() {
+    @Override
+    public void onComplete(OperationFuture&lt;?&gt; future) throws Exception {
+      latch.countDown();
     }
   });
 }
-<span style="color: #000000">latch.await</span>();
-</pre></div>
+latch.await();
+</code></pre>
 
 <p>Here we are using a <a href="http://docs.oracle.com/javase/7/docs/api/java/util/concurrent/CountDownLatch.html">CountDownLatch</a> which waits on the current thread as long as it has been counted down a hundred times. Exactly what we need in our situation, but the code is much easier to read. More importantly, its much more flexible because other things like firing off a new request, querying a web service or calculating a result can be done.</p>
 
 <p>It is also possible to override the default <code>ExecutorService</code> implementation with a custom one. This may be needed if the default behavior (Basically a upper-bounded cachedThreadPool) does not suite your needs. Also, you should use this approach if you create a bunch of <code>CouchbaseClient</code> instances so you can share the same service across all of them.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// Create the Builder
+
+<pre><code>// Create the Builder
 CouchbaseConnectionFactoryBuilder builder = new CouchbaseConnectionFactoryBuilder();
 
 // Create a thread pool of 5 fixed threads
@@ -160,46 +167,50 @@ builder.setListenerExecutorService(service);
 
 // Create the instance
 CouchbaseClient client = new CouchbaseClient(builder.buildCouchbaseConnection(...));
-</pre></div>
+</code></pre>
 
-<h2 id="enhanced-profiling-capabilities:bba8f429639593fb86790d014f89fcf2">Enhanced Profiling Capabilities</h2>
+<h2 id="enhanced-profiling-capabilities">Enhanced Profiling Capabilities</h2>
 
 <p>Getting insight into a running application is always difficult, so we set out to make it easier for you. We incorporated a library called <a href="http://metrics.codahale.com/">metrics</a> that profiles, depending on the configuration level chosen.</p>
 
 <p>Before you can use it, you need to add this optional dependency:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">&lt;dependency&gt;</span>
-    <span style="color: #000000">&lt;groupId&gt;</span>com.codahale.metrics<span style="color: #000000">&lt;/groupId&gt;</span>
-    <span style="color: #000000">&lt;artifactId&gt;</span>metrics-core<span style="color: #000000">&lt;/artifactId&gt;</span>
-    <span style="color: #000000">&lt;version&gt;</span>3.0.1<span style="color: #000000">&lt;/version&gt;</span>
-<span style="color: #000000">&lt;/dependency&gt;</span>
-</pre></div>
+
+<pre><code>&lt;dependency&gt;
+    &lt;groupId&gt;com.codahale.metrics&lt;/groupId&gt;
+    &lt;artifactId&gt;metrics-core&lt;/artifactId&gt;
+    &lt;version&gt;3.0.1&lt;/version&gt;
+&lt;/dependency&gt;
+</code></pre>
 
 <p>On the builder, there is a method that allows you to activate the the profiler:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">CouchbaseConnectionFactoryBuilder builder = new CouchbaseConnectionFactoryBuilder();
+
+<pre><code>CouchbaseConnectionFactoryBuilder builder = new CouchbaseConnectionFactoryBuilder();
 
 // enable metric collection
 builder.setEnableMetrics(MetricType.PERFORMANCE);
-</pre></div>
+</code></pre>
 
 <p>If you look at the <code>MetricType</code> enumeration you can see that there are three types of values you can choose from: OFF (which keeps metric collection off), PERFORMANCE (which only collects performance-relevant metrics) and DEBUG (which collects all kinds of metrics, including the performance ones). While the metrics library is quite efficient, keep in mind that metric collection takes some resources away from your application.</p>
 
 <p>By default, the metric information will be printed out on the console every 30 seconds. You can run the following test code from your IDE and see how it looks:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">CouchbaseConnectionFactoryBuilder</span> <span style="color: #000000">builder</span> <span style="color: #000000">=</span> <span style="color: #000000">new</span> <span style="color: #000000">CouchbaseConnectionFactoryBuilder();</span>
-<span style="color: #000000">builder</span><span style="color: #3F6E75">.setEnableMetrics</span><span style="color: #000000">(MetricType</span><span style="color: #3F6E75">.PERFORMANCE</span><span style="color: #000000">);</span>
 
-<span style="color: #000000">CouchbaseConnectionFactory</span> <span style="color: #000000">cf</span> <span style="color: #000000">=</span>
-  <span style="color: #000000">builder</span><span style="color: #3F6E75">.buildCouchbaseConnection</span><span style="color: #000000">(Arrays</span><span style="color: #3F6E75">.asList</span><span style="color: #000000">(new</span> <span style="color: #000000">URI(</span><span style="color: #C41A16">&quot;http://127.0.0.1:8091/pools&quot;</span><span style="color: #000000">)),</span> <span style="color: #C41A16">&quot;default&quot;</span><span style="color: #000000">,</span> <span style="color: #C41A16">&quot;&quot;</span><span style="color: #000000">);</span>
+<pre><code>CouchbaseConnectionFactoryBuilder builder = new CouchbaseConnectionFactoryBuilder();
+builder.setEnableMetrics(MetricType.PERFORMANCE);
 
-<span style="color: #000000">CouchbaseClient</span> <span style="color: #000000">client</span> <span style="color: #000000">=</span> <span style="color: #000000">new</span> <span style="color: #000000">CouchbaseClient(cf);</span>
+CouchbaseConnectionFactory cf =
+  builder.buildCouchbaseConnection(Arrays.asList(new URI(&quot;http://127.0.0.1:8091/pools&quot;)), &quot;default&quot;, &quot;&quot;);
 
-<span style="color: #000000">while(true)</span> {
-  <span style="color: #000000">client.set</span>(<span style="color: #C41A16">&quot;foo&quot;</span><span style="color: #000000">,</span> <span style="color: #C41A16">&quot;bar&quot;</span>);
-  <span style="color: #000000">Thread.sleep</span>(<span style="color: #1C01CE">100</span>);
+CouchbaseClient client = new CouchbaseClient(cf);
+
+while(true) {
+  client.set(&quot;foo&quot;, &quot;bar&quot;);
+  Thread.sleep(100);
 }
-</pre></div>
+</code></pre>
 
 <p>Now wait 30 seconds and you&rsquo;ll see output like this in the console:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">  10/8/13 12:04:14 PM ============================================================
+
+<pre><code>  10/8/13 12:04:14 PM ============================================================
 
   -- Histograms ------------------------------------------------------------------
   [MEM] Average Bytes read from OS per read
@@ -252,34 +263,37 @@ builder.setEnableMetrics(MetricType.PERFORMANCE);
        1-minute rate = 9.85 events/second
        5-minute rate = 9.68 events/second
       15-minute rate = 9.63 events/second
-</pre></div>
+</code></pre>
 
 <p>I won&rsquo;t go into detail of all these metrics in this blog post, please refer to the documentation for a more complete picture. One more thing I want to show you is that the metrics library is also able to expose these metrics through JMX. All you need to do is set a system property that changes the output mode: <code>net.spy.metrics.reporter.type=jmx</code>. Other possible settings are <code>csv</code> and slf4j<code>. If you choose a logger that prints out information at a given interval you can change it by setting</code>net.spy.metrics.reporter.interval` to anything else than 30.</p>
 
 <p>So if you put the line <code>System.setProperty(&quot;net.spy.metrics.reporter.type&quot;, &quot;jmx&quot;);</code> before the code shown above, you can open (for example) jConsole and switch to the MBeans tab of the application. You&rsquo;ll see a <code>metrics</code> subsection exposed that contains the same metrics as they would show up in the logs.</p>
 
-<h2 id="cas-with-timeout:bba8f429639593fb86790d014f89fcf2">CAS with Timeout</h2>
+<h2 id="cas-with-timeout">CAS with Timeout</h2>
 
 <p>Before 1.2.0, it was not possible in one command to do a <code>cas</code> update and set a new timeout at the same time. You had to do a second <code>touch</code> operation which was not efficient nor atomic. Now, the API exposes a new <code>cas()</code> method that allows you to pass in the timeout at the same time. It is easy to use:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">client.cas(&quot;key&quot;, cas, nexExpiration, value);
-</pre></div>
+
+<pre><code>client.cas(&quot;key&quot;, cas, nexExpiration, value);
+</code></pre>
 
 <p>The asynchronous variations have been exposed since 1.2.1 as well.</p>
 
-<h2 id="initializing-through-properties:bba8f429639593fb86790d014f89fcf2">Initializing through Properties</h2>
+<h2 id="initializing-through-properties">Initializing through Properties</h2>
 
 <p>One thing that comes in handy if your cluster ip addresses change often is that you can now initialize a <code>CouchbaseClient</code> object based on system properties. Here is an example:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">System</span><span style="color: #3F6E75">.setProperty</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;cbclient.nodes&quot;</span><span style="color: #000000">,</span> <span style="color: #C41A16">&quot;http://127.0.0.1:8091/pools&quot;</span><span style="color: #000000">);</span>
-<span style="color: #000000">System</span><span style="color: #3F6E75">.setProperty</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;cbclient.bucket&quot;</span><span style="color: #000000">,</span> <span style="color: #C41A16">&quot;default&quot;</span><span style="color: #000000">);</span>
-<span style="color: #000000">System</span><span style="color: #3F6E75">.setProperty</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;cbclient.password&quot;</span><span style="color: #000000">,</span> <span style="color: #C41A16">&quot;&quot;</span><span style="color: #000000">);</span>
 
-<span style="color: #000000">CouchbaseConnectionFactoryBuilder</span> <span style="color: #000000">builder</span> <span style="color: #000000">=</span> <span style="color: #000000">new</span> <span style="color: #000000">CouchbaseConnectionFactoryBuilder();</span>
-<span style="color: #000000">CouchbaseConnectionFactory</span> <span style="color: #000000">cf</span> <span style="color: #000000">=</span> <span style="color: #000000">builder</span><span style="color: #3F6E75">.buildCouchbaseConnection</span><span style="color: #000000">();</span>
-<span style="color: #000000">CouchbaseClient</span> <span style="color: #000000">client</span> <span style="color: #000000">=</span> <span style="color: #000000">new</span> <span style="color: #000000">CouchbaseClient(cf);</span>
-</pre></div>
+<pre><code>System.setProperty(&quot;cbclient.nodes&quot;, &quot;http://127.0.0.1:8091/pools&quot;);
+System.setProperty(&quot;cbclient.bucket&quot;, &quot;default&quot;);
+System.setProperty(&quot;cbclient.password&quot;, &quot;&quot;);
+
+CouchbaseConnectionFactoryBuilder builder = new CouchbaseConnectionFactoryBuilder();
+CouchbaseConnectionFactory cf = builder.buildCouchbaseConnection();
+CouchbaseClient client = new CouchbaseClient(cf);
+</code></pre>
 
 <p>Of course you can set these properties in your application container or during startup, so it&rsquo;s very flexible and not tied into your code directly. Note that if you forget to set one of these properties, the code will warn you like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">Exception in thread &quot;main&quot; java.lang.IllegalArgumentException: System property cbclient.nodes not set or empty
+
+<pre><code>Exception in thread &quot;main&quot; java.lang.IllegalArgumentException: System property cbclient.nodes not set or empty
     at com.couchbase.client.CouchbaseConnectionFactory.&lt;init&gt;(CouchbaseConnectionFactory.java:160)
     at com.couchbase.client.CouchbaseConnectionFactoryBuilder$2.&lt;init&gt;(CouchbaseConnectionFactoryBuilder.java:318)
     at com.couchbase.client.CouchbaseConnectionFactoryBuilder.buildCouchbaseConnection(CouchbaseConnectionFactoryBuilder.java:318)
@@ -289,9 +303,9 @@ builder.setEnableMetrics(MetricType.PERFORMANCE);
     at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
     at java.lang.reflect.Method.invoke(Method.java:601)
     at com.intellij.rt.execution.application.AppMain.main(AppMain.java:120)
-</pre></div>
+</code></pre>
 
-<h2 id="other-changes:bba8f429639593fb86790d014f89fcf2">Other Changes</h2>
+<h2 id="other-changes">Other Changes</h2>
 
 <p>In addition to the enhancements shown above, the release includes - as always - numerous smaller bugfixes. The default poll interval for <code>ReplicateTo</code> and <code>PersistTo</code> has been lowered to <code>10ms</code> to account for performance changes that went into the Couchbase Sever 2.2 release. Also, the client now uses the <code>CRAM-MD5</code> authentication mechanism automatically if the server supports it (since 2.2 as well).</p>
 
@@ -318,7 +332,7 @@ builder.setEnableMetrics(MetricType.PERFORMANCE);
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

@@ -7,7 +7,7 @@
 
     <meta name="description" content="This post gets you started with Couchbase and its PHP SDK.">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Getting Started with Couchbase and PHP &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -74,7 +74,8 @@
                             
                         </p>
                     </header>
-
+                    
+                    
                     <div class="post-description">
                         
 
@@ -87,131 +88,142 @@ future way of interacting with Couchbase, so it is definitely worth a look.</p>
 
 <p>The rest of this post guides you through the installation process of both Couchbase and the PHP SDKs.</p>
 
-<h2 id="installing-couchbase:ca12db3f5f62aaf868a124e77d2583ea">Installing Couchbase</h2>
+<h2 id="installing-couchbase">Installing Couchbase</h2>
 
 <p>The easiest way to install Couchbase is through a precompiled binary for Ubuntu, RedHat, Windows or Mac OS X. You can find all of them
 <a href="http://www.couchbase.com/download">here</a>. The installation process is really straightforward: you first need to install the binary and
 then configure Couchbase from a web interface. I recommend you to watch the webinar starting from minute 7 <a href="http://www.couchbase.com/webinar/couchbase-server-2.0-overview">here</a>, where Perry Krug describes the necessary steps in detail. For the purpose of this post, you can just stick with the default settings.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>sudo dpkg -i couchbase-server-community_x86_2.0.0-dev-preview-3.deb
-</pre></div>
+
+<pre><code>$ sudo dpkg -i couchbase-server-community_x86_2.0.0-dev-preview-3.deb
+</code></pre>
 
 <p>After the installation, you should have a Couchbase instance listening on <code>127.0.0.1:8091</code>.</p>
 
-<h2 id="installing-php-ext-couchbase:ca12db3f5f62aaf868a124e77d2583ea">Installing php-ext-couchbase</h2>
+<h2 id="installing-php-ext-couchbase">Installing php-ext-couchbase</h2>
 
 <p>The new PHP SDK ships as a PHP extension, so we need to compile it. Make sure you have both the build tools (like <code>build-essentials</code>) and the PHP development packages (<code>php5-dev php-pear</code>) installed. You also need to install <code>libssl0.9.8</code>. On Ubuntu it looks like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>sudo aptitude install libssl0.9.8 php5-dev php-pear
-</pre></div>
+
+<pre><code>$ sudo aptitude install libssl0.9.8 php5-dev php-pear
+</code></pre>
 
 <p>The extension also depends on the <code>libcouchbase</code> library, which can be installed through the Couchbase repository (for more information on this, look <a href="http://www.couchbase.com/develop/c/current">here</a>).</p>
 
 <p>Add this to your <code>/etc/apt/sources.list</code>:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500"># Ubuntu 11.10 Oneiric Ocelot (Debian unstable)</span>
-<span style="color: #A90D91">deb</span> <span style="color: #C41A16">http://packages.couchbase.com/ubuntu</span> <span style="color: #A90D91">oneiric</span> <span style="color: #A90D91">oneiric/main</span>
-</pre></div>
+
+<pre><code># Ubuntu 11.10 Oneiric Ocelot (Debian unstable)
+deb http://packages.couchbase.com/ubuntu oneiric oneiric/main
+</code></pre>
 
 <p>Then, import the key, update your repositories and install the package:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>wget -O- http://packages.couchbase.com/ubuntu/couchbase.key | sudo apt-key add -
-<span style="color: #000000">$ </span>sudo aptitude update <span style="color: #000000">&amp;&amp;</span> sudo aptitude install libcouchbase-dev
-</pre></div>
+
+<pre><code>$ wget -O- http://packages.couchbase.com/ubuntu/couchbase.key | sudo apt-key add -
+$ sudo aptitude update &amp;&amp; sudo aptitude install libcouchbase-dev
+</code></pre>
 
 <p>Now, we need to <a href="https://github.com/couchbaselabs/php-ext-couchbase/zipball/master">download</a> the extension and build it.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>unzip couchbaselabs-php-ext-couchbase-2680b64.zip
-<span style="color: #000000">$ </span><span style="color: #A90D91">cd </span>couchbaselabs-php-ext-couchbase-2680b64
 
-<span style="color: #000000">$ </span>phpize
-<span style="color: #000000">$ </span>./configure
-<span style="color: #000000">$ </span>make
-<span style="color: #000000">$ </span>sudo make install
+<pre><code>$ unzip couchbaselabs-php-ext-couchbase-2680b64.zip
+$ cd couchbaselabs-php-ext-couchbase-2680b64
+
+$ phpize
+$ ./configure
+$ make
+$ sudo make install
   Installing shared extensions:     /usr/lib/php5/20090626+lfs/
-</pre></div>
+</code></pre>
 
 <p>The last thing we need to do is create a new <code>couchbase.ini</code> file in <code>/etc/php5/conf.d</code> with the following content:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">extension=couchbase.so
-</pre></div>
+
+<pre><code>extension=couchbase.so
+</code></pre>
 
 <p>Now we can see that the couchbase extension is installed correctly:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>php -m | grep couch
+
+<pre><code>$ php -m | grep couch
 couchbase
-</pre></div>
+</code></pre>
 
 <p>Of course you&rsquo;ll need to restart your webserver or your fastcgi processes too.</p>
 
-<h2 id="installing-php-couchbase:ca12db3f5f62aaf868a124e77d2583ea">Installing php-couchbase</h2>
+<h2 id="installing-php-couchbase">Installing php-couchbase</h2>
 
 <p>If you want to work with the current stable SDK, you need to download the code from the <a href="https://github.com/couchbaselabs/php-couchbase">php-couchbase</a> repository. This SDK extends the <code>memcached</code> extension, which you can install directly through apt:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>sudo aptitude install php5-memcached
-</pre></div>
+
+<pre><code>$ sudo aptitude install php5-memcached
+</code></pre>
 
 <p>Documentation for the PHP 1.1 SDK can be found <a href="http://www.couchbase.com/docs/couchbase-sdk-php-1.1/getting-started.html">here</a>.</p>
 
 <p>Note that for the rest of this post I&rsquo;ll use the API provided by the <code>php-ext-couchbase</code> extension, but the one for <code>php-couchbase</code> shouldn&rsquo;t be much different.</p>
 
-<h2 id="basic-usage:ca12db3f5f62aaf868a124e77d2583ea">Basic Usage</h2>
+<h2 id="basic-usage">Basic Usage</h2>
 
 <p>Historically, communication with CouchDB was done over pure HTTP while memcached provided a custom protocol. Couchbase uses both methods, depending on the task you want to accomplish. Create, update and delete actions are done through the <code>memcached</code> protocol. If you want to read data, you can do that either based on the key (through the memcached protocol) or on a view (through HTTP). Thankfully, the SDK abstracts this away from you, but its always good if you know whats going on under the hood.</p>
 
 <p>You can access the API through an object-oriented interface or directly through their exported functions. I couldn&rsquo;t find any online documentation for now, but here&rsquo;s the function list from the source-code:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">/* {{{ couchbase_functions</span><span style="color: #633820">[]</span><span style="color: #177500"></span>
-<span style="color: #177500">*/</span>
-<span style="color: #A90D91">static</span> <span style="color: #000000">zend_function_entry</span> <span style="color: #000000">couchbase_functions</span><span style="color: #633820">[]</span> <span style="color: #000000">=</span> {
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_connect</span>, <span style="color: #000000">arginfo_connect</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_add</span>, <span style="color: #000000">arginfo_add</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_set</span>, <span style="color: #000000">arginfo_set</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_set_multi</span>, <span style="color: #000000">arginfo_set_multi</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_replace</span>, <span style="color: #000000">arginfo_replace</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_prepend</span>, <span style="color: #000000">arginfo_prepend</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_append</span>, <span style="color: #000000">arginfo_append</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_cas</span>, <span style="color: #000000">arginfo_cas</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_get</span>, <span style="color: #000000">arginfo_get</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_get_multi</span>, <span style="color: #000000">arginfo_get_multi</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_get_delayed</span>, <span style="color: #000000">arginfo_get_delayed</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_fetch</span>, <span style="color: #000000">arginfo_fetch</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_fetch_all</span>, <span style="color: #000000">arginfo_fetch_all</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_increment</span>, <span style="color: #000000">arginfo_increment</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_decrement</span>, <span style="color: #000000">arginfo_decrement</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_get_stats</span>, <span style="color: #000000">arginfo_get_stats</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_delete</span>, <span style="color: #000000">arginfo_delete</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_flush</span>, <span style="color: #000000">arginfo_flush</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_get_result_code</span>, <span style="color: #000000">arginfo_result_code</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_set_option</span>, <span style="color: #000000">arginfo_set_option</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_get_option</span>, <span style="color: #000000">arginfo_get_option</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_version</span>, <span style="color: #000000">arginfo_version</span>)
-    {<span style="color: #000000">NULL</span>, <span style="color: #000000">NULL</span>, <span style="color: #000000">NULL</span>}
+
+<pre><code>/* {{{ couchbase_functions[]
+*/
+static zend_function_entry couchbase_functions[] = {
+    PHP_FE(couchbase_connect, arginfo_connect)
+    PHP_FE(couchbase_add, arginfo_add)
+    PHP_FE(couchbase_set, arginfo_set)
+    PHP_FE(couchbase_set_multi, arginfo_set_multi)
+    PHP_FE(couchbase_replace, arginfo_replace)
+    PHP_FE(couchbase_prepend, arginfo_prepend)
+    PHP_FE(couchbase_append, arginfo_append)
+    PHP_FE(couchbase_cas, arginfo_cas)
+    PHP_FE(couchbase_get, arginfo_get)
+    PHP_FE(couchbase_get_multi, arginfo_get_multi)
+    PHP_FE(couchbase_get_delayed, arginfo_get_delayed)
+    PHP_FE(couchbase_fetch, arginfo_fetch)
+    PHP_FE(couchbase_fetch_all, arginfo_fetch_all)
+    PHP_FE(couchbase_increment, arginfo_increment)
+    PHP_FE(couchbase_decrement, arginfo_decrement)
+    PHP_FE(couchbase_get_stats, arginfo_get_stats)
+    PHP_FE(couchbase_delete, arginfo_delete)
+    PHP_FE(couchbase_flush, arginfo_flush)
+    PHP_FE(couchbase_get_result_code, arginfo_result_code)
+    PHP_FE(couchbase_set_option, arginfo_set_option)
+    PHP_FE(couchbase_get_option, arginfo_get_option)
+    PHP_FE(couchbase_version, arginfo_version)
+    {NULL, NULL, NULL}
 };
-</pre></div>
+</code></pre>
 
 <p>The <a href="https://github.com/couchbaselabs/php-ext-couchbase/tree/master/tests">test cases</a> also provide vital information on how to use the API.</p>
 
 <p>Let&rsquo;s create 10 JSON documents and store them in Couchbase:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
 
-<span style="color: #000000">$connection</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Couchbase</span>(<span style="color: #C41A16">&quot;127.0.0.1:8091&quot;</span>);
+<pre><code>&lt;?php
 
-<span style="color: #A90D91">for</span>(<span style="color: #000000">$i=</span><span style="color: #1C01CE">0</span>;<span style="color: #000000">$i&lt;</span><span style="color: #1C01CE">10</span>;<span style="color: #000000">$i++</span>) {
-    <span style="color: #000000">$doc</span> <span style="color: #000000">=</span> <span style="color: #A90D91">array</span>(
-        <span style="color: #C41A16">&#39;title&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;This is Post $i&quot;</span>
+$connection = new Couchbase(&quot;127.0.0.1:8091&quot;);
+
+for($i=0;$i&lt;10;$i++) {
+    $doc = array(
+        'title' =&gt; &quot;This is Post $i&quot;
     );
-    <span style="color: #000000">$connection-&gt;</span><span style="color: #836C28">set</span>(<span style="color: #C41A16">&quot;post_$i&quot;</span>, <span style="color: #A90D91">json_encode</span>(<span style="color: #000000">$doc</span>));
+    $connection-&gt;set(&quot;post_$i&quot;, json_encode($doc));
 }
 
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>You can view your stored documents instantly through the GUI (<a href="http://localhost:8091/index.html#sec=documents&amp;bucketName=default">http://localhost:8091/index.html#sec=documents&amp;bucketName=default</a>). Now we can retrieve all documents again by their keys:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
 
-<span style="color: #000000">$connection</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Couchbase</span>(<span style="color: #C41A16">&quot;127.0.0.1:8091&quot;</span>);
+<pre><code>&lt;?php
 
-<span style="color: #A90D91">echo</span> <span style="color: #C41A16">&quot;&lt;ul&gt;&quot;</span>;
-<span style="color: #A90D91">for</span>(<span style="color: #000000">$i=</span><span style="color: #1C01CE">0</span>;<span style="color: #000000">$i&lt;</span><span style="color: #1C01CE">10</span>;<span style="color: #000000">$i++</span>) {
-    <span style="color: #000000">$post</span> <span style="color: #000000">=</span> <span style="color: #A90D91">json_decode</span>(<span style="color: #000000">$connection-&gt;</span><span style="color: #836C28">get</span>(<span style="color: #C41A16">&quot;post_$i&quot;</span>));
-    <span style="color: #A90D91">echo</span> <span style="color: #C41A16">&quot;&lt;li&gt;&quot;</span> <span style="color: #000000">.</span> <span style="color: #000000">$post-&gt;</span><span style="color: #836C28">title</span> <span style="color: #000000">.</span>  <span style="color: #C41A16">&quot;&lt;/li&gt;&quot;</span>;
+$connection = new Couchbase(&quot;127.0.0.1:8091&quot;);
+
+echo &quot;&lt;ul&gt;&quot;;
+for($i=0;$i&lt;10;$i++) {
+    $post = json_decode($connection-&gt;get(&quot;post_$i&quot;));
+    echo &quot;&lt;li&gt;&quot; . $post-&gt;title .  &quot;&lt;/li&gt;&quot;;
 }
-<span style="color: #A90D91">echo</span> <span style="color: #C41A16">&quot;&lt;/ul&gt;&quot;</span>;
+echo &quot;&lt;/ul&gt;&quot;;
 
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>Note that we need to encode/decode our JSON documents by hand, because in Couchbase you can store pretty much what you want in a document.</p>
 
@@ -241,7 +253,7 @@ Jan <a href="https://twitter.com/#!/janl/status/179166150205259776">pointed out<
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

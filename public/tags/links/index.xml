@@ -23,7 +23,7 @@
 
 &lt;p&gt;I&amp;rsquo;ll try to update this page as new articles get published, so it may pay off to come back here from time to time and check out the topmost ones. If you want to see your article included, post them in the comments!&lt;/p&gt;
 
-&lt;h2 id=&#34;starting-out:76a11daebb48e304a92800ea720c7bd4&#34;&gt;Starting Out&lt;/h2&gt;
+&lt;h2 id=&#34;starting-out&#34;&gt;Starting Out&lt;/h2&gt;
 
 &lt;ul&gt;
 &lt;li&gt;&lt;a href=&#34;http://www.couchbase.com/docs/couchbase-manual-2.1.0/&#34;&gt;Official Couchbase Server 2.1 Manual&lt;/a&gt;: The official manual and a good starting point for all kinds of general-purpose and architectural questions.&lt;/li&gt;
@@ -33,7 +33,7 @@
 &lt;li&gt;2012-07-06 &lt;a href=&#34;http://tugdualgrall.blogspot.co.at/2012/07/couchbase-101-install-store-and-query.html&#34;&gt;Couchbase 101 : Install, Store and Query Data (tgrall)&lt;/a&gt;: A very basic introduction for people starting out, teaching the very basics in a hands-on fashion.&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;installation-infrastructure:76a11daebb48e304a92800ea720c7bd4&#34;&gt;Installation &amp;amp; Infrastructure&lt;/h2&gt;
+&lt;h2 id=&#34;installation-infrastructure&#34;&gt;Installation &amp;amp; Infrastructure&lt;/h2&gt;
 
 &lt;ul&gt;
 &lt;li&gt;&lt;a href=&#34;http://www.couchbase.com/docs/couchbase-manual-2.1.0/couchbase-getting-started.html&#34;&gt;Official Installation Guide for 2.1&lt;/a&gt;: The official installation guide, read this before installing on production systems.&lt;/li&gt;
@@ -45,7 +45,7 @@
 &lt;li&gt;2013-05-27 &lt;a href=&#34;http://nitschinger.at/A-Couchbase-Cluster-in-Minutes-with-Vagrant-and-Puppet&#34;&gt;A Couchbase Cluster in Minutes with Vagrant and Puppet (daschl)&lt;/a&gt;: If you want to setup a 4 node cluster with couchbase in minutes, this blog post shows you how to do it.&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;document-design-data-import-export:76a11daebb48e304a92800ea720c7bd4&#34;&gt;Document Design &amp;amp; Data Import/Export&lt;/h2&gt;
+&lt;h2 id=&#34;document-design-data-import-export&#34;&gt;Document Design &amp;amp; Data Import/Export&lt;/h2&gt;
 
 &lt;ul&gt;
 &lt;li&gt;2013-07-18 &lt;a href=&#34;http://tugdualgrall.blogspot.co.at/2013/07/how-to-implement-document-versioning.html&#34;&gt;How to implement Document Versioning with Couchbase (tgrall)&lt;/a&gt;: See how to implement document versioning by using a key-based approach. Uses the Java SDK, but can be adapted for all languages.&lt;/li&gt;
@@ -53,7 +53,7 @@
 &lt;li&gt;2013-07-03 &lt;a href=&#34;http://tugdualgrall.blogspot.co.at/2013/07/sql-to-nosql-importing-data-from-rdbms.html&#34;&gt;SQL to NoSQL : Copy your data from MySQL to Couchbase (tgrall)&lt;/a&gt;: A Java-based tool to import data from a SQL database into Couchbase.&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;views:76a11daebb48e304a92800ea720c7bd4&#34;&gt;Views&lt;/h2&gt;
+&lt;h2 id=&#34;views&#34;&gt;Views&lt;/h2&gt;
 
 &lt;ul&gt;
 &lt;li&gt;2013-07-25 &lt;a href=&#34;http://blog.couchbase.com/caching-queries-couchbase-high-performance&#34;&gt;Caching queries in Couchbase for high performance (Alexis Roos)&lt;/a&gt;: Learn how to cache view results for better performance.&lt;/li&gt;
@@ -63,7 +63,7 @@
 &lt;li&gt;2013-02-13 &lt;a href=&#34;http://tugdualgrall.blogspot.co.at/2013/02/introduction-to-collated-views-with.html&#34;&gt;Introduction to Collated Views with Couchbase 2.0 (tgrall)&lt;/a&gt;: Views can also be used to output &amp;ldquo;master/detail&amp;rdquo;-like scenarios. This post shows how.&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;java-sdk-jvm:76a11daebb48e304a92800ea720c7bd4&#34;&gt;Java SDK &amp;amp; JVM&lt;/h2&gt;
+&lt;h2 id=&#34;java-sdk-jvm&#34;&gt;Java SDK &amp;amp; JVM&lt;/h2&gt;
 
 &lt;ul&gt;
 &lt;li&gt;&lt;a href=&#34;http://www.couchbase.com/communities/java/getting-started&#34;&gt;Getting Started &amp;amp; Download&lt;/a&gt;: The official &amp;ldquo;Getting Started&amp;rdquo; page for the Java SDK. Introduction, Tutorial and Downloads.&lt;/li&gt;
@@ -74,7 +74,7 @@
 &lt;li&gt;2012-04-26 &lt;a href=&#34;http://nitschinger.at/Accessing-Couchbase-from-Scala&#34;&gt;Accessing Couchbase from Scala (daschl)&lt;/a&gt;: How to access the Couchbase Java SDK from the Scala programing language.&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;net:76a11daebb48e304a92800ea720c7bd4&#34;&gt;.NET&lt;/h2&gt;
+&lt;h2 id=&#34;net&#34;&gt;.NET&lt;/h2&gt;
 
 &lt;ul&gt;
 &lt;li&gt;&lt;a href=&#34;http://www.couchbase.com/communities/net/getting-started&#34;&gt;Getting Started &amp;amp; Download&lt;/a&gt;: The official &amp;ldquo;Getting Started&amp;rdquo; page for the .NET SDK. Introduction, Tutorial and Downloads.&lt;/li&gt;
@@ -88,7 +88,7 @@
 &lt;li&gt;2012-08-01 &lt;a href=&#34;http://blog.couchbase.com/introducing-couchbase-aspnet-outputcache-provider&#34;&gt;Introducing the Couchbase ASP.NET OutputCache Provider (John Zablocki)&lt;/a&gt;: A short post on how to use Couchbase for easy caching in the ASP.NET environment.&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;php:76a11daebb48e304a92800ea720c7bd4&#34;&gt;PHP&lt;/h2&gt;
+&lt;h2 id=&#34;php&#34;&gt;PHP&lt;/h2&gt;
 
 &lt;p&gt;(Note: some of these posts are outdated in the way that currently the &amp;ldquo;way to go&amp;rdquo; when installing the PHP SDK is through PECL. See the the &lt;a href=&#34;http://www.couchbase.com/communities/php/getting-started&#34;&gt;Getting Started &amp;amp; Download&lt;/a&gt; guide for more information.)&lt;/p&gt;
 
@@ -102,14 +102,14 @@
 &lt;li&gt;2012-06-21 &lt;a href=&#34;http://nitschinger.at/Using-Couchbase-as-a-flexible-session-store&#34;&gt;Using Couchbase as a flexible session store (daschl)&lt;/a&gt;: With Couchbase Server 2.0, JSON data and Views, its easy to run metrics over your sessions and identify user behavior. Learn how in this post.&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;c-go:76a11daebb48e304a92800ea720c7bd4&#34;&gt;C &amp;amp; Go&lt;/h2&gt;
+&lt;h2 id=&#34;c-go&#34;&gt;C &amp;amp; Go&lt;/h2&gt;
 
 &lt;ul&gt;
 &lt;li&gt;&lt;a href=&#34;http://www.couchbase.com/communities/c/getting-started&#34;&gt;Getting Started &amp;amp; Download with the C SDK&lt;/a&gt;: The official &amp;ldquo;Getting Started&amp;rdquo; page for the C SDK. Introduction, Tutorial and Downloads.&lt;/li&gt;
 &lt;li&gt;&lt;a href=&#34;https://github.com/couchbaselabs/go-couchbase&#34;&gt;Official Go Client Repository&lt;/a&gt;: The Go repository with code and simple examples.&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;ruby:76a11daebb48e304a92800ea720c7bd4&#34;&gt;Ruby&lt;/h2&gt;
+&lt;h2 id=&#34;ruby&#34;&gt;Ruby&lt;/h2&gt;
 
 &lt;ul&gt;
 &lt;li&gt;&lt;a href=&#34;http://www.couchbase.com/communities/ruby/getting-started&#34;&gt;Getting Started &amp;amp; Download&lt;/a&gt;: The official &amp;ldquo;Getting Started&amp;rdquo; page for the Ruby SDK. Introduction, Tutorial and Downloads.&lt;/li&gt;
@@ -117,7 +117,7 @@
 &lt;li&gt;2013-02-11 &lt;a href=&#34;http://blog.couchbase.com/using-couchbase-ruby-gem-eventmachine&#34;&gt;Using Couchbase Ruby Gem with EventMachine (avsej)&lt;/a&gt;: This post shows how to use the Ruby SDK together with the high performance EventMachine (custom protocols and performance for TCP/IP) gem.&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;node-js:76a11daebb48e304a92800ea720c7bd4&#34;&gt;Node.JS&lt;/h2&gt;
+&lt;h2 id=&#34;node-js&#34;&gt;Node.JS&lt;/h2&gt;
 
 &lt;ul&gt;
 &lt;li&gt;2013-03-06 &lt;a href=&#34;http://tugdualgrall.blogspot.co.at/2013/03/easy-application-development-with.html&#34;&gt;Easy application development with Couchbase, Angular and Node (tgrall)&lt;/a&gt;: Storing Ideas and Votes in Couchbase with Angular and NodeJS.&lt;/li&gt;
@@ -126,7 +126,7 @@
 &lt;li&gt;2012-09-24 &lt;a href=&#34;http://tugdualgrall.blogspot.co.at/2012/09/create-simple-nodejs-and-couchbase.html&#34;&gt;Create a Simple Node.js and Couchbase application&amp;hellip; on OS X (tgrall)&lt;/a&gt; A simple (but maybe outdated) tutorial on how to use the NodeJS driver from OSX.&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;python:76a11daebb48e304a92800ea720c7bd4&#34;&gt;Python&lt;/h2&gt;
+&lt;h2 id=&#34;python&#34;&gt;Python&lt;/h2&gt;
 
 &lt;ul&gt;
 &lt;li&gt;&lt;a href=&#34;http://www.couchbase.com/communities/python/getting-started&#34;&gt;Getting Started &amp;amp; Download&lt;/a&gt;: The official &amp;ldquo;Getting Started&amp;rdquo; page for the Python SDK. Introduction, Tutorial and Downloads.&lt;/li&gt;
@@ -134,21 +134,21 @@
 &lt;li&gt;2013-05-30 &lt;a href=&#34;http://blog.couchbase.com/whats-python-couchbase-sdk&#34;&gt;What&amp;rsquo;s up with the Python Couchbase SDK (volker)&lt;/a&gt;: A rundown of the latest changes on the Python SDK.&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;ecosystem:76a11daebb48e304a92800ea720c7bd4&#34;&gt;Ecosystem&lt;/h2&gt;
+&lt;h2 id=&#34;ecosystem&#34;&gt;Ecosystem&lt;/h2&gt;
 
 &lt;ul&gt;
 &lt;li&gt;2013-07-31 &lt;a href=&#34;http://www.ortussolutions.com/blog/couchbase-cluster-setup-orm-secondary-cache-introduction&#34;&gt;Couchbase: Cluster Setup + ORM Secondary Cache Introduction (Brad Wood)&lt;/a&gt;: Using ColdFusion and looking for a secondary cache implementation? Look no further.&lt;/li&gt;
 &lt;li&gt;2013-07-22 &lt;a href=&#34;http://blog.jeroenreijn.com/2013/07/visitor-analysis-with-couchbase-elasticsearch.html&#34;&gt;Real-time visitor analysis with Couchbase, Elasticsearch and Kibana (Jeroen Reijn)&lt;/a&gt;: A great post on a customer&amp;rsquo;s use case for real-time visitor analysis.&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;troubleshooting:76a11daebb48e304a92800ea720c7bd4&#34;&gt;Troubleshooting&lt;/h2&gt;
+&lt;h2 id=&#34;troubleshooting&#34;&gt;Troubleshooting&lt;/h2&gt;
 
 &lt;ul&gt;
 &lt;li&gt;&lt;a href=&#34;http://www.couchbase.com/docs/couchbase-manual-2.1.0/couchbase-troubleshooting.html&#34;&gt;Official troubleshooting Guide&lt;/a&gt;: The best place to start if something goes wrong on the server and you don&amp;rsquo;t know why.&lt;/li&gt;
 &lt;li&gt;2012-12-26 &lt;a href=&#34;http://tugdualgrall.blogspot.co.at/2012/12/what-to-do-if-your-couchbase-server.html&#34;&gt;What to do if your Couchbase Server does not start? (tgrall)&lt;/a&gt;: If you have troubles getting older Couchbase Server 2.0 versions to run on Windows, this post is for you.&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h2 id=&#34;fun-stuff:76a11daebb48e304a92800ea720c7bd4&#34;&gt;Fun Stuff&lt;/h2&gt;
+&lt;h2 id=&#34;fun-stuff&#34;&gt;Fun Stuff&lt;/h2&gt;
 
 &lt;ul&gt;
 &lt;li&gt;&lt;a href=&#34;https://github.com/couchbaselabs/DeveloperDay&#34;&gt;Example code for lots of SDKs and Languages&lt;/a&gt;: Our DeveloperDay material with hands-on code examples to try and learn.&lt;/li&gt;

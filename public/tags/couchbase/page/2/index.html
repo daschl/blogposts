@@ -7,7 +7,7 @@
 
     <meta name="description" content="">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Couchbase &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -79,46 +79,52 @@
                     <div class="post-description">
                         
 
-<h2 id="introduction:ce2158c13cb07928acc4bd887e624d2c">Introduction</h2>
+<h2 id="introduction">Introduction</h2>
 
 <p>The latest <a href="http://www.couchbase.com/develop/java/next">Java Developer Preview (dp4)</a> is hot off the press, and therefore I thought it would be a good idea to show you how to use some of the brand-new features that are now available. This post will show you how to use the new <code>ComplexKey</code> class for view queries and also how to create and delete buckets directly from your SDK.</p>
 
 <p>First, we added a very flexible way of providing parameters to view queries. The idea is that, instead of having to deal with JSON strings on your own, you can pass in Java objects and the appropriate JSON string will be created for you. While it may not sound like a big deal first, this also frees you from the worries about encoding it properly so that it can be transferred over HTTP. Before we dig into the inner workings, lets first start with a basic example on how to create a view query.</p>
 
 <p>Every time you query a view, you need to create a <code>Query</code> and a <code>View</code> object. The <code>View</code> both  object defines the name of the design document and the view, and the <code>Query</code> object allows you to control the params that you can supply with the query.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">View myview = client.getView(&quot;designdoc&quot;, &quot;viewname&quot;);
-</pre></div>
+
+<pre><code>View myview = client.getView(&quot;designdoc&quot;, &quot;viewname&quot;);
+</code></pre>
 
 <p>Instead of creating the <code>View</code> object directly, you use the <code>getView()</code> method on the client object. It is important to know that the SDK actually fetches view information from the server and will throw an exception if either the design document name or the view name are not found. An exception typically looks like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">com.couchbase.client.protocol.views.InvalidViewException: Could not load view &quot;viewname&quot; for design doc &quot;designdoc&quot;
-</pre></div>
+
+<pre><code>com.couchbase.client.protocol.views.InvalidViewException: Could not load view &quot;viewname&quot; for design doc &quot;designdoc&quot;
+</code></pre>
 
 <p>Now that we have our view created, let&rsquo;s instantiate a query object:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">Query myquery = new Query();
-</pre></div>
+
+<pre><code>Query myquery = new Query();
+</code></pre>
 
 <p>If you don&rsquo;t specify anything else, the query object will work with the default settings. This means that no reduce function will be used and the full documents are not included. If you want to change these settings (or others), the <code>Query</code> instance provides setter methods for all of them. If you want to find out more, look at the SDK documentation or at the <a href="http://www.couchbase.com/docs/couchbase-manual-2.0/couchbase-views-querying-rest-api.html">Couchbase Server manual</a>. Basically, you can control everything that you could too while querying a view from the Couchbase UI. Here are some examples:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">// Include the full documents as well</span>
-<span style="color: #000000">myquery</span>.<span style="color: #000000">setIncludeDocs</span>(<span style="color: #A90D91">true</span>);
 
-<span style="color: #177500">// Enable the reduce function</span>
-<span style="color: #000000">myquery</span>.<span style="color: #000000">setReduce</span>(<span style="color: #A90D91">true</span>);
+<pre><code>// Include the full documents as well
+myquery.setIncludeDocs(true);
 
-<span style="color: #177500">// Set the group level</span>
-<span style="color: #000000">myquery</span>.<span style="color: #000000">setGroupLevel</span>(<span style="color: #1C01CE">2</span>);
-</pre></div>
+// Enable the reduce function
+myquery.setReduce(true);
+
+// Set the group level
+myquery.setGroupLevel(2);
+</code></pre>
 
 <p>Note that it doesn&rsquo;t make sense to include the full documents and run the reduce phase, since you don&rsquo;t have document references left after the reduce phase. If you try to set both to true, the SDK complains with the following exception:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// query.setReduce(true); query.setIncludeDocs(true);
-java.lang.UnsupportedOperationException: Reduced views don&#39;t contain documents
-</pre></div>
+
+<pre><code>// query.setReduce(true); query.setIncludeDocs(true);
+java.lang.UnsupportedOperationException: Reduced views don't contain documents
+</code></pre>
 
 <p>Also, if your view doesn&rsquo;t contain a reduce function and you set <code>reduce</code> to <code>true</code>, you&rsquo;ll see the following:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">// query.setReduce(true); on a view with no reduce function defined.</span>
-<span style="color: #000000">java</span>.<span style="color: #000000">lang</span>.<span style="color: #000000">RuntimeException:</span> <span style="color: #000000">This</span> <span style="color: #000000">view</span> <span style="color: #000000">doesn&#39;t</span> <span style="color: #000000">contain</span> <span style="color: #000000">a</span> <span style="color: #000000">reduce</span> <span style="color: #A90D91">function</span>
-</pre></div>
 
-<h2 id="querying-with-complexkeys:ce2158c13cb07928acc4bd887e624d2c">Querying with ComplexKeys</h2>
+<pre><code>// query.setReduce(true); on a view with no reduce function defined.
+java.lang.RuntimeException: This view doesn't contain a reduce function
+</code></pre>
+
+<h2 id="querying-with-complexkeys">Querying with ComplexKeys</h2>
 
 <p>Enough with exceptions, here comes the fun part: some query setter methods not only accept boolean or string arguments, they also allow instances of <code>ComplexKey</code>. <code>ComplexKey</code> takes care of translating your Java objects (or primitives) to their appropriate <a href="http://json.org/">JSON</a> representation. Here is a list of the query methods who support it:</p>
 
@@ -131,7 +137,8 @@ java.lang.UnsupportedOperationException: Reduced views don&#39;t contain documen
 </ul>
 
 <p>An instance of a <code>ComplexKey</code> object is obtained through the static <code>of</code> factory method. When the query object is accessed during the view query, the <code>toJSON()</code> method is called on it and as a result the JSON string is generated. Here are some examples:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// JSON Result: 100
+
+<pre><code>// JSON Result: 100
 ComplexKey.of(100);
 
 // JSON Result: &quot;Hello&quot;
@@ -142,38 +149,42 @@ ComplexKey.of(&quot;Hello&quot;, &quot;World&quot;);
 
 // JSON Result: [1349360771542,1]
 ComplexKey.of(new Date().getTime(), 1);
-</pre></div>
+</code></pre>
 
 <p>This means that you don&rsquo;t have to deal with building the proper JSON strings for yourself (and make sure the escaping is correct). All methods except <code>setRange()</code> expect exactly one instance of ComplexKey. For example, if you emit keys with a unix timestamp and you want to fetch all records until now, you could do it like so:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">Query query = new Query();
+
+<pre><code>Query query = new Query();
 query.setRangeEnd(ComplexKey.of(new Date().getTime()));
-</pre></div>
+</code></pre>
 
 <p>When converted to a string to send it over the wire, it would look like this: <code>?endkey=1349361137738</code>. This makes it also very easy to create a full range query:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">long now = new Date().getTime();
+
+<pre><code>long now = new Date().getTime();
 long tomorrow = now + 86400;
 Query query = new Query();
 query.setRange(ComplexKey.of(now), ComplexKey.of(tomorrow));
-</pre></div>
+</code></pre>
 
 <p>This converts to <code>?startkey=1349362647742&amp;endkey=1349362734142</code> on the wire.</p>
 
-<h2 id="bucket-management-through-the-clustermanager:ce2158c13cb07928acc4bd887e624d2c">Bucket management through the ClusterManager</h2>
+<h2 id="bucket-management-through-the-clustermanager">Bucket management through the ClusterManager</h2>
 
 <p>Until now, you&rsquo;d have to <a href="http://www.couchbase.com/docs/couchbase-manual-2.0/couchbase-admin-web-console-data-buckets.html">create and delete buckets</a> either manually through the Couchbase UI or by using the REST API directly. With the addition of the <code>ClusterManager</code>, it is now possible to mange your buckets directly through the SDK, be it for testing purposes or to automatically create them when your code is deployed to a new environment. This can be especially useful if you want to automate bucket management in a staging or CI environment.</p>
 
 <p>The management API is not accessible through <code>CouchbaseClient</code>, but through the <code>ClusterManager</code> class. This is because the <code>CouchbaseClient</code> is bound to a specific bucket and was not designed for management purposes like this. Instead, you create a new instance of the <code>ClusterManager</code> class and pass it a list of URIs and the admin user name and password.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">List&lt;URI&gt;</span> <span style="color: #000000">uris</span> <span style="color: #000000">=</span> <span style="color: #000000">new</span> <span style="color: #000000">LinkedList&lt;URI&gt;();</span>
-<span style="color: #000000">uris</span><span style="color: #3F6E75">.add</span><span style="color: #000000">(URI</span><span style="color: #3F6E75">.create</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;http://127.0.0.1:8091/pools&quot;</span><span style="color: #000000">));</span>
-<span style="color: #000000">ClusterManager</span> <span style="color: #000000">manager</span> <span style="color: #000000">=</span> <span style="color: #000000">new</span> <span style="color: #000000">ClusterManager(uris,</span> <span style="color: #C41A16">&quot;Administrator&quot;</span><span style="color: #000000">,</span> <span style="color: #C41A16">&quot;password&quot;</span><span style="color: #000000">);</span>
 
-<span style="color: #000000">//</span> <span style="color: #000000">..</span> <span style="color: #000000">your</span> <span style="color: #000000">code</span>
+<pre><code>List&lt;URI&gt; uris = new LinkedList&lt;URI&gt;();
+uris.add(URI.create(&quot;http://127.0.0.1:8091/pools&quot;));
+ClusterManager manager = new ClusterManager(uris, &quot;Administrator&quot;, &quot;password&quot;);
 
-<span style="color: #000000">manager</span><span style="color: #3F6E75">.shutdown</span><span style="color: #000000">();</span>
-</pre></div>
+// .. your code
+
+manager.shutdown();
+</code></pre>
 
 <p>You can now create and delete buckets (of type <code>Couchbase</code> or <code>Memcached</code>). You can also list all available buckets in the Couchbase cluster or flush the bucket (if flush is enabled). Here are some examples:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// Create the default bucket with a 100MB memory limit and 0 replicas.
+
+<pre><code>// Create the default bucket with a 100MB memory limit and 0 replicas.
 manager.createDefaultBucket(BucketType.COUCHBASE, 100, 0);
 
 // Create a bucket with authentication.
@@ -191,11 +202,11 @@ assertTrue(buckets.contains(&quot;mybucket&quot;));
 
 // Flush the &quot;default&quot; bucket if flush is enabled
 manager.flushBucket(&quot;default&quot;);
-</pre></div>
+</code></pre>
 
 <p>Note that creating, deleting and flushing may take some time (from milliseconds to seconds, depending on the cluster load). You can either wait a few seconds before you move on (with a Thread.sleep()), or you can wait until <code>listBuckets()</code> contains your created bucket. There is also a callback-approach (which the client library uses internally to minimize waiting times during tests), but this involves more code on the application side.</p>
 
-<h2 id="wrapping-up:ce2158c13cb07928acc4bd887e624d2c">Wrapping up</h2>
+<h2 id="wrapping-up">Wrapping up</h2>
 
 <p>This post showed you two brand-new features shipped with the 1.1-dp4 release.</p>
 
@@ -251,7 +262,7 @@ manager.flushBucket(&quot;default&quot;);
                     <div class="post-description">
                         
 
-<h2 id="introduction:4ac8fdf5a97cdd95577718a445e97b6e">Introduction</h2>
+<h2 id="introduction">Introduction</h2>
 
 <p>I&rsquo;ve been mostly blogging about PHP and <a href="http://lithify.me">Lithium</a>, but recently I&rsquo;ve also been looking into a very promising framework on the JVM - the <a href="http://www.playframework.org/">play! framework</a>. The current version (2.0) brings lots of enhancements and features and is (at least to me) the first framework that really boosts developer productivity on the JVM (and that I would work with in my free time).</p>
 
@@ -261,7 +272,7 @@ manager.flushBucket(&quot;default&quot;);
 
 <p>I&rsquo;ve also added the code to a <a href="https://github.com/daschl/couchplay/">repository</a> on GitHub for your convenience. You can find a tag for every post I&rsquo;ll publish so you can just clone the repository and checkout the appropriate tag to follow along.</p>
 
-<h2 id="about-the-stack:4ac8fdf5a97cdd95577718a445e97b6e">About the stack</h2>
+<h2 id="about-the-stack">About the stack</h2>
 
 <p>Our language of choice will be Java. I first thought about writing it in Scala, but then I realized that with Java I could attract a larger group of readers. Also, I did most of my past explorations in Scala, so this is a great opportunity for me to use the framework from the Java-side as well. The good thing is that the framework allows you to use both languages in parallel, so you can start out with one and then evolve if you need to.</p>
 
@@ -271,7 +282,7 @@ manager.flushBucket(&quot;default&quot;);
 
 <p>From here on I assume that you have Java 1.6 or later installed and included it in your <code>PATH</code>. If you haven&rsquo;t, there should be plenty of material available on the internet.</p>
 
-<h2 id="installing-couchbase:4ac8fdf5a97cdd95577718a445e97b6e">Installing Couchbase</h2>
+<h2 id="installing-couchbase">Installing Couchbase</h2>
 
 <p>Before we start digging into the framework, we need to stop for a second and install our backend database.</p>
 
@@ -281,17 +292,18 @@ manager.flushBucket(&quot;default&quot;);
 
 <p>After the installation has finished, open your browser, head over to <code>http://localhost:8091</code> and click through the setup wizard. You can go with the default settings, just make sure to give it a reasonable amount of RAM. If you run into trouble, the official <a href="http://www.couchbase.com/docs/couchbase-manual-2.0/couchbase-getting-started-install.html">docs</a> are there to help you out.</p>
 
-<h2 id="setting-up-our-play-project:4ac8fdf5a97cdd95577718a445e97b6e">Setting up our play! project</h2>
+<h2 id="setting-up-our-play-project">Setting up our play! project</h2>
 
 <p>Now that we have our database installed, it&rsquo;s time to set up the actual play! project. Go to <a href="http://www.playframework.org/">their official website</a> and download the current stable release (2.0.2 at the time of writing).</p>
 
 <p>After the download has finished, unpack the zipfile. Copy it over to a place where it doesn&rsquo;t get accidentally deleted and add it to your <code>PATH</code>. Adding it to the <code>PATH</code> here is pure convenience as I don&rsquo;t like to remember the full path everytime I need to run it.</p>
 
 <p>Now we can use the <code>play new</code> command to setup a new project. I&rsquo;m using Ubuntu Linux here, but the command also works the same on Windows (I haven&rsquo;t tried it on a Mac but it shouldn&rsquo;t be much different).</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">michael@daschl:~$ play new couchplay
+
+<pre><code>michael@daschl:~$ play new couchplay
     _            _
 _ __ | | __ _ _  _| |
-| &#39;_ \| |/ _&#39; | || |_|
+| '_ \| |/ _' | || |_|
 |  __/|_|\____|\__ (_)
 |_|            |__/
 
@@ -313,12 +325,13 @@ Which template do you want to use for this new application?
 OK, application couchplay is created.
 
 Have fun!
-</pre></div>
+</code></pre>
 
 <p>The application generator asks you for an application name and if you want to either generate a Scala or Java application. You don&rsquo;t have to choose the language for your final application here, it only wants to know in what language it should generats the sample controller for example.</p>
 
 <p>To make sure it&rsquo;s up and running, change into the directory and run the <code>play</code> command again. This should bring up the play console. For now, just type <code>run</code> and point your browser to <code>http://localhost:9000</code>. You should see the default welcome page of the framework.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">michael@daschl:~/couchplay$ play
+
+<pre><code>michael@daschl:~/couchplay$ play
 Getting org.scala-sbt sbt_2.9.1 0.11.3 ...
 :: retrieving :: org.scala-sbt#boot-app
     confs: [default]
@@ -327,7 +340,7 @@ Getting org.scala-sbt sbt_2.9.1 0.11.3 ...
 [info] Set current project to couchplay (in build file:/home/michael/couchplay/)
     _            _
 _ __ | | __ _ _  _| |
-| &#39;_ \| |/ _&#39; | || |_|
+| '_ \| |/ _' | || |_|
 |  __/|_|\____|\__ (_)
 |_|            |__/
 
@@ -345,33 +358,36 @@ play! 2.0.2, http://www.playframework.org
 [info] play - Listening for HTTP on port 9000...
 
 (Server started, use Ctrl+D to stop and go back to the console...)
-</pre></div>
+</code></pre>
 
 <p>As you can see, the initial dependencies are resolved and loaded automatically. If you already have something running on port <code>9000</code> (like <a href="http://php-fpm.org/">php-fpm</a>), then you can use the <code>run [PORTNUM]</code> command to specify a different port. There are lots of other possibilities here and we&rsquo;ll cover some of them as we progress further. If you&rsquo;re curious, you can type <code>help</code> to see the available commands.</p>
 
 <p>You may experience a large response time (a few seconds) when you open up the page for the first time. This is because in development mode, play! compiles everything for you on the fly. If you don&rsquo;t change anything, the next reload should be pretty fast. Since we only modify short bits of code between every refresh, the compiling times should not be an issue. In production, everything is precompiled anyway. If you look on your console, you can see that the files have been compiled automatically for you:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">[info] Compiling 4 Scala sources and 2 Java sources to /home/michael/couchplay/target/scala-2.9.1/classes...
+
+<pre><code>[info] Compiling 4 Scala sources and 2 Java sources to /home/michael/couchplay/target/scala-2.9.1/classes...
 [info] play - Application started (Dev)
-</pre></div>
+</code></pre>
 
 <p>One last tip here: if you use <code>~run</code> instead of <code>run</code>, the framework will detect code changes immediately (when you save your file) and compile it on the fly. If you use <code>run</code>, it will start compiling when you reload the page. As a result, when using <code>~run</code> the compile times should be even less noticable since you also need some time to switch back and forth between your IDE and the browser. Also keep in mind that all this is handled for you and you don&rsquo;t need to setup tomcat in your IDE and make sure everything is pushed correctly. If you are like me and have spent hours and hours of configuring eclipse and tomcat, this is pretty awesome news. You can of course still use Eclipse (or any other IDE), but you can concentrate on writing code, the rest will be done for you in the background.</p>
 
-<h2 id="connecting-to-couchbase:4ac8fdf5a97cdd95577718a445e97b6e">Connecting to Couchbase</h2>
+<h2 id="connecting-to-couchbase">Connecting to Couchbase</h2>
 
 <p>Currently, our application doesn&rsquo;t know about our backend database. Since play! doesn&rsquo;t have built-in support for Couchbase, we&rsquo;re going to use the Couchbase Java SDK to fill the gap.</p>
 
 <p>Couchbase thankfully provides a Maven repository, so we just need to define and load the dependency. Head over to the <code>project/Build.scala</code> file and add the following:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">val appDependencies = Seq(
+
+<pre><code>val appDependencies = Seq(
     &quot;couchbase&quot; % &quot;couchbase-client&quot; % &quot;1.1-dp&quot;
 )
 
 val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
     resolvers += &quot;Couchbase Maven Repository&quot; at &quot;http://files.couchbase.com/maven2&quot;
 )
-</pre></div>
+</code></pre>
 
 <p>Back in the play console, hit <code>ctrl-d</code> to stop the server and type <code>reload</code> and <code>update</code> to fetch the new dependencies. If everything finished without errors, type &ldquo;~run&rdquo; again.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">[couchplay] $ reload
+
+<pre><code>[couchplay] $ reload
 [info] Loading project definition from /home/michael/couchplay/project
 [info] Set current project to couchplay (in build file:/home/michael/couchplay/)
 [couchplay] $ update
@@ -401,143 +417,148 @@ val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).s
 [info] play - Listening for HTTP on port 9000...
 
 (Server started, use Ctrl+D to stop and go back to the console...)
-</pre></div>
+</code></pre>
 
 <p>I&rsquo;m quite sure you wonder about the strange syntax we&rsquo;ve been using to define our dependency. This is actually Scala code, since play! uses the awesome <a href="http://www.scala-sbt.org/">sbt</a> to manage its dependencies (the play console also builds upon it). There is a good introduction <a href="http://www.youtube.com/watch?v=V2rl62CZPVc">video</a> available if you want to learn more.</p>
 
 <p>The dependency is now in place, but we also need to connect to the database when the application starts and disconnect from it when it stops. If we&rsquo;d use the databases supported by the framework, this would be handled for us (but that&rsquo;s half the fun, right?). Since this is not the case, we need to &ldquo;hook&rdquo; into some kind of <code>start</code> and <code>stop</code> events.</p>
 
 <p>Play! provides us with something called the <a href="http://www.playframework.org/documentation/2.0.2/JavaGlobal">application Global object</a> that has methods we can override. Create a new file called <code>Global.java</code> inside the <code>app</code> directory and insert the following.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">import</span> <span style="color: #000000">play.*</span>;
 
-<span style="color: #A90D91">import</span> <span style="color: #000000">datasources.Couchbase</span>;
+<pre><code>import play.*;
 
-<span style="color: #000000">public</span> <span style="color: #A90D91">class</span> <span style="color: #3F6E75">Global</span> <span style="color: #000000">extends</span> <span style="color: #000000">GlobalSettings</span> {
+import datasources.Couchbase;
 
-    <span style="color: #000000">public</span> <span style="color: #000000">void</span> <span style="color: #000000">onStart</span>(<span style="color: #000000">Application</span> <span style="color: #000000">app</span>) {
-        <span style="color: #000000">Logger.info</span>(<span style="color: #C41A16">&quot;Application started&quot;</span>);
-        <span style="color: #000000">Couchbase.connect</span>();
+public class Global extends GlobalSettings {
+
+    public void onStart(Application app) {
+        Logger.info(&quot;Application started&quot;);
+        Couchbase.connect();
     }
 
-    <span style="color: #000000">public</span> <span style="color: #000000">void</span>  <span style="color: #000000">onStop</span>(<span style="color: #000000">Application</span> <span style="color: #000000">app</span>) {
-        <span style="color: #000000">Logger.info</span>(<span style="color: #C41A16">&quot;Application stopped&quot;</span>);
-        <span style="color: #000000">Couchbase.disconnect</span>();
+    public void  onStop(Application app) {
+        Logger.info(&quot;Application stopped&quot;);
+        Couchbase.disconnect();
     }
 
 }
-</pre></div>
+</code></pre>
 
 <p>We override the <code>onStart</code> and <code>onStop</code> methods to place our custom connect logic in there (and do some logging as well). We make use of a <code>Couchabase</code> connection class to abstract our connection logic, so we&rsquo;d better write that one too. Create a new file called <code>Couchbase.java</code> inside the <code>app/datasources</code> directory (which you also need to create).</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">package</span> <span style="color: #000000">datasources</span>;
 
-<span style="color: #A90D91">import</span> <span style="color: #000000">java.net.URI</span>;
-<span style="color: #A90D91">import</span> <span style="color: #000000">java.util.LinkedList</span>;
-<span style="color: #A90D91">import</span> <span style="color: #000000">java.util.List</span>;
-<span style="color: #A90D91">import</span> <span style="color: #000000">java.io.IOException</span>;
-<span style="color: #A90D91">import</span> <span style="color: #000000">java.util.concurrent.TimeUnit</span>;
+<pre><code>package datasources;
 
-<span style="color: #A90D91">import</span> <span style="color: #000000">play.*</span>;
-<span style="color: #A90D91">import</span> <span style="color: #000000">com.couchbase.client.CouchbaseClient</span>;
+import java.net.URI;
+import java.util.LinkedList;
+import java.util.List;
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
-<span style="color: #000000">/**</span>
-<span style="color: #000000">*</span> <span style="color: #000000">The</span> <span style="color: #C41A16">`Couchbase`</span> <span style="color: #A90D91">class</span> <span style="color: #3F6E75">acts</span> <span style="color: #000000">a</span> <span style="color: #000000">simple</span> <span style="color: #000000">connection</span> <span style="color: #000000">manager</span> <span style="color: #A90D91">for</span> <span style="color: #000000">the</span> <span style="color: #C41A16">`CouchbaseClient`</span>
-<span style="color: #000000">*</span> <span style="color: #000000">and</span> <span style="color: #000000">makes</span> <span style="color: #000000">sure</span> <span style="color: #000000">that</span> <span style="color: #000000">only</span> <span style="color: #000000">one</span> <span style="color: #000000">connection</span> <span style="color: #000000">is</span> <span style="color: #000000">alive</span> <span style="color: #000000">throughout</span> <span style="color: #000000">the</span> <span style="color: #000000">application.</span>
-<span style="color: #000000">*</span>
-<span style="color: #000000">*</span> <span style="color: #000000">You</span> <span style="color: #000000">may</span> <span style="color: #000000">want</span> <span style="color: #000000">to</span> <span style="color: #000000">extend</span> <span style="color: #000000">and</span> <span style="color: #000000">harden</span> <span style="color: #000000">this</span> <span style="color: #000000">implementation</span> <span style="color: #000000">in</span> <span style="color: #000000">a</span> <span style="color: #000000">production</span> <span style="color: #000000">environment.</span>
-<span style="color: #000000">*/</span>
-<span style="color: #000000">public</span> <span style="color: #000000">final</span> <span style="color: #A90D91">class</span> <span style="color: #3F6E75">Couchbase</span> {
+import play.*;
+import com.couchbase.client.CouchbaseClient;
 
-    <span style="color: #000000">/**</span>
-    <span style="color: #000000">*</span> <span style="color: #000000">Holds</span> <span style="color: #000000">the</span> <span style="color: #000000">actual</span> <span style="color: #C41A16">`CouchbaseClient`</span><span style="color: #000000">.</span>
-    <span style="color: #000000">*/</span>
-    <span style="color: #000000">private</span> <span style="color: #000000">static</span> <span style="color: #000000">CouchbaseClient</span> <span style="color: #000000">client</span> <span style="color: #000000">=</span> <span style="color: #000000">null</span>;
+/**
+* The `Couchbase` class acts a simple connection manager for the `CouchbaseClient`
+* and makes sure that only one connection is alive throughout the application.
+*
+* You may want to extend and harden this implementation in a production environment.
+*/
+public final class Couchbase {
 
-    <span style="color: #000000">/**</span>
-    <span style="color: #000000">*</span> <span style="color: #000000">Connects</span> <span style="color: #000000">to</span> <span style="color: #000000">Couchbase</span> <span style="color: #000000">based</span> <span style="color: #000000">on</span> <span style="color: #000000">the</span> <span style="color: #000000">configuration</span> <span style="color: #000000">settings.</span>
-    <span style="color: #000000">*</span>
-    <span style="color: #000000">*</span> <span style="color: #000000">If</span> <span style="color: #000000">the</span> <span style="color: #000000">database</span> <span style="color: #000000">is</span> <span style="color: #000000">not</span> <span style="color: #000000">reachable</span>, <span style="color: #000000">an</span> <span style="color: #000000">error</span> <span style="color: #000000">message</span> <span style="color: #000000">is</span> <span style="color: #000000">written</span> <span style="color: #000000">and</span> <span style="color: #000000">the</span>
-    <span style="color: #000000">*</span> <span style="color: #000000">application</span> <span style="color: #000000">exits.</span>
-    <span style="color: #000000">*/</span>
-    <span style="color: #000000">public</span> <span style="color: #000000">static</span> <span style="color: #000000">boolean</span> <span style="color: #000000">connect</span>() {
-        <span style="color: #000000">String</span> <span style="color: #000000">hostname</span> <span style="color: #000000">=</span> <span style="color: #000000">Play.application</span>()<span style="color: #000000">.configuration</span>()<span style="color: #000000">.getString</span>(<span style="color: #C41A16">&quot;couchbase.hostname&quot;</span>);
-        <span style="color: #000000">String</span> <span style="color: #000000">port</span> <span style="color: #000000">=</span> <span style="color: #000000">Play.application</span>()<span style="color: #000000">.configuration</span>()<span style="color: #000000">.getString</span>(<span style="color: #C41A16">&quot;couchbase.port&quot;</span>);
-        <span style="color: #000000">String</span> <span style="color: #000000">bucket</span> <span style="color: #000000">=</span> <span style="color: #000000">Play.application</span>()<span style="color: #000000">.configuration</span>()<span style="color: #000000">.getString</span>(<span style="color: #C41A16">&quot;couchbase.bucket&quot;</span>);
-        <span style="color: #000000">String</span> <span style="color: #000000">password</span> <span style="color: #000000">=</span> <span style="color: #000000">Play.application</span>()<span style="color: #000000">.configuration</span>()<span style="color: #000000">.getString</span>(<span style="color: #C41A16">&quot;couchbase.password&quot;</span>);
+    /**
+    * Holds the actual `CouchbaseClient`.
+    */
+    private static CouchbaseClient client = null;
 
-        <span style="color: #000000">List&lt;URI&gt;</span> <span style="color: #000000">uris</span> <span style="color: #000000">=</span> <span style="color: #000000">new</span> <span style="color: #000000">LinkedList&lt;URI&gt;</span>();
-        <span style="color: #000000">uris.add</span>(<span style="color: #000000">URI.create</span>(<span style="color: #C41A16">&quot;http://&quot;</span><span style="color: #000000">+hostname+</span><span style="color: #C41A16">&quot;:&quot;</span><span style="color: #000000">+port+</span><span style="color: #C41A16">&quot;/pools&quot;</span>));
+    /**
+    * Connects to Couchbase based on the configuration settings.
+    *
+    * If the database is not reachable, an error message is written and the
+    * application exits.
+    */
+    public static boolean connect() {
+        String hostname = Play.application().configuration().getString(&quot;couchbase.hostname&quot;);
+        String port = Play.application().configuration().getString(&quot;couchbase.port&quot;);
+        String bucket = Play.application().configuration().getString(&quot;couchbase.bucket&quot;);
+        String password = Play.application().configuration().getString(&quot;couchbase.password&quot;);
+
+        List&lt;URI&gt; uris = new LinkedList&lt;URI&gt;();
+        uris.add(URI.create(&quot;http://&quot;+hostname+&quot;:&quot;+port+&quot;/pools&quot;));
 
 
-        <span style="color: #A90D91">try</span> {
-            <span style="color: #000000">client</span> <span style="color: #000000">=</span> <span style="color: #000000">new</span> <span style="color: #000000">CouchbaseClient</span>(<span style="color: #000000">uris</span>, <span style="color: #000000">bucket</span>, <span style="color: #000000">password</span>);
-        } <span style="color: #000000">catch</span>(<span style="color: #000000">IOException</span> <span style="color: #000000">e</span>) {
-            <span style="color: #000000">Logger.error</span>(<span style="color: #C41A16">&quot;Error connection to Couchbase: &quot;</span> <span style="color: #000000">+</span> <span style="color: #000000">e.getMessage</span>());
-            <span style="color: #000000">System.exit</span>(<span style="color: #1C01CE">0</span>);
+        try {
+            client = new CouchbaseClient(uris, bucket, password);
+        } catch(IOException e) {
+            Logger.error(&quot;Error connection to Couchbase: &quot; + e.getMessage());
+            System.exit(0);
         }
 
-        <span style="color: #A90D91">return</span> <span style="color: #000000">true</span>;
+        return true;
     }
 
-    <span style="color: #000000">/**</span>
-    <span style="color: #000000">*</span> <span style="color: #000000">Disconnect</span> <span style="color: #A90D91">from</span> <span style="color: #000000">Couchbase.</span>
-    <span style="color: #000000">*/</span>
-    <span style="color: #000000">public</span> <span style="color: #000000">static</span> <span style="color: #000000">boolean</span> <span style="color: #000000">disconnect</span>() {
-        <span style="color: #A90D91">if</span>(<span style="color: #000000">client</span> <span style="color: #000000">==</span> <span style="color: #000000">null</span>) {
-            <span style="color: #A90D91">return</span> <span style="color: #000000">false</span>;
+    /**
+    * Disconnect from Couchbase.
+    */
+    public static boolean disconnect() {
+        if(client == null) {
+            return false;
         }
 
-        <span style="color: #A90D91">return</span> <span style="color: #000000">client.shutdown</span>(<span style="color: #1C01CE">3</span>, <span style="color: #000000">TimeUnit.SECONDS</span>);
+        return client.shutdown(3, TimeUnit.SECONDS);
     }
 
-    <span style="color: #000000">/**</span>
-    <span style="color: #000000">*</span> <span style="color: #000000">Returns</span> <span style="color: #000000">the</span> <span style="color: #000000">actual</span> <span style="color: #C41A16">`CouchbaseClient`</span> <span style="color: #000000">connection</span> <span style="color: #A90D91">object</span><span style="color: #000000">.</span>
-    <span style="color: #000000">*</span>
-    <span style="color: #000000">*</span> <span style="color: #000000">If</span> <span style="color: #000000">no</span> <span style="color: #000000">connection</span> <span style="color: #000000">is</span> <span style="color: #000000">established</span> <span style="color: #000000">yet</span>, <span style="color: #000000">it</span> <span style="color: #000000">tries</span> <span style="color: #000000">to</span> <span style="color: #000000">connect.</span> <span style="color: #000000">Note</span> <span style="color: #000000">that</span>
-    <span style="color: #000000">*</span> <span style="color: #000000">this</span> <span style="color: #000000">is</span> <span style="color: #000000">just</span> <span style="color: #000000">in</span> <span style="color: #000000">place</span> <span style="color: #A90D91">for</span> <span style="color: #000000">pure</span> <span style="color: #000000">convenience</span>, <span style="color: #000000">make</span> <span style="color: #000000">sure</span> <span style="color: #000000">to</span> <span style="color: #000000">connect</span> <span style="color: #000000">explicitly.</span>
-    <span style="color: #000000">*/</span>
-    <span style="color: #000000">public</span> <span style="color: #000000">static</span> <span style="color: #000000">CouchbaseClient</span> <span style="color: #000000">getConnection</span>() {
-        <span style="color: #A90D91">if</span>(<span style="color: #000000">client</span> <span style="color: #000000">==</span> <span style="color: #000000">null</span>) {
-            <span style="color: #000000">connect</span>();
+    /**
+    * Returns the actual `CouchbaseClient` connection object.
+    *
+    * If no connection is established yet, it tries to connect. Note that
+    * this is just in place for pure convenience, make sure to connect explicitly.
+    */
+    public static CouchbaseClient getConnection() {
+        if(client == null) {
+            connect();
         }
 
-        <span style="color: #A90D91">return</span> <span style="color: #000000">client</span>;
+        return client;
     }
 
 }
-</pre></div>
+</code></pre>
 
 <p>We basically define a <code>connect</code> and a <code>disconnect</code> method, which get called from our <code>Gobal.java</code> class. Inside the <code>connect</code> method we read configuration settings (more on that shortly) and then try to open the Couchbase connection. The <code>disconnect</code> method waits 3 seconds to finish any queued operations and then disconnects. Also, we provide a <code>getConnection()</code> method that returns the actual instance of the client object (which we&rsquo;ll use later in our models).</p>
 
 <p>It is always a good idea to just open one connection for the whole lifecycle instead of opening a new connection every time a request comes in. This removes unneeded handshake-latency and should therefore improve the overall performance of the application.</p>
 
 <p>You may have noticed the various <code>Play.application().configuration().getString();</code> calls. With these method calls you can read the values from your <code>conf/application.conf</code> configuration file. By defining your connection settings there instead of the actual implementation, you can easily swap the settings if you deploy your application into production. More on the configuration file can be found <a href="http://www.playframework.org/documentation/2.0.2/Configuration">here</a>. To define the settings we need, open your <code>application.conf</code> file and add the following to the end (or somewhere in between):</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"># Couchbase configuration
+
+<pre><code># Couchbase configuration
 # ~~~~~
 couchbase.hostname=&quot;localhost&quot;
 couchbase.port=8091
 couchbase.bucket=&quot;default&quot;
 couchbase.password=&quot;&quot;
-</pre></div>
+</code></pre>
 
 <p>Now we have everything in place to configure the settings and connect to the database. If you start the server again and load the page for the first time, you can see the debug output of the Couchbase SDK:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">[<span style="color: #000000">info</span>] <span style="color: #000000">application</span> <span style="color: #000000">-</span> <span style="color: #000000">Application</span> <span style="color: #000000">started</span>
-<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">07</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">19</span><span style="color: #000000">:</span><span style="color: #1C01CE">12</span><span style="color: #000000">:</span><span style="color: #1C01CE">43.788</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseConnection</span>:  <span style="color: #000000">Added</span> {<span style="color: #000000">QA</span> <span style="color: #000000">sa=/</span><span style="color: #1C01CE">127.0.0.1</span><span style="color: #000000">:</span><span style="color: #1C01CE">11210</span>, <span style="color: #000000">#Rops=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">#Wops=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">#iq=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">topRop=null</span>, <span style="color: #000000">topWop=null</span>, <span style="color: #000000">toWrite=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">interested=</span><span style="color: #1C01CE">0</span>} <span style="color: #000000">to</span> <span style="color: #000000">connect</span> <span style="color: #000000">queue</span>
-<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">07</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">19</span><span style="color: #000000">:</span><span style="color: #1C01CE">12</span><span style="color: #000000">:</span><span style="color: #1C01CE">43.789</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseClient</span>:  <span style="color: #000000">viewmode</span> <span style="color: #000000">property</span> <span style="color: #000000">isn&#39;t</span> <span style="color: #000000">defined</span>. <span style="color: #000000">Setting</span> <span style="color: #000000">viewmode</span> <span style="color: #000000">to</span> <span style="color: #000000">production</span> <span style="color: #000000">mode</span>
-<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">07</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">19</span><span style="color: #000000">:</span><span style="color: #1C01CE">12</span><span style="color: #000000">:</span><span style="color: #1C01CE">43.790</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">ViewConnection</span>:  <span style="color: #000000">Added</span> <span style="color: #000000">localhost/</span><span style="color: #1C01CE">127.0.0.1</span><span style="color: #000000">:</span><span style="color: #1C01CE">8092</span> <span style="color: #000000">to</span> <span style="color: #000000">connect</span> <span style="color: #000000">queue</span>
-<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">07</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">19</span><span style="color: #000000">:</span><span style="color: #1C01CE">12</span><span style="color: #000000">:</span><span style="color: #1C01CE">43.794</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseConnection</span>:  <span style="color: #000000">Connection</span> <span style="color: #000000">state</span> <span style="color: #000000">changed</span> <span style="color: #A90D91">for</span> <span style="color: #000000">sun</span>.<span style="color: #000000">nio</span>.<span style="color: #000000">ch</span>.<span style="color: #000000">SelectionKeyImpl</span><span style="color: #1C01CE">@1</span><span style="color: #000000">d179fb</span>
-[<span style="color: #000000">info</span>] <span style="color: #000000">play</span> <span style="color: #000000">-</span> <span style="color: #000000">Application</span> <span style="color: #000000">started</span> (<span style="color: #000000">Dev</span>)
-</pre></div>
+
+<pre><code>[info] application - Application started
+2012-07-17 19:12:43.788 INFO com.couchbase.client.CouchbaseConnection:  Added {QA sa=/127.0.0.1:11210, #Rops=0, #Wops=0, #iq=0, topRop=null, topWop=null, toWrite=0, interested=0} to connect queue
+2012-07-17 19:12:43.789 INFO com.couchbase.client.CouchbaseClient:  viewmode property isn't defined. Setting viewmode to production mode
+2012-07-17 19:12:43.790 INFO com.couchbase.client.ViewConnection:  Added localhost/127.0.0.1:8092 to connect queue
+2012-07-17 19:12:43.794 INFO com.couchbase.client.CouchbaseConnection:  Connection state changed for sun.nio.ch.SelectionKeyImpl@1d179fb
+[info] play - Application started (Dev)
+</code></pre>
 
 <p>Note that since we haven&rsquo;t defined a <code>viewmode</code> setting, Couchbase assumes you&rsquo;re running in production mode. You can change this setting, but I haven&rsquo;t done this here (we&rsquo;ll push our views into production before we use them inside the application).</p>
 
 <p>If you press <code>ctrl+d</code> to stop the application, you can see that Couchbase correctly closes the connection:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">[info] application - Application stopped
+
+<pre><code>[info] application - Application stopped
 2012-07-17 19:24:52.216 INFO com.couchbase.client.CouchbaseConnection:  Shut down Couchbase client
 2012-07-17 19:24:52.226 INFO com.couchbase.client.ViewConnection:  Shut down Couchbase client
 2012-07-17 19:24:52.226 INFO com.couchbase.client.ViewNode:  Couchbase I/O reactor terminated
-</pre></div>
+</code></pre>
 
-<h2 id="wrapping-up:4ac8fdf5a97cdd95577718a445e97b6e">Wrapping up</h2>
+<h2 id="wrapping-up">Wrapping up</h2>
 
 <p>This post hopefully gave you an overview of what we&rsquo;re going to implement, namely a real-time web chat application. We&rsquo;re going to use Java, the play! framework and Couchbase. Also we&rsquo;ve set up the database, the project itself and connected both. In the next post we&rsquo;ll build on this foundation and add session management to let users sign in and out.</p>
 
@@ -563,68 +584,76 @@ couchbase.password=&quot;&quot;
 
 <p>My <a href="http://nitschinger.at/Using-Couchbase-as-a-flexible-session-store">last post</a> about storing sessions in Couchbase was more of a general overview on what&rsquo;s possible. This post builds on the foundations and principles discussed and shows you various ways to store PHP sessions in Couchbase. We start out simple by using the built-in <code>session</code> ini -directives, then head over to the brand new <a href="http://php.net/manual/en/class.sessionhandlerinterface.php">SessionHandlerInterface</a> introduced in PHP 5.4 and finally implement it completely on our own. We&rsquo;ll see how both the complexity and flexibility increase during each of our approaches. In the end it&rsquo;s up to you which method seems appropriate for your use-case.</p>
 
-<h2 id="session-handler-and-memcached:70348acea5ad0f0c153f019a522d6d11">session_handler and memcached</h2>
+<h2 id="session-handler-and-memcached">session_handler and memcached</h2>
 
 <p>This approach has one big advantage: it&rsquo;s dead easy to setup and use. Let&rsquo;s tackle the good parts first and then discuss the weaknesses of this approach.</p>
 
 <p>We are using the protocol-compatible nature of Couchbase and let the built-in <code>memcached</code> session handler do the job for us. So the first thing we need to do (apart from installing Couchbase) is install the <code>php5-memcached</code> extension. If you&rsquo;re on a debian-based system it&rsquo;s as easy as running</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>sudo aptitude install php5-memcached
-</pre></div>
+
+<pre><code>$ sudo aptitude install php5-memcached
+</code></pre>
 
 <p>If you want to make sure that the extension is correctly installed, check the module on the command line:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>php -m | grep mem
+
+<pre><code>$ php -m | grep mem
 memcached
-</pre></div>
+</code></pre>
 
 <p>Now we need to tell PHP to use the <code>memcached</code> session handler and where it should save the data. To do this, we need to modify the <code>php.ini</code> file accordingly. I&rsquo;m using <a href="http://httpd.apache.org/">Apache</a> on <a href="http://www.ubuntu.com/">Ubuntu</a>, so my <code>php.ini</code> is located under <code>/etc/php5/apache2/php.ini</code>. Find and replace the following settings with their new values:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">[Session]</span>
-<span style="color: #836C28">session.save_handler</span> <span style="color: #000000">=</span> <span style="color: #C41A16">memcached</span>
-<span style="color: #836C28">session.save_path</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;localhost:11211&quot;</span>
-</pre></div>
+
+<pre><code>[Session]
+session.save_handler = memcached
+session.save_path = &quot;localhost:11211&quot;
+</code></pre>
 
 <p>Of course, you want to replace <code>localhost</code> with a different address if Couchbase is not running on your local machine. Couchbase uses <code>11211</code> as its <a href="http://www.couchbase.com/docs/couchbase-manual-2.0/couchbase-network-ports.html">data port</a>, just like memcached. Now we have everything in place, restart the server to get it up and running:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>sudo service apache2 restart
-</pre></div>
+
+<pre><code>$ sudo service apache2 restart
+</code></pre>
 
 <p>The infrastructure is in place, so we can now start working with the session store through the <code>$_SESSION</code> superglobal. Here is a short script that shows how you can work with it:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
 
-<span style="color: #177500">// Start the session.</span>
-<span style="color: #A90D91">session_start</span>();
+<pre><code>&lt;?php
 
-<span style="color: #177500">// Dump the session to the screen.</span>
-<span style="color: #A90D91">var_dump</span>(<span style="color: #000000">$_SESSION</span>);
+// Start the session.
+session_start();
 
-<span style="color: #177500">// Define some data to store.</span>
-<span style="color: #A90D91">class</span> <span style="color: #3F6E75">User</span> { <span style="color: #A90D91">public</span> <span style="color: #000000">$firstname</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;hoo&quot;</span>; }
-<span style="color: #000000">$user</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">User</span>();
+// Dump the session to the screen.
+var_dump($_SESSION);
 
-<span style="color: #177500">// Store it in the session object.</span>
-<span style="color: #000000">$_SESSION</span>[<span style="color: #C41A16">&#39;user&#39;</span>] <span style="color: #000000">=</span> <span style="color: #000000">$user</span>;
-<span style="color: #000000">$_SESSION</span>[<span style="color: #C41A16">&#39;randomStuff&#39;</span>] <span style="color: #000000">=</span> <span style="color: #A90D91">array</span>(<span style="color: #1C01CE">1</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;blue&#39;</span>, <span style="color: #C41A16">&#39;couchbase&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;rocks&#39;</span>);
+// Define some data to store.
+class User { public $firstname = &quot;hoo&quot;; }
+$user = new User();
 
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+// Store it in the session object.
+$_SESSION['user'] = $user;
+$_SESSION['randomStuff'] = array(1 =&gt; 'blue', 'couchbase' =&gt; 'rocks');
+
+?&gt;
+</code></pre>
 
 <p>This is not rocket science and exactly the way you&rsquo;d handle sessions through the interface provided by PHP. Check out the <a href="http://php.net/manual/en/reserved.variables.session.php">documentation</a> if you haven&rsquo;t used it yet.</p>
 
 <p>So, how does PHP store the data in Couchbase? The first thing to note is that all your session data is stored in the <code>default</code> bucket and uses a binary format (like how it would be stored in memcached). If you inspect the output from our example above, you can see that the user object is actually stored as an object so PHP uses the built-in serializer (if not configured differently) to store the session data. If you look in the bucket, you can see a key like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">memc.sess.key.a6sgl1oldchknlsj8mc3c37b11
-</pre></div>
+
+<pre><code>memc.sess.key.a6sgl1oldchknlsj8mc3c37b11
+</code></pre>
 
 <p>The first part is the prefix and the cryptic string at the end is the PHP session identifier which is carried along by the client through a cookie. If you fire up firebug or chrome and inspect the headers, you can see the corresponding <code>PHPSESSID</code>:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">Cookie:PHPSESSID=a6sgl1oldchknlsj8mc3c37b11;</span>
-</pre></div>
+
+<pre><code>Cookie:PHPSESSID=a6sgl1oldchknlsj8mc3c37b11;
+</code></pre>
 
 <p>The stored document looks like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">{</span>
+
+<pre><code>{
 &quot;_id&quot;: &quot;memc.sess.key.a6sgl1oldchknlsj8mc3c37b11&quot;,
 &quot;_rev&quot;: &quot;10-000003794c342b870000009800000000&quot;,
-&quot;$<span style="color: #000000">flags</span>&quot;: 0,
-&quot;$<span style="color: #000000">expiration</span>&quot;: 0,
-&quot;$<span style="color: #000000">att_reason</span>&quot;: &quot;invalid_json&quot;
+&quot;$flags&quot;: 0,
+&quot;$expiration&quot;: 0,
+&quot;$att_reason&quot;: &quot;invalid_json&quot;
 }
-</pre></div>
+</code></pre>
 
 <p>Since the data is not stored in JSON format, you can&rsquo;t inspect it from the Couchbase GUI directly. So why did I include it here anyway? Look at the <code>$expiration</code> key. It is important to note that we don&rsquo;t specify an expiration time here, because this is handled through PHP. So if you want to change the expiration time you have to change the appropriate setting using the <code>session.cache_expire</code> directive. This is different to the approach we&rsquo;ll cover at the end of the article where we implement everything on our own and don&rsquo;t rely on those built-in features.</p>
 
@@ -632,122 +661,124 @@ memcached
 
 <p>Since the data is not stored in JSON format, you can&rsquo;t use the awesome map/reduce querying mechanisms that Couchbase 2.0 provides. Also, you can&rsquo;t change the bucket or key-names. Another problem is that you can&rsquo;t make use of the automatic, dynamic reconfiguration mechanisms provided by Couchbase. So if the server at the ip-address goes down, PHP won&rsquo;t be able to store sessions in the cluster anymore. Couchbase provides an optional component called <a href="http://www.couchbase.com/docs/moxi-manual-1.8/moxi-introduction.html">Moxi</a> that acts as a proxy between your client and the couchbase cluster and is able to handle such situations. So if you&rsquo;re not able to use the approaches shown in the rest of this post you definitely need to take a look at it!</p>
 
-<h2 id="more-flexibility-through-the-sessionhandlerinterface:70348acea5ad0f0c153f019a522d6d11">More flexibility through the SessionHandlerInterface</h2>
+<h2 id="more-flexibility-through-the-sessionhandlerinterface">More flexibility through the SessionHandlerInterface</h2>
 
 <p>PHP 5.4 provides a brand new interface called <a href="http://www.php.net/manual/en/class.sessionhandlerinterface.php">SessionHandlerInterface</a> through which we can implement our own session handler. This way, we can use the familiar and built-in <code>$_SESSION</code> superglobal and make use of the advanced Couchbase functionality.</p>
 
 <p>We need to implement the following interface:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">SessionHandlerInterface <span style="color: #000000">{</span>
+
+<pre><code>SessionHandlerInterface {
     abstract public bool close ( void )
-    abstract public bool destroy ( string $<span style="color: #000000">session_id</span> )
-    abstract public bool gc ( string $<span style="color: #000000">maxlifetime</span> )
-    abstract public bool open ( string $<span style="color: #000000">save_path</span> , string $<span style="color: #000000">session_id</span> )
-    abstract public string read ( string $<span style="color: #000000">session_id</span> )
-    abstract public bool write ( string $<span style="color: #000000">session_id</span> , string $<span style="color: #000000">session_data</span> )
+    abstract public bool destroy ( string $session_id )
+    abstract public bool gc ( string $maxlifetime )
+    abstract public bool open ( string $save_path , string $session_id )
+    abstract public string read ( string $session_id )
+    abstract public bool write ( string $session_id , string $session_data )
 }
-</pre></div>
+</code></pre>
 
 <p>The following implementation is not meant to be used 1:1 in production, since I haven&rsquo;t tested every aspect of it. Nevertheless it should give you an idea on how such a implementation may look like. Note that you need to have the <code>php-ext-couchbase</code> extension installed. If you are not sure on how to do this, see my post about <a href="http://nitschinger.at/Getting-Started-with-Couchbase-and-PHP">Getting Started with Couchbase and PHP</a>. You can also find a github gist <a href="https://gist.github.com/2986942">here</a>.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
 
-<span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">* A reference implementation of a custom Couchbase session handler.</span>
-<span style="color: #C41A16">*/</span>
-<span style="color: #A90D91">class</span> <span style="color: #3F6E75">CouchbaseSessionHandler</span> <span style="color: #A90D91">implements</span> <span style="color: #000000">SessionHandlerInterface</span> {
+<pre><code>&lt;?php
 
-    <span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">    * Holds the Couchbase connection.</span>
-<span style="color: #C41A16">    */</span>
-    <span style="color: #A90D91">protected</span> <span style="color: #000000">$_connection</span> <span style="color: #000000">=</span> <span style="color: #A90D91">null</span>;
+/**
+* A reference implementation of a custom Couchbase session handler.
+*/
+class CouchbaseSessionHandler implements SessionHandlerInterface {
 
-    <span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">    * The Couchbase host and port.</span>
-<span style="color: #C41A16">    */</span>
-    <span style="color: #A90D91">protected</span> <span style="color: #000000">$_host</span> <span style="color: #000000">=</span> <span style="color: #A90D91">null</span>;
+    /**
+    * Holds the Couchbase connection.
+    */
+    protected $_connection = null;
 
-    <span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">    * The Couchbase bucket name.</span>
-<span style="color: #C41A16">    */</span>
-    <span style="color: #A90D91">protected</span> <span style="color: #000000">$_bucket</span> <span style="color: #000000">=</span> <span style="color: #A90D91">null</span>;
+    /**
+    * The Couchbase host and port.
+    */
+    protected $_host = null;
 
-    <span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">    * The prefix to be used in Couchbase keynames.</span>
-<span style="color: #C41A16">    */</span>
-    <span style="color: #A90D91">protected</span> <span style="color: #000000">$_keyPrefix</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;session:&#39;</span>;
+    /**
+    * The Couchbase bucket name.
+    */
+    protected $_bucket = null;
 
-    <span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">    * Define a expiration time of 10 minutes.</span>
-<span style="color: #C41A16">    */</span>
-    <span style="color: #A90D91">protected</span> <span style="color: #000000">$_expire</span> <span style="color: #000000">=</span> <span style="color: #1C01CE">600</span>;
+    /**
+    * The prefix to be used in Couchbase keynames.
+    */
+    protected $_keyPrefix = 'session:';
 
-    <span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">    * Set the default configuration params on init.</span>
-<span style="color: #C41A16">    */</span>
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">__construct</span>(<span style="color: #000000">$host</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;127.0.0.1:8091&#39;</span>, <span style="color: #000000">$bucket</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;default&#39;</span>) {
-        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">_host</span> <span style="color: #000000">=</span> <span style="color: #000000">$host</span>;
-        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">_bucket</span> <span style="color: #000000">=</span> <span style="color: #000000">$bucket</span>;
+    /**
+    * Define a expiration time of 10 minutes.
+    */
+    protected $_expire = 600;
+
+    /**
+    * Set the default configuration params on init.
+    */
+    public function __construct($host = '127.0.0.1:8091', $bucket = 'default') {
+        $this-&gt;_host = $host;
+        $this-&gt;_bucket = $bucket;
     }
 
-    <span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">    * Open the connection to Couchbase (called by PHP on `session_start()`)</span>
-<span style="color: #C41A16">    */</span>
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">open</span>(<span style="color: #000000">$savePath</span>, <span style="color: #000000">$sessionName</span>) {
-        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">_connection</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Couchbase</span>(<span style="color: #000000">$this-&gt;</span><span style="color: #836C28">_host</span>, <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">_bucket</span>);
-        <span style="color: #A90D91">return</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">_connection</span> <span style="color: #000000">?</span> <span style="color: #A90D91">true</span> <span style="color: #000000">:</span> <span style="color: #A90D91">false</span>;
+    /**
+    * Open the connection to Couchbase (called by PHP on `session_start()`)
+    */
+    public function open($savePath, $sessionName) {
+        $this-&gt;_connection = new Couchbase($this-&gt;_host, $this-&gt;_bucket);
+        return $this-&gt;_connection ? true : false;
     }
 
-    <span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">    * Close the connection. Called by PHP when the script ends.</span>
-<span style="color: #C41A16">    */</span>
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">close</span>() {
-        <span style="color: #A90D91">unset</span>(<span style="color: #000000">$this-&gt;</span><span style="color: #836C28">_connection</span>);
-        <span style="color: #A90D91">return</span> <span style="color: #A90D91">true</span>;
+    /**
+    * Close the connection. Called by PHP when the script ends.
+    */
+    public function close() {
+        unset($this-&gt;_connection);
+        return true;
     }
 
-    <span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">    * Read data from the session.</span>
-<span style="color: #C41A16">    */</span>
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">read</span>(<span style="color: #000000">$sessionId</span>) {
-        <span style="color: #000000">$key</span> <span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">_keyPrefix</span> <span style="color: #000000">.</span> <span style="color: #000000">$sessionId</span>;
-        <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">_connection</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">get</span>(<span style="color: #000000">$key</span>);
+    /**
+    * Read data from the session.
+    */
+    public function read($sessionId) {
+        $key = $this-&gt;_keyPrefix . $sessionId;
+        $result = $this-&gt;_connection-&gt;get($key);
 
-        <span style="color: #A90D91">return</span> <span style="color: #000000">$result</span> <span style="color: #000000">?:</span> <span style="color: #A90D91">null</span>;
+        return $result ?: null;
     }
 
-    <span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">    * Write data to the session.</span>
-<span style="color: #C41A16">    */</span>
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">write</span>(<span style="color: #000000">$sessionId</span>, <span style="color: #000000">$sessionData</span>) {
-        <span style="color: #000000">$key</span> <span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">_keyPrefix</span> <span style="color: #000000">.</span> <span style="color: #000000">$sessionId</span>;
-        <span style="color: #A90D91">if</span>(<span style="color: #A90D91">empty</span>(<span style="color: #000000">$sessionData</span>)) {
-            <span style="color: #A90D91">return</span> <span style="color: #A90D91">false</span>;
+    /**
+    * Write data to the session.
+    */
+    public function write($sessionId, $sessionData) {
+        $key = $this-&gt;_keyPrefix . $sessionId;
+        if(empty($sessionData)) {
+            return false;
         }
 
-        <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">_connection</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">set</span>(<span style="color: #000000">$key</span>, <span style="color: #000000">$sessionData</span>, <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">_expire</span>);
-        <span style="color: #A90D91">return</span> <span style="color: #000000">$result</span> <span style="color: #000000">?</span> <span style="color: #A90D91">true</span> <span style="color: #000000">:</span> <span style="color: #A90D91">false</span>;
+        $result = $this-&gt;_connection-&gt;set($key, $sessionData, $this-&gt;_expire);
+        return $result ? true : false;
     }
 
-    <span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">    * Delete data from the session.</span>
-<span style="color: #C41A16">    */</span>
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">destroy</span>(<span style="color: #000000">$sessionId</span>) {
-        <span style="color: #000000">$key</span> <span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">_keyPrefix</span> <span style="color: #000000">.</span> <span style="color: #000000">$sessionId</span>;
-        <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">_connection</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">delete</span>(<span style="color: #000000">$key</span>);
+    /**
+    * Delete data from the session.
+    */
+    public function destroy($sessionId) {
+        $key = $this-&gt;_keyPrefix . $sessionId;
+        $result = $this-&gt;_connection-&gt;delete($key);
 
-        <span style="color: #A90D91">return</span> <span style="color: #000000">$result</span> <span style="color: #000000">?</span> <span style="color: #A90D91">true</span> <span style="color: #000000">:</span> <span style="color: #A90D91">false</span>;
+        return $result ? true : false;
     }
 
-    <span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">    * Run the garbage collection.</span>
-<span style="color: #C41A16">    */</span>
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">gc</span>(<span style="color: #000000">$maxLifetime</span>) {
-        <span style="color: #A90D91">return</span> <span style="color: #A90D91">true</span>;
+    /**
+    * Run the garbage collection.
+    */
+    public function gc($maxLifetime) {
+        return true;
     }
 
 }
 
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>It&rsquo;s not that complex as it may look like in the first place. At the top of the class we&rsquo;re defining and initializing some variables that hold our configuration. We don&rsquo;t have to do this, but this way we&rsquo;re getting a bit more flexibility and can pass custom settings through the constructor.</p>
 
@@ -762,34 +793,38 @@ memcached
 <p>The <code>destroy</code> method should not contain any surprises, we just delete the document based on the key if it exists. The <code>gc</code> method is not used here, because Couchbase handles the garbage collection for us. If you store your data in files, you want to clean up old sessions here.</p>
 
 <p>Now we can use our handler and do some work with it:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #000000">$handler</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">CouchbaseSessionHandler</span>();
 
-<span style="color: #A90D91">session_set_save_handler</span>(<span style="color: #000000">$handler</span>, <span style="color: #A90D91">true</span>);
-<span style="color: #A90D91">session_start</span>();
+<pre><code>&lt;?php
+$handler = new CouchbaseSessionHandler();
 
-<span style="color: #A90D91">var_dump</span>(<span style="color: #000000">$_SESSION</span>);
+session_set_save_handler($handler, true);
+session_start();
 
-<span style="color: #000000">$_SESSION</span>[<span style="color: #C41A16">&#39;foo&#39;</span>] <span style="color: #000000">=</span> <span style="color: #A90D91">null</span>;
-<span style="color: #000000">$_SESSION</span>[<span style="color: #C41A16">&#39;data&#39;</span>] <span style="color: #000000">=</span> <span style="color: #A90D91">array</span>(
-    <span style="color: #C41A16">&#39;couchbase&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;rocks&#39;</span>
+var_dump($_SESSION);
+
+$_SESSION['foo'] = null;
+$_SESSION['data'] = array(
+    'couchbase' =&gt; 'rocks'
 );
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>On the first load, the <code>$_SESSION</code> variable is of course empty. When you reload the page, you should see output like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">array(2) { &#39;foo&#39; =&gt; NULL &#39;data&#39; =&gt; array(1) { &#39;couchbase&#39; =&gt; string(5) &quot;rocks&quot; } }
-</pre></div>
+
+<pre><code>array(2) { 'foo' =&gt; NULL 'data' =&gt; array(1) { 'couchbase' =&gt; string(5) &quot;rocks&quot; } }
+</code></pre>
 
 <p>In the Couchbase GUI, we can see that a key has been added to the <code>default</code> bucket named something like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">session:a6sgl1oldchknlsj8mc3c37b11</span>
-</pre></div>
+
+<pre><code>session:a6sgl1oldchknlsj8mc3c37b11
+</code></pre>
 
 <p>Couchbase provides a handy tool on the command line to inspect our documents - it&rsquo;s called <code>cbc</code>. We can use it to fetch the contents of our key and peek inside:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>cbc cat session:a6sgl1oldchknlsj8mc3c37b11
-<span style="color: #C41A16">&quot;session:a6sgl1oldchknlsj8mc3c37b11&quot;</span> Size <span style="color: #1C01CE">45</span> Flags 0x0 CAS 0x9d394b19130a0000
-foo|N;data|a:1:<span style="color: #000000">{</span>s:9:<span style="color: #C41A16">&quot;couchbase&quot;</span>;s:5:<span style="color: #C41A16">&quot;rocks&quot;</span>;<span style="color: #000000">}</span>
-</pre></div>
+
+<pre><code>$ cbc cat session:a6sgl1oldchknlsj8mc3c37b11
+&quot;session:a6sgl1oldchknlsj8mc3c37b11&quot; Size 45 Flags 0x0 CAS 0x9d394b19130a0000
+foo|N;data|a:1:{s:9:&quot;couchbase&quot;;s:5:&quot;rocks&quot;;}
+</code></pre>
 
 <p>You can see that the PHP session handler still stores the data in a serialized way (you can also <code>var_dump()</code> the content of the <code>$sessionData</code> variable handed over to our <code>write()</code> method to see the serialized data string).</p>
 
@@ -797,149 +832,152 @@ foo|N;data|a:1:<span style="color: #000000">{</span>s:9:<span style="color: #C41
 
 <p>Chances are that you&rsquo;re still using PHP 5.3 or lower. If this is the case, you want to either use the <a href="http://at.php.net/manual/en/class.sessionhandler.php">old way</a> to define your session handler or just read on (because the method described below isn&rsquo;t bound to a specific PHP version).</p>
 
-<h2 id="implementing-it-on-our-own:70348acea5ad0f0c153f019a522d6d11">Implementing it on our own</h2>
+<h2 id="implementing-it-on-our-own">Implementing it on our own</h2>
 
 <p>When we implement the session handling mechanism on our own, we can reuse all insights from above and also use <a href="http://nitschinger.at/Handling-JSON-like-a-boss-in-PHP">JSON</a> instead of the PHP object serialization. Imagine we&rsquo;re writing yet another PHP framework (don&rsquo;t do that&hellip;) and define a session interface like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #A90D91">namespace</span> <span style="color: #000000">framework\sessions</span>;
 
-<span style="color: #A90D91">interface</span> <span style="color: #000000">SessionHandler</span> {
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">read</span>(<span style="color: #000000">$sessionId</span>);
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">write</span>(<span style="color: #000000">$sessionId</span>, <span style="color: #000000">$data</span>);
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">delete</span>(<span style="color: #000000">$sessionId</span>);
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">check</span>(<span style="color: #000000">$sessionId</span>);
+<pre><code>&lt;?php
+namespace framework\sessions;
+
+interface SessionHandler {
+    public function read($sessionId);
+    public function write($sessionId, $data);
+    public function delete($sessionId);
+    public function check($sessionId);
 }
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>The <code>read</code>, <code>write</code> and <code>delete</code> methods should be clear what they&rsquo;re doing. The <code>check</code> method checks if the given key is found in the session store.</p>
 
 <p>Here&rsquo;s again the full implementation, we&rsquo;ll talk it through afterwards:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #A90D91">namespace</span> <span style="color: #000000">framework\sessions</span>;
 
-<span style="color: #A90D91">use</span> <span style="color: #000000">Couchbase</span>;
+<pre><code>&lt;?php
+namespace framework\sessions;
 
-<span style="color: #A90D91">class</span> <span style="color: #3F6E75">CouchbaseSessionHandler</span> <span style="color: #A90D91">implements</span> <span style="color: #000000">SessionHandler</span> {
+use Couchbase;
 
-    <span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">    * Holds the Couchbase connection.</span>
-<span style="color: #C41A16">    */</span>
-    <span style="color: #A90D91">protected</span> <span style="color: #000000">$_connection</span> <span style="color: #000000">=</span> <span style="color: #A90D91">null</span>;
-    <span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">    * The prefix to be used in Couchbase keynames.</span>
-<span style="color: #C41A16">    */</span>
-    <span style="color: #A90D91">protected</span> <span style="color: #000000">$_keyPrefix</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;session:&#39;</span>;
+class CouchbaseSessionHandler implements SessionHandler {
 
-    <span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">    * Define a expiration time of 10 minutes.</span>
-<span style="color: #C41A16">    */</span>
-    <span style="color: #A90D91">protected</span> <span style="color: #000000">$_expire</span> <span style="color: #000000">=</span> <span style="color: #1C01CE">600</span>;
+    /**
+    * Holds the Couchbase connection.
+    */
+    protected $_connection = null;
+    /**
+    * The prefix to be used in Couchbase keynames.
+    */
+    protected $_keyPrefix = 'session:';
 
-    <span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">    * Currently in development mode? Used for view loading.</span>
-<span style="color: #C41A16">    */</span>
-    <span style="color: #A90D91">protected</span> <span style="color: #000000">$_development</span> <span style="color: #000000">=</span> <span style="color: #A90D91">null</span>;
+    /**
+    * Define a expiration time of 10 minutes.
+    */
+    protected $_expire = 600;
 
-    <span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">    * Connect to Couchbase.</span>
-<span style="color: #C41A16">    */</span>
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">__construct</span>(<span style="color: #000000">$host</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;127.0.0.1:8091&#39;</span>, <span style="color: #000000">$bucket</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;default&#39;</span>, <span style="color: #000000">$dev</span> <span style="color: #000000">=</span> <span style="color: #A90D91">true</span>) {
-            <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">_development</span> <span style="color: #000000">=</span> <span style="color: #000000">$dev</span>;
-            <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">_connection</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Couchbase</span>(<span style="color: #000000">$host</span>, <span style="color: #000000">$bucket</span>);
-            <span style="color: #A90D91">return</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">_connection</span> <span style="color: #000000">?</span> <span style="color: #A90D91">true</span> <span style="color: #000000">:</span> <span style="color: #A90D91">false</span>;
+    /**
+    * Currently in development mode? Used for view loading.
+    */
+    protected $_development = null;
+
+    /**
+    * Connect to Couchbase.
+    */
+    public function __construct($host = '127.0.0.1:8091', $bucket = 'default', $dev = true) {
+            $this-&gt;_development = $dev;
+            $this-&gt;_connection = new Couchbase($host, $bucket);
+            return $this-&gt;_connection ? true : false;
     }
 
-    <span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">    * Read the document for the given `sessionId`.</span>
-<span style="color: #C41A16">    */</span>
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">read</span>(<span style="color: #000000">$sessionId</span>) {
-        <span style="color: #000000">$key</span> <span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">_keyPrefix</span> <span style="color: #000000">.</span> <span style="color: #000000">$sessionId</span>;
+    /**
+    * Read the document for the given `sessionId`.
+    */
+    public function read($sessionId) {
+        $key = $this-&gt;_keyPrefix . $sessionId;
 
-        <span style="color: #000000">$data</span> <span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">_connection</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">get</span>(<span style="color: #000000">$key</span>);
-        <span style="color: #A90D91">return</span> <span style="color: #000000">$data</span> <span style="color: #000000">?</span> <span style="color: #A90D91">json_decode</span>(<span style="color: #000000">$data</span>, <span style="color: #A90D91">true</span>) <span style="color: #000000">:</span> <span style="color: #A90D91">null</span>;
+        $data = $this-&gt;_connection-&gt;get($key);
+        return $data ? json_decode($data, true) : null;
     }
 
-    <span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">    * Write the data.</span>
-<span style="color: #C41A16">    */</span>
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">write</span>(<span style="color: #000000">$sessionId</span>, <span style="color: #000000">$data</span>) {
-        <span style="color: #000000">$key</span> <span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">_keyPrefix</span> <span style="color: #000000">.</span> <span style="color: #000000">$sessionId</span>;
-        <span style="color: #000000">$data</span> <span style="color: #000000">=</span> <span style="color: #000000">$data</span> <span style="color: #000000">+</span> <span style="color: #A90D91">array</span>(<span style="color: #C41A16">&#39;type&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;session&#39;</span>);
+    /**
+    * Write the data.
+    */
+    public function write($sessionId, $data) {
+        $key = $this-&gt;_keyPrefix . $sessionId;
+        $data = $data + array('type' =&gt; 'session');
 
-        <span style="color: #A90D91">return</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">_connection</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">set</span>(<span style="color: #000000">$key</span>, <span style="color: #A90D91">json_encode</span>(<span style="color: #000000">$data</span>), <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">_expire</span>);
+        return $this-&gt;_connection-&gt;set($key, json_encode($data), $this-&gt;_expire);
     }
 
-    <span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">    * Delete the data for the given `sessionId`.</span>
-<span style="color: #C41A16">    */</span>
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">delete</span>(<span style="color: #000000">$sessionId</span>) {
-        <span style="color: #000000">$key</span> <span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">_keyPrefix</span> <span style="color: #000000">.</span> <span style="color: #000000">$sessionId</span>;
+    /**
+    * Delete the data for the given `sessionId`.
+    */
+    public function delete($sessionId) {
+        $key = $this-&gt;_keyPrefix . $sessionId;
 
-        <span style="color: #A90D91">return</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">_connection</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">delete</span>(<span style="color: #000000">$key</span>);
+        return $this-&gt;_connection-&gt;delete($key);
     }
 
-    <span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">    * Check if a document exists.</span>
-<span style="color: #C41A16">    **/</span>
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">check</span>(<span style="color: #000000">$sessionId</span>) {
-        <span style="color: #000000">$key</span> <span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">_keyPrefix</span> <span style="color: #000000">.</span> <span style="color: #000000">$sessionId</span>;
-        <span style="color: #A90D91">return</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">_connection</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">get</span>(<span style="color: #000000">$key</span>) <span style="color: #000000">?</span> <span style="color: #A90D91">true</span> <span style="color: #000000">:</span> <span style="color: #A90D91">false</span>;
+    /**
+    * Check if a document exists.
+    **/
+    public function check($sessionId) {
+        $key = $this-&gt;_keyPrefix . $sessionId;
+        return $this-&gt;_connection-&gt;get($key) ? true : false;
     }
 
 }
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>This implementation is pretty basic and should give you just an idea what&rsquo;s possible. Since we&rsquo;re storing JSON in Couchbase, you can get fancy and implement the <code>read</code> and <code>check</code> method not only on the <code>sessionId</code> level, but also do fine-grained inspection of the keys inside the JSON document.</p>
 
 <p>The code provided here is very similar to the example above, with only minor changes. The first one is that we open the connection on <code>__construct</code> and don&rsquo;t have a <code>gc</code> method since we don&rsquo;t need it here. Inside <code>read</code> and <code>write</code> we make use of <code>json_encode</code> and <code>json_decode</code> to convert the PHP payload into JSON. The <code>check</code> method works in a similar fashion to <code>read</code> but returns <code>true/false</code> instead of the actual data.</p>
 
 <p>Let&rsquo;s run some code against our implementation:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #A90D91">use</span> <span style="color: #000000">framework\sessions\CouchbaseSessionHandler</span>;
 
-<span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">* Init the Handler.</span>
-<span style="color: #C41A16">*/</span>
-<span style="color: #000000">$handler</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">CouchbaseSessionHandler</span>();
+<pre><code>&lt;?php
+use framework\sessions\CouchbaseSessionHandler;
 
-<span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">* Generate a Session ID for testing purposes.</span>
-<span style="color: #C41A16">*/</span>
-<span style="color: #000000">$sessionId</span> <span style="color: #000000">=</span> <span style="color: #A90D91">uniqid</span>();
+/**
+* Init the Handler.
+*/
+$handler = new CouchbaseSessionHandler();
 
-<span style="color: #C41A16">/**</span>
-<span style="color: #C41A16">* Store and retreive.</span>
-<span style="color: #C41A16">*/</span>
-<span style="color: #000000">$data</span> <span style="color: #000000">=</span> <span style="color: #A90D91">array</span>(<span style="color: #C41A16">&#39;couchbase&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;rocks&#39;</span>);
+/**
+* Generate a Session ID for testing purposes.
+*/
+$sessionId = uniqid();
 
-<span style="color: #177500">// Write some data</span>
-<span style="color: #000000">$handler-&gt;</span><span style="color: #836C28">write</span>(<span style="color: #000000">$sessionId</span>, <span style="color: #000000">$data</span>);
+/**
+* Store and retreive.
+*/
+$data = array('couchbase' =&gt; 'rocks');
 
-<span style="color: #177500">// Returns the array</span>
-<span style="color: #A90D91">var_dump</span>(<span style="color: #000000">$handler-&gt;</span><span style="color: #836C28">read</span>(<span style="color: #000000">$sessionId</span>));
+// Write some data
+$handler-&gt;write($sessionId, $data);
 
-<span style="color: #177500">// Returns true</span>
-<span style="color: #A90D91">var_dump</span>(<span style="color: #000000">$handler-&gt;</span><span style="color: #836C28">check</span>(<span style="color: #000000">$sessionId</span>));
+// Returns the array
+var_dump($handler-&gt;read($sessionId));
 
-<span style="color: #177500">// Delete the document</span>
-<span style="color: #000000">$handler-&gt;</span><span style="color: #836C28">delete</span>(<span style="color: #000000">$sessionId</span>);
+// Returns true
+var_dump($handler-&gt;check($sessionId));
 
-<span style="color: #177500">// Returns NULL</span>
-<span style="color: #A90D91">var_dump</span>(<span style="color: #000000">$handler-&gt;</span><span style="color: #836C28">read</span>(<span style="color: #000000">$sessionId</span>));
+// Delete the document
+$handler-&gt;delete($sessionId);
 
-<span style="color: #177500">// Returns false</span>
-<span style="color: #A90D91">var_dump</span>(<span style="color: #000000">$handler-&gt;</span><span style="color: #836C28">check</span>(<span style="color: #000000">$sessionId</span>));
+// Returns NULL
+var_dump($handler-&gt;read($sessionId));
 
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+// Returns false
+var_dump($handler-&gt;check($sessionId));
+
+?&gt;
+</code></pre>
 
 <p>If you comment out the <code>delete</code> part you can see that the document is stored as JSON in Couchbase. On the next request, you don&rsquo;t need the <code>write</code> call anymore since the data is loaded directly from Couchbase.</p>
 
 <p>As a side note, my original idea was to implement a <code>clear</code> method that deletes all stored session documents. This is a perfect use-case for a view, but since the PHP extension with view support is still in a developer preview, <a href="http://www.couchbase.com/issues/browse/PCBC-76">something went wrong</a>. When this issue is resolved I&rsquo;ll write another blog post focusing on handling views. If you want to implement the <code>clear</code> method now, you can workaround <code>memcached</code>-style and maintain a separate document that just holds all keys of the current sessions. You can load this one and then delete all fetched keys.</p>
 
-<h2 id="final-thoughts:70348acea5ad0f0c153f019a522d6d11">Final thoughts</h2>
+<h2 id="final-thoughts">Final thoughts</h2>
 
 <p>There are lots of possibilities on how you can use Couchbase to store your PHP sessions. If you just want to switch to Couchbase on the backend and don&rsquo;t want to touch your code at all, the first option is for you. If you&rsquo;ve used the built-in PHP session handling mechanisms and want to switch to a much more powerful storage engine, the second method may be a good fit. Finally, if you&rsquo;re using a PHP framework that uses its own adapters the last method provides the most flexibility and can be modified to suit all your needs.</p>
 
@@ -967,7 +1005,7 @@ foo|N;data|a:1:<span style="color: #000000">{</span>s:9:<span style="color: #C41
 
 <p>Let&rsquo;s look at some obstacles that we as application developers face and then see how we may solve them through Couchbase and its functionality. Of course, there are lots of ways to solve the same problem domain and the solutions provided here may not fit your problem as good as another technology/stack/software. I&rsquo;d love to hear your opinions on this if you have a more elegant or flexible approach with a similar technology.</p>
 
-<h2 id="introduction:512f62c3475e795b4e119166c489818f">Introduction</h2>
+<h2 id="introduction">Introduction</h2>
 
 <p>The root of all session storage problems is that most web applications need to store some kind of state across pages and HTTP is by design <a href="http://en.wikipedia.org/wiki/Stateless_protocol">stateless</a>. Therefore, we need to use some of the solutions that were invented to fill exactly this gap.</p>
 
@@ -983,34 +1021,38 @@ foo|N;data|a:1:<span style="color: #000000">{</span>s:9:<span style="color: #C41
 
 <p>That&rsquo;s the short story on the origins of Couchbase. Note that there are lots of other awesome projects out there that help you achieve similar results, with <a href="http://redis.io/">Redis</a>, <a href="http://www.mongodb.org/">MongoDB</a> or <a href="http://wiki.basho.com/">Riak</a> as the more prominent ones. Espcially Redis provides more powerful data structures on top of the &ldquo;key/value&rdquo; pattern and is definitely worth a look.</p>
 
-<h2 id="implementation:512f62c3475e795b4e119166c489818f">Implementation</h2>
+<h2 id="implementation">Implementation</h2>
 
 <p>The most simple use case that all session stores need to fulfill is - of course - to store and read session data in a very performant way. Most of the time, a unique session identifier is used as the key and some arbitrary payload as the value (for example usernames, ids or other related data).</p>
 
 <p>Note that this post aims to be a SDK-independent introduction to the topic, and the exact syntax may vary a bit from SDK to SDK (I&rsquo;m using PHP here, but the syntax is nearly identical for the other SDKs). As the Couchbase API is similar to memcached, you should feel right at home if you&rsquo;ve used it already (at least for the basic commands).</p>
 
 <p>Couchbase provides you with <code>get</code> and <code>set</code> methods to read and store a value identified by a unique key. The key should be a string and the value preferably a JSON object. You can also store serialized or binary data, but you then loose the ability to query it through views. On the <code>set</code>-command, you can also pass in an optional expiration time, which comes in handy if you want to expire sessions automatically. Here&rsquo;s an example to store a session document:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$user</span> <span style="color: #000000">=</span> <span style="color: #000000">array(</span>
-    <span style="color: #C41A16">&#39;username&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;daschl&#39;</span><span style="color: #000000">,</span>
-    <span style="color: #C41A16">&#39;fullname&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;Michael Nitschinger&#39;</span>
-<span style="color: #000000">);</span>
-<span style="color: #000000">$document</span> <span style="color: #000000">=</span> <span style="color: #000000">json_encode($user);</span>
-<span style="color: #000000">$couchbase-&gt;set(</span><span style="color: #C41A16">&#39;user:1234&#39;</span><span style="color: #000000">,</span> <span style="color: #000000">$document,</span> <span style="color: #000000">60);</span>
-</pre></div>
+
+<pre><code>$user = array(
+    'username' =&gt; 'daschl',
+    'fullname' =&gt; 'Michael Nitschinger'
+);
+$document = json_encode($user);
+$couchbase-&gt;set('user:1234', $document, 60);
+</code></pre>
 
 <p>This stores the given JSON document with the key <code>user:1234</code> and a expiry time of 60 seconds in Couchbase. If you provide a expiry time that is larger than 30 days, Couchbase assumes that you pass in a unix timestamp (as a result, you can also pass absolute timestamps instead of relative ones).</p>
 
 <p>To read it back afterwards, you can use the <code>get</code> method:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">$couchbase-&gt;get(</span><span style="color: #C41A16">&#39;user:1234&#39;</span><span style="color: #000000">);</span>
-</pre></div>
+
+<pre><code>$result = $couchbase-&gt;get('user:1234');
+</code></pre>
 
 <p>If you want to delete the key (for example to destroy the session), you can just remove the key:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">$couchbase-&gt;delete(</span><span style="color: #C41A16">&#39;user:1234&#39;</span><span style="color: #000000">);</span>
-</pre></div>
+
+<pre><code>$result = $couchbase-&gt;delete('user:1234');
+</code></pre>
 
 <p>You can also just &ldquo;touch&rdquo; the document, so that the expiry key will be refreshed:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">$couchbase-&gt;touch(</span><span style="color: #C41A16">&#39;user:1234&#39;</span><span style="color: #000000">,</span> <span style="color: #000000">60);</span>
-</pre></div>
+
+<pre><code>$result = $couchbase-&gt;touch('user:1234', 60);
+</code></pre>
 
 <p>Of course that&rsquo;s just the simplest use case, but it is often enough to start with. If you&rsquo;re curious, you can also <a href="http://www.couchbase.com/docs/couchbase-sdk-php-1.1/api-reference-summary.html">look into</a> <code>getMulti</code> and <code>setMulti</code> to fetch more keys at the same time. One thing to remember is that when you specify an expiration time the key will only be deleted on the next fetch and not automatically. If you have a large batch of keys that you want to remove you need some kind of background script that touches them and makes sure they are actually deleted. Note that you can also wait for the Couchbase background job to delete the expired keys for you which runs every hour by default.</p>
 
@@ -1027,7 +1069,8 @@ foo|N;data|a:1:<span style="color: #000000">{</span>s:9:<span style="color: #C41
 <p>In order to achieve this, we need some way to differentiate if a user is just visiting the website or is logged in. Also, we need to store the location from where he is coming. Since this a more-or-less SDK-agnostic post, here are some hints how this could be done:</p>
 
 <p>When an anonymous user requests our website, we initiate a session that identifies him by his ip-address and does a lookup of his location based on some external information (for example the <a href="http://www.maxmind.com/app/geolite">MaxMind GeoLite database</a>). We store a session identifier in a cookie and the following document in Couchbase:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// Key: user:&lt;SESSION-IDENTIFIER&gt;
+
+<pre><code>// Key: user:&lt;SESSION-IDENTIFIER&gt;
 {
     &quot;namespace&quot;: &quot;sessions&quot;,
     &quot;type&quot;: &quot;anonymous&quot;,
@@ -1036,10 +1079,11 @@ foo|N;data|a:1:<span style="color: #000000">{</span>s:9:<span style="color: #C41
     &quot;remoteAddress&quot;: &quot;&lt;ipaddr&gt;&quot;,
     &quot;location&quot;: &quot;Vienna/Austria&quot;
 }
-</pre></div>
+</code></pre>
 
 <p>If the user is logged in, we can clear the old session and instantiate a new one with more details about our user:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// Key: user:&lt;SESSION-IDENTIFIER&gt;
+
+<pre><code>// Key: user:&lt;SESSION-IDENTIFIER&gt;
 {
     &quot;namespace&quot;: &quot;sessions&quot;,
     &quot;type&quot;: &quot;user&quot;,
@@ -1050,123 +1094,130 @@ foo|N;data|a:1:<span style="color: #000000">{</span>s:9:<span style="color: #C41
     &quot;location&quot;: &quot;Vienna/Austria&quot;,
     &quot;name&quot;: &quot;&lt;full name&gt;&quot;
 }
-</pre></div>
+</code></pre>
 
 <p>The whole store, delete and update calls can be done with the basic methods described above, but what I want to concentrate on are the views. If you want to follow along, here is a short PHP script that populates the default bucket with some data to work with:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-    <span style="color: #177500">// Open the Connection</span>
-    <span style="color: #000000">$couchbase</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Couchbase</span>(<span style="color: #C41A16">&quot;127.0.0.1:8091&quot;</span>);
 
-    <span style="color: #177500">// Create some fake data with random hashes to simulate session identifiers.</span>
-    <span style="color: #000000">$data</span> <span style="color: #000000">=</span> <span style="color: #A90D91">array</span>(
-        <span style="color: #C41A16">&#39;68ea304124beaa7e648cc1327d793b0a&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">array</span>(
-            <span style="color: #C41A16">&#39;namespace&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;sessions&#39;</span>,
-            <span style="color: #C41A16">&#39;type&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;anonymous&#39;</span>,
-            <span style="color: #C41A16">&#39;lastSeen&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">time</span>(),
-            <span style="color: #C41A16">&#39;firstSeen&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">time</span>(),
-            <span style="color: #C41A16">&#39;remoteAddress&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;192.168.0.1&#39;</span>,
-            <span style="color: #C41A16">&#39;location&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;Vienna/Austria&#39;</span>
+<pre><code>&lt;?php
+    // Open the Connection
+    $couchbase = new Couchbase(&quot;127.0.0.1:8091&quot;);
+
+    // Create some fake data with random hashes to simulate session identifiers.
+    $data = array(
+        '68ea304124beaa7e648cc1327d793b0a' =&gt; array(
+            'namespace' =&gt; 'sessions',
+            'type' =&gt; 'anonymous',
+            'lastSeen' =&gt; time(),
+            'firstSeen' =&gt; time(),
+            'remoteAddress' =&gt; '192.168.0.1',
+            'location' =&gt; 'Vienna/Austria'
         ),
-        <span style="color: #C41A16">&#39;6254b64d554a88b629bdbfc507d8c267&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">array</span>(
-            <span style="color: #C41A16">&#39;namespace&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;sessions&#39;</span>,
-            <span style="color: #C41A16">&#39;type&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;anonymous&#39;</span>,
-            <span style="color: #C41A16">&#39;lastSeen&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">time</span>(),
-            <span style="color: #C41A16">&#39;firstSeen&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">time</span>()<span style="color: #000000">-</span><span style="color: #1C01CE">3600</span>,
-            <span style="color: #C41A16">&#39;remoteAddress&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;10.10.10.10&#39;</span>,
-            <span style="color: #C41A16">&#39;location&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;Berlin/Germany&#39;</span>
+        '6254b64d554a88b629bdbfc507d8c267' =&gt; array(
+            'namespace' =&gt; 'sessions',
+            'type' =&gt; 'anonymous',
+            'lastSeen' =&gt; time(),
+            'firstSeen' =&gt; time()-3600,
+            'remoteAddress' =&gt; '10.10.10.10',
+            'location' =&gt; 'Berlin/Germany'
         ),
-        <span style="color: #C41A16">&#39;6148bae4fad02c0edfd7dbd8d54d79f1&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">array</span>(
-            <span style="color: #C41A16">&#39;namespace&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;sessions&#39;</span>,
-            <span style="color: #C41A16">&quot;type&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;user&quot;</span>,
-            <span style="color: #C41A16">&quot;userID&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;1234&quot;</span>,
-            <span style="color: #C41A16">&#39;lastSeen&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">time</span>()<span style="color: #000000">-</span><span style="color: #1C01CE">7200</span>,
-            <span style="color: #C41A16">&#39;firstSeen&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">time</span>()<span style="color: #000000">-</span><span style="color: #1C01CE">7800</span>,
-            <span style="color: #C41A16">&quot;remoteAddress&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;1.2.3.4&quot;</span>,
-            <span style="color: #C41A16">&quot;location&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;Rome/Italy&quot;</span>,
-            <span style="color: #C41A16">&quot;name&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;Luigi Manfrotto&quot;</span>
+        '6148bae4fad02c0edfd7dbd8d54d79f1' =&gt; array(
+            'namespace' =&gt; 'sessions',
+            &quot;type&quot; =&gt; &quot;user&quot;,
+            &quot;userID&quot; =&gt; &quot;1234&quot;,
+            'lastSeen' =&gt; time()-7200,
+            'firstSeen' =&gt; time()-7800,
+            &quot;remoteAddress&quot; =&gt; &quot;1.2.3.4&quot;,
+            &quot;location&quot; =&gt; &quot;Rome/Italy&quot;,
+            &quot;name&quot; =&gt; &quot;Luigi Manfrotto&quot;
         ),
-        <span style="color: #C41A16">&#39;4aeb265e299c41450dd6af813d0bef97&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">array</span>(
-            <span style="color: #C41A16">&#39;namespace&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;sessions&#39;</span>,
-            <span style="color: #C41A16">&quot;type&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;user&quot;</span>,
-            <span style="color: #C41A16">&quot;userID&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;1104&quot;</span>,
-            <span style="color: #C41A16">&#39;lastSeen&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">time</span>(),
-            <span style="color: #C41A16">&#39;firstSeen&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">time</span>(),
-            <span style="color: #C41A16">&quot;remoteAddress&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;2.3.4.5&quot;</span>,
-            <span style="color: #C41A16">&quot;location&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;Vienna/Austria&quot;</span>,
-            <span style="color: #C41A16">&quot;name&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;Hans Huber&quot;</span>
+        '4aeb265e299c41450dd6af813d0bef97' =&gt; array(
+            'namespace' =&gt; 'sessions',
+            &quot;type&quot; =&gt; &quot;user&quot;,
+            &quot;userID&quot; =&gt; &quot;1104&quot;,
+            'lastSeen' =&gt; time(),
+            'firstSeen' =&gt; time(),
+            &quot;remoteAddress&quot; =&gt; &quot;2.3.4.5&quot;,
+            &quot;location&quot; =&gt; &quot;Vienna/Austria&quot;,
+            &quot;name&quot; =&gt; &quot;Hans Huber&quot;
         )
     );
 
-    <span style="color: #177500">// Store the documents in Couchbase</span>
-    <span style="color: #A90D91">foreach</span>(<span style="color: #000000">$data</span> <span style="color: #A90D91">as</span> <span style="color: #000000">$hash</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">$document</span>) {
-        <span style="color: #000000">$couchbase-&gt;</span><span style="color: #836C28">set</span>(<span style="color: #C41A16">&quot;user:$hash&quot;</span>, <span style="color: #A90D91">json_encode</span>(<span style="color: #000000">$document</span>));
+    // Store the documents in Couchbase
+    foreach($data as $hash =&gt; $document) {
+        $couchbase-&gt;set(&quot;user:$hash&quot;, json_encode($document));
     }
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>Now that we have four documents to work with, we can start creating views from the Couchbase GUI. Head over to the &ldquo;Views&rdquo; section and click on &ldquo;Create Development View&rdquo;. The way Couchbase works is that you write your view queries in development mode on a subset of your documents and when you&rsquo;re finished you can publish them to production. Since we have only four documents in the bucket, it won&rsquo;t make any difference here.</p>
 
 <p>The name of our design document is <code>_design/dev_sessions</code> and the first view is called <code>active</code>. This one will return all currently logged in users:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">function</span> (<span style="color: #000000">doc</span>) {
-    <span style="color: #A90D91">if</span>(<span style="color: #000000">doc</span>.<span style="color: #000000">namespace</span> <span style="color: #000000">==</span> <span style="color: #C41A16">&#39;sessions&#39;</span>) {
-        <span style="color: #000000">emit</span>(<span style="color: #000000">doc</span>.<span style="color: #000000">_id</span>, <span style="color: #000000">doc</span>);
+
+<pre><code>function (doc) {
+    if(doc.namespace == 'sessions') {
+        emit(doc._id, doc);
     }
 }
-</pre></div>
+</code></pre>
 
 <p>If you save it and click <code>Show Results</code>, then you&rsquo;ll see all four documents below that got matched. You can also click on the URI string above <code>?connection_timeout=60000&amp;limit=10&amp;skip=0</code> to see the actual response in your browser. But what if we just want the total number of users logged in? We can use a built-in reduce function for that. In the &ldquo;Reduce&rdquo; textarea to the right just enter <code>_count</code>. If you click save and then show the results again, you can see that we just got one document back with no key and just <code>4</code> as the value.</p>
 
 <p>The nice thing here is that we can pass <code>reduce=true/false</code> as a param and then get either the full response back or just the aggregated version. So this query gives us all active users on the website. Let&rsquo;s write another view that just returns the logged in users:</p>
 
 <p>Modify the view like here and then click <code>Save As...</code> and name it <code>logged_in</code>:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">function</span> (<span style="color: #000000">doc</span>) {
-    <span style="color: #A90D91">if</span>(<span style="color: #000000">doc</span>.<span style="color: #000000">namespace</span> <span style="color: #000000">==</span> <span style="color: #C41A16">&#39;sessions&#39;</span> <span style="color: #000000">&amp;&amp;</span> <span style="color: #000000">doc</span>.<span style="color: #000000">type</span> <span style="color: #000000">==</span> <span style="color: #C41A16">&#39;user&#39;</span>) {
-        <span style="color: #000000">emit</span>(<span style="color: #000000">doc</span>.<span style="color: #000000">_id</span>, <span style="color: #000000">doc</span>);
+
+<pre><code>function (doc) {
+    if(doc.namespace == 'sessions' &amp;&amp; doc.type == 'user') {
+        emit(doc._id, doc);
     }
 }
-</pre></div>
+</code></pre>
 
 <p>The reduce function can be reused in the same way. As you can see, with just a bit more code in JavaScript we have another view that just returns the logged in users. Now we want to display a third diagram that displays all users from <code>Vienna/Austria</code>. This time, we want to differentiate between anonymous and logged in users so that they can be displayed in two distinct graphs. Our map function may look like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">function</span> (<span style="color: #000000">doc</span>) {
-    <span style="color: #A90D91">if</span>(<span style="color: #000000">doc</span>.<span style="color: #000000">namespace</span> <span style="color: #000000">==</span> <span style="color: #C41A16">&#39;sessions&#39;</span> <span style="color: #000000">&amp;&amp;</span> <span style="color: #000000">doc</span>.<span style="color: #000000">location</span> <span style="color: #000000">==</span> <span style="color: #C41A16">&#39;Vienna/Austria&#39;</span>) {
-        <span style="color: #000000">emit</span>(<span style="color: #000000">doc</span>.<span style="color: #000000">type</span>, <span style="color: #1C01CE">1</span>);
+
+<pre><code>function (doc) {
+    if(doc.namespace == 'sessions' &amp;&amp; doc.location == 'Vienna/Austria') {
+        emit(doc.type, 1);
     }
 }
-</pre></div>
+</code></pre>
 
 <p>Every time we find a document with the correct location, we emit a document with the key of either <code>anonymous</code> or <code>user</code>. As values we supply a value of <code>1</code> since we can reuse that in our reduce function. The reduce function is again the built in <code>_count</code> function, but this time we pass an additional param <code>group_level</code> with a value of <code>1</code> to our query. This way, Couchbase aggregates our data and returns a document like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// Params: ?group_level=1&amp;reduce=true&amp;connection_timeout=60000&amp;limit=10&amp;skip=0
+
+<pre><code>// Params: ?group_level=1&amp;reduce=true&amp;connection_timeout=60000&amp;limit=10&amp;skip=0
 {
     &quot;rows&quot;: [
         {&quot;key&quot;:&quot;anonymous&quot;,&quot;value&quot;:1},
         {&quot;key&quot;:&quot;user&quot;,&quot;value&quot;:1}
     ]
 }
-</pre></div>
+</code></pre>
 
 <p>If we insert another <code>user</code> document the counter would display <code>2</code>. If we don&rsquo;t use the grouping level setting, Couchbase would just return the total amount of documents emitted.</p>
 
 <p>All of these views assumed that we have some kind of realtime polling to our backend, because the results didn&rsquo;t include grouping by a distinct timestamp. In order to load a graph with meaningful results for the last hour, we can return it aggregated by timestamp (we can reuse the same <code>_count</code> reduce function and the level 1 grouping):</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">function</span> (<span style="color: #000000">doc</span>) {
-    <span style="color: #A90D91">if</span>(<span style="color: #000000">doc</span>.<span style="color: #000000">namespace</span> <span style="color: #000000">==</span> <span style="color: #C41A16">&#39;sessions&#39;</span>) {
-        <span style="color: #000000">emit</span>(<span style="color: #000000">doc</span>.<span style="color: #000000">lastSeen</span>, <span style="color: #1C01CE">1</span>);
+
+<pre><code>function (doc) {
+    if(doc.namespace == 'sessions') {
+        emit(doc.lastSeen, 1);
     }
 }
-</pre></div>
+</code></pre>
 
 <p>An example output would look like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// Params: ?group_level=1&amp;connection_timeout=60000&amp;limit=10&amp;skip=0
+
+<pre><code>// Params: ?group_level=1&amp;connection_timeout=60000&amp;limit=10&amp;skip=0
 {
     &quot;rows&quot;:[
         {&quot;key&quot;:1339997680,&quot;value&quot;:1},
         {&quot;key&quot;:1340004880,&quot;value&quot;:3}
     ]
 }
-</pre></div>
+</code></pre>
 
 <p>Now, if we have record for the last year in our database it won&rsquo;t make much sense to fetch them all on every request. If you look one entry below the <code>group_level</code> param, you&rsquo;ll find <code>startkey</code> and <code>endkey</code> options. With these two you can provide a timerange to fetch the results.</p>
 
-<h2 id="performance:512f62c3475e795b4e119166c489818f">Performance</h2>
+<h2 id="performance">Performance</h2>
 
 <p>I know that synthetic benchmarks never provide reproducible results in production environments, but they provide at least a rough estimation on how the application may be able to perform under certain conditions.</p>
 
@@ -1176,7 +1227,7 @@ foo|N;data|a:1:<span style="color: #000000">{</span>s:9:<span style="color: #C41
 
 <p>If you ran the program, it would be cool to share your results in the comments below.</p>
 
-<h2 id="wrapping-up:512f62c3475e795b4e119166c489818f">Wrapping Up</h2>
+<h2 id="wrapping-up">Wrapping Up</h2>
 
 <p>From both its history and current feature set, chances are that Couchbase is a possible solution to your session store needs. It provides you with both fast and flexible querying mechanisms and is capable to scale up to more nodes with just a few clicks if you need it to. There are definitely other good storage systems out there (like redis), so make sure to dig deeper into the concepts to find out if Couchbase is right for your application.</p>
 
@@ -1211,16 +1262,18 @@ up and running in minutes, so check it out if you haven&rsquo;t already. For the
 <code>localhost</code>. If it runs elswhere, just modify the URI string later accordingly.</p>
 
 <p>Let&rsquo;s create the standard directory structure for our project. We&rsquo;ll use sbt to manage our dependencies, so create a <code>build.sbt</code> file too.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">/couchbase-scala
+
+<pre><code>/couchbase-scala
     /src
         /main
             /scala
                 Main.scala
     build.sbt
-</pre></div>
+</code></pre>
 
 <p>Let&rsquo;s write the <code>build.sbt</code> first:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">name := &quot;couchbase-scala&quot;
+
+<pre><code>name := &quot;couchbase-scala&quot;
 
 version := &quot;1.0&quot;
 
@@ -1229,81 +1282,88 @@ scalaVersion := &quot;2.9.2&quot;
 resolvers += &quot;Couchbase Maven Repository&quot; at &quot;http://files.couchbase.com/maven2&quot;
 
 libraryDependencies += &quot;couchbase&quot; % &quot;couchbase-client&quot; % &quot;1.1-dp&quot;
-</pre></div>
+</code></pre>
 
 <p>We need to add the <a href="http://files.couchbase.com/maven2">Couchbase Maven Repository</a> to our resolvers list, since it contains the Couchbase package and all
 its dependencies. The last line adds the actual dependency. If you want the (older) stable release, use &ldquo;1.0.2&rdquo; instead of &ldquo;1.1-dp&rdquo;. Tip: you can browse the
 repository directly in your browser and see what versions are available.</p>
 
 <p>Let&rsquo;s add a simple <code>Main</code> object in <code>Main.scala</code>:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">object Main extends App {
+
+<pre><code>object Main extends App {
     println(&quot;Hello World&quot;)
 }
-</pre></div>
+</code></pre>
 
 <p>Now, start sbt and run the application for the first time:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">couchbase-scala$ sbt
+
+<pre><code>couchbase-scala$ sbt
 &gt; run
 ** ((Omitting Fetch and Compile Output)) **
 [info] Running Main
 Hello World
 [success] Total time: 4 s, completed 24.04.2012 11:01:33
-</pre></div>
+</code></pre>
 
 <p>I&rsquo;ve omited the part where sbt resolves our dependencies and compiles the libraries, but the output should look like the one above. Now that we have all our
 dependencies in place, we can start talking to the Couchbase server. Here&rsquo;s a short example with synchronous set and get operations (note that no exception
 handling takes place here):</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">import</span> <span style="color: #000000">collection.JavaConversions._</span> 
-<span style="color: #A90D91">import</span> <span style="color: #000000">collection.mutable.ArrayBuffer</span>
 
-<span style="color: #A90D91">import</span> <span style="color: #000000">java.net.URI</span>;
-<span style="color: #A90D91">import</span> <span style="color: #000000">java.net.ConnectException</span>;
+<pre><code>import collection.JavaConversions._ 
+import collection.mutable.ArrayBuffer
 
-<span style="color: #A90D91">import</span> <span style="color: #000000">com.couchbase.client.CouchbaseClient</span>;
+import java.net.URI;
+import java.net.ConnectException;
 
-<span style="color: #A90D91">object</span> <span style="color: #000000">Main</span> <span style="color: #000000">extends</span> <span style="color: #000000">App</span> {
-    <span style="color: #000000">val</span> <span style="color: #000000">uris</span> <span style="color: #000000">=</span> <span style="color: #000000">ArrayBuffer</span>(<span style="color: #000000">URI.create</span>(<span style="color: #C41A16">&quot;http://127.0.0.1:8091/pools&quot;</span>))
-    <span style="color: #000000">val</span> <span style="color: #000000">client</span> <span style="color: #000000">=</span> <span style="color: #000000">new</span> <span style="color: #000000">CouchbaseClient</span>(<span style="color: #000000">uris</span>, <span style="color: #C41A16">&quot;default&quot;</span>, <span style="color: #C41A16">&quot;&quot;</span>)
+import com.couchbase.client.CouchbaseClient;
 
-    <span style="color: #000000">client.set</span>(<span style="color: #C41A16">&quot;hello&quot;</span>, <span style="color: #1C01CE">0</span>, <span style="color: #C41A16">&quot;world&quot;</span>)
-    <span style="color: #000000">println</span>(<span style="color: #C41A16">&quot;Receiving -&gt; &quot;</span> <span style="color: #000000">+</span> <span style="color: #000000">client.get</span>(<span style="color: #C41A16">&quot;hello&quot;</span>))
+object Main extends App {
+    val uris = ArrayBuffer(URI.create(&quot;http://127.0.0.1:8091/pools&quot;))
+    val client = new CouchbaseClient(uris, &quot;default&quot;, &quot;&quot;)
 
-    <span style="color: #000000">client.shutdown</span>()
-    <span style="color: #000000">System.exit</span>(<span style="color: #1C01CE">0</span>)
+    client.set(&quot;hello&quot;, 0, &quot;world&quot;)
+    println(&quot;Receiving -&gt; &quot; + client.get(&quot;hello&quot;))
+
+    client.shutdown()
+    System.exit(0)
 }
-</pre></div>
+</code></pre>
 
 <p>Save the file, type <code>run</code> again in sbt and you should get the following output (you only need to leave the REPL if you&rsquo;ve changed the <code>build.sbt</code> file):</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">[<span style="color: #000000">info</span>] <span style="color: #000000">Compiling</span> <span style="color: #1C01CE">1</span> <span style="color: #000000">Scala</span> <span style="color: #000000">source</span> <span style="color: #000000">to</span> <span style="color: #000000">&lt;Path\to\Sourcecode&gt;\couchbase-scala\target\scala-</span><span style="color: #1C01CE">2.9.2</span><span style="color: #000000">\classes</span>...
-[<span style="color: #000000">info</span>] <span style="color: #000000">Running</span> <span style="color: #000000">Main</span>
-<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">24</span> <span style="color: #1C01CE">11</span><span style="color: #000000">:</span><span style="color: #1C01CE">05</span><span style="color: #000000">:</span><span style="color: #1C01CE">11.850</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseConnection</span>:  <span style="color: #000000">Added</span> {<span style="color: #000000">QA</span> <span style="color: #000000">sa=/</span><span style="color: #1C01CE">127.0.0.1</span><span style="color: #000000">:</span><span style="color: #1C01CE">11210</span>, <span style="color: #000000">#Rops=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">#Wops=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">#iq=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">topRop=null</span>, <span style="color: #000000">topWop=null</span>, <span style="color: #000000">toWrite=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">interested=</span><span style="color: #1C01CE">0</span>} <span style="color: #000000">to</span> <span style="color: #000000">connect</span> <span style="color: #000000">queue</span>
-<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">24</span> <span style="color: #1C01CE">11</span><span style="color: #000000">:</span><span style="color: #1C01CE">05</span><span style="color: #000000">:</span><span style="color: #1C01CE">11.856</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseClient</span>:  <span style="color: #000000">viewmode</span> <span style="color: #000000">property</span> <span style="color: #000000">isn&#39;t</span> <span style="color: #000000">defined</span>. <span style="color: #000000">Setting</span> <span style="color: #000000">viewmode</span> <span style="color: #000000">to</span> <span style="color: #000000">production</span> <span style="color: #000000">mode</span>
-<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">24</span> <span style="color: #1C01CE">11</span><span style="color: #000000">:</span><span style="color: #1C01CE">05</span><span style="color: #000000">:</span><span style="color: #1C01CE">11.856</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseConnection</span>:  <span style="color: #000000">Connection</span> <span style="color: #000000">state</span> <span style="color: #000000">changed</span> <span style="color: #A90D91">for</span> <span style="color: #000000">sun</span>.<span style="color: #000000">nio</span>.<span style="color: #000000">ch</span>.<span style="color: #000000">SelectionKeyImpl</span><span style="color: #1C01CE">@10319</span><span style="color: #000000">d7</span>
-<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">24</span> <span style="color: #1C01CE">11</span><span style="color: #000000">:</span><span style="color: #1C01CE">05</span><span style="color: #000000">:</span><span style="color: #1C01CE">11.926</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">ViewConnection</span>:  <span style="color: #000000">Added</span> <span style="color: #000000">daschl-notebook/</span><span style="color: #1C01CE">127.0.0.1</span><span style="color: #000000">:</span><span style="color: #1C01CE">8092</span> <span style="color: #000000">to</span> <span style="color: #000000">connect</span> <span style="color: #000000">queue</span>
-<span style="color: #000000">Receiving</span> <span style="color: #000000">-&gt;</span> <span style="color: #000000">world</span>
-<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">24</span> <span style="color: #1C01CE">11</span><span style="color: #000000">:</span><span style="color: #1C01CE">05</span><span style="color: #000000">:</span><span style="color: #1C01CE">12.360</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseConnection</span>:  <span style="color: #000000">Shut</span> <span style="color: #000000">down</span> <span style="color: #000000">Couchbase</span> <span style="color: #000000">client</span>
-<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">24</span> <span style="color: #1C01CE">11</span><span style="color: #000000">:</span><span style="color: #1C01CE">05</span><span style="color: #000000">:</span><span style="color: #1C01CE">12.368</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">ViewConnection</span>:  <span style="color: #000000">Shut</span> <span style="color: #000000">down</span> <span style="color: #000000">Couchbase</span> <span style="color: #000000">client</span>
-<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">04</span><span style="color: #000000">-</span><span style="color: #1C01CE">24</span> <span style="color: #1C01CE">11</span><span style="color: #000000">:</span><span style="color: #1C01CE">05</span><span style="color: #000000">:</span><span style="color: #1C01CE">12.374</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">ViewNode</span>:  <span style="color: #000000">Couchbase</span> <span style="color: #000000">I/O</span> <span style="color: #000000">reactor</span> <span style="color: #000000">terminated</span>
-[<span style="color: #000000">success</span>] <span style="color: #000000">Total</span> <span style="color: #000000">time</span>: <span style="color: #1C01CE">6</span> <span style="color: #000000">s</span>, <span style="color: #000000">completed</span> <span style="color: #1C01CE">24.04.2012</span> <span style="color: #1C01CE">11</span><span style="color: #000000">:</span><span style="color: #1C01CE">05</span><span style="color: #000000">:</span><span style="color: #1C01CE">12</span>
-</pre></div>
+
+<pre><code>[info] Compiling 1 Scala source to &lt;Path\to\Sourcecode&gt;\couchbase-scala\target\scala-2.9.2\classes...
+[info] Running Main
+2012-04-24 11:05:11.850 INFO com.couchbase.client.CouchbaseConnection:  Added {QA sa=/127.0.0.1:11210, #Rops=0, #Wops=0, #iq=0, topRop=null, topWop=null, toWrite=0, interested=0} to connect queue
+2012-04-24 11:05:11.856 INFO com.couchbase.client.CouchbaseClient:  viewmode property isn't defined. Setting viewmode to production mode
+2012-04-24 11:05:11.856 INFO com.couchbase.client.CouchbaseConnection:  Connection state changed for sun.nio.ch.SelectionKeyImpl@10319d7
+2012-04-24 11:05:11.926 INFO com.couchbase.client.ViewConnection:  Added daschl-notebook/127.0.0.1:8092 to connect queue
+Receiving -&gt; world
+2012-04-24 11:05:12.360 INFO com.couchbase.client.CouchbaseConnection:  Shut down Couchbase client
+2012-04-24 11:05:12.368 INFO com.couchbase.client.ViewConnection:  Shut down Couchbase client
+2012-04-24 11:05:12.374 INFO com.couchbase.client.ViewNode:  Couchbase I/O reactor terminated
+[success] Total time: 6 s, completed 24.04.2012 11:05:12
+</code></pre>
 
 <p>You see all the Couchbase log messages here, because the default logger logs directly to STDOUT. Right in the middle you can see the output of our synchronous <a href="http://www.couchbase.com/docs/couchbase-sdk-java-1.1/couchbase-sdk-java-retrieve-get.html#table-couchbase-sdk_java_get">get</a> operation. You should also see the
 created document in your Couchbase <a href="http://localhost:8091/index.html#sec=documents&amp;bucketName=default">default bucket</a>.</p>
 
 <p>Let&rsquo;s go through the main code line by line and see what&rsquo;s going on.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">val uris = ArrayBuffer(URI.create(&quot;http://127.0.0.1:8091/pools&quot;))   
+
+<pre><code>val uris = ArrayBuffer(URI.create(&quot;http://127.0.0.1:8091/pools&quot;))   
 val client = new CouchbaseClient(uris, &quot;default&quot;, &quot;&quot;)
-</pre></div>
+</code></pre>
 
 <p>The <code>CouchbaseClient</code> accepts a list of URIs to communicate with as the first argument (you need to import <code>collection.JavaConversions._</code>, so that <code>ÀrrayBuffer</code> gets
 converted to a <code>java.util.List</code>). The second argument is the bucket name, the third one is an optional bucket password (which is always empty for the <code>default</code> one).</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">client.set(&quot;hello&quot;, 0, &quot;world&quot;)
+
+<pre><code>client.set(&quot;hello&quot;, 0, &quot;world&quot;)
 println(&quot;Receiving -&gt; &quot; + client.get(&quot;hello&quot;))
-</pre></div>
+</code></pre>
 
 <p>We can now throw all commands at the client, be it synchronous or asynchronous ones. You can find all supported methods <a href="http://www.couchbase.com/docs/couchbase-sdk-java-1.1/api-reference-summary.html">here</a>.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">client.shutdown()
-</pre></div>
+
+<pre><code>client.shutdown()
+</code></pre>
 
 <p>Finally, we close the connection to the server. You can pass optional timeouts here, so that the client waits for the given amount of time before it finally closes the connection.
 This allows asynchronous commands to finish first.</p>
@@ -1338,131 +1398,142 @@ future way of interacting with Couchbase, so it is definitely worth a look.</p>
 
 <p>The rest of this post guides you through the installation process of both Couchbase and the PHP SDKs.</p>
 
-<h2 id="installing-couchbase:ca12db3f5f62aaf868a124e77d2583ea">Installing Couchbase</h2>
+<h2 id="installing-couchbase">Installing Couchbase</h2>
 
 <p>The easiest way to install Couchbase is through a precompiled binary for Ubuntu, RedHat, Windows or Mac OS X. You can find all of them
 <a href="http://www.couchbase.com/download">here</a>. The installation process is really straightforward: you first need to install the binary and
 then configure Couchbase from a web interface. I recommend you to watch the webinar starting from minute 7 <a href="http://www.couchbase.com/webinar/couchbase-server-2.0-overview">here</a>, where Perry Krug describes the necessary steps in detail. For the purpose of this post, you can just stick with the default settings.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>sudo dpkg -i couchbase-server-community_x86_2.0.0-dev-preview-3.deb
-</pre></div>
+
+<pre><code>$ sudo dpkg -i couchbase-server-community_x86_2.0.0-dev-preview-3.deb
+</code></pre>
 
 <p>After the installation, you should have a Couchbase instance listening on <code>127.0.0.1:8091</code>.</p>
 
-<h2 id="installing-php-ext-couchbase:ca12db3f5f62aaf868a124e77d2583ea">Installing php-ext-couchbase</h2>
+<h2 id="installing-php-ext-couchbase">Installing php-ext-couchbase</h2>
 
 <p>The new PHP SDK ships as a PHP extension, so we need to compile it. Make sure you have both the build tools (like <code>build-essentials</code>) and the PHP development packages (<code>php5-dev php-pear</code>) installed. You also need to install <code>libssl0.9.8</code>. On Ubuntu it looks like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>sudo aptitude install libssl0.9.8 php5-dev php-pear
-</pre></div>
+
+<pre><code>$ sudo aptitude install libssl0.9.8 php5-dev php-pear
+</code></pre>
 
 <p>The extension also depends on the <code>libcouchbase</code> library, which can be installed through the Couchbase repository (for more information on this, look <a href="http://www.couchbase.com/develop/c/current">here</a>).</p>
 
 <p>Add this to your <code>/etc/apt/sources.list</code>:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500"># Ubuntu 11.10 Oneiric Ocelot (Debian unstable)</span>
-<span style="color: #A90D91">deb</span> <span style="color: #C41A16">http://packages.couchbase.com/ubuntu</span> <span style="color: #A90D91">oneiric</span> <span style="color: #A90D91">oneiric/main</span>
-</pre></div>
+
+<pre><code># Ubuntu 11.10 Oneiric Ocelot (Debian unstable)
+deb http://packages.couchbase.com/ubuntu oneiric oneiric/main
+</code></pre>
 
 <p>Then, import the key, update your repositories and install the package:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>wget -O- http://packages.couchbase.com/ubuntu/couchbase.key | sudo apt-key add -
-<span style="color: #000000">$ </span>sudo aptitude update <span style="color: #000000">&amp;&amp;</span> sudo aptitude install libcouchbase-dev
-</pre></div>
+
+<pre><code>$ wget -O- http://packages.couchbase.com/ubuntu/couchbase.key | sudo apt-key add -
+$ sudo aptitude update &amp;&amp; sudo aptitude install libcouchbase-dev
+</code></pre>
 
 <p>Now, we need to <a href="https://github.com/couchbaselabs/php-ext-couchbase/zipball/master">download</a> the extension and build it.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>unzip couchbaselabs-php-ext-couchbase-2680b64.zip
-<span style="color: #000000">$ </span><span style="color: #A90D91">cd </span>couchbaselabs-php-ext-couchbase-2680b64
 
-<span style="color: #000000">$ </span>phpize
-<span style="color: #000000">$ </span>./configure
-<span style="color: #000000">$ </span>make
-<span style="color: #000000">$ </span>sudo make install
+<pre><code>$ unzip couchbaselabs-php-ext-couchbase-2680b64.zip
+$ cd couchbaselabs-php-ext-couchbase-2680b64
+
+$ phpize
+$ ./configure
+$ make
+$ sudo make install
   Installing shared extensions:     /usr/lib/php5/20090626+lfs/
-</pre></div>
+</code></pre>
 
 <p>The last thing we need to do is create a new <code>couchbase.ini</code> file in <code>/etc/php5/conf.d</code> with the following content:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">extension=couchbase.so
-</pre></div>
+
+<pre><code>extension=couchbase.so
+</code></pre>
 
 <p>Now we can see that the couchbase extension is installed correctly:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>php -m | grep couch
+
+<pre><code>$ php -m | grep couch
 couchbase
-</pre></div>
+</code></pre>
 
 <p>Of course you&rsquo;ll need to restart your webserver or your fastcgi processes too.</p>
 
-<h2 id="installing-php-couchbase:ca12db3f5f62aaf868a124e77d2583ea">Installing php-couchbase</h2>
+<h2 id="installing-php-couchbase">Installing php-couchbase</h2>
 
 <p>If you want to work with the current stable SDK, you need to download the code from the <a href="https://github.com/couchbaselabs/php-couchbase">php-couchbase</a> repository. This SDK extends the <code>memcached</code> extension, which you can install directly through apt:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>sudo aptitude install php5-memcached
-</pre></div>
+
+<pre><code>$ sudo aptitude install php5-memcached
+</code></pre>
 
 <p>Documentation for the PHP 1.1 SDK can be found <a href="http://www.couchbase.com/docs/couchbase-sdk-php-1.1/getting-started.html">here</a>.</p>
 
 <p>Note that for the rest of this post I&rsquo;ll use the API provided by the <code>php-ext-couchbase</code> extension, but the one for <code>php-couchbase</code> shouldn&rsquo;t be much different.</p>
 
-<h2 id="basic-usage:ca12db3f5f62aaf868a124e77d2583ea">Basic Usage</h2>
+<h2 id="basic-usage">Basic Usage</h2>
 
 <p>Historically, communication with CouchDB was done over pure HTTP while memcached provided a custom protocol. Couchbase uses both methods, depending on the task you want to accomplish. Create, update and delete actions are done through the <code>memcached</code> protocol. If you want to read data, you can do that either based on the key (through the memcached protocol) or on a view (through HTTP). Thankfully, the SDK abstracts this away from you, but its always good if you know whats going on under the hood.</p>
 
 <p>You can access the API through an object-oriented interface or directly through their exported functions. I couldn&rsquo;t find any online documentation for now, but here&rsquo;s the function list from the source-code:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">/* {{{ couchbase_functions</span><span style="color: #633820">[]</span><span style="color: #177500"></span>
-<span style="color: #177500">*/</span>
-<span style="color: #A90D91">static</span> <span style="color: #000000">zend_function_entry</span> <span style="color: #000000">couchbase_functions</span><span style="color: #633820">[]</span> <span style="color: #000000">=</span> {
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_connect</span>, <span style="color: #000000">arginfo_connect</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_add</span>, <span style="color: #000000">arginfo_add</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_set</span>, <span style="color: #000000">arginfo_set</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_set_multi</span>, <span style="color: #000000">arginfo_set_multi</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_replace</span>, <span style="color: #000000">arginfo_replace</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_prepend</span>, <span style="color: #000000">arginfo_prepend</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_append</span>, <span style="color: #000000">arginfo_append</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_cas</span>, <span style="color: #000000">arginfo_cas</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_get</span>, <span style="color: #000000">arginfo_get</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_get_multi</span>, <span style="color: #000000">arginfo_get_multi</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_get_delayed</span>, <span style="color: #000000">arginfo_get_delayed</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_fetch</span>, <span style="color: #000000">arginfo_fetch</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_fetch_all</span>, <span style="color: #000000">arginfo_fetch_all</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_increment</span>, <span style="color: #000000">arginfo_increment</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_decrement</span>, <span style="color: #000000">arginfo_decrement</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_get_stats</span>, <span style="color: #000000">arginfo_get_stats</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_delete</span>, <span style="color: #000000">arginfo_delete</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_flush</span>, <span style="color: #000000">arginfo_flush</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_get_result_code</span>, <span style="color: #000000">arginfo_result_code</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_set_option</span>, <span style="color: #000000">arginfo_set_option</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_get_option</span>, <span style="color: #000000">arginfo_get_option</span>)
-    <span style="color: #000000">PHP_FE</span>(<span style="color: #000000">couchbase_version</span>, <span style="color: #000000">arginfo_version</span>)
-    {<span style="color: #000000">NULL</span>, <span style="color: #000000">NULL</span>, <span style="color: #000000">NULL</span>}
+
+<pre><code>/* {{{ couchbase_functions[]
+*/
+static zend_function_entry couchbase_functions[] = {
+    PHP_FE(couchbase_connect, arginfo_connect)
+    PHP_FE(couchbase_add, arginfo_add)
+    PHP_FE(couchbase_set, arginfo_set)
+    PHP_FE(couchbase_set_multi, arginfo_set_multi)
+    PHP_FE(couchbase_replace, arginfo_replace)
+    PHP_FE(couchbase_prepend, arginfo_prepend)
+    PHP_FE(couchbase_append, arginfo_append)
+    PHP_FE(couchbase_cas, arginfo_cas)
+    PHP_FE(couchbase_get, arginfo_get)
+    PHP_FE(couchbase_get_multi, arginfo_get_multi)
+    PHP_FE(couchbase_get_delayed, arginfo_get_delayed)
+    PHP_FE(couchbase_fetch, arginfo_fetch)
+    PHP_FE(couchbase_fetch_all, arginfo_fetch_all)
+    PHP_FE(couchbase_increment, arginfo_increment)
+    PHP_FE(couchbase_decrement, arginfo_decrement)
+    PHP_FE(couchbase_get_stats, arginfo_get_stats)
+    PHP_FE(couchbase_delete, arginfo_delete)
+    PHP_FE(couchbase_flush, arginfo_flush)
+    PHP_FE(couchbase_get_result_code, arginfo_result_code)
+    PHP_FE(couchbase_set_option, arginfo_set_option)
+    PHP_FE(couchbase_get_option, arginfo_get_option)
+    PHP_FE(couchbase_version, arginfo_version)
+    {NULL, NULL, NULL}
 };
-</pre></div>
+</code></pre>
 
 <p>The <a href="https://github.com/couchbaselabs/php-ext-couchbase/tree/master/tests">test cases</a> also provide vital information on how to use the API.</p>
 
 <p>Let&rsquo;s create 10 JSON documents and store them in Couchbase:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
 
-<span style="color: #000000">$connection</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Couchbase</span>(<span style="color: #C41A16">&quot;127.0.0.1:8091&quot;</span>);
+<pre><code>&lt;?php
 
-<span style="color: #A90D91">for</span>(<span style="color: #000000">$i=</span><span style="color: #1C01CE">0</span>;<span style="color: #000000">$i&lt;</span><span style="color: #1C01CE">10</span>;<span style="color: #000000">$i++</span>) {
-    <span style="color: #000000">$doc</span> <span style="color: #000000">=</span> <span style="color: #A90D91">array</span>(
-        <span style="color: #C41A16">&#39;title&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;This is Post $i&quot;</span>
+$connection = new Couchbase(&quot;127.0.0.1:8091&quot;);
+
+for($i=0;$i&lt;10;$i++) {
+    $doc = array(
+        'title' =&gt; &quot;This is Post $i&quot;
     );
-    <span style="color: #000000">$connection-&gt;</span><span style="color: #836C28">set</span>(<span style="color: #C41A16">&quot;post_$i&quot;</span>, <span style="color: #A90D91">json_encode</span>(<span style="color: #000000">$doc</span>));
+    $connection-&gt;set(&quot;post_$i&quot;, json_encode($doc));
 }
 
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>You can view your stored documents instantly through the GUI (<a href="http://localhost:8091/index.html#sec=documents&amp;bucketName=default">http://localhost:8091/index.html#sec=documents&amp;bucketName=default</a>). Now we can retrieve all documents again by their keys:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
 
-<span style="color: #000000">$connection</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Couchbase</span>(<span style="color: #C41A16">&quot;127.0.0.1:8091&quot;</span>);
+<pre><code>&lt;?php
 
-<span style="color: #A90D91">echo</span> <span style="color: #C41A16">&quot;&lt;ul&gt;&quot;</span>;
-<span style="color: #A90D91">for</span>(<span style="color: #000000">$i=</span><span style="color: #1C01CE">0</span>;<span style="color: #000000">$i&lt;</span><span style="color: #1C01CE">10</span>;<span style="color: #000000">$i++</span>) {
-    <span style="color: #000000">$post</span> <span style="color: #000000">=</span> <span style="color: #A90D91">json_decode</span>(<span style="color: #000000">$connection-&gt;</span><span style="color: #836C28">get</span>(<span style="color: #C41A16">&quot;post_$i&quot;</span>));
-    <span style="color: #A90D91">echo</span> <span style="color: #C41A16">&quot;&lt;li&gt;&quot;</span> <span style="color: #000000">.</span> <span style="color: #000000">$post-&gt;</span><span style="color: #836C28">title</span> <span style="color: #000000">.</span>  <span style="color: #C41A16">&quot;&lt;/li&gt;&quot;</span>;
+$connection = new Couchbase(&quot;127.0.0.1:8091&quot;);
+
+echo &quot;&lt;ul&gt;&quot;;
+for($i=0;$i&lt;10;$i++) {
+    $post = json_decode($connection-&gt;get(&quot;post_$i&quot;));
+    echo &quot;&lt;li&gt;&quot; . $post-&gt;title .  &quot;&lt;/li&gt;&quot;;
 }
-<span style="color: #A90D91">echo</span> <span style="color: #C41A16">&quot;&lt;/ul&gt;&quot;</span>;
+echo &quot;&lt;/ul&gt;&quot;;
 
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>Note that we need to encode/decode our JSON documents by hand, because in Couchbase you can store pretty much what you want in a document.</p>
 
@@ -1492,7 +1563,7 @@ Jan <a href="https://twitter.com/#!/janl/status/179166150205259776">pointed out<
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

@@ -7,7 +7,7 @@
 
     <meta name="description" content="I&#39;ve hacked together a small example on how to easily cache full responses in Lithium.">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Caching responses in Lithium &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -74,24 +74,26 @@
                             
                         </p>
                     </header>
-
+                    
+                    
                     <div class="post-description">
                         <p>If you need to cache full <code>Response</code> objects in Lithium (which means that your controllers don&rsquo;t even get called when there&rsquo;s a cache hit), you can place this in your <code>app/config/bootstrap/cache.php</code> file (note that this is certainly not &ldquo;production ready&rdquo;, but it should give you a starting point):</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">/**</span>
-<span style="color: #177500"> * Cache full Responses</span>
-<span style="color: #177500"> */</span>
-<span style="color: #000000">Dispatcher::applyFilter</span>(<span style="color: #C41A16">&#39;run&#39;</span>, <span style="color: #A90D91">function</span>(<span style="color: #000000">$self</span>, <span style="color: #000000">$params</span>, <span style="color: #000000">$chain</span>) {
-    <span style="color: #000000">$key</span> <span style="color: #000000">=</span> <span style="color: #000000">md5</span>(<span style="color: #000000">LITHIUM_APP_PATH</span>) . <span style="color: #C41A16">&#39;.app.cache.&#39;</span>.<span style="color: #000000">md5</span>(<span style="color: #000000">$params</span><span style="color: #633820">[</span><span style="color: #C41A16">&#39;request&#39;</span><span style="color: #633820">]</span><span style="color: #000000">-&gt;url</span>);
-    <span style="color: #A90D91">if</span>(<span style="color: #000000">$cache</span> <span style="color: #000000">=</span> <span style="color: #000000">Cache::read</span>(<span style="color: #C41A16">&#39;default&#39;</span>, <span style="color: #000000">$key</span>)) {
-        <span style="color: #A90D91">return</span> <span style="color: #000000">$cache</span>;
+
+<pre><code>/**
+ * Cache full Responses
+ */
+Dispatcher::applyFilter('run', function($self, $params, $chain) {
+    $key = md5(LITHIUM_APP_PATH) . '.app.cache.'.md5($params['request']-&gt;url);
+    if($cache = Cache::read('default', $key)) {
+        return $cache;
     }
 
-    <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">$chain-&gt;next</span>(<span style="color: #000000">$self</span>, <span style="color: #000000">$params</span>, <span style="color: #000000">$chain</span>);
+    $result = $chain-&gt;next($self, $params, $chain);
 
-    <span style="color: #000000">Cache::write</span>(<span style="color: #C41A16">&#39;default&#39;</span>, <span style="color: #000000">$key</span>, <span style="color: #000000">$result</span>, <span style="color: #C41A16">&#39;+1 day&#39;</span>);
-    <span style="color: #A90D91">return</span> <span style="color: #000000">$result</span>;
+    Cache::write('default', $key, $result, '+1 day');
+    return $result;
 });
-</pre></div>
+</code></pre>
 
 <p>It filters the <code>Dispatcher</code> and first checks if the <code>Response</code> object is already stored in the cache. The cache key is based on the requested URL, so if your <code>/</code> URL points to `<code>/posts/index</code>, both requests will be cached seperately (you could modify the code snipped so that it talks to the <code>Router</code> and checks for the corresponding controller/action object and cache on this key).</p>
 
@@ -120,7 +122,7 @@
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

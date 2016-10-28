@@ -7,7 +7,7 @@
 
     <meta name="description" content="Learn how to correctly redirect URLs based on the Request information.">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Quick Tip: Lithium Redirect &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -74,37 +74,41 @@
                             
                         </p>
                     </header>
-
+                    
+                    
                     <div class="post-description">
                         <p>While migrating <a href="https://github.com/UnionOfRAD/lithium_bin">lithium_bin</a> as part of research over to MongoDB (from CouchDB), I found the following snippet in the <code>routes.php</code> file:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">Router::connect</span>(<span style="color: #C41A16">&#39;/&#39;</span>, <span style="color: #000000">array</span>(), <span style="color: #A90D91">function</span>(<span style="color: #000000">$request</span>) {
-    <span style="color: #000000">$location</span> <span style="color: #000000">=</span> <span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;controller&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;pastes&#39;</span>, <span style="color: #C41A16">&#39;action&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;add&#39;</span>);
-    <span style="color: #A90D91">return</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Response</span>(<span style="color: #000000">compact</span>(<span style="color: #C41A16">&#39;location&#39;</span>));
+
+<pre><code>Router::connect('/', array(), function($request) {
+    $location = array('controller' =&gt; 'pastes', 'action' =&gt; 'add');
+    return new Response(compact('location'));
 });
-</pre></div>
+</code></pre>
 
 <p>This means that when the user enters the application via the root url (<code>/</code>), he instantly gets redirected to <code>/pastes/add</code> (or a different URL if you have custom routes configured).</p>
 
 <p>This may seem ok at first, but there&rsquo;s a problem. It doesn&rsquo;t take URLs into account that don&rsquo;t live directly under the document root. So if your application lives under <code>http://localhost/pastium/</code>, it will redirect you to <code>http://localhost/pastes/add/</code> which is not really what you want. Instead, do it like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">Router::connect</span>(<span style="color: #C41A16">&#39;/&#39;</span>, <span style="color: #000000">array</span>(), <span style="color: #A90D91">function</span>(<span style="color: #000000">$request</span>) {
-    <span style="color: #000000">$location</span> <span style="color: #000000">=</span> <span style="color: #000000">Router::match</span>(<span style="color: #C41A16">&#39;Pastes::add&#39;</span>, <span style="color: #000000">$request</span>);
-    <span style="color: #A90D91">return</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Response</span>(<span style="color: #000000">compact</span>(<span style="color: #C41A16">&#39;location&#39;</span>));
+
+<pre><code>Router::connect('/', array(), function($request) {
+    $location = Router::match('Pastes::add', $request);
+    return new Response(compact('location'));
 });
-</pre></div>
+</code></pre>
 
 <p>In this snippet, the <code>Router</code> takes the current <code>Request</code> into account and returns the correct location (based on the reverse routing information). Now it should redirect you correctly to <code>http://localhost/pastium/pastes/add/</code>.</p>
 
 <p>By the way, this is extracted from the <code>Controller::redirect</code> method, which is implemented in a similar way:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">redirect</span>(<span style="color: #000000">$url</span>, <span style="color: #000000">array</span> <span style="color: #000000">$options</span> <span style="color: #000000">=</span> <span style="color: #000000">array</span>()) {
-    <span style="color: #177500">//...</span>
-    <span style="color: #000000">$this-&gt;_filter</span>(<span style="color: #000000">__METHOD__</span>, <span style="color: #000000">$params</span>, <span style="color: #A90D91">function</span>(<span style="color: #000000">$self</span>, <span style="color: #000000">$params</span>) <span style="color: #000000">use</span> (<span style="color: #000000">$router</span>) {
-        <span style="color: #000000">$options</span> <span style="color: #000000">=</span> <span style="color: #000000">$params</span><span style="color: #633820">[</span><span style="color: #C41A16">&#39;options&#39;</span><span style="color: #633820">]</span>;
-        <span style="color: #000000">$location</span> <span style="color: #000000">=</span> <span style="color: #000000">$options</span><span style="color: #633820">[</span><span style="color: #C41A16">&#39;location&#39;</span><span style="color: #633820">]</span> <span style="color: #000000">?:</span> <span style="color: #000000">$router::match</span>(<span style="color: #000000">$params</span><span style="color: #633820">[</span><span style="color: #C41A16">&#39;url&#39;</span><span style="color: #633820">]</span>, <span style="color: #000000">$self-&gt;request</span>);
-        <span style="color: #000000">$self-&gt;render</span>(<span style="color: #000000">compact</span>(<span style="color: #C41A16">&#39;location&#39;</span>) <span style="color: #000000">+</span> <span style="color: #000000">$options</span>);
+
+<pre><code>public function redirect($url, array $options = array()) {
+    //...
+    $this-&gt;_filter(__METHOD__, $params, function($self, $params) use ($router) {
+        $options = $params['options'];
+        $location = $options['location'] ?: $router::match($params['url'], $self-&gt;request);
+        $self-&gt;render(compact('location') + $options);
     });
-    <span style="color: #177500">//...</span>
+    //...
 }
-</pre></div>
+</code></pre>
 
 <p>If you have any ideas on how to improve this further, feel free to comment below!</p>
 
@@ -129,7 +133,7 @@
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

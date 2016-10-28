@@ -3,8 +3,12 @@
   
   <url>
     <loc>http://nitschinger.at/</loc>
-    <lastmod>2016-02-19T00:00:00+00:00</lastmod>
-    <priority>0</priority>
+    <lastmod>2016-06-15T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>http://nitschinger.at/Scheduling-Timers-on-OS-X-with-Rust-and-Kqueue/</loc>
+    <lastmod>2016-06-15T00:00:00+00:00</lastmod>
   </url>
   
   <url>

@@ -7,7 +7,7 @@
 
     <meta name="description" content="In this post I&#39;ll show you how to create your own View-Helper with Lithium. You&#39;ll also learn something about the Inflector and Unit-Testing.">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Write your own Helper with Lithium &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -74,73 +74,79 @@
                             
                         </p>
                     </header>
-
+                    
+                    
                     <div class="post-description">
                         <p>Lithium comes with two helpers out of the box. The Form-Helper and the Html-Helper. Both are great and help you to make your View-Code more flexible, maintainable and easier to read.</p>
 
 <p>But what do you do when you need a functionality that they don&rsquo;t provide? Right, you write your own. Let&rsquo;s imagine you want to tell your blog-readers how many posts you have stored in your database. In our first iteration our code might look like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">We</span> <span style="color: #000000">have</span> <span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #A90D91">count</span>(<span style="color: #000000">$posts</span>) <span style="color: #633820">?&gt;</span> <span style="color: #000000">posts</span> <span style="color: #000000">stored</span> <span style="color: #A90D91">in</span> <span style="color: #000000">the</span> <span style="color: #000000">database</span>.
-</pre></div>
+
+<pre><code>We have &lt;?= count($posts) ?&gt; posts stored in the database.
+</code></pre>
 
 <p>Looks great so far, but our code doesn&rsquo;t cover the case when we have only one post stored. Let&rsquo;s fix that:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">We</span> <span style="color: #000000">have</span> <span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #A90D91">count</span>(<span style="color: #000000">$posts</span>) <span style="color: #633820">?&gt;</span> 
-<span style="color: #633820">&lt;?php</span> <span style="color: #A90D91">if</span>(<span style="color: #A90D91">count</span>(<span style="color: #000000">$posts</span>) <span style="color: #000000">!=</span> <span style="color: #1C01CE">1</span>)<span style="color: #000000">:</span> <span style="color: #633820">?&gt;</span>
-    <span style="color: #000000">posts</span>
-<span style="color: #633820">&lt;?php</span> <span style="color: #A90D91">else</span><span style="color: #000000">:</span> <span style="color: #633820">?&gt;</span>
-    <span style="color: #000000">post</span>
-<span style="color: #633820">&lt;?php</span> <span style="color: #A90D91">endif</span>; <span style="color: #633820">?&gt;</span>
-<span style="color: #000000">stored</span> <span style="color: #A90D91">in</span> <span style="color: #000000">the</span> <span style="color: #000000">database</span>.
-</pre></div>
+
+<pre><code>We have &lt;?= count($posts) ?&gt; 
+&lt;?php if(count($posts) != 1): ?&gt;
+    posts
+&lt;?php else: ?&gt;
+    post
+&lt;?php endif; ?&gt;
+stored in the database.
+</code></pre>
 
 <p>This works, but looks ugly and makes our View more complicated and messy (leaving aside that the above code is a bit verbose). To fix that, we write a custom <code>Word-Helper</code> that abstracts the count-stuff for our view.</p>
 
 <p>Thankfully, the li3-developers thought about that and provide us with everything we need to get started. Lithium also automatically loads our helper if we want to access it. Let&rsquo;s assume that we want to call the helper with <code>$this-&gt;word-&gt;pluralize(count($posts), 'post')</code>.</p>
 
 <p>We all love tests, so let&rsquo;s start with them first. We create a new <code>WordTest.php</code> (in <code>app/tests/cases/extensions/helper</code>) and add a some test cases.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #A90D91">namespace</span> <span style="color: #000000">app\tests\cases\extensions\helper</span>;
-<span style="color: #A90D91">use</span> <span style="color: #000000">app\extensions\helper\Word</span>;
 
-<span style="color: #A90D91">class</span> <span style="color: #3F6E75">WordTest</span> <span style="color: #A90D91">extends</span> <span style="color: #000000">\lithium\test\Unit</span> {
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">setUp</span>() {
-        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">word</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Word</span>();
+<pre><code>&lt;?php
+namespace app\tests\cases\extensions\helper;
+use app\extensions\helper\Word;
+
+class WordTest extends \lithium\test\Unit {
+    public function setUp() {
+        $this-&gt;word = new Word();
     }
 
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">testPluralize</span>() {
-        <span style="color: #000000">$singular</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;post&#39;</span>;
+    public function testPluralize() {
+        $singular = 'post';
 
-        <span style="color: #000000">$expected</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;1 post&#39;</span>;
-        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">assertEqual</span>(<span style="color: #000000">$expected</span>, <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">word</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">pluralize</span>(<span style="color: #1C01CE">1</span>, <span style="color: #000000">$singular</span>));
+        $expected = '1 post';
+        $this-&gt;assertEqual($expected, $this-&gt;word-&gt;pluralize(1, $singular));
 
-        <span style="color: #000000">$expected</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;0 posts&#39;</span>;
-        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">assertEqual</span>(<span style="color: #000000">$expected</span>, <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">word</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">pluralize</span>(<span style="color: #1C01CE">0</span>, <span style="color: #000000">$singular</span>));
+        $expected = '0 posts';
+        $this-&gt;assertEqual($expected, $this-&gt;word-&gt;pluralize(0, $singular));
 
-        <span style="color: #000000">$expected</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&#39;2 posts&#39;</span>;
-        <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">assertEqual</span>(<span style="color: #000000">$expected</span>, <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">word</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">pluralize</span>(<span style="color: #1C01CE">2</span>, <span style="color: #000000">$singular</span>));
+        $expected = '2 posts';
+        $this-&gt;assertEqual($expected, $this-&gt;word-&gt;pluralize(2, $singular));
     }
 }
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>If we run the tests (<code>http://yourblog.com/test/app/tests/cases/extensions/helper/WordTest</code>), they will fail (as expected). In the <code>setUp</code>-method we try to instantiate the Word-Helper, but it doesn&rsquo;t exist yet. The <code>testPluralize</code>-method tests three different calls of our <code>Word::pluralize()</code> Helper-Method. To make our tests go green, we finally create our <code>Word</code>-Helper (in <code>app/extensions/helper/Word.php</code>).</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #A90D91">namespace</span> <span style="color: #000000">app\extensions\helper</span>;
-<span style="color: #A90D91">use</span> <span style="color: #000000">lithium\util\Inflector</span>;
 
-<span style="color: #A90D91">class</span> <span style="color: #3F6E75">Word</span> <span style="color: #A90D91">extends</span> <span style="color: #000000">\lithium\template\Helper</span> {
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">pluralize</span>(<span style="color: #000000">$count</span>, <span style="color: #000000">$word</span>) {      
-        <span style="color: #000000">$word</span> <span style="color: #000000">=</span> (<span style="color: #000000">$count</span> <span style="color: #000000">!=</span> <span style="color: #1C01CE">1</span> <span style="color: #000000">?</span> <span style="color: #000000">Inflector::</span><span style="color: #836C28">pluralize</span>(<span style="color: #000000">$word</span>) <span style="color: #000000">:</span> <span style="color: #000000">$word</span>);
-        <span style="color: #A90D91">return</span> <span style="color: #000000">$count.</span><span style="color: #C41A16">&quot; &quot;</span><span style="color: #000000">.$word</span>;
+<pre><code>&lt;?php
+namespace app\extensions\helper;
+use lithium\util\Inflector;
+
+class Word extends \lithium\template\Helper {
+    public function pluralize($count, $word) {      
+        $word = ($count != 1 ? Inflector::pluralize($word) : $word);
+        return $count.&quot; &quot;.$word;
     }
 }
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>Now re-run your tests - they should succeed. If they don&rsquo;t, please check that your files are named correctly and you don&rsquo;t have any typos in them.</p>
 
 <p>Now it&rsquo;s time to call our brand-new helper from our view. Thanks to the <code>autoloading</code> feature, it&rsquo;s dead easy:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">We</span> <span style="color: #000000">have</span> <span style="color: #633820">&lt;?</span><span style="color: #000000">=</span> <span style="color: #000000">$this-&gt;</span><span style="color: #836C28">word</span><span style="color: #000000">-&gt;</span><span style="color: #836C28">pluralize</span>(<span style="color: #A90D91">count</span>(<span style="color: #000000">$posts</span>), <span style="color: #C41A16">&#39;post&#39;</span>); <span style="color: #633820">?&gt;</span> <span style="color: #000000">stored</span> <span style="color: #A90D91">in</span> <span style="color: #000000">the</span> <span style="color: #000000">database</span>.
-</pre></div>
+
+<pre><code>We have &lt;?= $this-&gt;word-&gt;pluralize(count($posts), 'post'); ?&gt; stored in the database.
+</code></pre>
 
 <p>That&rsquo;s it - you&rsquo;ve just created your own View-Helper! If you have any questions or suggestions, feel free to comment below.</p>
 
@@ -165,7 +171,7 @@
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

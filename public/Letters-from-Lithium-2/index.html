@@ -7,7 +7,7 @@
 
     <meta name="description" content="Letters from Lithium keeps you up to date with Lithium and its community. Issue #2 2011-09-05">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Letters from Lithium #2 &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -74,32 +74,34 @@
                             
                         </p>
                     </header>
-
+                    
+                    
                     <div class="post-description">
                         
 
-<h2 id="about:b4182e0f0db9b44aa8cf9721d0e799f0">About</h2>
+<h2 id="about">About</h2>
 
 <p>Letters from Lithium keeps you up to date about what happens in the Lithium core and community. If you have interesting news to share, comment below or ping me on <a href="http://twitter.com/daschl">twitter</a>.</p>
 
-<h2 id="core-news:b4182e0f0db9b44aa8cf9721d0e799f0">Core News</h2>
+<h2 id="core-news">Core News</h2>
 
 <p>Routing got a bit more awesome with <a href="https://github.com/UnionOfRAD/lithium/commit/792b916249052b87c368e2e25798a93dceaa0154#L3R636">route continuations</a>. They allow you match more routes in one request, which is very useful in many cases. Take a look at this test case:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">/**</span>
-<span style="color: #177500">* Tests that continuation routes properly fall through and aggregate multiple route parameters.</span>
-<span style="color: #177500">*/</span>
-<span style="color: #A90D91">public</span> <span style="color: #A90D91">function</span> <span style="color: #000000">testRouteContinuations</span>() {
-    <span style="color: #000000">Router::connect</span>(<span style="color: #C41A16">&#39;/{:locale:en|de|it|jp}/{:args}&#39;</span>, <span style="color: #000000">array</span>(), <span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;continue&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #A90D91">true</span>));
-    <span style="color: #000000">Router::connect</span>(<span style="color: #C41A16">&#39;/{:controller}/{:action}/{:id:</span><span style="color: #633820">[</span><span style="color: #1C01CE">0</span><span style="color: #000000">-</span><span style="color: #1C01CE">9</span><span style="color: #633820">]</span><span style="color: #C41A16">+}&#39;</span>);
 
-    <span style="color: #000000">$request</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Request</span>(<span style="color: #000000">array</span>(<span style="color: #C41A16">&#39;url&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;/en/posts/view/1138&#39;</span>));
-    <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">Router::process</span>(<span style="color: #000000">$request</span>)<span style="color: #000000">-&gt;params</span>;
-    <span style="color: #000000">$expected</span> <span style="color: #000000">=</span> <span style="color: #000000">array</span> (
-        <span style="color: #C41A16">&#39;controller&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;posts&#39;</span>, <span style="color: #C41A16">&#39;action&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;view&#39;</span>, <span style="color: #C41A16">&#39;id&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;1138&#39;</span>, <span style="color: #C41A16">&#39;locale&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&#39;en&#39;</span>
+<pre><code>/**
+* Tests that continuation routes properly fall through and aggregate multiple route parameters.
+*/
+public function testRouteContinuations() {
+    Router::connect('/{:locale:en|de|it|jp}/{:args}', array(), array('continue' =&gt; true));
+    Router::connect('/{:controller}/{:action}/{:id:[0-9]+}');
+
+    $request = new Request(array('url' =&gt; '/en/posts/view/1138'));
+    $result = Router::process($request)-&gt;params;
+    $expected = array (
+        'controller' =&gt; 'posts', 'action' =&gt; 'view', 'id' =&gt; '1138', 'locale' =&gt; 'en'
     );
-    <span style="color: #000000">$this-&gt;assertEqual</span>(<span style="color: #000000">$expected</span>, <span style="color: #000000">$result</span>);
+    $this-&gt;assertEqual($expected, $result);
 }
-</pre></div>
+</code></pre>
 
 <p>The data branch has been <a href="https://github.com/UnionOfRAD/lithium/commit/107f596b3224b47cfe91a820bae5867a5e0aee6c">merged</a> recently, which should improve the overall stability of the model layer and add a few smaller features. Thanks to <a href="https://github.com/vesln">Veselin Todorov</a>, you <a href="https://github.com/UnionOfRAD/lithium/commit/0c35bef1a36f3ffd6baee3586bf8c3380dfabb81">can now use</a> the &ldquo;last&rdquo; option in validations. This lets you better control the validation stack.</p>
 
@@ -107,19 +109,19 @@
 
 <p>Of course, various other bugs have been fixed (including the <a href="https://github.com/UnionOfRAD/lithium/commit/cbd0c4d2c07837e2e5ea4f9e8ff8c6a0d1fa1c61">HMAC bug</a>) and small enhancements like <a href="https://github.com/UnionOfRAD/lithium/commit/74514b870c13aac98236111c524ab5c1bc04656f">collection sorting</a> and <a href="https://github.com/UnionOfRAD/lithium/commit/c0d4ff82b1b3bb662ed0e78ed9599437306ca068">Form::error() filtering</a> found their way into the core.</p>
 
-<h2 id="plugins:b4182e0f0db9b44aa8cf9721d0e799f0">Plugins</h2>
+<h2 id="plugins">Plugins</h2>
 
 <p><a href="https://github.com/eLod">eLod</a> (also known as &ldquo;smoking_kiddo&rdquo; on IRC) created a plugin called <a href="https://github.com/eLod/li3_console">li3_console</a> which provides a fully functional PHP <a href="http://en.wikipedia.org/wiki/Read-eval-print_loop">REPL</a> and also lets you interact with your Lithium environment (like models) from the command line.</p>
 
 <p>If you need to deploy your Lithium application to remote servers and are used to <a href="https://github.com/capistrano/capistrano">Capistrano</a>, you should take a look at <a href="https://github.com/mehlah/capium">capium</a>. It is a ruby gem that provides deploy recipes and rake tasks for Lithium.</p>
 
-<h2 id="blogs-and-media:b4182e0f0db9b44aa8cf9721d0e799f0">Blogs and Media</h2>
+<h2 id="blogs-and-media">Blogs and Media</h2>
 
 <p>For those new to Lithium, <a href="http://www.davidgolding.net/">David Golding</a> recently published a very informative introduction <a href="http://www.scribd.com/doc/62146078/New-to-Lithium-Part-1">here</a>. It gets you up and running quickly and walks you through the creation of models, controllers and views.</p>
 
 <p>Also, <a href="http://www.jblotus.com/">James Fuller</a> released a few blog posts in the last weeks, covering various topics around Lithium. Head over to his blog and read about <a href="http://www.jblotus.com/2011/08/17/adding-a-session-flash-message-to-your-site-in-lithium-php/">Flash Messages</a>, the <a href="http://www.jblotus.com/2011/08/19/how-to-add-a-html-button-element-using-lithium-phps-formhelper/">FormHelper</a>, <a href="http://www.jblotus.com/2011/08/20/super-simple-lithium-php-json-web-service-calls/">Web Service Calls</a>, <a href="http://www.jblotus.com/2011/08/27/understanding-filters-in-lithium-php/">Filters</a> and <a href="http://www.jblotus.com/2011/08/31/using-an-appcontroller-in-lithium-php-to-pass-data-to-the-layout/">AppControllers</a>.</p>
 
-<h2 id="universe:b4182e0f0db9b44aa8cf9721d0e799f0">Universe</h2>
+<h2 id="universe">Universe</h2>
 
 <p>Recently, <a href="http://www.engineyard.com/">Engine Yard</a> (mostly known for their knowledge and cloud platforms in the Ruby on Rails world) acquired <a href="http://orchestra.io">Orchestra</a> to extend their language support. Orchestra is a great platform to deploy your PHP and Lithium applications on to, so give it a try (they also provide free accounts) if you haven&rsquo;t already. The <a href="http://lithify.me/docs/manual/cloud/readme.wiki">manual</a> also provides a short guide if you need help.</p>
 
@@ -146,7 +148,7 @@
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

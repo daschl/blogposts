@@ -7,7 +7,7 @@
 
     <meta name="description" content="">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Java &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -77,10 +77,11 @@
                     </header>
 
                     <div class="post-description">
-                        <p>TL:DR; When acquiring <a href="http://netty.io/3.6/api/org/jboss/netty/channel/Channel.html">Channels</a> in <a href="http://netty.io">Netty</a>, always use a <a href="http://netty.io/3.6/api/org/jboss/netty/channel/ChannelFutureListener.html">ChannelFutureListener</a> and never <a href="http://docs.jboss.org/netty/3.2/api/org/jboss/netty/channel/ChannelFuture.html#awaitUninterruptibly(">awaitUninterruptibly()</a>). Curious why? Read on.</p>
+                        <p>TL:DR; When acquiring <a href="http://netty.io/3.6/api/org/jboss/netty/channel/Channel.html">Channels</a> in <a href="http://netty.io">Netty</a>, always use a <a href="http://netty.io/3.6/api/org/jboss/netty/channel/ChannelFutureListener.html">ChannelFutureListener</a> and never <a href="http://docs.jboss.org/netty/3.2/api/org/jboss/netty/channel/ChannelFuture.html#awaitUninterruptibly()">awaitUninterruptibly()</a>. Curious why? Read on.</p>
 
 <p>In the <a href="http://www.couchbase.com/develop/java/current">Java SDK</a> for <a href="http://www.couchbase.com/">Couchbase</a>, we use Netty to establish and maintain a streaming connection to one of the cluster nodes in order to get notified when topology changes happen. This streaming connection needs to be established during the bootstrap process of the client and we need to block until the connection is established (actually we don&rsquo;t need to, but the current implementation works that way). The old implementation to acquire the Channel looked like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">ClientBootstrap bootstrap = new ClientBootstrap(factory);
+
+<pre><code>ClientBootstrap bootstrap = new ClientBootstrap(factory);
 bootstrap.setPipelineFactory(new BucketMonitorPipelineFactory());
 ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
 
@@ -89,14 +90,16 @@ if (!future.isSuccess()) {
   bootstrap.releaseExternalResources();
   throw new ConnectionException(&quot;Something bad happened...&quot;);
 }
-</pre></div>
+</code></pre>
 
 <p>This works great, but there is a problem associated that is not obvious in the first place. As long as you use this code only in a client side context, Netty will not complain and happily work with your code. When people started to use our client library inside a Netty based server framework (for example <a href="http://www.playframework.com/">Play</a>), Netty complained like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">Unexpected exception[IllegalStateException: await*() in I/O thread causes a dead lock or sudden performance drop. Use addListener() instead or call await*() from a different thread.]
-</pre></div>
+
+<pre><code>Unexpected exception[IllegalStateException: await*() in I/O thread causes a dead lock or sudden performance drop. Use addListener() instead or call await*() from a different thread.]
+</code></pre>
 
 <p>The environment where this happens is clearly defined: we are bootstrapping a Netty client inside the I/O thread of a Netty server, so we basically have two Netty environments running and one is complaining about the other. Once you are aware of this situation, it is more or less easy to fix:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">bootstrap = new ClientBootstrap(factory);
+
+<pre><code>bootstrap = new ClientBootstrap(factory);
 bootstrap.setPipelineFactory(new BucketMonitorPipelineFactory());
 ChannelFuture future =  bootstrap.connect(new InetSocketAddress(host, port));
 channelFuture.addListener(new ChannelFutureListener() {
@@ -110,10 +113,11 @@ channelFuture.addListener(new ChannelFutureListener() {
     }
   }
 });
-</pre></div>
+</code></pre>
 
 <p>Now, instead of waiting on the caller thread, we move the waiting part to a separate thread managed by the Netty execution context. There&rsquo;s only one problem left: we still need to block, because the code down the stack depends on a established Channel to work with. To solve this issue, we can use a <a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/CountDownLatch.html">CountDownLatch</a> like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">final CountDownLatch channelLatch = new CountDownLatch(1);
+
+<pre><code>final CountDownLatch channelLatch = new CountDownLatch(1);
 channelFuture.addListener(new ChannelFutureListener() {
   @Override
   public void operationComplete(ChannelFuture cf) throws Exception {
@@ -133,7 +137,7 @@ try {
   throw new ConnectionException(&quot;Interrupted while waiting for streaming &quot;
     + &quot;connection to arrive.&quot;);
 }
-</pre></div>
+</code></pre>
 
 <p>In the end we still block on the caller thread, but we are compliant with Netty. The main takeaway for me is that you should never block on acquiring Channels in Netty, just because of the fact that your client side code may be used in a server side context as well. This is especially true for library developers like me.</p>
 
@@ -155,46 +159,52 @@ try {
                     <div class="post-description">
                         
 
-<h2 id="introduction:ce2158c13cb07928acc4bd887e624d2c">Introduction</h2>
+<h2 id="introduction">Introduction</h2>
 
 <p>The latest <a href="http://www.couchbase.com/develop/java/next">Java Developer Preview (dp4)</a> is hot off the press, and therefore I thought it would be a good idea to show you how to use some of the brand-new features that are now available. This post will show you how to use the new <code>ComplexKey</code> class for view queries and also how to create and delete buckets directly from your SDK.</p>
 
 <p>First, we added a very flexible way of providing parameters to view queries. The idea is that, instead of having to deal with JSON strings on your own, you can pass in Java objects and the appropriate JSON string will be created for you. While it may not sound like a big deal first, this also frees you from the worries about encoding it properly so that it can be transferred over HTTP. Before we dig into the inner workings, lets first start with a basic example on how to create a view query.</p>
 
 <p>Every time you query a view, you need to create a <code>Query</code> and a <code>View</code> object. The <code>View</code> both  object defines the name of the design document and the view, and the <code>Query</code> object allows you to control the params that you can supply with the query.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">View myview = client.getView(&quot;designdoc&quot;, &quot;viewname&quot;);
-</pre></div>
+
+<pre><code>View myview = client.getView(&quot;designdoc&quot;, &quot;viewname&quot;);
+</code></pre>
 
 <p>Instead of creating the <code>View</code> object directly, you use the <code>getView()</code> method on the client object. It is important to know that the SDK actually fetches view information from the server and will throw an exception if either the design document name or the view name are not found. An exception typically looks like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">com.couchbase.client.protocol.views.InvalidViewException: Could not load view &quot;viewname&quot; for design doc &quot;designdoc&quot;
-</pre></div>
+
+<pre><code>com.couchbase.client.protocol.views.InvalidViewException: Could not load view &quot;viewname&quot; for design doc &quot;designdoc&quot;
+</code></pre>
 
 <p>Now that we have our view created, let&rsquo;s instantiate a query object:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">Query myquery = new Query();
-</pre></div>
+
+<pre><code>Query myquery = new Query();
+</code></pre>
 
 <p>If you don&rsquo;t specify anything else, the query object will work with the default settings. This means that no reduce function will be used and the full documents are not included. If you want to change these settings (or others), the <code>Query</code> instance provides setter methods for all of them. If you want to find out more, look at the SDK documentation or at the <a href="http://www.couchbase.com/docs/couchbase-manual-2.0/couchbase-views-querying-rest-api.html">Couchbase Server manual</a>. Basically, you can control everything that you could too while querying a view from the Couchbase UI. Here are some examples:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">// Include the full documents as well</span>
-<span style="color: #000000">myquery</span>.<span style="color: #000000">setIncludeDocs</span>(<span style="color: #A90D91">true</span>);
 
-<span style="color: #177500">// Enable the reduce function</span>
-<span style="color: #000000">myquery</span>.<span style="color: #000000">setReduce</span>(<span style="color: #A90D91">true</span>);
+<pre><code>// Include the full documents as well
+myquery.setIncludeDocs(true);
 
-<span style="color: #177500">// Set the group level</span>
-<span style="color: #000000">myquery</span>.<span style="color: #000000">setGroupLevel</span>(<span style="color: #1C01CE">2</span>);
-</pre></div>
+// Enable the reduce function
+myquery.setReduce(true);
+
+// Set the group level
+myquery.setGroupLevel(2);
+</code></pre>
 
 <p>Note that it doesn&rsquo;t make sense to include the full documents and run the reduce phase, since you don&rsquo;t have document references left after the reduce phase. If you try to set both to true, the SDK complains with the following exception:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// query.setReduce(true); query.setIncludeDocs(true);
-java.lang.UnsupportedOperationException: Reduced views don&#39;t contain documents
-</pre></div>
+
+<pre><code>// query.setReduce(true); query.setIncludeDocs(true);
+java.lang.UnsupportedOperationException: Reduced views don't contain documents
+</code></pre>
 
 <p>Also, if your view doesn&rsquo;t contain a reduce function and you set <code>reduce</code> to <code>true</code>, you&rsquo;ll see the following:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #177500">// query.setReduce(true); on a view with no reduce function defined.</span>
-<span style="color: #000000">java</span>.<span style="color: #000000">lang</span>.<span style="color: #000000">RuntimeException:</span> <span style="color: #000000">This</span> <span style="color: #000000">view</span> <span style="color: #000000">doesn&#39;t</span> <span style="color: #000000">contain</span> <span style="color: #000000">a</span> <span style="color: #000000">reduce</span> <span style="color: #A90D91">function</span>
-</pre></div>
 
-<h2 id="querying-with-complexkeys:ce2158c13cb07928acc4bd887e624d2c">Querying with ComplexKeys</h2>
+<pre><code>// query.setReduce(true); on a view with no reduce function defined.
+java.lang.RuntimeException: This view doesn't contain a reduce function
+</code></pre>
+
+<h2 id="querying-with-complexkeys">Querying with ComplexKeys</h2>
 
 <p>Enough with exceptions, here comes the fun part: some query setter methods not only accept boolean or string arguments, they also allow instances of <code>ComplexKey</code>. <code>ComplexKey</code> takes care of translating your Java objects (or primitives) to their appropriate <a href="http://json.org/">JSON</a> representation. Here is a list of the query methods who support it:</p>
 
@@ -207,7 +217,8 @@ java.lang.UnsupportedOperationException: Reduced views don&#39;t contain documen
 </ul>
 
 <p>An instance of a <code>ComplexKey</code> object is obtained through the static <code>of</code> factory method. When the query object is accessed during the view query, the <code>toJSON()</code> method is called on it and as a result the JSON string is generated. Here are some examples:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// JSON Result: 100
+
+<pre><code>// JSON Result: 100
 ComplexKey.of(100);
 
 // JSON Result: &quot;Hello&quot;
@@ -218,38 +229,42 @@ ComplexKey.of(&quot;Hello&quot;, &quot;World&quot;);
 
 // JSON Result: [1349360771542,1]
 ComplexKey.of(new Date().getTime(), 1);
-</pre></div>
+</code></pre>
 
 <p>This means that you don&rsquo;t have to deal with building the proper JSON strings for yourself (and make sure the escaping is correct). All methods except <code>setRange()</code> expect exactly one instance of ComplexKey. For example, if you emit keys with a unix timestamp and you want to fetch all records until now, you could do it like so:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">Query query = new Query();
+
+<pre><code>Query query = new Query();
 query.setRangeEnd(ComplexKey.of(new Date().getTime()));
-</pre></div>
+</code></pre>
 
 <p>When converted to a string to send it over the wire, it would look like this: <code>?endkey=1349361137738</code>. This makes it also very easy to create a full range query:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">long now = new Date().getTime();
+
+<pre><code>long now = new Date().getTime();
 long tomorrow = now + 86400;
 Query query = new Query();
 query.setRange(ComplexKey.of(now), ComplexKey.of(tomorrow));
-</pre></div>
+</code></pre>
 
 <p>This converts to <code>?startkey=1349362647742&amp;endkey=1349362734142</code> on the wire.</p>
 
-<h2 id="bucket-management-through-the-clustermanager:ce2158c13cb07928acc4bd887e624d2c">Bucket management through the ClusterManager</h2>
+<h2 id="bucket-management-through-the-clustermanager">Bucket management through the ClusterManager</h2>
 
 <p>Until now, you&rsquo;d have to <a href="http://www.couchbase.com/docs/couchbase-manual-2.0/couchbase-admin-web-console-data-buckets.html">create and delete buckets</a> either manually through the Couchbase UI or by using the REST API directly. With the addition of the <code>ClusterManager</code>, it is now possible to mange your buckets directly through the SDK, be it for testing purposes or to automatically create them when your code is deployed to a new environment. This can be especially useful if you want to automate bucket management in a staging or CI environment.</p>
 
 <p>The management API is not accessible through <code>CouchbaseClient</code>, but through the <code>ClusterManager</code> class. This is because the <code>CouchbaseClient</code> is bound to a specific bucket and was not designed for management purposes like this. Instead, you create a new instance of the <code>ClusterManager</code> class and pass it a list of URIs and the admin user name and password.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">List&lt;URI&gt;</span> <span style="color: #000000">uris</span> <span style="color: #000000">=</span> <span style="color: #000000">new</span> <span style="color: #000000">LinkedList&lt;URI&gt;();</span>
-<span style="color: #000000">uris</span><span style="color: #3F6E75">.add</span><span style="color: #000000">(URI</span><span style="color: #3F6E75">.create</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;http://127.0.0.1:8091/pools&quot;</span><span style="color: #000000">));</span>
-<span style="color: #000000">ClusterManager</span> <span style="color: #000000">manager</span> <span style="color: #000000">=</span> <span style="color: #000000">new</span> <span style="color: #000000">ClusterManager(uris,</span> <span style="color: #C41A16">&quot;Administrator&quot;</span><span style="color: #000000">,</span> <span style="color: #C41A16">&quot;password&quot;</span><span style="color: #000000">);</span>
 
-<span style="color: #000000">//</span> <span style="color: #000000">..</span> <span style="color: #000000">your</span> <span style="color: #000000">code</span>
+<pre><code>List&lt;URI&gt; uris = new LinkedList&lt;URI&gt;();
+uris.add(URI.create(&quot;http://127.0.0.1:8091/pools&quot;));
+ClusterManager manager = new ClusterManager(uris, &quot;Administrator&quot;, &quot;password&quot;);
 
-<span style="color: #000000">manager</span><span style="color: #3F6E75">.shutdown</span><span style="color: #000000">();</span>
-</pre></div>
+// .. your code
+
+manager.shutdown();
+</code></pre>
 
 <p>You can now create and delete buckets (of type <code>Couchbase</code> or <code>Memcached</code>). You can also list all available buckets in the Couchbase cluster or flush the bucket (if flush is enabled). Here are some examples:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">// Create the default bucket with a 100MB memory limit and 0 replicas.
+
+<pre><code>// Create the default bucket with a 100MB memory limit and 0 replicas.
 manager.createDefaultBucket(BucketType.COUCHBASE, 100, 0);
 
 // Create a bucket with authentication.
@@ -267,11 +282,11 @@ assertTrue(buckets.contains(&quot;mybucket&quot;));
 
 // Flush the &quot;default&quot; bucket if flush is enabled
 manager.flushBucket(&quot;default&quot;);
-</pre></div>
+</code></pre>
 
 <p>Note that creating, deleting and flushing may take some time (from milliseconds to seconds, depending on the cluster load). You can either wait a few seconds before you move on (with a Thread.sleep()), or you can wait until <code>listBuckets()</code> contains your created bucket. There is also a callback-approach (which the client library uses internally to minimize waiting times during tests), but this involves more code on the application side.</p>
 
-<h2 id="wrapping-up:ce2158c13cb07928acc4bd887e624d2c">Wrapping up</h2>
+<h2 id="wrapping-up">Wrapping up</h2>
 
 <p>This post showed you two brand-new features shipped with the 1.1-dp4 release.</p>
 
@@ -299,7 +314,7 @@ manager.flushBucket(&quot;default&quot;);
                     <div class="post-description">
                         
 
-<h2 id="introduction:4ac8fdf5a97cdd95577718a445e97b6e">Introduction</h2>
+<h2 id="introduction">Introduction</h2>
 
 <p>I&rsquo;ve been mostly blogging about PHP and <a href="http://lithify.me">Lithium</a>, but recently I&rsquo;ve also been looking into a very promising framework on the JVM - the <a href="http://www.playframework.org/">play! framework</a>. The current version (2.0) brings lots of enhancements and features and is (at least to me) the first framework that really boosts developer productivity on the JVM (and that I would work with in my free time).</p>
 
@@ -309,7 +324,7 @@ manager.flushBucket(&quot;default&quot;);
 
 <p>I&rsquo;ve also added the code to a <a href="https://github.com/daschl/couchplay/">repository</a> on GitHub for your convenience. You can find a tag for every post I&rsquo;ll publish so you can just clone the repository and checkout the appropriate tag to follow along.</p>
 
-<h2 id="about-the-stack:4ac8fdf5a97cdd95577718a445e97b6e">About the stack</h2>
+<h2 id="about-the-stack">About the stack</h2>
 
 <p>Our language of choice will be Java. I first thought about writing it in Scala, but then I realized that with Java I could attract a larger group of readers. Also, I did most of my past explorations in Scala, so this is a great opportunity for me to use the framework from the Java-side as well. The good thing is that the framework allows you to use both languages in parallel, so you can start out with one and then evolve if you need to.</p>
 
@@ -319,7 +334,7 @@ manager.flushBucket(&quot;default&quot;);
 
 <p>From here on I assume that you have Java 1.6 or later installed and included it in your <code>PATH</code>. If you haven&rsquo;t, there should be plenty of material available on the internet.</p>
 
-<h2 id="installing-couchbase:4ac8fdf5a97cdd95577718a445e97b6e">Installing Couchbase</h2>
+<h2 id="installing-couchbase">Installing Couchbase</h2>
 
 <p>Before we start digging into the framework, we need to stop for a second and install our backend database.</p>
 
@@ -329,17 +344,18 @@ manager.flushBucket(&quot;default&quot;);
 
 <p>After the installation has finished, open your browser, head over to <code>http://localhost:8091</code> and click through the setup wizard. You can go with the default settings, just make sure to give it a reasonable amount of RAM. If you run into trouble, the official <a href="http://www.couchbase.com/docs/couchbase-manual-2.0/couchbase-getting-started-install.html">docs</a> are there to help you out.</p>
 
-<h2 id="setting-up-our-play-project:4ac8fdf5a97cdd95577718a445e97b6e">Setting up our play! project</h2>
+<h2 id="setting-up-our-play-project">Setting up our play! project</h2>
 
 <p>Now that we have our database installed, it&rsquo;s time to set up the actual play! project. Go to <a href="http://www.playframework.org/">their official website</a> and download the current stable release (2.0.2 at the time of writing).</p>
 
 <p>After the download has finished, unpack the zipfile. Copy it over to a place where it doesn&rsquo;t get accidentally deleted and add it to your <code>PATH</code>. Adding it to the <code>PATH</code> here is pure convenience as I don&rsquo;t like to remember the full path everytime I need to run it.</p>
 
 <p>Now we can use the <code>play new</code> command to setup a new project. I&rsquo;m using Ubuntu Linux here, but the command also works the same on Windows (I haven&rsquo;t tried it on a Mac but it shouldn&rsquo;t be much different).</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">michael@daschl:~$ play new couchplay
+
+<pre><code>michael@daschl:~$ play new couchplay
     _            _
 _ __ | | __ _ _  _| |
-| &#39;_ \| |/ _&#39; | || |_|
+| '_ \| |/ _' | || |_|
 |  __/|_|\____|\__ (_)
 |_|            |__/
 
@@ -361,12 +377,13 @@ Which template do you want to use for this new application?
 OK, application couchplay is created.
 
 Have fun!
-</pre></div>
+</code></pre>
 
 <p>The application generator asks you for an application name and if you want to either generate a Scala or Java application. You don&rsquo;t have to choose the language for your final application here, it only wants to know in what language it should generats the sample controller for example.</p>
 
 <p>To make sure it&rsquo;s up and running, change into the directory and run the <code>play</code> command again. This should bring up the play console. For now, just type <code>run</code> and point your browser to <code>http://localhost:9000</code>. You should see the default welcome page of the framework.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">michael@daschl:~/couchplay$ play
+
+<pre><code>michael@daschl:~/couchplay$ play
 Getting org.scala-sbt sbt_2.9.1 0.11.3 ...
 :: retrieving :: org.scala-sbt#boot-app
     confs: [default]
@@ -375,7 +392,7 @@ Getting org.scala-sbt sbt_2.9.1 0.11.3 ...
 [info] Set current project to couchplay (in build file:/home/michael/couchplay/)
     _            _
 _ __ | | __ _ _  _| |
-| &#39;_ \| |/ _&#39; | || |_|
+| '_ \| |/ _' | || |_|
 |  __/|_|\____|\__ (_)
 |_|            |__/
 
@@ -393,33 +410,36 @@ play! 2.0.2, http://www.playframework.org
 [info] play - Listening for HTTP on port 9000...
 
 (Server started, use Ctrl+D to stop and go back to the console...)
-</pre></div>
+</code></pre>
 
 <p>As you can see, the initial dependencies are resolved and loaded automatically. If you already have something running on port <code>9000</code> (like <a href="http://php-fpm.org/">php-fpm</a>), then you can use the <code>run [PORTNUM]</code> command to specify a different port. There are lots of other possibilities here and we&rsquo;ll cover some of them as we progress further. If you&rsquo;re curious, you can type <code>help</code> to see the available commands.</p>
 
 <p>You may experience a large response time (a few seconds) when you open up the page for the first time. This is because in development mode, play! compiles everything for you on the fly. If you don&rsquo;t change anything, the next reload should be pretty fast. Since we only modify short bits of code between every refresh, the compiling times should not be an issue. In production, everything is precompiled anyway. If you look on your console, you can see that the files have been compiled automatically for you:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">[info] Compiling 4 Scala sources and 2 Java sources to /home/michael/couchplay/target/scala-2.9.1/classes...
+
+<pre><code>[info] Compiling 4 Scala sources and 2 Java sources to /home/michael/couchplay/target/scala-2.9.1/classes...
 [info] play - Application started (Dev)
-</pre></div>
+</code></pre>
 
 <p>One last tip here: if you use <code>~run</code> instead of <code>run</code>, the framework will detect code changes immediately (when you save your file) and compile it on the fly. If you use <code>run</code>, it will start compiling when you reload the page. As a result, when using <code>~run</code> the compile times should be even less noticable since you also need some time to switch back and forth between your IDE and the browser. Also keep in mind that all this is handled for you and you don&rsquo;t need to setup tomcat in your IDE and make sure everything is pushed correctly. If you are like me and have spent hours and hours of configuring eclipse and tomcat, this is pretty awesome news. You can of course still use Eclipse (or any other IDE), but you can concentrate on writing code, the rest will be done for you in the background.</p>
 
-<h2 id="connecting-to-couchbase:4ac8fdf5a97cdd95577718a445e97b6e">Connecting to Couchbase</h2>
+<h2 id="connecting-to-couchbase">Connecting to Couchbase</h2>
 
 <p>Currently, our application doesn&rsquo;t know about our backend database. Since play! doesn&rsquo;t have built-in support for Couchbase, we&rsquo;re going to use the Couchbase Java SDK to fill the gap.</p>
 
 <p>Couchbase thankfully provides a Maven repository, so we just need to define and load the dependency. Head over to the <code>project/Build.scala</code> file and add the following:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">val appDependencies = Seq(
+
+<pre><code>val appDependencies = Seq(
     &quot;couchbase&quot; % &quot;couchbase-client&quot; % &quot;1.1-dp&quot;
 )
 
 val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
     resolvers += &quot;Couchbase Maven Repository&quot; at &quot;http://files.couchbase.com/maven2&quot;
 )
-</pre></div>
+</code></pre>
 
 <p>Back in the play console, hit <code>ctrl-d</code> to stop the server and type <code>reload</code> and <code>update</code> to fetch the new dependencies. If everything finished without errors, type &ldquo;~run&rdquo; again.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">[couchplay] $ reload
+
+<pre><code>[couchplay] $ reload
 [info] Loading project definition from /home/michael/couchplay/project
 [info] Set current project to couchplay (in build file:/home/michael/couchplay/)
 [couchplay] $ update
@@ -449,143 +469,148 @@ val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).s
 [info] play - Listening for HTTP on port 9000...
 
 (Server started, use Ctrl+D to stop and go back to the console...)
-</pre></div>
+</code></pre>
 
 <p>I&rsquo;m quite sure you wonder about the strange syntax we&rsquo;ve been using to define our dependency. This is actually Scala code, since play! uses the awesome <a href="http://www.scala-sbt.org/">sbt</a> to manage its dependencies (the play console also builds upon it). There is a good introduction <a href="http://www.youtube.com/watch?v=V2rl62CZPVc">video</a> available if you want to learn more.</p>
 
 <p>The dependency is now in place, but we also need to connect to the database when the application starts and disconnect from it when it stops. If we&rsquo;d use the databases supported by the framework, this would be handled for us (but that&rsquo;s half the fun, right?). Since this is not the case, we need to &ldquo;hook&rdquo; into some kind of <code>start</code> and <code>stop</code> events.</p>
 
 <p>Play! provides us with something called the <a href="http://www.playframework.org/documentation/2.0.2/JavaGlobal">application Global object</a> that has methods we can override. Create a new file called <code>Global.java</code> inside the <code>app</code> directory and insert the following.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">import</span> <span style="color: #000000">play.*</span>;
 
-<span style="color: #A90D91">import</span> <span style="color: #000000">datasources.Couchbase</span>;
+<pre><code>import play.*;
 
-<span style="color: #000000">public</span> <span style="color: #A90D91">class</span> <span style="color: #3F6E75">Global</span> <span style="color: #000000">extends</span> <span style="color: #000000">GlobalSettings</span> {
+import datasources.Couchbase;
 
-    <span style="color: #000000">public</span> <span style="color: #000000">void</span> <span style="color: #000000">onStart</span>(<span style="color: #000000">Application</span> <span style="color: #000000">app</span>) {
-        <span style="color: #000000">Logger.info</span>(<span style="color: #C41A16">&quot;Application started&quot;</span>);
-        <span style="color: #000000">Couchbase.connect</span>();
+public class Global extends GlobalSettings {
+
+    public void onStart(Application app) {
+        Logger.info(&quot;Application started&quot;);
+        Couchbase.connect();
     }
 
-    <span style="color: #000000">public</span> <span style="color: #000000">void</span>  <span style="color: #000000">onStop</span>(<span style="color: #000000">Application</span> <span style="color: #000000">app</span>) {
-        <span style="color: #000000">Logger.info</span>(<span style="color: #C41A16">&quot;Application stopped&quot;</span>);
-        <span style="color: #000000">Couchbase.disconnect</span>();
+    public void  onStop(Application app) {
+        Logger.info(&quot;Application stopped&quot;);
+        Couchbase.disconnect();
     }
 
 }
-</pre></div>
+</code></pre>
 
 <p>We override the <code>onStart</code> and <code>onStop</code> methods to place our custom connect logic in there (and do some logging as well). We make use of a <code>Couchabase</code> connection class to abstract our connection logic, so we&rsquo;d better write that one too. Create a new file called <code>Couchbase.java</code> inside the <code>app/datasources</code> directory (which you also need to create).</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">package</span> <span style="color: #000000">datasources</span>;
 
-<span style="color: #A90D91">import</span> <span style="color: #000000">java.net.URI</span>;
-<span style="color: #A90D91">import</span> <span style="color: #000000">java.util.LinkedList</span>;
-<span style="color: #A90D91">import</span> <span style="color: #000000">java.util.List</span>;
-<span style="color: #A90D91">import</span> <span style="color: #000000">java.io.IOException</span>;
-<span style="color: #A90D91">import</span> <span style="color: #000000">java.util.concurrent.TimeUnit</span>;
+<pre><code>package datasources;
 
-<span style="color: #A90D91">import</span> <span style="color: #000000">play.*</span>;
-<span style="color: #A90D91">import</span> <span style="color: #000000">com.couchbase.client.CouchbaseClient</span>;
+import java.net.URI;
+import java.util.LinkedList;
+import java.util.List;
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
-<span style="color: #000000">/**</span>
-<span style="color: #000000">*</span> <span style="color: #000000">The</span> <span style="color: #C41A16">`Couchbase`</span> <span style="color: #A90D91">class</span> <span style="color: #3F6E75">acts</span> <span style="color: #000000">a</span> <span style="color: #000000">simple</span> <span style="color: #000000">connection</span> <span style="color: #000000">manager</span> <span style="color: #A90D91">for</span> <span style="color: #000000">the</span> <span style="color: #C41A16">`CouchbaseClient`</span>
-<span style="color: #000000">*</span> <span style="color: #000000">and</span> <span style="color: #000000">makes</span> <span style="color: #000000">sure</span> <span style="color: #000000">that</span> <span style="color: #000000">only</span> <span style="color: #000000">one</span> <span style="color: #000000">connection</span> <span style="color: #000000">is</span> <span style="color: #000000">alive</span> <span style="color: #000000">throughout</span> <span style="color: #000000">the</span> <span style="color: #000000">application.</span>
-<span style="color: #000000">*</span>
-<span style="color: #000000">*</span> <span style="color: #000000">You</span> <span style="color: #000000">may</span> <span style="color: #000000">want</span> <span style="color: #000000">to</span> <span style="color: #000000">extend</span> <span style="color: #000000">and</span> <span style="color: #000000">harden</span> <span style="color: #000000">this</span> <span style="color: #000000">implementation</span> <span style="color: #000000">in</span> <span style="color: #000000">a</span> <span style="color: #000000">production</span> <span style="color: #000000">environment.</span>
-<span style="color: #000000">*/</span>
-<span style="color: #000000">public</span> <span style="color: #000000">final</span> <span style="color: #A90D91">class</span> <span style="color: #3F6E75">Couchbase</span> {
+import play.*;
+import com.couchbase.client.CouchbaseClient;
 
-    <span style="color: #000000">/**</span>
-    <span style="color: #000000">*</span> <span style="color: #000000">Holds</span> <span style="color: #000000">the</span> <span style="color: #000000">actual</span> <span style="color: #C41A16">`CouchbaseClient`</span><span style="color: #000000">.</span>
-    <span style="color: #000000">*/</span>
-    <span style="color: #000000">private</span> <span style="color: #000000">static</span> <span style="color: #000000">CouchbaseClient</span> <span style="color: #000000">client</span> <span style="color: #000000">=</span> <span style="color: #000000">null</span>;
+/**
+* The `Couchbase` class acts a simple connection manager for the `CouchbaseClient`
+* and makes sure that only one connection is alive throughout the application.
+*
+* You may want to extend and harden this implementation in a production environment.
+*/
+public final class Couchbase {
 
-    <span style="color: #000000">/**</span>
-    <span style="color: #000000">*</span> <span style="color: #000000">Connects</span> <span style="color: #000000">to</span> <span style="color: #000000">Couchbase</span> <span style="color: #000000">based</span> <span style="color: #000000">on</span> <span style="color: #000000">the</span> <span style="color: #000000">configuration</span> <span style="color: #000000">settings.</span>
-    <span style="color: #000000">*</span>
-    <span style="color: #000000">*</span> <span style="color: #000000">If</span> <span style="color: #000000">the</span> <span style="color: #000000">database</span> <span style="color: #000000">is</span> <span style="color: #000000">not</span> <span style="color: #000000">reachable</span>, <span style="color: #000000">an</span> <span style="color: #000000">error</span> <span style="color: #000000">message</span> <span style="color: #000000">is</span> <span style="color: #000000">written</span> <span style="color: #000000">and</span> <span style="color: #000000">the</span>
-    <span style="color: #000000">*</span> <span style="color: #000000">application</span> <span style="color: #000000">exits.</span>
-    <span style="color: #000000">*/</span>
-    <span style="color: #000000">public</span> <span style="color: #000000">static</span> <span style="color: #000000">boolean</span> <span style="color: #000000">connect</span>() {
-        <span style="color: #000000">String</span> <span style="color: #000000">hostname</span> <span style="color: #000000">=</span> <span style="color: #000000">Play.application</span>()<span style="color: #000000">.configuration</span>()<span style="color: #000000">.getString</span>(<span style="color: #C41A16">&quot;couchbase.hostname&quot;</span>);
-        <span style="color: #000000">String</span> <span style="color: #000000">port</span> <span style="color: #000000">=</span> <span style="color: #000000">Play.application</span>()<span style="color: #000000">.configuration</span>()<span style="color: #000000">.getString</span>(<span style="color: #C41A16">&quot;couchbase.port&quot;</span>);
-        <span style="color: #000000">String</span> <span style="color: #000000">bucket</span> <span style="color: #000000">=</span> <span style="color: #000000">Play.application</span>()<span style="color: #000000">.configuration</span>()<span style="color: #000000">.getString</span>(<span style="color: #C41A16">&quot;couchbase.bucket&quot;</span>);
-        <span style="color: #000000">String</span> <span style="color: #000000">password</span> <span style="color: #000000">=</span> <span style="color: #000000">Play.application</span>()<span style="color: #000000">.configuration</span>()<span style="color: #000000">.getString</span>(<span style="color: #C41A16">&quot;couchbase.password&quot;</span>);
+    /**
+    * Holds the actual `CouchbaseClient`.
+    */
+    private static CouchbaseClient client = null;
 
-        <span style="color: #000000">List&lt;URI&gt;</span> <span style="color: #000000">uris</span> <span style="color: #000000">=</span> <span style="color: #000000">new</span> <span style="color: #000000">LinkedList&lt;URI&gt;</span>();
-        <span style="color: #000000">uris.add</span>(<span style="color: #000000">URI.create</span>(<span style="color: #C41A16">&quot;http://&quot;</span><span style="color: #000000">+hostname+</span><span style="color: #C41A16">&quot;:&quot;</span><span style="color: #000000">+port+</span><span style="color: #C41A16">&quot;/pools&quot;</span>));
+    /**
+    * Connects to Couchbase based on the configuration settings.
+    *
+    * If the database is not reachable, an error message is written and the
+    * application exits.
+    */
+    public static boolean connect() {
+        String hostname = Play.application().configuration().getString(&quot;couchbase.hostname&quot;);
+        String port = Play.application().configuration().getString(&quot;couchbase.port&quot;);
+        String bucket = Play.application().configuration().getString(&quot;couchbase.bucket&quot;);
+        String password = Play.application().configuration().getString(&quot;couchbase.password&quot;);
+
+        List&lt;URI&gt; uris = new LinkedList&lt;URI&gt;();
+        uris.add(URI.create(&quot;http://&quot;+hostname+&quot;:&quot;+port+&quot;/pools&quot;));
 
 
-        <span style="color: #A90D91">try</span> {
-            <span style="color: #000000">client</span> <span style="color: #000000">=</span> <span style="color: #000000">new</span> <span style="color: #000000">CouchbaseClient</span>(<span style="color: #000000">uris</span>, <span style="color: #000000">bucket</span>, <span style="color: #000000">password</span>);
-        } <span style="color: #000000">catch</span>(<span style="color: #000000">IOException</span> <span style="color: #000000">e</span>) {
-            <span style="color: #000000">Logger.error</span>(<span style="color: #C41A16">&quot;Error connection to Couchbase: &quot;</span> <span style="color: #000000">+</span> <span style="color: #000000">e.getMessage</span>());
-            <span style="color: #000000">System.exit</span>(<span style="color: #1C01CE">0</span>);
+        try {
+            client = new CouchbaseClient(uris, bucket, password);
+        } catch(IOException e) {
+            Logger.error(&quot;Error connection to Couchbase: &quot; + e.getMessage());
+            System.exit(0);
         }
 
-        <span style="color: #A90D91">return</span> <span style="color: #000000">true</span>;
+        return true;
     }
 
-    <span style="color: #000000">/**</span>
-    <span style="color: #000000">*</span> <span style="color: #000000">Disconnect</span> <span style="color: #A90D91">from</span> <span style="color: #000000">Couchbase.</span>
-    <span style="color: #000000">*/</span>
-    <span style="color: #000000">public</span> <span style="color: #000000">static</span> <span style="color: #000000">boolean</span> <span style="color: #000000">disconnect</span>() {
-        <span style="color: #A90D91">if</span>(<span style="color: #000000">client</span> <span style="color: #000000">==</span> <span style="color: #000000">null</span>) {
-            <span style="color: #A90D91">return</span> <span style="color: #000000">false</span>;
+    /**
+    * Disconnect from Couchbase.
+    */
+    public static boolean disconnect() {
+        if(client == null) {
+            return false;
         }
 
-        <span style="color: #A90D91">return</span> <span style="color: #000000">client.shutdown</span>(<span style="color: #1C01CE">3</span>, <span style="color: #000000">TimeUnit.SECONDS</span>);
+        return client.shutdown(3, TimeUnit.SECONDS);
     }
 
-    <span style="color: #000000">/**</span>
-    <span style="color: #000000">*</span> <span style="color: #000000">Returns</span> <span style="color: #000000">the</span> <span style="color: #000000">actual</span> <span style="color: #C41A16">`CouchbaseClient`</span> <span style="color: #000000">connection</span> <span style="color: #A90D91">object</span><span style="color: #000000">.</span>
-    <span style="color: #000000">*</span>
-    <span style="color: #000000">*</span> <span style="color: #000000">If</span> <span style="color: #000000">no</span> <span style="color: #000000">connection</span> <span style="color: #000000">is</span> <span style="color: #000000">established</span> <span style="color: #000000">yet</span>, <span style="color: #000000">it</span> <span style="color: #000000">tries</span> <span style="color: #000000">to</span> <span style="color: #000000">connect.</span> <span style="color: #000000">Note</span> <span style="color: #000000">that</span>
-    <span style="color: #000000">*</span> <span style="color: #000000">this</span> <span style="color: #000000">is</span> <span style="color: #000000">just</span> <span style="color: #000000">in</span> <span style="color: #000000">place</span> <span style="color: #A90D91">for</span> <span style="color: #000000">pure</span> <span style="color: #000000">convenience</span>, <span style="color: #000000">make</span> <span style="color: #000000">sure</span> <span style="color: #000000">to</span> <span style="color: #000000">connect</span> <span style="color: #000000">explicitly.</span>
-    <span style="color: #000000">*/</span>
-    <span style="color: #000000">public</span> <span style="color: #000000">static</span> <span style="color: #000000">CouchbaseClient</span> <span style="color: #000000">getConnection</span>() {
-        <span style="color: #A90D91">if</span>(<span style="color: #000000">client</span> <span style="color: #000000">==</span> <span style="color: #000000">null</span>) {
-            <span style="color: #000000">connect</span>();
+    /**
+    * Returns the actual `CouchbaseClient` connection object.
+    *
+    * If no connection is established yet, it tries to connect. Note that
+    * this is just in place for pure convenience, make sure to connect explicitly.
+    */
+    public static CouchbaseClient getConnection() {
+        if(client == null) {
+            connect();
         }
 
-        <span style="color: #A90D91">return</span> <span style="color: #000000">client</span>;
+        return client;
     }
 
 }
-</pre></div>
+</code></pre>
 
 <p>We basically define a <code>connect</code> and a <code>disconnect</code> method, which get called from our <code>Gobal.java</code> class. Inside the <code>connect</code> method we read configuration settings (more on that shortly) and then try to open the Couchbase connection. The <code>disconnect</code> method waits 3 seconds to finish any queued operations and then disconnects. Also, we provide a <code>getConnection()</code> method that returns the actual instance of the client object (which we&rsquo;ll use later in our models).</p>
 
 <p>It is always a good idea to just open one connection for the whole lifecycle instead of opening a new connection every time a request comes in. This removes unneeded handshake-latency and should therefore improve the overall performance of the application.</p>
 
 <p>You may have noticed the various <code>Play.application().configuration().getString();</code> calls. With these method calls you can read the values from your <code>conf/application.conf</code> configuration file. By defining your connection settings there instead of the actual implementation, you can easily swap the settings if you deploy your application into production. More on the configuration file can be found <a href="http://www.playframework.org/documentation/2.0.2/Configuration">here</a>. To define the settings we need, open your <code>application.conf</code> file and add the following to the end (or somewhere in between):</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"># Couchbase configuration
+
+<pre><code># Couchbase configuration
 # ~~~~~
 couchbase.hostname=&quot;localhost&quot;
 couchbase.port=8091
 couchbase.bucket=&quot;default&quot;
 couchbase.password=&quot;&quot;
-</pre></div>
+</code></pre>
 
 <p>Now we have everything in place to configure the settings and connect to the database. If you start the server again and load the page for the first time, you can see the debug output of the Couchbase SDK:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">[<span style="color: #000000">info</span>] <span style="color: #000000">application</span> <span style="color: #000000">-</span> <span style="color: #000000">Application</span> <span style="color: #000000">started</span>
-<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">07</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">19</span><span style="color: #000000">:</span><span style="color: #1C01CE">12</span><span style="color: #000000">:</span><span style="color: #1C01CE">43.788</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseConnection</span>:  <span style="color: #000000">Added</span> {<span style="color: #000000">QA</span> <span style="color: #000000">sa=/</span><span style="color: #1C01CE">127.0.0.1</span><span style="color: #000000">:</span><span style="color: #1C01CE">11210</span>, <span style="color: #000000">#Rops=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">#Wops=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">#iq=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">topRop=null</span>, <span style="color: #000000">topWop=null</span>, <span style="color: #000000">toWrite=</span><span style="color: #1C01CE">0</span>, <span style="color: #000000">interested=</span><span style="color: #1C01CE">0</span>} <span style="color: #000000">to</span> <span style="color: #000000">connect</span> <span style="color: #000000">queue</span>
-<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">07</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">19</span><span style="color: #000000">:</span><span style="color: #1C01CE">12</span><span style="color: #000000">:</span><span style="color: #1C01CE">43.789</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseClient</span>:  <span style="color: #000000">viewmode</span> <span style="color: #000000">property</span> <span style="color: #000000">isn&#39;t</span> <span style="color: #000000">defined</span>. <span style="color: #000000">Setting</span> <span style="color: #000000">viewmode</span> <span style="color: #000000">to</span> <span style="color: #000000">production</span> <span style="color: #000000">mode</span>
-<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">07</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">19</span><span style="color: #000000">:</span><span style="color: #1C01CE">12</span><span style="color: #000000">:</span><span style="color: #1C01CE">43.790</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">ViewConnection</span>:  <span style="color: #000000">Added</span> <span style="color: #000000">localhost/</span><span style="color: #1C01CE">127.0.0.1</span><span style="color: #000000">:</span><span style="color: #1C01CE">8092</span> <span style="color: #000000">to</span> <span style="color: #000000">connect</span> <span style="color: #000000">queue</span>
-<span style="color: #1C01CE">2012</span><span style="color: #000000">-</span><span style="color: #1C01CE">07</span><span style="color: #000000">-</span><span style="color: #1C01CE">17</span> <span style="color: #1C01CE">19</span><span style="color: #000000">:</span><span style="color: #1C01CE">12</span><span style="color: #000000">:</span><span style="color: #1C01CE">43.794</span> <span style="color: #000000">INFO</span> <span style="color: #000000">com</span>.<span style="color: #000000">couchbase</span>.<span style="color: #000000">client</span>.<span style="color: #000000">CouchbaseConnection</span>:  <span style="color: #000000">Connection</span> <span style="color: #000000">state</span> <span style="color: #000000">changed</span> <span style="color: #A90D91">for</span> <span style="color: #000000">sun</span>.<span style="color: #000000">nio</span>.<span style="color: #000000">ch</span>.<span style="color: #000000">SelectionKeyImpl</span><span style="color: #1C01CE">@1</span><span style="color: #000000">d179fb</span>
-[<span style="color: #000000">info</span>] <span style="color: #000000">play</span> <span style="color: #000000">-</span> <span style="color: #000000">Application</span> <span style="color: #000000">started</span> (<span style="color: #000000">Dev</span>)
-</pre></div>
+
+<pre><code>[info] application - Application started
+2012-07-17 19:12:43.788 INFO com.couchbase.client.CouchbaseConnection:  Added {QA sa=/127.0.0.1:11210, #Rops=0, #Wops=0, #iq=0, topRop=null, topWop=null, toWrite=0, interested=0} to connect queue
+2012-07-17 19:12:43.789 INFO com.couchbase.client.CouchbaseClient:  viewmode property isn't defined. Setting viewmode to production mode
+2012-07-17 19:12:43.790 INFO com.couchbase.client.ViewConnection:  Added localhost/127.0.0.1:8092 to connect queue
+2012-07-17 19:12:43.794 INFO com.couchbase.client.CouchbaseConnection:  Connection state changed for sun.nio.ch.SelectionKeyImpl@1d179fb
+[info] play - Application started (Dev)
+</code></pre>
 
 <p>Note that since we haven&rsquo;t defined a <code>viewmode</code> setting, Couchbase assumes you&rsquo;re running in production mode. You can change this setting, but I haven&rsquo;t done this here (we&rsquo;ll push our views into production before we use them inside the application).</p>
 
 <p>If you press <code>ctrl+d</code> to stop the application, you can see that Couchbase correctly closes the connection:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">[info] application - Application stopped
+
+<pre><code>[info] application - Application stopped
 2012-07-17 19:24:52.216 INFO com.couchbase.client.CouchbaseConnection:  Shut down Couchbase client
 2012-07-17 19:24:52.226 INFO com.couchbase.client.ViewConnection:  Shut down Couchbase client
 2012-07-17 19:24:52.226 INFO com.couchbase.client.ViewNode:  Couchbase I/O reactor terminated
-</pre></div>
+</code></pre>
 
-<h2 id="wrapping-up:4ac8fdf5a97cdd95577718a445e97b6e">Wrapping up</h2>
+<h2 id="wrapping-up">Wrapping up</h2>
 
 <p>This post hopefully gave you an overview of what we&rsquo;re going to implement, namely a real-time web chat application. We&rsquo;re going to use Java, the play! framework and Couchbase. Also we&rsquo;ve set up the database, the project itself and connected both. In the next post we&rsquo;ll build on this foundation and add session management to let users sign in and out.</p>
 
@@ -612,7 +637,7 @@ couchbase.password=&quot;&quot;
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

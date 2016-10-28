@@ -21,21 +21,23 @@
 
 &lt;p&gt;The main purpose of this post is to show you how core tests work and were the core team needs help to improve things further. At the end of this post you should be able to write new and extend existing test cases. A side effect of this is that you&amp;rsquo;ll learn parts of the core from the inside out while you&amp;rsquo;re testing them.&lt;/p&gt;
 
-&lt;h2 id=&#34;introducing-core-tests:ecedfe84f7ffd774ecf4f5159f0f34ea&#34;&gt;Introducing core tests&lt;/h2&gt;
+&lt;h2 id=&#34;introducing-core-tests&#34;&gt;Introducing core tests&lt;/h2&gt;
 
 &lt;p&gt;Before you start writing your own tests, make sure the existing cases work as expected (without any &lt;code&gt;Exceptions&lt;/code&gt; or &lt;code&gt;Errors&lt;/code&gt;). For developing directly in the core, I&amp;rsquo;d recommend you a slightly different setup than the default one. You should clone the &lt;code&gt;framework&lt;/code&gt; and the &lt;code&gt;lithium&lt;/code&gt; repository in different directories so you can quickly exchange functionality and symlink stuff if you have to. My setup looks similar to this:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;- web
+
+&lt;pre&gt;&lt;code&gt;- web
     - framework
     - libraries
         - lithium
         - li3_docs
         - manual
         - lithium_qa
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Now tell your &lt;code&gt;framework&lt;/code&gt; to look at the right path, hop into &lt;code&gt;app/config/bootstrap/libraries.php&lt;/code&gt; and modify the &lt;code&gt;LITHIUM_LIBRARY_PATH&lt;/code&gt;.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;define(&amp;#39;LITHIUM_LIBRARY_PATH&amp;#39;, dirname(dirname(LITHIUM_APP_PATH)) . &amp;#39;/libraries&amp;#39;);
-&lt;/pre&gt;&lt;/div&gt;
+
+&lt;pre&gt;&lt;code&gt;define(&#39;LITHIUM_LIBRARY_PATH&#39;, dirname(dirname(LITHIUM_APP_PATH)) . &#39;/libraries&#39;);
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;If you haven&amp;rsquo;t already, make sure that the &lt;code&gt;app/resources&lt;/code&gt; folder is writable.&lt;/p&gt;
 
@@ -45,7 +47,7 @@
 
 &lt;p&gt;If you have any failing tests, try to track down if it is your setup or some test cases are not working correctly. If you&amp;rsquo;re unsure, you can always get feedback on #li3 at freenode.&lt;/p&gt;
 
-&lt;h2 id=&#34;understanding-test-filters:ecedfe84f7ffd774ecf4f5159f0f34ea&#34;&gt;Understanding test filters&lt;/h2&gt;
+&lt;h2 id=&#34;understanding-test-filters&#34;&gt;Understanding test filters&lt;/h2&gt;
 
 &lt;p&gt;Now that existing tests are running as expected, take a look at the buttons on the top. The &lt;code&gt;Affected&lt;/code&gt;, &lt;code&gt;Complexity&lt;/code&gt;, &lt;code&gt;Coverage&lt;/code&gt; and &lt;code&gt;Profiler&lt;/code&gt; labeled buttons are called &amp;ldquo;test filters&amp;rdquo; and perform specific tasks on the selected group of test cases.&lt;/p&gt;
 
@@ -62,86 +64,90 @@
 
 &lt;p&gt;Make sure to get familiar with these filters as they are crucial in verifying and investigating your written tests.&lt;/p&gt;
 
-&lt;h2 id=&#34;investigating-core-tests:ecedfe84f7ffd774ecf4f5159f0f34ea&#34;&gt;Investigating core tests&lt;/h2&gt;
+&lt;h2 id=&#34;investigating-core-tests&#34;&gt;Investigating core tests&lt;/h2&gt;
 
 &lt;p&gt;The best way to get familiar with core tests is to look at existing ones. Let&amp;rsquo;s investigate one test case of the &lt;code&gt;ValidatorTest&lt;/code&gt; class.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #177500&#34;&gt;/**&lt;/span&gt;
-&lt;span style=&#34;color: #177500&#34;&gt; * Tests that new methods can be called on Validator by adding rules using Validator::add().&lt;/span&gt;
-&lt;span style=&#34;color: #177500&#34;&gt; *&lt;/span&gt;
-&lt;span style=&#34;color: #177500&#34;&gt; * @return void&lt;/span&gt;
-&lt;span style=&#34;color: #177500&#34;&gt; */&lt;/span&gt;
-&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;testAddCustomRegexMethods&lt;/span&gt;() {
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertNull&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;Validator::rules&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;foo&amp;#39;&lt;/span&gt;));
 
-    &lt;span style=&#34;color: #000000&#34;&gt;Validator::add&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;foo&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/^foo$/&amp;#39;&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertTrue&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;Validator::isFoo&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;foo&amp;#39;&lt;/span&gt;));
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertFalse&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;Validator::isFoo&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;bar&amp;#39;&lt;/span&gt;));
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertTrue&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;in_array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;foo&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;Validator::rules&lt;/span&gt;()));
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertEqual&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;/^foo$/&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;Validator::rules&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;foo&amp;#39;&lt;/span&gt;));
+&lt;pre&gt;&lt;code&gt;/**
+ * Tests that new methods can be called on Validator by adding rules using Validator::add().
+ *
+ * @return void
+ */
+public function testAddCustomRegexMethods() {
+    $this-&amp;gt;assertNull(Validator::rules(&#39;foo&#39;));
 
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;expectException&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Rule `bar` is not a validation rule.&amp;quot;&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;assertNull&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;Validator::isBar&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;foo&amp;#39;&lt;/span&gt;));
+    Validator::add(&#39;foo&#39;, &#39;/^foo$/&#39;);
+    $this-&amp;gt;assertTrue(Validator::isFoo(&#39;foo&#39;));
+    $this-&amp;gt;assertFalse(Validator::isFoo(&#39;bar&#39;));
+    $this-&amp;gt;assertTrue(in_array(&#39;foo&#39;, Validator::rules()));
+    $this-&amp;gt;assertEqual(&#39;/^foo$/&#39;, Validator::rules(&#39;foo&#39;));
+
+    $this-&amp;gt;expectException(&amp;quot;Rule `bar` is not a validation rule.&amp;quot;);
+    $this-&amp;gt;assertNull(Validator::isBar(&#39;foo&#39;));
 }
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;If you look closely, you can identify a pattern here that will come frequently. Before you test a specific functionality/value, make sure it isn&amp;rsquo;t already set. You can do this with &lt;code&gt;assertFalse&lt;/code&gt;, &lt;code&gt;assertNull&lt;/code&gt; or maybe &lt;code&gt;assertTrue(empty(..))&lt;/code&gt;. Next, perform the piece of code you want to test (like adding a custom regex rule here) and then perform checks on the entity again. A good rule of thumb is to test normal cases first and then exceptional cases (which often raise &lt;code&gt;Exceptions&lt;/code&gt;). You can also break down complicated tests in smaller ones and add helper methods that get called from the main test case.&lt;/p&gt;
 
 &lt;p&gt;If your tests contain dependencies, make sure to initialize them in &lt;code&gt;setUp()&lt;/code&gt; and remove/reset them in &lt;code&gt;tearDown()&lt;/code&gt;. These methods get called before/after all tests in the test class and should leave the environment in a clean state. This prevents unexpected failures in later tests and also keeps the memory usage on a normal level. Here&amp;rsquo;s an example of the &lt;code&gt;MongoDb&lt;/code&gt; test class:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;setUp&lt;/span&gt;() {
-    &lt;span style=&#34;color: #000000&#34;&gt;Connections::config&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;lithium_mongo_test&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;_testConfig&lt;/span&gt;));
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;db&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Connections::get&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;lithium_mongo_test&amp;#39;&lt;/span&gt;);
-    &lt;span style=&#34;color: #000000&#34;&gt;$model&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;_model&lt;/span&gt;;
-    &lt;span style=&#34;color: #000000&#34;&gt;$model::config&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;key&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;_id&amp;#39;&lt;/span&gt;));
-    &lt;span style=&#34;color: #000000&#34;&gt;$model::resetConnection&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;false&lt;/span&gt;);
 
-    &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;query&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Query&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;compact&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;model&amp;#39;&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;array&lt;/span&gt;(
-        &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;entity&amp;#39;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Document&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;compact&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;#39;model&amp;#39;&lt;/span&gt;))
+&lt;pre&gt;&lt;code&gt;public function setUp() {
+    Connections::config(array(&#39;lithium_mongo_test&#39; =&amp;gt; $this-&amp;gt;_testConfig));
+    $this-&amp;gt;db = Connections::get(&#39;lithium_mongo_test&#39;);
+    $model = $this-&amp;gt;_model;
+    $model::config(array(&#39;key&#39; =&amp;gt; &#39;_id&#39;));
+    $model::resetConnection(false);
+
+    $this-&amp;gt;query = new Query(compact(&#39;model&#39;) + array(
+        &#39;entity&#39; =&amp;gt; new Document(compact(&#39;model&#39;))
     ));
 }
 
-&lt;span style=&#34;color: #A90D91&#34;&gt;public&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;function&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;tearDown&lt;/span&gt;() {
-    &lt;span style=&#34;color: #A90D91&#34;&gt;try&lt;/span&gt; {
-        &lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;db-&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;delete&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;query&lt;/span&gt;);
-    } &lt;span style=&#34;color: #A90D91&#34;&gt;catch&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;Exception&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;$e&lt;/span&gt;) {}
-    &lt;span style=&#34;color: #000000&#34;&gt;unset&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;$this-&amp;gt;query&lt;/span&gt;);
+public function tearDown() {
+    try {
+        $this-&amp;gt;db-&amp;gt;delete($this-&amp;gt;query);
+    } catch (Exception $e) {}
+    unset($this-&amp;gt;query);
 }
-&lt;/pre&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;The &lt;code&gt;setUp()&lt;/code&gt; method initializes a test connection to the database and &lt;code&gt;tearDown()&lt;/code&gt; makes sure that the test database gets deleted and the &lt;code&gt;$this-&amp;gt;query&lt;/code&gt; object is freed.&lt;/p&gt;
 
 &lt;p&gt;There are a lot more patterns that you&amp;rsquo;ll learn while writing core tests, but this should give you a start.&lt;/p&gt;
 
-&lt;h2 id=&#34;qa-your-code:ecedfe84f7ffd774ecf4f5159f0f34ea&#34;&gt;QA your code&lt;/h2&gt;
+&lt;h2 id=&#34;qa-your-code&#34;&gt;QA your code&lt;/h2&gt;
 
 &lt;p&gt;To ensure a high-quality codebase, Lithium enforces a set of coding standards which can be found &lt;a href=&#34;https://github.com/UnionOfRAD/lithium/wiki/Coding-Standards&#34;&gt;here&lt;/a&gt;. You don&amp;rsquo;t have to know every part of the standard by heart, because Lithium provides a plugin called &lt;a href=&#34;https://github.com/UnionOfRAD/lithium_qa&#34;&gt;lithium_qa&lt;/a&gt;. This plugin checks your code if it complies to the standards and shows you what parts of it are wrong. I recommend you to clone it into the &lt;code&gt;libraries&lt;/code&gt; directory shown above. It is also a good idea to add the &lt;code&gt;li3&lt;/code&gt; command to your &lt;code&gt;PATH&lt;/code&gt; so your calls don&amp;rsquo;t get too verbose.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;cd&lt;/span&gt; /usr/local/bin
-&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;sudo ln -s /path/to/lithium/console/li3 li3
-&lt;/pre&gt;&lt;/div&gt;
+
+&lt;pre&gt;&lt;code&gt;$ cd /usr/local/bin
+$ sudo ln -s /path/to/lithium/console/li3 li3
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Let&amp;rsquo;s assume we want to check classes in the &lt;code&gt;lithium\core&lt;/code&gt; namespace:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;cd &lt;/span&gt;lithium_qa
-&lt;span style=&#34;color: #000000&#34;&gt;$ &lt;/span&gt;li3 syntax ../lithium/core
-&lt;span style=&#34;color: #000000&#34;&gt;[&lt;/span&gt;Passed &lt;span style=&#34;color: #000000&#34;&gt;]&lt;/span&gt; syntax check of &lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;core/Object.php&lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;[&lt;/span&gt;Passed &lt;span style=&#34;color: #000000&#34;&gt;]&lt;/span&gt; syntax check of &lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;core/Adaptable.php&lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;[&lt;/span&gt;Failed &lt;span style=&#34;color: #000000&#34;&gt;]&lt;/span&gt; syntax check of &lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;core/StaticObject.php&lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;
+
+&lt;pre&gt;&lt;code&gt;$ cd lithium_qa
+$ li3 syntax ../lithium/core
+[Passed ] syntax check of `core/Object.php`
+[Passed ] syntax check of `core/Adaptable.php`
+[Failed ] syntax check of `core/StaticObject.php`
 59| 101| Maximum line length exceeded
-&lt;span style=&#34;color: #000000&#34;&gt;[&lt;/span&gt;Passed &lt;span style=&#34;color: #000000&#34;&gt;]&lt;/span&gt; syntax check of &lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;core/Environment.php&lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;[&lt;/span&gt;Passed &lt;span style=&#34;color: #000000&#34;&gt;]&lt;/span&gt; syntax check of &lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;core/ConfigException.php&lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;[&lt;/span&gt;Passed &lt;span style=&#34;color: #000000&#34;&gt;]&lt;/span&gt; syntax check of &lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;core/ClassNotFoundException.php&lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;[&lt;/span&gt;Passed &lt;span style=&#34;color: #000000&#34;&gt;]&lt;/span&gt; syntax check of &lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;core/NetworkException.php&lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;[&lt;/span&gt;Passed &lt;span style=&#34;color: #000000&#34;&gt;]&lt;/span&gt; syntax check of &lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;core/ErrorHandler.php&lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;
-&lt;span style=&#34;color: #000000&#34;&gt;[&lt;/span&gt;Passed &lt;span style=&#34;color: #000000&#34;&gt;]&lt;/span&gt; syntax check of &lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;core/Libraries.php&lt;span style=&#34;color: #C41A16&#34;&gt;`&lt;/span&gt;
-&lt;/pre&gt;&lt;/div&gt;
+[Passed ] syntax check of `core/Environment.php`
+[Passed ] syntax check of `core/ConfigException.php`
+[Passed ] syntax check of `core/ClassNotFoundException.php`
+[Passed ] syntax check of `core/NetworkException.php`
+[Passed ] syntax check of `core/ErrorHandler.php`
+[Passed ] syntax check of `core/Libraries.php`
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;There you can see that each core class passed the test except the &lt;code&gt;StaticObject&lt;/code&gt; class which has one line (59) that is too long. Now you can edit that file and modify it accordingly. If you&amp;rsquo;re not sure what the output means, head back to the &lt;a href=&#34;https://github.com/UnionOfRAD/lithium/wiki/Coding-Standards&#34;&gt;official standard&lt;/a&gt; and look for the corresponding entry.&lt;/p&gt;
 
 &lt;p&gt;Please make sure that all code you want to see in the core respects these standards. You can also use it to test your own code as well!&lt;/p&gt;
 
-&lt;h2 id=&#34;getting-help:ecedfe84f7ffd774ecf4f5159f0f34ea&#34;&gt;Getting help&lt;/h2&gt;
+&lt;h2 id=&#34;getting-help&#34;&gt;Getting help&lt;/h2&gt;
 
 &lt;p&gt;If you&amp;rsquo;re new to code testing in Lithium, make sure to read the official guide in the &lt;a href=&#34;http://lithify.me/docs/manual/10_testing/readme.wiki&#34;&gt;manual&lt;/a&gt; first. Next, check out the main &lt;a href=&#34;https://github.com/UnionOfRAD/lithium/issues/17&#34;&gt;testing ticket on GitHub&lt;/a&gt; which is constantly updated and shows what classes need testing. If you need help on testing the core, make sure to join #li3-core on freenode and ping one of the core developers. You can also contact me directly and I&amp;rsquo;ll make sure to help you out or point you in the right direction.&lt;/p&gt;
 
-&lt;h2 id=&#34;wrapping-up:ecedfe84f7ffd774ecf4f5159f0f34ea&#34;&gt;Wrapping up&lt;/h2&gt;
+&lt;h2 id=&#34;wrapping-up&#34;&gt;Wrapping up&lt;/h2&gt;
 
 &lt;p&gt;You should now be able to run the core tests, extend and write your own and also pass your code through the official code quality assurance tool. Please help out and fork the core, run it on your machine, check for errors, extend current tests, write new ones and correct QA issues. If we all work together, I&amp;rsquo;m sure we can make Lithium the best tested web framework out there. If you want to see more information regarding this topic on my blog, comment down below and I&amp;rsquo;ll see what I can provide.&lt;/p&gt;
 

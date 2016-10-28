@@ -7,7 +7,7 @@
 
     <meta name="description" content="">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Php &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -80,16 +80,18 @@
                         <p>Lithium comes with a powerful and flexible routing system. However, in its default configuration, you may encounter some problems with MongoDB-ObjectIDs and reverse routing. ObjectIDs are usually the &ldquo;primary keys&rdquo; of your Document in MongoDB, are 12 bytes long and consist of numbers and characters from &lsquo;a&rsquo; to &lsquo;f&rsquo;. A typical ObjectID would look similar to <code>4ce2d9f99436485e05000000</code>.</p>
 
 <p>If you take a closer look at the default routes that ship with Lithium, you&rsquo;ll maybe notice that the <code>:id</code> part only matches numbers (and not characters).</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">Router::connect(</span><span style="color: #C41A16">&#39;/{:controller}/{:action}/{:id:</span><span style="color: #633820">[</span><span style="color: #1C01CE">0</span><span style="color: #000000">-</span><span style="color: #1C01CE">9</span><span style="color: #633820">]</span><span style="color: #C41A16">+}.{:type}&#39;</span><span style="color: #000000">,</span> <span style="color: #000000">array(</span><span style="color: #C41A16">&#39;id&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">null));</span>
-<span style="color: #000000">Router::connect(</span><span style="color: #C41A16">&#39;/{:controller}/{:action}/{:id:</span><span style="color: #633820">[</span><span style="color: #1C01CE">0</span><span style="color: #000000">-</span><span style="color: #1C01CE">9</span><span style="color: #633820">]</span><span style="color: #C41A16">+}&#39;</span><span style="color: #000000">);</span>
-<span style="color: #000000">Router::connect(</span><span style="color: #C41A16">&#39;/{:controller}/{:action}/{:args}&#39;</span><span style="color: #000000">);</span>
-</pre></div>
+
+<pre><code>Router::connect('/{:controller}/{:action}/{:id:[0-9]+}.{:type}', array('id' =&gt; null));
+Router::connect('/{:controller}/{:action}/{:id:[0-9]+}');
+Router::connect('/{:controller}/{:action}/{:args}');
+</code></pre>
 
 <p>With this setup a call to <code>$this-&gt;html-&gt;link()</code> with an MongoDB-ObjectID set as <code>id</code> won&rsquo;t work because the router is not able to find a matching route (this is called reverse routing). The solution to this &ldquo;problem&rdquo; is, that we need to modify the <code>:id</code>-part of the <code>Router::connect</code>-calls. Replace your default routes with the following code:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">Router::connect(</span><span style="color: #C41A16">&#39;/{:controller}/{:action}/{:id:</span><span style="color: #633820">[</span><span style="color: #1C01CE">0</span><span style="color: #000000">-</span><span style="color: #1C01CE">9</span><span style="color: #000000">a</span><span style="color: #836C28">-f</span><span style="color: #633820">]</span><span style="color: #C41A16">{24}}.{:type}&#39;</span><span style="color: #000000">,</span> <span style="color: #000000">array(</span><span style="color: #C41A16">&#39;id&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">null));</span>
-<span style="color: #000000">Router::connect(</span><span style="color: #C41A16">&#39;/{:controller}/{:action}/{:id:</span><span style="color: #633820">[</span><span style="color: #1C01CE">0</span><span style="color: #000000">-</span><span style="color: #1C01CE">9</span><span style="color: #000000">a</span><span style="color: #836C28">-f</span><span style="color: #633820">]</span><span style="color: #C41A16">{24}}&#39;</span><span style="color: #000000">);</span>
-<span style="color: #000000">Router::connect(</span><span style="color: #C41A16">&#39;/{:controller}/{:action}/{:args}&#39;</span><span style="color: #000000">);</span>
-</pre></div>
+
+<pre><code>Router::connect('/{:controller}/{:action}/{:id:[0-9a-f]{24}}.{:type}', array('id' =&gt; null));
+Router::connect('/{:controller}/{:action}/{:id:[0-9a-f]{24}}');
+Router::connect('/{:controller}/{:action}/{:args}');
+</code></pre>
 
 <p>Now everything should work as expected with li3 and MongoDB ObjectIDs. A final note for the interested reader: if you leave out the <code>{24}</code>-quantifier, then a route like <code>/posts/add</code> won&rsquo;t work because <code>add</code> would also be a valid <code>id</code> to the router.</p>
 
@@ -114,7 +116,7 @@
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

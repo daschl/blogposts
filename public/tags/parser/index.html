@@ -7,7 +7,7 @@
 
     <meta name="description" content="">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Parser &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -79,37 +79,41 @@
                     <div class="post-description">
                         
 
-<h1 id="introduction:2b33965f6a73c85faf8445219846fbab">Introduction</h1>
+<h1 id="introduction">Introduction</h1>
 
 <p>A lot of developers avoid writing parsers because they think it&rsquo;s pretty hard to do so. Writing an efficient parser for a general purpose language (like PHP, Ruby, Java,&hellip;) is hard, but fortunately, most of the time we don&rsquo;t need that much complexity. Typically we just want to parse input coming from config files or from a specific problem domain (expressed through DSLs). DSLs (Domain Specific Languages) are pretty cool, because they allow you to express logic and flow in a very specific and convenient way for a limited set of tasks.</p>
 
 <p>For example, if you want to map a Route in Lithium to a controller/action, it looks like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">Router::connect(</span><span style="color: #C41A16">&#39;/login&#39;</span><span style="color: #000000">,</span> <span style="color: #000000">array(</span><span style="color: #C41A16">&#39;Sessions::add&#39;</span><span style="color: #000000">));</span>
-</pre></div>
+
+<pre><code>Router::connect('/login', array('Sessions::add'));
+</code></pre>
 
 <p>Pretty short, but we can do better. Consider the following DSL syntax I just made up:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">map /login -&gt; Sessions::add
-</pre></div>
+
+<pre><code>map /login -&gt; Sessions::add
+</code></pre>
 
 <p>By using a notation like this, it is easer to grasp what&rsquo;s going on, because we can avoid all the PHP specifics like its array or method syntax. Another benefit is that someone who can write a DSL file doesn&rsquo;t need to know the underlying language which implements it. If a Java-guy likes our language, he can write a parser for it as well and the DSL doesn&rsquo;t need to change at all. In our example it doesn&rsquo;t make sense, but the <a href="https://github.com/cucumber/gherkin">Gherkin</a> DSL for behaviour driven development has been ported to various languages. The original implementation was done in Ruby for the <a href="http://cukes.info/">Cucumber</a> project and the <a href="http://behat.org/">Behat</a> project ported it over to PHP.</p>
 
 <p>Okay, back to our example. This is cool, but how can we transform the latter line, so that it executes our original PHP command? We can either explode it by whitespace and then mess around finding the correct keywords. Or, we can write write an interpreter. A compiler (or interpreter) normally consists mainly of two things: a lexer and a parser. The lexer transforms the raw source into a stream of tokens on which the parser operates on. A parser is normally described by a formal notation like <a href="http://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_Form">EBNF</a> or something along that lines and knows what to do when a specific stream of tokens is found.</p>
 
 <p>Let&rsquo;s take our example from above. The <code>map /login -&gt; Sessions::add</code> may be translated into the following token stream by the lexer (for the sake of simplicity we just display them as tuples):</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">&lt;T_MAP, &quot;map&quot;&gt;
+
+<pre><code>&lt;T_MAP, &quot;map&quot;&gt;
 &lt;T_URL, &quot;/login&quot;&gt;
 &lt;T_BLOCKSTART, &quot;-&gt;&quot;&gt;
 &lt;T_IDENTIFIER, &quot;Sessions::add&quot;&gt;
-</pre></div>
+</code></pre>
 
 <p>The parser can parse the following notation (note that this is not EBNF, I&rsquo;ve added regex in <code>[]</code> to keep it simple):</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">&lt;whitespace&gt;     := [\s]
+
+<pre><code>&lt;whitespace&gt;     := [\s]
 &lt;map&gt;            := &quot;map&quot;
 &lt;url&gt;            := [a-z/]
 &lt;blockstart&gt;     := &quot;-&gt;&quot;
 &lt;identifier&gt;     := [a-zA-Z0-9:]
 &lt;mapBlock&gt;       := &lt;map&gt; &lt;whitespace&gt;* &lt;url&gt;+ &lt;whitespace&gt;* &lt;blockstart&gt; &lt;whitespace&gt;* &lt;identifier&gt;+
-</pre></div>
+</code></pre>
 
 <p>Every rule identified by a <code>:=</code>is called a production rule. I leave the parsing part for a later post, because that would be too much for a single posting. Nevertheless, you can see that if the parser finds a <code>mapBlock</code>(which consists of smaller production rules), it knows the <code>identifier</code> and can transform it into the appropriate <code>Router::connect()</code> call.</p>
 
@@ -117,122 +121,128 @@
 
 <p>Enough theory, let&rsquo;s get started with the lexer.</p>
 
-<h1 id="implementation:2b33965f6a73c85faf8445219846fbab">Implementation</h1>
+<h1 id="implementation">Implementation</h1>
 
 <p>The basic idea is that we match a list of regexes against the current line. If one of them matches, we store that token and advance our offset to the first character after the match. If no token is found and we are not yet at the end of the line, raise an exception (because something invalid is in front of our offset).</p>
 
 <p>Let&rsquo;s stick with the example already mentioned above. We want to create tokens for an input file like <code>map /login -&gt; Sessions::add</code> or <code>root -&gt; Pages::home</code>.</p>
 
 <p>The <code>root</code> command maps the <code>/</code>URL (like <code>Router::connect('/', array('Pages::home'));</code> in Lithium). The first thing we need is an array of <a href="http://en.wikipedia.org/wiki/Terminal_and_nonterminal_symbols#Terminal_symbols">terminal symbols</a> that map to token identifiers.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #633820">&lt;?php</span>
-<span style="color: #A90D91">class</span> <span style="color: #3F6E75">Lexer</span> {
-    <span style="color: #A90D91">protected</span> <span style="color: #A90D91">static</span> <span style="color: #000000">$_terminals</span> <span style="color: #000000">=</span> <span style="color: #A90D91">array</span>(
-        <span style="color: #C41A16">&quot;/^(root)/&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;T_ROOT&quot;</span>,
-        <span style="color: #C41A16">&quot;/^(map)/&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;T_MAP&quot;</span>,
-        <span style="color: #C41A16">&quot;/^(\s+)/&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;T_WHITESPACE&quot;</span>,
-        <span style="color: #C41A16">&quot;/^(\/[A-Za-z0-9\/:]+[^\s])/&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;T_URL&quot;</span>,
-        <span style="color: #C41A16">&quot;/^(-&gt;)/&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;T_BLOCKSTART&quot;</span>,
-        <span style="color: #C41A16">&quot;/^(::)/&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;T_DOUBLESEPARATOR&quot;</span>,
-        <span style="color: #C41A16">&quot;/^(\w+)/&quot;</span> <span style="color: #000000">=&gt;</span> <span style="color: #C41A16">&quot;T_IDENTIFIER&quot;</span>,
+
+<pre><code>&lt;?php
+class Lexer {
+    protected static $_terminals = array(
+        &quot;/^(root)/&quot; =&gt; &quot;T_ROOT&quot;,
+        &quot;/^(map)/&quot; =&gt; &quot;T_MAP&quot;,
+        &quot;/^(\s+)/&quot; =&gt; &quot;T_WHITESPACE&quot;,
+        &quot;/^(\/[A-Za-z0-9\/:]+[^\s])/&quot; =&gt; &quot;T_URL&quot;,
+        &quot;/^(-&gt;)/&quot; =&gt; &quot;T_BLOCKSTART&quot;,
+        &quot;/^(::)/&quot; =&gt; &quot;T_DOUBLESEPARATOR&quot;,
+        &quot;/^(\w+)/&quot; =&gt; &quot;T_IDENTIFIER&quot;,
     );
 }
-<span style="color: #633820">?&gt;</span>
-</pre></div>
+?&gt;
+</code></pre>
 
 <p>Now, let&rsquo;s implement a <code>run</code> method that accepts an array of source lines and returns an array of tokens. It calls the helper <code>_match</code> method that performs the actual matching and raises an exception if no token was found.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">public</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">function</span> <span style="color: #000000">run</span>(<span style="color: #000000">$source</span>) {
-    <span style="color: #000000">$tokens</span> <span style="color: #000000">=</span> <span style="color: #000000">array</span>();
 
-    <span style="color: #000000">foreach</span>(<span style="color: #000000">$source</span> <span style="color: #000000">as</span> <span style="color: #000000">$number</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">$line</span>) {            
-        <span style="color: #000000">$offset</span> <span style="color: #000000">=</span> <span style="color: #1C01CE">0</span>;
-        <span style="color: #A90D91">while</span>(<span style="color: #000000">$offset</span> <span style="color: #000000">&lt;</span> <span style="color: #000000">strlen</span>(<span style="color: #000000">$line</span>)) {
-            <span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #A90D91">static</span><span style="color: #000000">::_match</span>(<span style="color: #000000">$line</span>, <span style="color: #000000">$number</span>, <span style="color: #000000">$offset</span>);
-            <span style="color: #A90D91">if</span>(<span style="color: #000000">$result</span> <span style="color: #000000">===</span> <span style="color: #A90D91">false</span>) {
-                <span style="color: #A90D91">throw</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Exception</span>(<span style="color: #C41A16">&quot;Unable to parse line &quot;</span> . (<span style="color: #000000">$line+</span><span style="color: #1C01CE">1</span>) . <span style="color: #C41A16">&quot;.&quot;</span>);
+<pre><code>public static function run($source) {
+    $tokens = array();
+
+    foreach($source as $number =&gt; $line) {            
+        $offset = 0;
+        while($offset &lt; strlen($line)) {
+            $result = static::_match($line, $number, $offset);
+            if($result === false) {
+                throw new Exception(&quot;Unable to parse line &quot; . ($line+1) . &quot;.&quot;);
             }
-            <span style="color: #000000">$tokens</span><span style="color: #633820">[]</span> <span style="color: #000000">=</span> <span style="color: #000000">$result</span>;
-            <span style="color: #000000">$offset</span> <span style="color: #000000">+=</span> <span style="color: #000000">strlen</span>(<span style="color: #000000">$result</span><span style="color: #633820">[</span><span style="color: #C41A16">&#39;match&#39;</span><span style="color: #633820">]</span>);
+            $tokens[] = $result;
+            $offset += strlen($result['match']);
         }
     }
 
-    <span style="color: #A90D91">return</span> <span style="color: #000000">$tokens</span>;
+    return $tokens;
 }
-</pre></div>
+</code></pre>
 
 <p>Note that how we advance the offset further every iteration and work towards the end of the string. To get the full picture, here&rsquo;s the <code>_match</code> helper method.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #A90D91">protected</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">function</span> <span style="color: #000000">_match</span>(<span style="color: #000000">$line</span>, <span style="color: #000000">$number</span>, <span style="color: #000000">$offset</span>) {
-    <span style="color: #000000">$string</span> <span style="color: #000000">=</span> <span style="color: #000000">substr</span>(<span style="color: #000000">$line</span>, <span style="color: #000000">$offset</span>);
 
-    <span style="color: #000000">foreach</span>(<span style="color: #A90D91">static</span><span style="color: #000000">::$_terminals</span> <span style="color: #000000">as</span> <span style="color: #000000">$pattern</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">$name</span>) {
-        <span style="color: #A90D91">if</span>(<span style="color: #000000">preg_match</span>(<span style="color: #000000">$pattern</span>, <span style="color: #000000">$string</span>, <span style="color: #000000">$matches</span>)) {
-            <span style="color: #A90D91">return</span> <span style="color: #000000">array</span>(
-                <span style="color: #C41A16">&#39;match&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">$matches</span><span style="color: #633820">[</span><span style="color: #1C01CE">1</span><span style="color: #633820">]</span>,
-                <span style="color: #C41A16">&#39;token&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">$name</span>,
-                <span style="color: #C41A16">&#39;line&#39;</span> <span style="color: #000000">=&gt;</span> <span style="color: #000000">$number+</span><span style="color: #1C01CE">1</span>
+<pre><code>protected static function _match($line, $number, $offset) {
+    $string = substr($line, $offset);
+
+    foreach(static::$_terminals as $pattern =&gt; $name) {
+        if(preg_match($pattern, $string, $matches)) {
+            return array(
+                'match' =&gt; $matches[1],
+                'token' =&gt; $name,
+                'line' =&gt; $number+1
             );
         }
     }
 
-    <span style="color: #A90D91">return</span> <span style="color: #A90D91">false</span>;
+    return false;
 }
-</pre></div>
+</code></pre>
 
 <p>We use the <code>preg_match</code> method to check if one of our pattern matches the current string. If you look closely, you can see that all of our regexes start at the beginning of the line (<code>^</code>) and
 are enclosed (<code>()</code>) so we can find them exactly at the beginning and get the inner content. We also store the current line, because we need it in our parser and to display helpful error messages.</p>
 
 <p>Let&rsquo;s run our lexer with some example input:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$input</span> <span style="color: #000000">=</span> <span style="color: #000000">array(</span><span style="color: #C41A16">&#39;root -&gt; Foo::bar&#39;</span><span style="color: #000000">);</span>
-<span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">Lexer::run($input);</span>
-<span style="color: #000000">var_dump($result);</span>
-</pre></div>
+
+<pre><code>$input = array('root -&gt; Foo::bar');
+$result = Lexer::run($input);
+var_dump($result);
+</code></pre>
 
 <p>We should get the following output:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">array
+
+<pre><code>array
   0 =&gt; 
     array
-      &#39;match&#39; =&gt; string &#39;root&#39; (length=4)
-      &#39;token&#39; =&gt; string &#39;T_ROOT&#39; (length=6)
-      &#39;line&#39; =&gt; int 1
+      'match' =&gt; string 'root' (length=4)
+      'token' =&gt; string 'T_ROOT' (length=6)
+      'line' =&gt; int 1
   1 =&gt; 
     array
-      &#39;match&#39; =&gt; string &#39; &#39; (length=1)
-      &#39;token&#39; =&gt; string &#39;T_WHITESPACE&#39; (length=12)
-      &#39;line&#39; =&gt; int 1
+      'match' =&gt; string ' ' (length=1)
+      'token' =&gt; string 'T_WHITESPACE' (length=12)
+      'line' =&gt; int 1
   2 =&gt; 
     array
-      &#39;match&#39; =&gt; string &#39;-&gt;&#39; (length=2)
-      &#39;token&#39; =&gt; string &#39;T_BLOCKSTART&#39; (length=12)
-      &#39;line&#39; =&gt; int 1
+      'match' =&gt; string '-&gt;' (length=2)
+      'token' =&gt; string 'T_BLOCKSTART' (length=12)
+      'line' =&gt; int 1
   3 =&gt; 
     array
-      &#39;match&#39; =&gt; string &#39; &#39; (length=1)
-      &#39;token&#39; =&gt; string &#39;T_WHITESPACE&#39; (length=12)
-      &#39;line&#39; =&gt; int 1
+      'match' =&gt; string ' ' (length=1)
+      'token' =&gt; string 'T_WHITESPACE' (length=12)
+      'line' =&gt; int 1
   4 =&gt; 
     array
-      &#39;match&#39; =&gt; string &#39;Foo&#39; (length=3)
-      &#39;token&#39; =&gt; string &#39;T_IDENTIFIER&#39; (length=12)
-      &#39;line&#39; =&gt; int 1
+      'match' =&gt; string 'Foo' (length=3)
+      'token' =&gt; string 'T_IDENTIFIER' (length=12)
+      'line' =&gt; int 1
   5 =&gt; 
     array
-      &#39;match&#39; =&gt; string &#39;::&#39; (length=2)
-      &#39;token&#39; =&gt; string &#39;T_DOUBLESEPARATOR&#39; (length=17)
-      &#39;line&#39; =&gt; int 1
+      'match' =&gt; string '::' (length=2)
+      'token' =&gt; string 'T_DOUBLESEPARATOR' (length=17)
+      'line' =&gt; int 1
   6 =&gt; 
     array
-      &#39;match&#39; =&gt; string &#39;bar&#39; (length=3)
-      &#39;token&#39; =&gt; string &#39;T_IDENTIFIER&#39; (length=12)
-      &#39;line&#39; =&gt; int 1
-</pre></div>
+      'match' =&gt; string 'bar' (length=3)
+      'token' =&gt; string 'T_IDENTIFIER' (length=12)
+      'line' =&gt; int 1
+</code></pre>
 
 <p>We got a stream of tokens that represents our source file. Let&rsquo;s run it with invalid input:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$input</span> <span style="color: #000000">=</span> <span style="color: #000000">array(</span><span style="color: #C41A16">&#39;root -&gt; ?invalid&#39;</span><span style="color: #000000">);</span>
-<span style="color: #000000">$result</span> <span style="color: #000000">=</span> <span style="color: #000000">Lexer::run($input);</span>
-</pre></div>
+
+<pre><code>$input = array('root -&gt; ?invalid');
+$result = Lexer::run($input);
+</code></pre>
 
 <p>This raises an exception with the message <code>Unable to parse line 1.</code>.</p>
 
-<h1 id="wrapping-up:2b33965f6a73c85faf8445219846fbab">Wrapping Up</h1>
+<h1 id="wrapping-up">Wrapping Up</h1>
 
 <p>One thing you need to be aware of is that you need to place your token regex in the correct order - namely from special to general. If we put the <code>T_IDENTIFIER</code> before <code>T_ROOT</code>, the <code>root</code> keyword would always be matched as an identifier. While I haven&rsquo;t tried it out yet,<a href="https://twitter.com/#!/nikita_ppv">Nikita Popov</a> <a href="http://nikic.github.com/2011/10/23/Improving-lexing-performance-in-PHP.html">points out</a> that compiling all regexes into a big one leads to better performance.</p>
 
@@ -249,7 +259,7 @@ are enclosed (<code>()</code>) so we can find them exactly at the beginning and 
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>

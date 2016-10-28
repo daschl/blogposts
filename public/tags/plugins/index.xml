@@ -19,7 +19,7 @@
 
 &lt;p&gt;Note that this list is by no means complete. If you don&amp;rsquo;t find your own mentioned here, feel free to comment below. I&amp;rsquo;ve also tried to roughly group them so you can find them later more easily.&lt;/p&gt;
 
-&lt;h2 id=&#34;authentication-security:2d9d963d696621d0e0a880c999f831f8&#34;&gt;Authentication &amp;amp; Security&lt;/h2&gt;
+&lt;h2 id=&#34;authentication-security&#34;&gt;Authentication &amp;amp; Security&lt;/h2&gt;
 
 &lt;p&gt;&lt;a href=&#34;https://github.com/tmaiaroto/li3_access&#34;&gt;li3_access&lt;/a&gt;: Access control library by &lt;em&gt;tmaiaroto&lt;/em&gt;.&lt;/p&gt;
 
@@ -27,7 +27,7 @@
 
 &lt;p&gt;&lt;a href=&#34;https://github.com/gwoo/li3_oauth&#34;&gt;li3_oauth&lt;/a&gt;: OAuth library by &lt;em&gt;gwoo&lt;/em&gt;.&lt;/p&gt;
 
-&lt;h2 id=&#34;apis-and-externals:2d9d963d696621d0e0a880c999f831f8&#34;&gt;APIs and Externals&lt;/h2&gt;
+&lt;h2 id=&#34;apis-and-externals&#34;&gt;APIs and Externals&lt;/h2&gt;
 
 &lt;p&gt;&lt;a href=&#34;https://github.com/cgarvis/li3_delayed_job&#34;&gt;li3_delayed_job&lt;/a&gt;: Ruby&amp;rsquo;s Delayed::Job port to Lithium by &lt;em&gt;cgarvis&lt;/em&gt;.&lt;/p&gt;
 
@@ -37,7 +37,7 @@
 
 &lt;p&gt;&lt;a href=&#34;https://github.com/greut/li3_swiftmailer&#34;&gt;li3_swiftmailer&lt;/a&gt;: Interface to the Swiftmailer library by &lt;em&gt;greut&lt;/em&gt;.&lt;/p&gt;
 
-&lt;h2 id=&#34;view-layer-helpers:2d9d963d696621d0e0a880c999f831f8&#34;&gt;View Layer &amp;amp; Helpers&lt;/h2&gt;
+&lt;h2 id=&#34;view-layer-helpers&#34;&gt;View Layer &amp;amp; Helpers&lt;/h2&gt;
 
 &lt;p&gt;&lt;a href=&#34;https://github.com/greut/li3_analytics&#34;&gt;li3_analytics&lt;/a&gt;: Integrate Google Analytics easily by &lt;em&gt;greut&lt;/em&gt;.&lt;/p&gt;
 
@@ -63,7 +63,7 @@
 
 &lt;p&gt;&lt;a href=&#34;https://github.com/henrikbjorn/li3_twig&#34;&gt;li3_twig&lt;/a&gt;: Twig templating support by &lt;em&gt;henrikbjorn&lt;/em&gt;.&lt;/p&gt;
 
-&lt;h2 id=&#34;data-layer:2d9d963d696621d0e0a880c999f831f8&#34;&gt;Data Layer&lt;/h2&gt;
+&lt;h2 id=&#34;data-layer&#34;&gt;Data Layer&lt;/h2&gt;
 
 &lt;p&gt;&lt;a href=&#34;https://github.com/greut/li3_activerecord&#34;&gt;li3_activerecord&lt;/a&gt;: PHP ActiveRecord wrapper by &lt;em&gt;greut&lt;/em&gt;.&lt;/p&gt;
 
@@ -81,7 +81,7 @@
 
 &lt;p&gt;&lt;a href=&#34;https://github.com/vogan/li3_tree&#34;&gt;li3_tree&lt;/a&gt;: Tree model behavior by &lt;em&gt;vogan&lt;/em&gt;.&lt;/p&gt;
 
-&lt;h2 id=&#34;testing-documentation:2d9d963d696621d0e0a880c999f831f8&#34;&gt;Testing &amp;amp; Documentation&lt;/h2&gt;
+&lt;h2 id=&#34;testing-documentation&#34;&gt;Testing &amp;amp; Documentation&lt;/h2&gt;
 
 &lt;p&gt;&lt;a href=&#34;https://github.com/UnionOfRAD/li3_docs&#34;&gt;li3_docs&lt;/a&gt;: Official documentation plugin by &lt;em&gt;UnionOfRAD&lt;/em&gt;.&lt;/p&gt;
 
@@ -89,7 +89,7 @@
 
 &lt;p&gt;&lt;a href=&#34;http://rad-dev.org/li3_junit&#34;&gt;li3_junit&lt;/a&gt;: JUnit integration by &lt;em&gt;Michael Harris&lt;/em&gt;.&lt;/p&gt;
 
-&lt;h2 id=&#34;misc:2d9d963d696621d0e0a880c999f831f8&#34;&gt;Misc&lt;/h2&gt;
+&lt;h2 id=&#34;misc&#34;&gt;Misc&lt;/h2&gt;
 
 &lt;p&gt;&lt;a href=&#34;https://github.com/UnionOfRAD/li3_cldr&#34;&gt;li3_cldr&lt;/a&gt;: Query the Unicode CLDR by &lt;em&gt;UnionOfRAD&lt;/em&gt;.&lt;/p&gt;
 

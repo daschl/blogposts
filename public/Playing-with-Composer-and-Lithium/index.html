@@ -7,7 +7,7 @@
 
     <meta name="description" content="This post shows you how to manage your dependencies with Composer.">
 
-    <meta name="generator" content="Hugo 0.15" />
+    <meta name="generator" content="Hugo 0.16" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Playing with Composer and Lithium &middot; daschl writes. sometimes.">
@@ -48,7 +48,7 @@
                     <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl "><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
                     <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
@@ -74,41 +74,46 @@
                             
                         </p>
                     </header>
-
+                    
+                    
                     <div class="post-description">
                         
 
-<h2 id="about-composer:9b0b3007165e4b1358dd5daea08bd362">About Composer</h2>
+<h2 id="about-composer">About Composer</h2>
 
 <p><a href="http://packagist.org/about-composer">Composer</a> is a command-line tool that helps you manage your application dependencies. It automatically
 fetches packages, resolves dependencies and is easy to configure. The really good thing about Composer is that it isn&rsquo;t bound to a specific framework and can be used with every kind of repository. Composer is similar to package managers like npm, so you may feel at home quickly.</p>
 
 <p>The default repository of Composer is <a href="http://packagist.org/">Packagist</a>. If you want to use Composer in your project, you basically need two things: a <code>composer.json</code> file in your application root and the <code>composer.phar</code> application file itself. The easiest way to get it is to download it <a href="http://getcomposer.org/composer.phar">directly</a> and drop it somewhere on your file system. A minimal <code>composer.json</code> file looks like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">{
+
+<pre><code>{
     &quot;name&quot;: &quot;my-project&quot;,
     &quot;version&quot;: &quot;1.0.0&quot;,
     &quot;require&quot;: {
         &quot;monolog/monolog&quot;: &quot;1.0.0&quot;
     }
 }
-</pre></div>
+</code></pre>
 
 <p>As Packagist acts as the default repository, this will fetch the <a href="http://packagist.org/packages/monolog/monolog">monolog</a> library from there into the <code>vendor</code> directory. There are a lot of configuration options that can be found <a href="https://raw.github.com/composer/composer/master/doc/composer-schema.json">here</a>.</p>
 
 <p>Let&rsquo;s go through a quick example hands-on. Consider the following directory structure:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">/web
+
+<pre><code>/web
     composer.phar
     /my-project
         composer.json
-</pre></div>
+</code></pre>
 
 <p>If you execute the following commands:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span><span style="color: #A90D91">cd </span>my-project/
-<span style="color: #000000">$ </span>php path/to/composer.phar install
-</pre></div>
+
+<pre><code>$ cd my-project/
+$ php path/to/composer.phar install
+</code></pre>
 
 <p>Your directory structure will look like this afterwards:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">/web
+
+<pre><code>/web
     composer.phar
     composer.lock
     /my-project
@@ -117,12 +122,13 @@ fetches packages, resolves dependencies and is easy to configure. The really goo
             /bin
             /monolog
                 ....
-</pre></div>
+</code></pre>
 
 <p>If you stick with the defaults, all your dependencies will be installed in the <code>vendor</code> directory. Lithium uses the <code>libraries</code> directory to store the dependencies instead, but composer makes it easy to change the default directory (as you&rsquo;ll see shortly). You may also notice that there&rsquo;s a <code>bin</code> directory, which contains executable files (of course only if the installed  dependencies provide some).</p>
 
 <p>Composer also creates a <code>composer.lock</code> file that contains a &ldquo;frozen&rdquo; state of the current dependency tree.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">{
+
+<pre><code>{
     &quot;hash&quot;: &quot;a725fb1bf93f5c534217bbce2897ddc9&quot;,
     &quot;packages&quot;: [
         {
@@ -131,24 +137,26 @@ fetches packages, resolves dependencies and is easy to configure. The really goo
         }
     ]
 }
-</pre></div>
+</code></pre>
 
-<h2 id="managing-lithium:9b0b3007165e4b1358dd5daea08bd362">Managing Lithium</h2>
+<h2 id="managing-lithium">Managing Lithium</h2>
 
 <p>Now that we know how to work with Composer, let&rsquo;s manage a Lithium application with it. Currently, Lithium doesn&rsquo;t provide Composer packages out of the box, but it&rsquo;s easy to write one.</p>
 
 <p>The first thing you want to do is clone (or download) the <code>framework</code> repository. You can also use the <code>li3 library extract</code> command but then you&rsquo;d have to change the <code>LITHIUM_LIBRARY_PATH</code> back to the default location.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>git clone git://github.com/UnionOfRAD/framework.git composer-test
+
+<pre><code>$ git clone git://github.com/UnionOfRAD/framework.git composer-test
 Cloning into composer-test...
-remote: Counting objects: 29794, <span style="color: #A90D91">done</span>.
-remote: Compressing objects: 100% <span style="color: #000000">(</span>8622/8622<span style="color: #000000">)</span>, <span style="color: #A90D91">done</span>.
-remote: Total <span style="color: #1C01CE">29794</span> <span style="color: #000000">(</span>delta 18425<span style="color: #000000">)</span>, reused <span style="color: #1C01CE">29672</span> <span style="color: #000000">(</span>delta 18332<span style="color: #000000">)</span>
-Receiving objects: 100% <span style="color: #000000">(</span>29794/29794<span style="color: #000000">)</span>, 3.94 MiB | 1.52 MiB/s, <span style="color: #A90D91">done</span>.
-Resolving deltas: 100% <span style="color: #000000">(</span>18425/18425<span style="color: #000000">)</span>, <span style="color: #A90D91">done</span>.
-</pre></div>
+remote: Counting objects: 29794, done.
+remote: Compressing objects: 100% (8622/8622), done.
+remote: Total 29794 (delta 18425), reused 29672 (delta 18332)
+Receiving objects: 100% (29794/29794), 3.94 MiB | 1.52 MiB/s, done.
+Resolving deltas: 100% (18425/18425), done.
+</code></pre>
 
 <p>Now, instead of initializing the git submodules (which would fetch the Lithium core the good old way), add this <code>composer.json</code> file to <code>/composer-test</code>.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">{
+
+<pre><code>{
     &quot;name&quot;: &quot;composer-test&quot;,
     &quot;version&quot;: &quot;0.1.0&quot;,
     &quot;config&quot;: {
@@ -174,43 +182,46 @@ Resolving deltas: 100% <span style="color: #000000">(</span>18425/18425<span sty
         &quot;lithium&quot;: &quot;master&quot;
     }
 }
-</pre></div>
+</code></pre>
 
 <p>The <code>vendor-dir</code> setting changes the default <code>vendor</code> directory to <code>libraries</code>, which is recognized automatically by the Lithium class loader. If you don&rsquo;t like this approach, you could also change the <code>LITHIUM_LIBRARY_PATH</code> and point it to the <code>vendor</code> directory or create a symlink, but we stick with it for now. The <code>repositories</code> setting
 adds the git repository of the lithium core (if Lithium would provide a package on Packagist, then you wouldn&rsquo;t have to do this). The <code>require</code> setting is where all your application dependencies go into. The key <code>lithium</code> here refers to the package name in the <code>repositories</code> setting above.</p>
 
 <p>Let&rsquo;s install the dependencies:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>php path/to/composer.phar install
+
+<pre><code>$ php path/to/composer.phar install
 Installing dependencies
 Writing lock file
 Generating autoload files
-</pre></div>
+</code></pre>
 
 <p>If you look into the <code>/composer-test/libraries</code> directory, you can see that the <code>lithium</code> directory has been added successfully.</p>
 
 <p>If we now want to install <a href="http://twig.sensiolabs.org/">twig</a>, we can modify our <code>composer.json</code> file accordingly:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%">&quot;require&quot;: {
+
+<pre><code>&quot;require&quot;: {
     &quot;lithium&quot;: &quot;master&quot;,
     &quot;twig/extensions&quot;: &quot;master-dev&quot;
 }
-</pre></div>
+</code></pre>
 
 <p>Not that the twig library is already available on Packagist, so we don&rsquo;t have to tell Composer where to find it. We can now run <code>composer.phar update</code> to update our dependencies (and the <code>composer.lock</code> file):</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span style="color: #000000">$ </span>php ../composer.phar update
+
+<pre><code>$ php ../composer.phar update
 Updating dependencies
-- Package twig/twig <span style="color: #000000">(</span>1.6.0-dev<span style="color: #000000">)</span>
+- Package twig/twig (1.6.0-dev)
     Downloading
     Unpacking archive
     Cleaning up
 
-- Package twig/extensions <span style="color: #000000">(</span>master-dev<span style="color: #000000">)</span>
+- Package twig/extensions (master-dev)
     Downloading
     Unpacking archive
     Cleaning up
 
 Writing lock file
 Generating autoload files
-</pre></div>
+</code></pre>
 
 <p>As you can see, Composer has automatically downloaded all dependencies needed by <code>twig/extensions</code> too!</p>
 
@@ -237,7 +248,7 @@ Generating autoload files
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-		<li>&copy; Michael Nitschinger 2010-2016</li>
+                <li>&copy; Michael Nitschinger 2010-2016</li>
         </ul>
     </div>
 </div>
