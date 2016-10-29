@@ -308,6 +308,8 @@ The [WhitespaceTokenizer](https://github.com/blevesearch/bleve/blob/master/analy
 ## Benchmarks
 This is what you came for, right? Lets see how our implementation performs in comparison to the go one. To establish a meaningful baseline we need to define a common text corpus that is used for the benchmark.
 
+**Edit:** I forgot to mention the versions used: Rust is at `1.14.0-nightly` since the benchmarking tool is unstable and the version of go used is ` go1.7.1 darwin/amd64`.
+
 I copied the text out of the [Rust Wikipedia](https://en.wikipedia.org/wiki/Rust_(programming_language)) page that is exact 1000 characters long and contains around 150-160 tokens depending on the type of tokenizer used.
 
 ```rust
