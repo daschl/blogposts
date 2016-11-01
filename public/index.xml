@@ -2,12 +2,377 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>daschl writes. sometimes.</title>
-    <link>http://nitschinger.at/</link>
+    <link>http://nitschinger.at/index.xml</link>
     <description>Recent content on daschl writes. sometimes.</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 15 Jun 2016 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Fri, 28 Oct 2016 00:00:00 +0000</lastBuildDate>
     <atom:link href="http://nitschinger.at/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Text Analysis in Rust - Tokenization</title>
+      <link>http://nitschinger.at/Text-Analysis-in-Rust-Tokenization/</link>
+      <pubDate>Fri, 28 Oct 2016 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/Text-Analysis-in-Rust-Tokenization/</guid>
+      <description>
+
+&lt;p&gt;I work for &lt;a href=&#34;http://www.couchbase.com/&#34;&gt;Couchbase&lt;/a&gt; where we are currently developing full text search capabilities based on &lt;a href=&#34;blevesearch.com&#34;&gt;bleve&lt;/a&gt;. Bleve is implemented in &lt;a href=&#34;golang.org&#34;&gt;go&lt;/a&gt; and inspired by &lt;a href=&#34;http://lucene.apache.org/core/&#34;&gt;Apache Lucene&lt;/a&gt;, the reference implementation when it comes to full text search. While I am not directly involved in developing bleve I was curious about how it works internally and did take a look at the analyzers it provides.&lt;/p&gt;
+
+&lt;p&gt;Analyzers take your free form text and turn it into tokens which can then be used for indexing or queries. Since I know our team is currently at work doing performance optimizations in all places I wanted to take a stab at implementing similar analyzers in &lt;a href=&#34;https://www.rust-lang.org/&#34;&gt;Rust&lt;/a&gt; and see how they perform in comparison.&lt;/p&gt;
+
+&lt;p&gt;Analyzers typically consist of a tokenizer which slices a string into tokens and zero or more transformers which modify them subsequently (changing them, dropping them,&amp;hellip;). A very common use case is to take some text, tokenize (&amp;ldquo;split&amp;rdquo;) it by whitespace and then afterwards lowercase all tokens. This blog post only covers tokenizers, but transformers are planned for another post.&lt;/p&gt;
+
+&lt;p&gt;If you are only interested in how Rust is &lt;strong&gt;3 times as fast&lt;/strong&gt; as the go equivalent in our microbenchmarks, check out the last section. If you are curious about the implementation details, read on.&lt;/p&gt;
+
+&lt;p&gt;When I think about tokenizers and transformers the first thing that comes to mind in Rust are &lt;a href=&#34;https://doc.rust-lang.org/book/iterators.html&#34;&gt;Iterators&lt;/a&gt;. If we let our tokenizer implement the &lt;a href=&#34;https://doc.rust-lang.org/beta/std/iter/trait.Iterator.html&#34;&gt;Iterator&lt;/a&gt; trait we can make use of all the flexibility and high-level programming Rust provides without compromising performance.&lt;/p&gt;
+
+&lt;h2 id=&#34;tokenizers-and-tokens&#34;&gt;Tokenizers and Tokens&lt;/h2&gt;
+
+&lt;p&gt;So lets define our &lt;code&gt;Tokenizer&lt;/code&gt; as a trait which emits an &lt;code&gt;Iterator&lt;/code&gt; of &lt;code&gt;Tokens&lt;/code&gt;:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;trait&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Tokenizer&amp;lt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;&amp;#39;a&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;&lt;/span&gt; {
+    &lt;span style=&#34;color: #C41A16&#34;&gt;/// A Tokenizer always needs to produce an Iterator of Tokens.&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;TokenIter:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;Iterator&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;Item&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Token&amp;gt;&lt;/span&gt;;
+
+    &lt;span style=&#34;color: #C41A16&#34;&gt;/// Takes the input string and tokenizes it based on the implementations rules.&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;tokenize&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;input:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;&amp;#39;a&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;str&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Self::TokenIter&lt;/span&gt;;
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Note: I can&amp;rsquo;t wait for &lt;a href=&#34;https://github.com/rust-lang/rust/issues/34511&#34;&gt;impl Traits&lt;/a&gt; to land when it also supports trait functions, then this would clean up the declarations even further.&lt;/p&gt;
+
+&lt;p&gt;Lets take a first stab at the &lt;code&gt;Token&lt;/code&gt;:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Token&lt;/span&gt; {
+    &lt;span style=&#34;color: #000000&#34;&gt;term:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;String&lt;/span&gt;,
+    &lt;span style=&#34;color: #000000&#34;&gt;start_offset:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;,
+    &lt;span style=&#34;color: #000000&#34;&gt;position:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;,
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The &lt;code&gt;Token&lt;/code&gt; contains the &lt;code&gt;term&lt;/code&gt; sliced by the tokenizer and also related metadata like its absolute start offset in bytes as well as the relative position of the token in the stream. We need this information down the road for indexing and querying.&lt;/p&gt;
+
+&lt;p&gt;One problem with this approach is that the &lt;code&gt;String&lt;/code&gt; implicitly performs a heap allocation, and when we are slicing hundreds or thousands of small tokens we are allocating lots of small chunks on the heap.&lt;/p&gt;
+
+&lt;p&gt;The first idea to avoid this is using a &lt;code&gt;&amp;amp;str&lt;/code&gt; instead, but we potentially need to modify the term and then we are back at heap allocations (as an exercise for the reader, using &lt;a href=&#34;https://doc.rust-lang.org/std/borrow/enum.Cow.html&#34;&gt;Cow&lt;/a&gt; could also be an option). So, how can we make this more efficient?&lt;/p&gt;
+
+&lt;p&gt;One thing I realized during experimentation and later researching on the web is that when you are tokenizing text you mostly end up with lots of small tokens which maybe are even filtered out in the next step of the process. It would be nice if could stack allocate those small terms and as a fallback perform heap allocation for the rest! It turns out we can do just that, and here is one way:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;const&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;MAX_STACK_TERM_LEN:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;15&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;enum&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Term&lt;/span&gt; {
+    &lt;span style=&#34;color: #000000&#34;&gt;Stack&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;ArrayString&amp;lt;&lt;/span&gt;[&lt;span style=&#34;color: #A90D91&#34;&gt;u8&lt;/span&gt;; &lt;span style=&#34;color: #000000&#34;&gt;MAX_STACK_TERM_LEN&lt;/span&gt;]&lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;&lt;/span&gt;),
+    &lt;span style=&#34;color: #000000&#34;&gt;Heap&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;String&lt;/span&gt;),
+}
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Token&lt;/span&gt; {
+    &lt;span style=&#34;color: #000000&#34;&gt;term:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Term&lt;/span&gt;,
+    &lt;span style=&#34;color: #000000&#34;&gt;start_offset:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;,
+    &lt;span style=&#34;color: #000000&#34;&gt;position:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;,
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Woops, our &lt;code&gt;Token&lt;/code&gt; just got a little more complex. Our term is now an &lt;a href=&#34;https://doc.rust-lang.org/book/enums.html&#34;&gt;Enum&lt;/a&gt; which is either a stack allocated &lt;a href=&#34;https://docs.rs/arrayvec/0.3.20/arrayvec/struct.ArrayString.html&#34;&gt;ArrayString&lt;/a&gt; or a heap allocated &lt;a href=&#34;https://doc.rust-lang.org/std/string/struct.String.html&#34;&gt;String&lt;/a&gt;. Note that the &lt;code&gt;ArrayString&lt;/code&gt; implementation comes from the &lt;a href=&#34;https://crates.io/crates/arrayvec&#34;&gt;arrayvec&lt;/a&gt; crate and basically provides string functionality on top of a stack allocated array.&lt;/p&gt;
+
+&lt;p&gt;The nice thing about this is that we are not leaking this implementation detail to the caller, since we can always work with string slices on creation and access:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;impl&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Token&lt;/span&gt; {
+    &lt;span style=&#34;color: #633820&#34;&gt;#[inline]&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;from_str&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;term:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;str&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;start_offset:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;position:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Self&lt;/span&gt; {
+        &lt;span style=&#34;color: #000000&#34;&gt;Token&lt;/span&gt; {
+            &lt;span style=&#34;color: #000000&#34;&gt;term:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Token::convert_term&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;term&lt;/span&gt;),
+            &lt;span style=&#34;color: #000000&#34;&gt;start_offset:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;start_offset&lt;/span&gt;,
+            &lt;span style=&#34;color: #000000&#34;&gt;position:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;position&lt;/span&gt;,
+        }
+    }
+
+    &lt;span style=&#34;color: #633820&#34;&gt;#[inline]&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;convert_term&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;term:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;str&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Term&lt;/span&gt; {
+        &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;term&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;len&lt;/span&gt;() &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;MAX_STACK_TERM_LEN&lt;/span&gt; {
+            &lt;span style=&#34;color: #000000&#34;&gt;Term::Stack&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;ArrayString::&amp;lt;&lt;/span&gt;[&lt;span style=&#34;color: #000000&#34;&gt;_&lt;/span&gt;; &lt;span style=&#34;color: #000000&#34;&gt;MAX_STACK_TERM_LEN&lt;/span&gt;]&lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;::from&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;term&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;())
+        } &lt;span style=&#34;color: #A90D91&#34;&gt;else&lt;/span&gt; {
+            &lt;span style=&#34;color: #000000&#34;&gt;Term::Heap&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;term&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;to_string&lt;/span&gt;())
+        }
+    }
+
+    &lt;span style=&#34;color: #633820&#34;&gt;#[inline]&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;term&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;str&lt;/span&gt; {
+        &lt;span style=&#34;color: #A90D91&#34;&gt;match&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;term&lt;/span&gt; {
+            &lt;span style=&#34;color: #000000&#34;&gt;Term::Heap&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;ref&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;s&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;s&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;as_ref&lt;/span&gt;(),
+            &lt;span style=&#34;color: #000000&#34;&gt;Term::Stack&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;ref&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;s&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;s&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;as_ref&lt;/span&gt;(),
+        }
+    }
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;At this point we&amp;rsquo;ve departed from our go counterpart in two significant ways: we are using an iterator instead of &lt;a href=&#34;https://github.com/blevesearch/bleve/blob/master/analysis/type.go#L61-L67&#34;&gt;operating on a heap allocated array of tokens&lt;/a&gt; and we are using stack allocations for small tokens instead of heap allocating a &lt;a href=&#34;https://github.com/blevesearch/bleve/blob/master/analysis/type.go#L41&#34;&gt;Token&lt;/a&gt; and its term. I don&amp;rsquo;t know if go is doing escape analysis and optimizations in this case, but based on the benchmarks (read on) I don&amp;rsquo;t think so.&lt;/p&gt;
+
+&lt;p&gt;You might wonder why I selected a stack term length of 15 as the point where we start to do heap allocations. There is no fancy math behind it, I just tried tokenizing all kinds of text snippets and found this to be the sweet spot. Try it out for yourself, you&amp;rsquo;ll see that when you are increasing the size by a larger number the whole tokenization gets slower since rust needs to move those huge chunks around on the stack. Oh, and I did pick 15 and not 16 since the &lt;code&gt;ArrayString&lt;/code&gt; needs one byte for internal storage. If you get different numbers I&amp;rsquo;d love to read about it in the comments!&lt;/p&gt;
+
+&lt;p&gt;With all that in place, lets go work on some tokenizers.&lt;/p&gt;
+
+&lt;h2 id=&#34;the-whitespace-character-tokenizers&#34;&gt;The Whitespace &amp;amp; Character Tokenizers&lt;/h2&gt;
+
+&lt;p&gt;A common case in text analysis is splitting on whitespace, but thinking about more generally we probably want to split on all kinds of characters. So lets implement a character tokenizer which takes a function that takes the character as input and decides if it should split or not.&lt;/p&gt;
+
+&lt;p&gt;A quick warning: from here on it gets a bit more complex, so if you just came here for the benchmarks and you don&amp;rsquo;t care about the actual implementation you can safely skip to the next section.&lt;/p&gt;
+
+&lt;p&gt;Here is our &lt;code&gt;CharTokenIter&lt;/code&gt; struct:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;CharTokenIter&amp;lt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;&amp;#39;a&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;&lt;/span&gt; {
+    &lt;span style=&#34;color: #000000&#34;&gt;filter:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;, (&lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;char&lt;/span&gt;))) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;bool&lt;/span&gt;,
+    &lt;span style=&#34;color: #000000&#34;&gt;input:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;&amp;#39;a&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;str&lt;/span&gt;,
+    &lt;span style=&#34;color: #000000&#34;&gt;byte_offset:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;,
+    &lt;span style=&#34;color: #000000&#34;&gt;char_offset:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;,
+    &lt;span style=&#34;color: #000000&#34;&gt;position:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;,
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;It takes a &lt;code&gt;filter&lt;/code&gt; which is the function the implementations set when the &lt;code&gt;CharTokenIter&lt;/code&gt; is created. Naturally it also stores a reference to the original &lt;code&gt;input&lt;/code&gt; since it needs to create the tokens from it. Finally three variables are used to keep internal state that we&amp;rsquo;ll see getting populated in a second. &lt;code&gt;byte_offset&lt;/code&gt; stores the absolute offset in bytes of the token term, the &lt;code&gt;char_offset&lt;/code&gt; does the same but it only counts full characters. Finally the &lt;code&gt;position&lt;/code&gt; stores the relative position of the tokens in the stream. If you wonder why we are handling characters and bytes separately, welcome to the world of &lt;a href=&#34;https://en.wikipedia.org/wiki/Unicode&#34;&gt;Unicode&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;We can make creating our iterator a bit nicer:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;impl&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;&amp;#39;a&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;CharTokenIter&amp;lt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;&amp;#39;a&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;new&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;filter:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;, (&lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;char&lt;/span&gt;))) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;bool&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;input:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;&amp;#39;a&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;str&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Self&lt;/span&gt; {
+        &lt;span style=&#34;color: #000000&#34;&gt;CharTokenIter&lt;/span&gt; { &lt;span style=&#34;color: #000000&#34;&gt;filter:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;filter&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;input:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;input&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;byte_offset:&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;char_offset:&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;position:&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt; }
+    }
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now, lets get to where the rubber meets the road. We need to implement the &lt;code&gt;Iterator&lt;/code&gt; as specified in the contract, so our function looks like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;impl&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;&amp;#39;a&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;Iterator&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;CharTokenIter&amp;lt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;&amp;#39;a&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Item&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Token&lt;/span&gt;;
+
+    &lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;next&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;Option&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;Token&amp;gt;&lt;/span&gt; {
+    	&lt;span style=&#34;color: #177500&#34;&gt;// ponies and fairy dust in here...&lt;/span&gt;
+    }
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The rest of the code snippets that follow go inside the &lt;code&gt;next&lt;/code&gt; function. If we want to satisfy the Iterator semantics, we need to emit a token every time the predicate provided by our &lt;code&gt;filter&lt;/code&gt; matches:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;cidx&lt;/span&gt;, (&lt;span style=&#34;color: #000000&#34;&gt;bidx&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;)) &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;input&lt;/span&gt;[&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt;..]
+            .&lt;span style=&#34;color: #000000&#34;&gt;char_indices&lt;/span&gt;()
+            .&lt;span style=&#34;color: #000000&#34;&gt;enumerate&lt;/span&gt;()
+            .&lt;span style=&#34;color: #000000&#34;&gt;filter&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;filter&lt;/span&gt;) {
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We are slicing the input string starting at the current &lt;code&gt;byte_offset&lt;/code&gt;, then use &lt;code&gt;char_indices()&lt;/code&gt; on the iterator to also get the character index and then use &lt;code&gt;enumerate()&lt;/code&gt; to get the byte index. Equipped with the actual character and all kinds of offsets, we apply our filter function and if allowed to pass through craft our token and emit it:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;slice&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;input&lt;/span&gt;[&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt;..&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;bidx&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;skipped_bytes&lt;/span&gt;];
+&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;token&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Token::from_str&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;slice&lt;/span&gt;, &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;char_offset&lt;/span&gt;, &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;position&lt;/span&gt;);
+&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;char_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;char_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;slice&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;chars&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;count&lt;/span&gt;() &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;;
+&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;position&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;;
+&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;bidx&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;char_len&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;skipped_bytes&lt;/span&gt;;
+&lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;Some&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;token&lt;/span&gt;);
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;You can see that we are not only slicing out the token term but also adjusting the character and byte offsets properly. Now, what is this &lt;code&gt;skipped_bytes&lt;/code&gt; variable about? We&amp;rsquo;ll get to that in a second, but before that we need to cover another case: what happens if no split character is found or there are characters left after the last split character? To handle this, after our loop we need to handle the remainder:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;input&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;len&lt;/span&gt;() {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;slice&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;input&lt;/span&gt;[&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt;..];
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;token&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Token::from_str&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;slice&lt;/span&gt;, &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;char_offset&lt;/span&gt;, &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;position&lt;/span&gt;);
+    &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;input&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;len&lt;/span&gt;();
+    &lt;span style=&#34;color: #A90D91&#34;&gt;Some&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;token&lt;/span&gt;)
+} &lt;span style=&#34;color: #A90D91&#34;&gt;else&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;None&lt;/span&gt;
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If our byte offset is equal to the length of the input string we are done (signaled by returning &lt;code&gt;None&lt;/code&gt; to the iterator consumer), but in the other case we need to slice out the remaining bytes and return them as a final token.&lt;/p&gt;
+
+&lt;p&gt;Now that we&amp;rsquo;ve covered this lets get back to the &lt;code&gt;skipped_bytes&lt;/code&gt; thing from before.&lt;/p&gt;
+
+&lt;p&gt;We need to handle one more case: it can happen that more than one filter characters appear right after one another or at the very beginning of the text. Consider splitting on whitespace and the input looks like &lt;code&gt;hello \t\n world!&lt;/code&gt;. You want two tokens &lt;code&gt;hello&lt;/code&gt; and &lt;code&gt;world!&lt;/code&gt; and all the other whitespace should be consumed (accounted for in the byte offset, but not emitted inside an actual token term). To handle this case we keep track of the characters inside our for loop before emitting the token:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #177500&#34;&gt;// Temp variables to account skipping&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;skipped_bytes&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;;
+&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;skipped_chars&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;;
+&lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;cidx&lt;/span&gt;, (&lt;span style=&#34;color: #000000&#34;&gt;bidx&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;)) &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;input&lt;/span&gt;[&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt;..]
+    .&lt;span style=&#34;color: #000000&#34;&gt;char_indices&lt;/span&gt;()
+    .&lt;span style=&#34;color: #000000&#34;&gt;enumerate&lt;/span&gt;()
+    .&lt;span style=&#34;color: #000000&#34;&gt;filter&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;filter&lt;/span&gt;) {
+        &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;char_len&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;len_utf8&lt;/span&gt;();
+
+        &lt;span style=&#34;color: #177500&#34;&gt;// Check and skip chars if needed&lt;/span&gt;
+        &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cidx&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;skipped_chars&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt; {
+            &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;char_len&lt;/span&gt;;
+            &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;char_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;;
+            &lt;span style=&#34;color: #000000&#34;&gt;skipped_bytes&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;skipped_bytes&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;char_len&lt;/span&gt;;
+            &lt;span style=&#34;color: #000000&#34;&gt;skipped_chars&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;;
+            &lt;span style=&#34;color: #A90D91&#34;&gt;continue&lt;/span&gt;;
+        }
+
+        &lt;span style=&#34;color: #177500&#34;&gt;// Same as before down here&lt;/span&gt;
+        &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;slice&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;input&lt;/span&gt;[&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt;..&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;bidx&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;skipped_bytes&lt;/span&gt;];
+        &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;token&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Token::from_str&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;slice&lt;/span&gt;, &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;char_offset&lt;/span&gt;, &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;position&lt;/span&gt;);
+        &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;char_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;char_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;slice&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;chars&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;count&lt;/span&gt;() &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;;
+        &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;position&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;;
+        &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;bidx&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;char_len&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;skipped_bytes&lt;/span&gt;;
+        &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;Some&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;token&lt;/span&gt;);
+    }
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Here is the &lt;code&gt;next&lt;/code&gt; function in its full glory:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;next&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;Option&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;Token&amp;gt;&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;skipped_bytes&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;skipped_chars&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;cidx&lt;/span&gt;, (&lt;span style=&#34;color: #000000&#34;&gt;bidx&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;)) &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;input&lt;/span&gt;[&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt;..]
+        .&lt;span style=&#34;color: #000000&#34;&gt;char_indices&lt;/span&gt;()
+        .&lt;span style=&#34;color: #000000&#34;&gt;enumerate&lt;/span&gt;()
+        .&lt;span style=&#34;color: #000000&#34;&gt;filter&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;filter&lt;/span&gt;)
+        {
+            &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;char_len&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;len_utf8&lt;/span&gt;();
+            &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cidx&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;skipped_chars&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt; {
+                &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;char_len&lt;/span&gt;;
+                &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;char_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;;
+                &lt;span style=&#34;color: #000000&#34;&gt;skipped_bytes&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;skipped_bytes&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;char_len&lt;/span&gt;;
+                &lt;span style=&#34;color: #000000&#34;&gt;skipped_chars&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;;
+                &lt;span style=&#34;color: #A90D91&#34;&gt;continue&lt;/span&gt;;
+            }
+
+            &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;slice&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;input&lt;/span&gt;[&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt;..&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;bidx&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;skipped_bytes&lt;/span&gt;];
+            &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;token&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Token::from_str&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;slice&lt;/span&gt;, &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;char_offset&lt;/span&gt;, &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;position&lt;/span&gt;);
+            &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;char_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;char_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;slice&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;chars&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;count&lt;/span&gt;() &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;;
+            &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;position&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;;
+            &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;bidx&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;char_len&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;skipped_bytes&lt;/span&gt;;
+            &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;Some&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;token&lt;/span&gt;);
+        }
+
+    &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;input&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;len&lt;/span&gt;() {
+        &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;slice&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;input&lt;/span&gt;[&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt;..];
+        &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;token&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Token::from_str&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;slice&lt;/span&gt;, &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;char_offset&lt;/span&gt;, &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;position&lt;/span&gt;);
+        &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;input&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;len&lt;/span&gt;();
+        &lt;span style=&#34;color: #A90D91&#34;&gt;Some&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;token&lt;/span&gt;)
+    } &lt;span style=&#34;color: #A90D91&#34;&gt;else&lt;/span&gt; {
+        &lt;span style=&#34;color: #A90D91&#34;&gt;None&lt;/span&gt;
+    }
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;How would we implement a &lt;code&gt;Whitespace&lt;/code&gt; tokenizer with this? One might be tempted to match against &lt;code&gt;&#39; &#39;&lt;/code&gt;, but keep in mind that whitespace, when dealing with unicode, can be many more different characters so its best to not hardcode them in a gigantic match clause and instead use a built-in function.&lt;/p&gt;
+
+&lt;p&gt;Here is our &lt;code&gt;WhitespaceTokenizer&lt;/code&gt;:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;WhitespaceTokenizer&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;impl&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;&amp;#39;a&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Tokenizer&amp;lt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;&amp;#39;a&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;WhitespaceTokenizer&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;TokenIter&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;CharTokenIter&amp;lt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;&amp;#39;a&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;&lt;/span&gt;;
+
+    &lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;tokenize&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;input:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;&amp;#39;a&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;str&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Self::TokenIter&lt;/span&gt; {
+        &lt;span style=&#34;color: #000000&#34;&gt;CharTokenIter::new&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;is_whitespace&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;input&lt;/span&gt;)
+    }
+}
+
+&lt;span style=&#34;color: #633820&#34;&gt;#[inline]&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;is_whitespace&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;input:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;, (&lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;char&lt;/span&gt;))) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;bool&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;_&lt;/span&gt;, (&lt;span style=&#34;color: #000000&#34;&gt;_&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;)) &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;*input&lt;/span&gt;;
+    &lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;is_whitespace&lt;/span&gt;()
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We initialize the &lt;code&gt;CharTokenIter&lt;/code&gt; and in use the &lt;a href=&#34;https://doc.rust-lang.org/std/primitive.char.html#method.is_whitespace&#34;&gt;char::is_whitespace()&lt;/a&gt; method to check for a unicode whitespace character. Using it is now pretty simple, consider this test case:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;#[test]&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;should_split_between_words&lt;/span&gt;() {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;expected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;vec!&lt;/span&gt;[&lt;span style=&#34;color: #000000&#34;&gt;Token::from_str&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;hello&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;), &lt;span style=&#34;color: #000000&#34;&gt;Token::from_str&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;world&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #1C01CE&#34;&gt;6&lt;/span&gt;, &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;)];
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;actually&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;WhitespaceTokenizer&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;tokenize&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;hello world&amp;quot;&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;collect::&amp;lt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;Vec&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;Token&amp;gt;&amp;gt;&lt;/span&gt;();
+    &lt;span style=&#34;color: #000000&#34;&gt;assert_eq!&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;expected&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;actually&lt;/span&gt;);
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This implementation also works with all kinds of unicode characters that may have different byte lengths (and this is where our different tracking of character and byte offsets becomes important):&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;#[test]&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;should_handle_mixed_chars&lt;/span&gt;() {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;expected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;vec!&lt;/span&gt;[&lt;span style=&#34;color: #000000&#34;&gt;Token::from_str&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;abc界&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;), &lt;span style=&#34;color: #000000&#34;&gt;Token::from_str&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;abc界&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #1C01CE&#34;&gt;5&lt;/span&gt;, &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;)];
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;actually&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;WhitespaceTokenizer&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;tokenize&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;abc界 abc界&amp;quot;&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;collect::&amp;lt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;Vec&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;Token&amp;gt;&amp;gt;&lt;/span&gt;();
+    &lt;span style=&#34;color: #000000&#34;&gt;assert_eq!&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;expected&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;actually&lt;/span&gt;);
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Before we move on to benchmarks, lets take a quick look at the corresponding &lt;a href=&#34;https://github.com/blevesearch/bleve/blob/master/analysis/tokenizer/character/character.go&#34;&gt;go implementation&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;The &lt;a href=&#34;https://github.com/blevesearch/bleve/blob/master/analysis/tokenizer/character/character.go#L35&#34;&gt;CharacterTokenizer&lt;/a&gt; loops through each &lt;a href=&#34;https://blog.golang.org/strings&#34;&gt;rune&lt;/a&gt; and very similar to our implementation keeps track of all kinds of offsets and slices out terms as needed. The big difference is that it can&amp;rsquo;t do explicit stack allocations and upfront allocates a 1024 element slice for its &lt;code&gt;TokenStream&lt;/code&gt; which would be extended if more tokens are needed.&lt;/p&gt;
+
+&lt;p&gt;The &lt;a href=&#34;https://github.com/blevesearch/bleve/blob/master/analysis/tokenizer/whitespace/whitespace.go#L32&#34;&gt;WhitespaceTokenizer&lt;/a&gt; is also very similar and calls a runtime-provided function that checks if the given rune is a unicode whitespace character or not.&lt;/p&gt;
+
+&lt;h2 id=&#34;benchmarks&#34;&gt;Benchmarks&lt;/h2&gt;
+
+&lt;p&gt;This is what you came for, right? Lets see how our implementation performs in comparison to the go one. To establish a meaningful baseline we need to define a common text corpus that is used for the benchmark.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Edit:&lt;/strong&gt; I forgot to mention the versions used: Rust is at &lt;code&gt;1.14.0-nightly&lt;/code&gt; since the benchmarking tool is unstable and the version of go used is &lt;code&gt;go1.7.1 darwin/amd64&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;I copied the text out of the &lt;a href=&#34;https://en.wikipedia.org/wiki/Rust_(programming_language)&#34;&gt;Rust Wikipedia&lt;/a&gt; page that is exact 1000 characters long and contains around 150-160 tokens depending on the type of tokenizer used.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;INPUT:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;&amp;#39;static&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;str&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt;
+    &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;In addition to conventional static typing, before version 0.4, Rust also supported \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     typestates. The typestate system modeled assertions before and after program statements, \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     through use of a special check statement. Discrepancies could be discovered at compile time, \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     rather than when a program was running, as might be the case with assertions in C or C++ \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     code. The typestate concept was not unique to Rust, as it was first introduced in the \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     language NIL. Typestates were removed because in practice they found little use, though the \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     same functionality can still be achieved with branding patterns.&lt;/span&gt;
+
+&lt;span style=&#34;color: #C41A16&#34;&gt;The style changed between \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     0.2, 0.3 and 0.4. Version 0.2 introduced classes for the first time, with version 0.3 adding \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     a number of features including destructors and polymorphism through the use of interfaces. \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     In Rust 0.4, traits were added as a means to provide inheritance; In January 2014, the \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     editor-in-chief of Dr Dobb&amp;#39;s, Andrew Binstock, commented on Rust&amp;#39;s chances to become a \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     competitor to C++.&amp;quot;&lt;/span&gt;;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If we split on unicode whitespace, there are exactly 159 tokens.&lt;/p&gt;
+
+&lt;p&gt;Here is our benchmark for rust:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;#[bench]&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;bench_whitespace_tokenizer&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;b:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Bencher&lt;/span&gt;) {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;t&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;WhitespaceTokenizer&lt;/span&gt;;
+   &lt;span style=&#34;color: #000000&#34;&gt;b&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;iter&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;||&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;t&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;tokenize&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;INPUT&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;last&lt;/span&gt;());
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Running with &lt;code&gt;cargo +nightly bench&lt;/code&gt; on my machine (a 2,5GHz i7, OSX, 16GB RAM), rust reports:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;test bench_whitespace_tokenizer ... bench:       6,972 ns/iter (+/- 1,148)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;It takes 7 microseconds to process 159 tokens, so it can process 23 tokens per microsecond. This translates into roughly 23 million tokens per second. Put differently, with this input text we can tokenize around 136MB/s on a single core.&lt;/p&gt;
+
+&lt;p&gt;Here is our go equivalent in bleve:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;var&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;sampleLargeInput&lt;/span&gt; = []&lt;span style=&#34;color: #A90D91&#34;&gt;byte&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;`In addition to conventional static typing, before version 0.4, Rust also supported \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     typestates. The typestate system modeled assertions before and after program statements, \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     through use of a special check statement. Discrepancies could be discovered at compile time, \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     rather than when a program was running, as might be the case with assertions in C or C++ \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     code. The typestate concept was not unique to Rust, as it was first introduced in the \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     language NIL. Typestates were removed because in practice they found little use, though the \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     same functionality can still be achieved with branding patterns.&lt;/span&gt;
+
+&lt;span style=&#34;color: #C41A16&#34;&gt;The style changed between \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     0.2, 0.3 and 0.4. Version 0.2 introduced classes for the first time, with version 0.3 adding \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     a number of features including destructors and polymorphism through the use of interfaces. \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     In Rust 0.4, traits were added as a means to provide inheritance; In January 2014, the \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     editor-in-chief of Dr Dobb&amp;#39;s, Andrew Binstock, commented on Rust&amp;#39;s chances to become a \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     competitor to C++.`&lt;/span&gt;)
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;BenchmarkTokenizeEnglishText&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;b&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;*testing&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;B&lt;/span&gt;) {
+
+	&lt;span style=&#34;color: #000000&#34;&gt;tokenizer&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;character&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;NewCharacterTokenizer&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;notSpace&lt;/span&gt;)
+	&lt;span style=&#34;color: #000000&#34;&gt;b&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;ResetTimer&lt;/span&gt;()
+
+	&lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;; &lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt; &amp;lt; &lt;span style=&#34;color: #000000&#34;&gt;b&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;N&lt;/span&gt;; &lt;span style=&#34;color: #000000&#34;&gt;i++&lt;/span&gt; {
+		&lt;span style=&#34;color: #000000&#34;&gt;tokenizer&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;Tokenize&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;sampleLargeInput&lt;/span&gt;)
+	}
+
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;It reports:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;BenchmarkTokenizeEnglishText-8   	   50000	     22893 ns/op	   19072 B/op	     171 allocs/op
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;So each run takes close to 23 microseconds compared of 7 in Rust! That&amp;rsquo;s roughly three times slower, clocking at
+around 7 million tokens per second or 41MB/s per core.&lt;/p&gt;
+
+&lt;p&gt;Why is that? Let&amp;rsquo;s try disabling the stack allocation optimization in rust by setting the &lt;code&gt;MAX_STACK_TERM_LEN&lt;/code&gt; to 0 and rerun the benchmark:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;test bench_whitespace_tokenizer ... bench:      10,154 ns/iter (+/- 1,553)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;We lost a couple microseconds here, but I think the rest is just LLVM and Rust being really good at optimizing the iterator and loop code (keep in mind we are still stack-allocating the tokens themselves while in go I&amp;rsquo;m pretty sure its heap allocated as well in the big &lt;code&gt;TokenStream&lt;/code&gt; slice).&lt;/p&gt;
+
+&lt;p&gt;Now with any kind of microbenchmarking it is hard to say how the difference will look like on your hardware and dataset. More realistic numbers could be gathered by tokenizing large chunks of for example the Wikipedia dataset and then looking at the overall numbers. Of course your mileage may also vary per machine, so if you are curious please run the benchmarks on your hardware - and please post them in the comments below!&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Scheduling Timers on OS X with Rust and Kqueue</title>
@@ -3403,203 +3768,6 @@ SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further detail
 &lt;p&gt;Once you know the abstraction in spymemcached and how it works, switching logging implementations is easy and straightforward. If you work with one of the Couchbase people to report errors, please try to include output with DEBUG turned on, because this includes lots of useful information that can be used to determine the failure sources.&lt;/p&gt;
 
 &lt;p&gt;With the SLF4J facade added in the next spy release (2.9), you will be able to plug every large logging framework out there into the SDK. Let us know if you see a use case not covered with these mechanisms or if you have other comments on this.&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>Couchbase Java SDK Internals</title>
-      <link>http://nitschinger.at/Couchbase-Java-SDK-Internals/</link>
-      <pubDate>Wed, 17 Apr 2013 00:00:00 +0000</pubDate>
-      
-      <guid>http://nitschinger.at/Couchbase-Java-SDK-Internals/</guid>
-      <description>
-
-&lt;h2 id=&#34;motivation&#34;&gt;Motivation&lt;/h2&gt;
-
-&lt;p&gt;This blog post is intended to be a very detailed and informative article for those who already have used the Couchbase Java SDK and want to know how the internals work. This is not a introduction on how to use the Java SDK and we&amp;rsquo;ll cover some fairly advanced topics on the way.&lt;/p&gt;
-
-&lt;p&gt;Normally, when talking about the SDK we mean everything that is needed to get you going (Client library, documentation, release notes,&amp;hellip;). In this article though, the SDK refers to the Client library (code) unless stated otherwise.&lt;/p&gt;
-
-&lt;p&gt;As always, if you have feedback please let me/us know!&lt;/p&gt;
-
-&lt;h2 id=&#34;introduction&#34;&gt;Introduction&lt;/h2&gt;
-
-&lt;p&gt;First and foremost, it is important to understand that the SDK wraps and extends the functionality of the &lt;a href=&#34;https://github.com/couchbase/spymemcached&#34;&gt;spymemcached&lt;/a&gt; (called &amp;ldquo;spy&amp;rdquo;) memcached library. One of the protocols used internally is the memcached protocol, and a lot of functionality can be reused. On the other hand, once you start to peel off the first layers of the SDK you will notice that some components are somewhat more complex because of the fact that spy provides more features than the SDK needs in the first place. The other part is to remember that a lot of the components are interwoven, so you always need to get the dependency right. Most of the time, we release a new spy version at the same date with a new SDK, because new stuff has been added or fixed.&lt;/p&gt;
-
-&lt;p&gt;So, aside from reusing the functionality provided by spy, the SDK mainly adds two blocks of functionality: automatic cluster topology management and since 1.1 (and 2.0 server) support for Views. Aside from that it also provides administrative facilities like bucket and design document management.&lt;/p&gt;
-
-&lt;p&gt;To understand how the client operates, we&amp;rsquo;ll dissect the whole process in different life cycle phases of the client. After we go through all three phases (bootstrap, operation and shutdown) you should have a clear picture of whats going on under the hood. Note that there is a separate blog post in the making about error handling, so we won&amp;rsquo;t cover that here in greater detail (which will be published a few weeks later on the same blog here).&lt;/p&gt;
-
-&lt;h2 id=&#34;phase-1-bootstrap&#34;&gt;Phase 1: Bootstrap&lt;/h2&gt;
-
-&lt;p&gt;Before we can actually start serving operations like &lt;code&gt;get()&lt;/code&gt; and &lt;code&gt;set()&lt;/code&gt;, we need to bootstrap the &lt;code&gt;CouchbaseClient&lt;/code&gt; object. The important part that we need to accomplish here is to initially get a cluster configuration (which contains the nodes and vBucket map), but also to establish a streaming connection to receive cluster updates in (near) real-time.&lt;/p&gt;
-
-&lt;p&gt;We take the list of nodes passing during bootstrap and iterate over it. The first node in the list that can be contacted on port 8091 is used to walk the RESTful interface on the server. If it is not available, the next one will be tried. This means that going from the provided &lt;code&gt;http://host:port/pools&lt;/code&gt; URI we eventually follow the links to the bucket entity. All this happens inside a &lt;code&gt;ConfigurationProvider&lt;/code&gt;, which is in this case the &lt;code&gt;com.couchbase.client.vbucket.ConfigurationProviderHTTP&lt;/code&gt;. If you want to poke around on the internals, look for &lt;code&gt;getBucketConfiguration&lt;/code&gt; and &lt;code&gt;readPools&lt;/code&gt; methods.&lt;/p&gt;
-
-&lt;p&gt;A (successful) walk can be illustrated like this:&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;GET /pools&lt;/li&gt;
-&lt;li&gt;look for the &amp;ldquo;default&amp;rdquo; pools&lt;/li&gt;
-&lt;li&gt;GET /pools/default&lt;/li&gt;
-&lt;li&gt;look for the &amp;ldquo;buckets&amp;rdquo; hash which contains the bucket list&lt;/li&gt;
-&lt;li&gt;GET /pools/default/buckets&lt;/li&gt;
-&lt;li&gt;parse the list of buckets and extract the one provided by the application&lt;/li&gt;
-&lt;li&gt;GET /pools/default/buckets/&lt;bucketname&gt;&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;Now we are at the REST endpoint we need. Inside this JSON response, you&amp;rsquo;ll find all useful details that gets also be used by SDK internally (for example &lt;code&gt;stre  amingUri&lt;/code&gt;, &lt;code&gt;nodes&lt;/code&gt; and &lt;code&gt;vBucketServerMap&lt;/code&gt;). The config gets parsed and stored. Before we move on, let&amp;rsquo;s quickly discuss the strange &lt;code&gt;pools&lt;/code&gt; part inside our REST walk:&lt;/p&gt;
-
-&lt;p&gt;The concept of a resource pool to group buckets was designed for Couchbase Server, but is currently not implemented. Still, the REST API is implemented that way and therefore all SDKs support it. That said, while we could theoretically just go directly to &lt;code&gt;/pools/default/buckets&lt;/code&gt; and skip the first few queries, the current behaviour is future proof so you won&amp;rsquo;t have to change the bootstrap code once the server implements it.&lt;/p&gt;
-
-&lt;p&gt;Back to our bootstrap phase. Now that we have a valid cluster config which contains all the nodes (and their hostnames or ip addresses), we can establish connections to them. Aside from establishing the data connections, we also need to instantiate a streaming connection to one of them. For simplicity reasons, we just establish the streaming connection to the node from the list where we got our initial configuration.&lt;/p&gt;
-
-&lt;p&gt;This gets us to an important point to keep in mind: if you have lots of CouchbaseClient objects running on many nodes and they all get bootstrapped with the same list, they may end up connecting to the same node for the streaming connection and create a possible bottleneck. Therefore, to distribute the load a little better I recommend shuffling the array before it gets passed in to the CouchbaseClient object. When you only have a few CouchbaseClient objects connected to your cluster, that won&amp;rsquo;t be a problem at all.&lt;/p&gt;
-
-&lt;p&gt;The streaming connection URI is taken from the config we got previously, and normally looks like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;streamingUri: &amp;quot;/pools/default/bucketsStreaming/default?bucket_uuid=88cae4a609eea500d8ad072fe71a7290&amp;quot;
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;If you point your browser to this address, you will also get the cluster topology updates streamed in real-time. Since the streaming connection needs to be established all the time and potentially blocks a thread, this is done in the background handled by different threads. We are using the NIO framework &lt;a href=&#34;http://netty.io&#34;&gt;Netty&lt;/a&gt; for this task, which provides a very handy way of dealing with asynchronous operations. If you want to start digging into this part, keep in mind that all read operations are completely separate from write operations, so you need to deal with handlers that take care of what comes back from the server. Aside from some wiring needed for Netty, the business logic can be found in &lt;code&gt;com.couchbase.client.vbucket.BucketMonitor&lt;/code&gt; and &lt;code&gt;com.couchbase.client.vbucket.BucketUpdateResponseHandler&lt;/code&gt;. We also try to reestablish this streaming connection if the socket gets closed (for example if this node gets rebalanced out of the cluster).&lt;/p&gt;
-
-&lt;p&gt;To actually shuffle data to the cluster nodes, we need to open various sockets to them. Note that there is absolutely no connection pooling needed inside the client, because we manage all sockets proactively. Aside from the special streaming connection to one of the severs (which is opened against port 8091), we need to open the following connections:&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;Memcached Socket: Port 11210&lt;/li&gt;
-&lt;li&gt;View Socket: Port 8092&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;Note that port 11211 is not used inside the client SDKs, but used to connect generic memcached clients that are not cluster aware. This means that these generic clients do not get updated cluster topologies.&lt;/p&gt;
-
-&lt;p&gt;So as a rule of thumb, if you have a 10 node cluster running, one CouchbaseClient object open about 21 (2*10 + 1) client sockets. These are directly managed, so if a node gets removed or added the numbers will change accordingly.&lt;/p&gt;
-
-&lt;p&gt;Now that all sockets have been opened, we are ready to perform regular cluster operations. As you can see, there is a lot of overhead involved when the CouchbaseClient object gets bootstrapped. Because of this fact, we strongly discourage you from either creating a new object on every request or running a lot of CouchbaseClient objects in one application server. This only adds unnecessary overhead and load on the application server and adds on the total sockets opened against the cluster (resulting in a possible performance problem).&lt;/p&gt;
-
-&lt;p&gt;As a point of reference, with regular INFO level logging enabled this is how connecting and disconnecting to a 1-node cluster (Couchbase bucket) should look like:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;Apr 17, 2013 3:14:49 PM com.couchbase.client.CouchbaseProperties setPropertyFile
-INFO: Could not load properties file &amp;quot;cbclient.properties&amp;quot; because: File not found with system classloader.
-2013-04-17 15:14:49.656 INFO com.couchbase.client.CouchbaseConnection:  Added {QA sa=/127.0.0.1:11210, #Rops=0, #Wops=0, #iq=0, topRop=null, topWop=null, toWrite=0, interested=0} to connect queue
-2013-04-17 15:14:49.673 INFO com.couchbase.client.CouchbaseConnection:  Connection state changed for sun.nio.ch.SelectionKeyImpl@2adb1d4
-2013-04-17 15:14:49.718 INFO com.couchbase.client.ViewConnection:  Added localhost to connect queue
-2013-04-17 15:14:49.720 INFO com.couchbase.client.CouchbaseClient:  viewmode property isn&#39;t defined. Setting viewmode to production mode
-2013-04-17 15:14:49.856 INFO com.couchbase.client.CouchbaseConnection:  Shut down Couchbase client
-2013-04-17 15:14:49.861 INFO com.couchbase.client.ViewConnection:  Node localhost has no ops in the queue
-2013-04-17 15:14:49.861 INFO com.couchbase.client.ViewNode:  I/O reactor terminated for localhost
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;If you are connecting to a Couchbase Server 1.8 or against a Memcache-Bucket you won&amp;rsquo;t see View connections getting established:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;INFO: Could not load properties file &amp;quot;cbclient.properties&amp;quot; because: File not found with system classloader.
-2013-04-17 15:16:44.295 INFO com.couchbase.client.CouchbaseConnection:  Added {QA sa=/192.168.56.101:11210, #Rops=0, #Wops=0, #iq=0, topRop=null, topWop=null, toWrite=0, interested=0} to connect queue
-2013-04-17 15:16:44.297 INFO com.couchbase.client.CouchbaseConnection:  Added {QA sa=/192.168.56.102:11210, #Rops=0, #Wops=0, #iq=0, topRop=null, topWop=null, toWrite=0, interested=0} to connect queue
-2013-04-17 15:16:44.298 INFO com.couchbase.client.CouchbaseConnection:  Added {QA sa=/192.168.56.103:11210, #Rops=0, #Wops=0, #iq=0, topRop=null, topWop=null, toWrite=0, interested=0} to connect queue
-2013-04-17 15:16:44.298 INFO com.couchbase.client.CouchbaseConnection:  Added {QA sa=/192.168.56.104:11210, #Rops=0, #Wops=0, #iq=0, topRop=null, topWop=null, toWrite=0, interested=0} to connect queue
-2013-04-17 15:16:44.306 INFO com.couchbase.client.CouchbaseConnection:  Connection state changed for sun.nio.ch.SelectionKeyImpl@38b5dac4
-2013-04-17 15:16:44.313 INFO com.couchbase.client.CouchbaseClient:  viewmode property isn&#39;t defined. Setting viewmode to production mode
-2013-04-17 15:16:44.332 INFO com.couchbase.client.CouchbaseConnection:  Connection state changed for sun.nio.ch.SelectionKeyImpl@69945ce
-2013-04-17 15:16:44.333 INFO com.couchbase.client.CouchbaseConnection:  Connection state changed for sun.nio.ch.SelectionKeyImpl@6766afb3
-2013-04-17 15:16:44.334 INFO com.couchbase.client.CouchbaseConnection:  Connection state changed for sun.nio.ch.SelectionKeyImpl@2b2d96f2
-2013-04-17 15:16:44.368 INFO net.spy.memcached.auth.AuthThread:  Authenticated to 192.168.56.103/192.168.56.103:11210
-2013-04-17 15:16:44.368 INFO net.spy.memcached.auth.AuthThread:  Authenticated to 192.168.56.102/192.168.56.102:11210
-2013-04-17 15:16:44.369 INFO net.spy.memcached.auth.AuthThread:  Authenticated to 192.168.56.101/192.168.56.101:11210
-2013-04-17 15:16:44.369 INFO net.spy.memcached.auth.AuthThread:  Authenticated to 192.168.56.104/192.168.56.104:11210
-2013-04-17 15:16:44.490 INFO com.couchbase.client.CouchbaseConnection:  Shut down Couchbase client
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;h2 id=&#34;phase-2-operations&#34;&gt;Phase 2: Operations&lt;/h2&gt;
-
-&lt;p&gt;When the SDK is bootstrapped, it enables your application to run operations against the attached cluster. For the purpose of this blog post, we need to distinguish between operations that get executed against a stable cluster and operations on a cluster that is currently experiencing some form of topology change (be it planned because of adding nodes or unplanned because of a node failure). Let&amp;rsquo;s tackle the regular operations first.&lt;/p&gt;
-
-&lt;h3 id=&#34;operations-against-a-stable-cluster&#34;&gt;Operations against a stable cluster&lt;/h3&gt;
-
-&lt;p&gt;While not directly visible in the first place, inside the SDK we need to distinguish between memcached operations and View operations. All operations that have a unique key in their method signature can be treaded as memcached operations. All of them eventually end up getting funneled through spy. View operations on the other hand are implemented completely inside the SDK itself.&lt;/p&gt;
-
-&lt;p&gt;Both View and memcached operations are asynchronous. Inside spy, there is one thread (call the I/O thread) dedicated to deal with IO operations. Note that in high-traffic environments, its not unusual that this thread is always active. It uses the non-blocking Java NIO mechanisms to deal with traffic, and loops around &amp;ldquo;selectors&amp;rdquo; that get notified when data can either be written or read. If you profile your application you&amp;rsquo;ll see that this thread spends most of its time waiting on a &lt;code&gt;select&lt;/code&gt; method, it means that it is idling there waiting to be notified for new traffic. The concepts used inside spy to deal with this are common Java NIO knowledge, so you may want to look into the &lt;a href=&#34;https://www.ibm.com/developerworks/java/tutorials/j-nio/&#34;&gt;NIO internals&lt;/a&gt; first before digging into that code path. Good starting points are the &lt;code&gt;net.spy.memcached.MemcachedConnection&lt;/code&gt; and &lt;code&gt;net.spy.memcached.protocol.TCPMemcachedNodeImpl&lt;/code&gt; classes. Note that inside the SDK, we override the &lt;code&gt;MemcachedConnection&lt;/code&gt; to hook in our own reconfiguration logic. This class can be found inside the SDK at &lt;code&gt;com.couchbase.client.CouchbaseConnection&lt;/code&gt; and for memcached-type buckets in &lt;code&gt;com.couchbase.client.CouchbaseMemcachedConnection&lt;/code&gt;.&lt;/p&gt;
-
-&lt;p&gt;So if a memcached operations (like &lt;code&gt;get()&lt;/code&gt;) gets issued, it gets passed down until it reaches the IO thread. The IO thread will then put it on a write queue towards its target node. It gets written eventually and then the IO thread adds information to a read queue so the responses can be mapped accordingly. This approach is based on futures, so when the result actually arrives, the Future is marked as completed, the result gets parsed and attached as Object.&lt;/p&gt;
-
-&lt;p&gt;The SDK only uses the memcached binary protocol, although spy would also support ASCII. The binary format is much more efficient and some of the advanced operations are only implemented there.&lt;/p&gt;
-
-&lt;p&gt;You may wonder how the SDK knows where to send the operation? Since we already have the up-to-date cluster map, we can hash the key and then based on the node list and vBucketMap determine which node to access. The vBucketMap not only contains the information for the master node of the array, but also the information for zero to three replica nodes. Look at this (shortened) example:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;vBucketServerMap: {
-hashAlgorithm: &amp;quot;CRC&amp;quot;,
-numReplicas: 1,
-serverList: [
-    &amp;quot;192.168.56.101:11210&amp;quot;,
-    &amp;quot;192.168.56.102:11210&amp;quot;
-],
-vBucketMap: [
-[0,1],
-[0,1],
-[0,1],
-[1,0],
-[1,0],
-[1,0]
-//.....
-},
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;The &lt;code&gt;serverList&lt;/code&gt; contains our nodes, and the &lt;code&gt;vBucketMap&lt;/code&gt; has pointers to the &lt;code&gt;serverList&lt;/code&gt; array. We have 1024 vBuckets, so only some of them are shown here. You can see from looking at it that all keys that has into the first vBucket have its master node at index 0 (so the &lt;code&gt;.101&lt;/code&gt; node) and its replica at index 1 (so the &lt;code&gt;.102&lt;/code&gt; node). Once the cluster map changes and the vBuckets move around, we just need to update our config and know all the time where to point our operations towards.&lt;/p&gt;
-
-&lt;p&gt;View operations are handled differently. Since views can&amp;rsquo;t be sent to a specific node (because we don&amp;rsquo;t have a way to hash a key or something), we round-robin between the connected nodes. The operation gets assigned to a &lt;a href=&#34;http://www.couchbase.com/autodocs/couchbase-java-client-1.1.5/com/couchbase/client/ViewNode.html&#34;&gt;com.couchbase.client.ViewNode&lt;/a&gt; once it has free connections and then executed. The result is also handled through futures. To implement this functionality, the SDK uses the third party Apache HTTP Commons (NIO) library.&lt;/p&gt;
-
-&lt;p&gt;The whole View API hides behind port 8092 on every node and is very similar to &lt;a href=&#34;http://couchdb.apache.org/&#34;&gt;CouchDB&lt;/a&gt;. It also contains a RESTful API, but the structure is a little bit different. For example, you can reach a design document at &lt;code&gt;/&amp;lt;bucketname&amp;gt;/_design/&amp;lt;designname&amp;gt;&lt;/code&gt;. It contains the View definitions in JSON:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;{
-    language: &amp;quot;javascript&amp;quot;,
-    views: {
-        all: {
-            map: &amp;quot;function (doc) { if(doc.type == &amp;quot;city&amp;quot;) {emit([doc.continent, doc.country, doc.name], 1)}}&amp;quot;,
-            reduce: &amp;quot;_sum&amp;quot;
-        }
-    }
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;You can then reach down one level further like &lt;code&gt;/&amp;lt;bucketname&amp;gt;/_design/&amp;lt;designname&amp;gt;/_view/&amp;lt;viewname&amp;gt;&lt;/code&gt; to actually query it:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;{&amp;quot;total_rows&amp;quot;:9,&amp;quot;rows&amp;quot;:[
-{&amp;quot;id&amp;quot;:&amp;quot;city:shanghai&amp;quot;,&amp;quot;key&amp;quot;:[&amp;quot;asia&amp;quot;,&amp;quot;china&amp;quot;,&amp;quot;shanghai&amp;quot;],&amp;quot;value&amp;quot;:1},
-{&amp;quot;id&amp;quot;:&amp;quot;city:tokyo&amp;quot;,&amp;quot;key&amp;quot;:[&amp;quot;asia&amp;quot;,&amp;quot;japan&amp;quot;,&amp;quot;tokyo&amp;quot;],&amp;quot;value&amp;quot;:1},
-{&amp;quot;id&amp;quot;:&amp;quot;city:moscow&amp;quot;,&amp;quot;key&amp;quot;:[&amp;quot;asia&amp;quot;,&amp;quot;russia&amp;quot;,&amp;quot;moscow&amp;quot;],&amp;quot;value&amp;quot;:1},
-{&amp;quot;id&amp;quot;:&amp;quot;city:vienna&amp;quot;,&amp;quot;key&amp;quot;:[&amp;quot;europe&amp;quot;,&amp;quot;austria&amp;quot;,&amp;quot;vienna&amp;quot;],&amp;quot;value&amp;quot;:1},
-{&amp;quot;id&amp;quot;:&amp;quot;city:paris&amp;quot;,&amp;quot;key&amp;quot;:[&amp;quot;europe&amp;quot;,&amp;quot;france&amp;quot;,&amp;quot;paris&amp;quot;],&amp;quot;value&amp;quot;:1},
-{&amp;quot;id&amp;quot;:&amp;quot;city:rome&amp;quot;,&amp;quot;key&amp;quot;:[&amp;quot;europe&amp;quot;,&amp;quot;italy&amp;quot;,&amp;quot;rome&amp;quot;],&amp;quot;value&amp;quot;:1},
-{&amp;quot;id&amp;quot;:&amp;quot;city:amsterdam&amp;quot;,&amp;quot;key&amp;quot;:[&amp;quot;europe&amp;quot;,&amp;quot;netherlands&amp;quot;,&amp;quot;amsterdam&amp;quot;],&amp;quot;value&amp;quot;:1},
-{&amp;quot;id&amp;quot;:&amp;quot;city:new_york&amp;quot;,&amp;quot;key&amp;quot;:[&amp;quot;north_america&amp;quot;,&amp;quot;usa&amp;quot;,&amp;quot;new_york&amp;quot;],&amp;quot;value&amp;quot;:1},
-{&amp;quot;id&amp;quot;:&amp;quot;city:san_francisco&amp;quot;,&amp;quot;key&amp;quot;:[&amp;quot;north_america&amp;quot;,&amp;quot;usa&amp;quot;,&amp;quot;san_francisco&amp;quot;],&amp;quot;value&amp;quot;:1}
-]
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Once the request is sent and a response gets back, it depends on the type of View request to determine on how the response gets parsed. It makes a difference, because reduced View queries look different than non-reduced. The SDK also includes support for spatial Views and they need to be handled differently as well.&lt;/p&gt;
-
-&lt;p&gt;The whole View response parsing implementation can be found inside the &lt;a href=&#34;http://www.couchbase.com/autodocs/couchbase-java-client-1.1.5/com/couchbase/client/protocol/views/package-frame.html&#34;&gt;com.couchbase.client.protocol.views&lt;/a&gt; namespace. You&amp;rsquo;ll find abstract classes and interfaces like &lt;code&gt;ViewResponse&lt;/code&gt; in there, and then their special implementations like &lt;code&gt;ViewResponseNoDocs&lt;/code&gt;, &lt;code&gt;ViewResponseWithDocs&lt;/code&gt; or &lt;code&gt;ViewResponseReduced&lt;/code&gt;. It also makes a different if &lt;code&gt;setIncludeDocs()&lt;/code&gt; is used on the Query object, because the SDK also needs to load the full documents using the memcached protocol behind the scenes. This is also done while parsing the Views.&lt;/p&gt;
-
-&lt;p&gt;Now that you have a basic understanding on how the SDK distributes its operations under stable conditions, we need to cover an important topic: how the SDK deals with cluster topology changes.&lt;/p&gt;
-
-&lt;h3 id=&#34;operations-against-a-rebalancing-cluster&#34;&gt;Operations against a rebalancing cluster&lt;/h3&gt;
-
-&lt;p&gt;Note that there is a separate blog post upcoming dealing with all the scenarios that may come up when something goes wrong on the SDK. Since rebalancing and failover are crucial parts of the SDK, this post deals more with the general process on how this is handled.&lt;/p&gt;
-
-&lt;p&gt;As mentioned earlier, the SDK receives topology updates through the streaming connection. Leaving the special case aside where this node actually gets removed or fails, all updates will stream in near real-time (in a eventually consistent architecture, it may take some time until the cluster updates get populated to that node). The chunks that come in over the stream look exactly like the ones we&amp;rsquo;ve seen when reading the initial configuration. After those chunks have been parsed, we need to check if the changes really affect the SDK (since there are many more parameters than the SDK needs, it won&amp;rsquo;t make sense to listen to all of them). All changes that affect the topology and/or vBucket map are considered as important. If nodes get added or removed (be it either through failure or planned), we need to open or close the sockets. This process is called &amp;ldquo;reconfiguration&amp;rdquo;.&lt;/p&gt;
-
-&lt;p&gt;Once such a reconfiguration is triggered, lots of actions need to happen in various places. Spymemcached needs to handle its sockets, View nodes need to be managed and new configuration needs to be updated. The SDK makes sure that only one reconfiguration can happen at the same time through locks so we don&amp;rsquo;t have any race conditions going on.&lt;/p&gt;
-
-&lt;p&gt;The Netty-based &lt;code&gt;BucketUpdateResponseHandler&lt;/code&gt; triggers the &lt;code&gt;CouchbaseClient#reconfigure&lt;/code&gt; method, which then starts to dispatch everything. Depending on the bucket type used (i.e. memcached type buckets don&amp;rsquo;t have Views and therefore no ViewNodes), configs are updated and sockets closed. Once the reconfiguration is done, it can receive new ones. During planned changes, everything should be pretty much controlled and no operations should fail. If a node is actually down and cannot be reached, those operations will be cancelled. Reconfiguration is tricky because the topology changes while operations are flowing through the system.&lt;/p&gt;
-
-&lt;p&gt;Finally, let&amp;rsquo;s cover some differences between Couchbase and Memcache type buckets. All the information hat you&amp;rsquo;ve been reading previously only applies to Couchbase buckets. Memcache buckets are pretty basic and do not have the concept of vBuckets. Since you don&amp;rsquo;t have vBuckets, all that the Client has to do is to manage the nodes and their corresponding sockets. Also, a different hashing algorithm is used (mostly Ketama) to determine the target node for each key. Also, memcache buckets don&amp;rsquo;t have views, so you can&amp;rsquo;t use the View API and it doesn&amp;rsquo;t make much sense to keep View sockets around. So to clarify the previous statement, if you are running against a memcache bucket, for a 10 node cluster you&amp;rsquo;ll only have 11 open connections.&lt;/p&gt;
-
-&lt;h2 id=&#34;phase-3-shutdown&#34;&gt;Phase 3: Shutdown&lt;/h2&gt;
-
-&lt;p&gt;Once the &lt;code&gt;CouchbaseClient#shutdown()&lt;/code&gt; method is called, no more operations are allowed to be added onto the &lt;code&gt;CouchbaseConnection&lt;/code&gt;. Until the timeout is reached, the client wants to make sure that all operations went through accordingly. All sockets for both memcached and View connections are shut down once there are no more operations in the queue (or they get dropped). Note that that the &lt;code&gt;shutdown&lt;/code&gt; methods on those sockets are also used when a node gets removed from the cluster during normal operations, so it&amp;rsquo;s basically the same, but just for all attached nodes at the same time.&lt;/p&gt;
-
-&lt;h2 id=&#34;summary&#34;&gt;Summary&lt;/h2&gt;
-
-&lt;p&gt;After reading this blog post, you should have a much more clear picture on how the client SDK works and why it is designed the way it is. We have lots of enhancements planned for future releases, mostly enhancing the direct API experience. Note that this blog post didn&amp;rsquo;t cover how errors are handled inside the SDK; this will be published in a separate blog post because there is also lots of information to cover.&lt;/p&gt;
 </description>
     </item>
     

@@ -1,13 +1,377 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Rust on daschl writes. sometimes.</title>
-    <link>http://nitschinger.at/tags/rust/</link>
-    <description>Recent content in Rust on daschl writes. sometimes.</description>
+    <title>daschl writes. sometimes.</title>
+    <link>http://nitschinger.at/tags/rust/index.xml</link>
+    <description>Recent content on daschl writes. sometimes.</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 15 Jun 2016 00:00:00 +0000</lastBuildDate>
     <atom:link href="http://nitschinger.at/tags/rust/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Text Analysis in Rust - Tokenization</title>
+      <link>http://nitschinger.at/Text-Analysis-in-Rust-Tokenization/</link>
+      <pubDate>Fri, 28 Oct 2016 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/Text-Analysis-in-Rust-Tokenization/</guid>
+      <description>
+
+&lt;p&gt;I work for &lt;a href=&#34;http://www.couchbase.com/&#34;&gt;Couchbase&lt;/a&gt; where we are currently developing full text search capabilities based on &lt;a href=&#34;blevesearch.com&#34;&gt;bleve&lt;/a&gt;. Bleve is implemented in &lt;a href=&#34;golang.org&#34;&gt;go&lt;/a&gt; and inspired by &lt;a href=&#34;http://lucene.apache.org/core/&#34;&gt;Apache Lucene&lt;/a&gt;, the reference implementation when it comes to full text search. While I am not directly involved in developing bleve I was curious about how it works internally and did take a look at the analyzers it provides.&lt;/p&gt;
+
+&lt;p&gt;Analyzers take your free form text and turn it into tokens which can then be used for indexing or queries. Since I know our team is currently at work doing performance optimizations in all places I wanted to take a stab at implementing similar analyzers in &lt;a href=&#34;https://www.rust-lang.org/&#34;&gt;Rust&lt;/a&gt; and see how they perform in comparison.&lt;/p&gt;
+
+&lt;p&gt;Analyzers typically consist of a tokenizer which slices a string into tokens and zero or more transformers which modify them subsequently (changing them, dropping them,&amp;hellip;). A very common use case is to take some text, tokenize (&amp;ldquo;split&amp;rdquo;) it by whitespace and then afterwards lowercase all tokens. This blog post only covers tokenizers, but transformers are planned for another post.&lt;/p&gt;
+
+&lt;p&gt;If you are only interested in how Rust is &lt;strong&gt;3 times as fast&lt;/strong&gt; as the go equivalent in our microbenchmarks, check out the last section. If you are curious about the implementation details, read on.&lt;/p&gt;
+
+&lt;p&gt;When I think about tokenizers and transformers the first thing that comes to mind in Rust are &lt;a href=&#34;https://doc.rust-lang.org/book/iterators.html&#34;&gt;Iterators&lt;/a&gt;. If we let our tokenizer implement the &lt;a href=&#34;https://doc.rust-lang.org/beta/std/iter/trait.Iterator.html&#34;&gt;Iterator&lt;/a&gt; trait we can make use of all the flexibility and high-level programming Rust provides without compromising performance.&lt;/p&gt;
+
+&lt;h2 id=&#34;tokenizers-and-tokens&#34;&gt;Tokenizers and Tokens&lt;/h2&gt;
+
+&lt;p&gt;So lets define our &lt;code&gt;Tokenizer&lt;/code&gt; as a trait which emits an &lt;code&gt;Iterator&lt;/code&gt; of &lt;code&gt;Tokens&lt;/code&gt;:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;trait&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Tokenizer&amp;lt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;&amp;#39;a&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;&lt;/span&gt; {
+    &lt;span style=&#34;color: #C41A16&#34;&gt;/// A Tokenizer always needs to produce an Iterator of Tokens.&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;TokenIter:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;Iterator&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;Item&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Token&amp;gt;&lt;/span&gt;;
+
+    &lt;span style=&#34;color: #C41A16&#34;&gt;/// Takes the input string and tokenizes it based on the implementations rules.&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;tokenize&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;input:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;&amp;#39;a&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;str&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Self::TokenIter&lt;/span&gt;;
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Note: I can&amp;rsquo;t wait for &lt;a href=&#34;https://github.com/rust-lang/rust/issues/34511&#34;&gt;impl Traits&lt;/a&gt; to land when it also supports trait functions, then this would clean up the declarations even further.&lt;/p&gt;
+
+&lt;p&gt;Lets take a first stab at the &lt;code&gt;Token&lt;/code&gt;:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Token&lt;/span&gt; {
+    &lt;span style=&#34;color: #000000&#34;&gt;term:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;String&lt;/span&gt;,
+    &lt;span style=&#34;color: #000000&#34;&gt;start_offset:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;,
+    &lt;span style=&#34;color: #000000&#34;&gt;position:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;,
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The &lt;code&gt;Token&lt;/code&gt; contains the &lt;code&gt;term&lt;/code&gt; sliced by the tokenizer and also related metadata like its absolute start offset in bytes as well as the relative position of the token in the stream. We need this information down the road for indexing and querying.&lt;/p&gt;
+
+&lt;p&gt;One problem with this approach is that the &lt;code&gt;String&lt;/code&gt; implicitly performs a heap allocation, and when we are slicing hundreds or thousands of small tokens we are allocating lots of small chunks on the heap.&lt;/p&gt;
+
+&lt;p&gt;The first idea to avoid this is using a &lt;code&gt;&amp;amp;str&lt;/code&gt; instead, but we potentially need to modify the term and then we are back at heap allocations (as an exercise for the reader, using &lt;a href=&#34;https://doc.rust-lang.org/std/borrow/enum.Cow.html&#34;&gt;Cow&lt;/a&gt; could also be an option). So, how can we make this more efficient?&lt;/p&gt;
+
+&lt;p&gt;One thing I realized during experimentation and later researching on the web is that when you are tokenizing text you mostly end up with lots of small tokens which maybe are even filtered out in the next step of the process. It would be nice if could stack allocate those small terms and as a fallback perform heap allocation for the rest! It turns out we can do just that, and here is one way:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;const&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;MAX_STACK_TERM_LEN:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;15&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;enum&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Term&lt;/span&gt; {
+    &lt;span style=&#34;color: #000000&#34;&gt;Stack&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;ArrayString&amp;lt;&lt;/span&gt;[&lt;span style=&#34;color: #A90D91&#34;&gt;u8&lt;/span&gt;; &lt;span style=&#34;color: #000000&#34;&gt;MAX_STACK_TERM_LEN&lt;/span&gt;]&lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;&lt;/span&gt;),
+    &lt;span style=&#34;color: #000000&#34;&gt;Heap&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;String&lt;/span&gt;),
+}
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Token&lt;/span&gt; {
+    &lt;span style=&#34;color: #000000&#34;&gt;term:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Term&lt;/span&gt;,
+    &lt;span style=&#34;color: #000000&#34;&gt;start_offset:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;,
+    &lt;span style=&#34;color: #000000&#34;&gt;position:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;,
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Woops, our &lt;code&gt;Token&lt;/code&gt; just got a little more complex. Our term is now an &lt;a href=&#34;https://doc.rust-lang.org/book/enums.html&#34;&gt;Enum&lt;/a&gt; which is either a stack allocated &lt;a href=&#34;https://docs.rs/arrayvec/0.3.20/arrayvec/struct.ArrayString.html&#34;&gt;ArrayString&lt;/a&gt; or a heap allocated &lt;a href=&#34;https://doc.rust-lang.org/std/string/struct.String.html&#34;&gt;String&lt;/a&gt;. Note that the &lt;code&gt;ArrayString&lt;/code&gt; implementation comes from the &lt;a href=&#34;https://crates.io/crates/arrayvec&#34;&gt;arrayvec&lt;/a&gt; crate and basically provides string functionality on top of a stack allocated array.&lt;/p&gt;
+
+&lt;p&gt;The nice thing about this is that we are not leaking this implementation detail to the caller, since we can always work with string slices on creation and access:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;impl&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Token&lt;/span&gt; {
+    &lt;span style=&#34;color: #633820&#34;&gt;#[inline]&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;from_str&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;term:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;str&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;start_offset:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;position:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Self&lt;/span&gt; {
+        &lt;span style=&#34;color: #000000&#34;&gt;Token&lt;/span&gt; {
+            &lt;span style=&#34;color: #000000&#34;&gt;term:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Token::convert_term&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;term&lt;/span&gt;),
+            &lt;span style=&#34;color: #000000&#34;&gt;start_offset:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;start_offset&lt;/span&gt;,
+            &lt;span style=&#34;color: #000000&#34;&gt;position:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;position&lt;/span&gt;,
+        }
+    }
+
+    &lt;span style=&#34;color: #633820&#34;&gt;#[inline]&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;convert_term&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;term:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;str&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Term&lt;/span&gt; {
+        &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;term&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;len&lt;/span&gt;() &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;MAX_STACK_TERM_LEN&lt;/span&gt; {
+            &lt;span style=&#34;color: #000000&#34;&gt;Term::Stack&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;ArrayString::&amp;lt;&lt;/span&gt;[&lt;span style=&#34;color: #000000&#34;&gt;_&lt;/span&gt;; &lt;span style=&#34;color: #000000&#34;&gt;MAX_STACK_TERM_LEN&lt;/span&gt;]&lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;::from&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;term&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;unwrap&lt;/span&gt;())
+        } &lt;span style=&#34;color: #A90D91&#34;&gt;else&lt;/span&gt; {
+            &lt;span style=&#34;color: #000000&#34;&gt;Term::Heap&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;term&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;to_string&lt;/span&gt;())
+        }
+    }
+
+    &lt;span style=&#34;color: #633820&#34;&gt;#[inline]&lt;/span&gt;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;term&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;str&lt;/span&gt; {
+        &lt;span style=&#34;color: #A90D91&#34;&gt;match&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;term&lt;/span&gt; {
+            &lt;span style=&#34;color: #000000&#34;&gt;Term::Heap&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;ref&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;s&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;s&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;as_ref&lt;/span&gt;(),
+            &lt;span style=&#34;color: #000000&#34;&gt;Term::Stack&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;ref&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;s&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;s&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;as_ref&lt;/span&gt;(),
+        }
+    }
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;At this point we&amp;rsquo;ve departed from our go counterpart in two significant ways: we are using an iterator instead of &lt;a href=&#34;https://github.com/blevesearch/bleve/blob/master/analysis/type.go#L61-L67&#34;&gt;operating on a heap allocated array of tokens&lt;/a&gt; and we are using stack allocations for small tokens instead of heap allocating a &lt;a href=&#34;https://github.com/blevesearch/bleve/blob/master/analysis/type.go#L41&#34;&gt;Token&lt;/a&gt; and its term. I don&amp;rsquo;t know if go is doing escape analysis and optimizations in this case, but based on the benchmarks (read on) I don&amp;rsquo;t think so.&lt;/p&gt;
+
+&lt;p&gt;You might wonder why I selected a stack term length of 15 as the point where we start to do heap allocations. There is no fancy math behind it, I just tried tokenizing all kinds of text snippets and found this to be the sweet spot. Try it out for yourself, you&amp;rsquo;ll see that when you are increasing the size by a larger number the whole tokenization gets slower since rust needs to move those huge chunks around on the stack. Oh, and I did pick 15 and not 16 since the &lt;code&gt;ArrayString&lt;/code&gt; needs one byte for internal storage. If you get different numbers I&amp;rsquo;d love to read about it in the comments!&lt;/p&gt;
+
+&lt;p&gt;With all that in place, lets go work on some tokenizers.&lt;/p&gt;
+
+&lt;h2 id=&#34;the-whitespace-character-tokenizers&#34;&gt;The Whitespace &amp;amp; Character Tokenizers&lt;/h2&gt;
+
+&lt;p&gt;A common case in text analysis is splitting on whitespace, but thinking about more generally we probably want to split on all kinds of characters. So lets implement a character tokenizer which takes a function that takes the character as input and decides if it should split or not.&lt;/p&gt;
+
+&lt;p&gt;A quick warning: from here on it gets a bit more complex, so if you just came here for the benchmarks and you don&amp;rsquo;t care about the actual implementation you can safely skip to the next section.&lt;/p&gt;
+
+&lt;p&gt;Here is our &lt;code&gt;CharTokenIter&lt;/code&gt; struct:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;CharTokenIter&amp;lt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;&amp;#39;a&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;&lt;/span&gt; {
+    &lt;span style=&#34;color: #000000&#34;&gt;filter:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;, (&lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;char&lt;/span&gt;))) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;bool&lt;/span&gt;,
+    &lt;span style=&#34;color: #000000&#34;&gt;input:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;&amp;#39;a&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;str&lt;/span&gt;,
+    &lt;span style=&#34;color: #000000&#34;&gt;byte_offset:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;,
+    &lt;span style=&#34;color: #000000&#34;&gt;char_offset:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;,
+    &lt;span style=&#34;color: #000000&#34;&gt;position:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;,
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;It takes a &lt;code&gt;filter&lt;/code&gt; which is the function the implementations set when the &lt;code&gt;CharTokenIter&lt;/code&gt; is created. Naturally it also stores a reference to the original &lt;code&gt;input&lt;/code&gt; since it needs to create the tokens from it. Finally three variables are used to keep internal state that we&amp;rsquo;ll see getting populated in a second. &lt;code&gt;byte_offset&lt;/code&gt; stores the absolute offset in bytes of the token term, the &lt;code&gt;char_offset&lt;/code&gt; does the same but it only counts full characters. Finally the &lt;code&gt;position&lt;/code&gt; stores the relative position of the tokens in the stream. If you wonder why we are handling characters and bytes separately, welcome to the world of &lt;a href=&#34;https://en.wikipedia.org/wiki/Unicode&#34;&gt;Unicode&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;We can make creating our iterator a bit nicer:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;impl&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;&amp;#39;a&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;CharTokenIter&amp;lt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;&amp;#39;a&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;new&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;filter:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;, (&lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;char&lt;/span&gt;))) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;bool&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;input:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;&amp;#39;a&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;str&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Self&lt;/span&gt; {
+        &lt;span style=&#34;color: #000000&#34;&gt;CharTokenIter&lt;/span&gt; { &lt;span style=&#34;color: #000000&#34;&gt;filter:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;filter&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;input:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;input&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;byte_offset:&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;char_offset:&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;position:&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt; }
+    }
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now, lets get to where the rubber meets the road. We need to implement the &lt;code&gt;Iterator&lt;/code&gt; as specified in the contract, so our function looks like this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;impl&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;&amp;#39;a&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;Iterator&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;CharTokenIter&amp;lt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;&amp;#39;a&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Item&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Token&lt;/span&gt;;
+
+    &lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;next&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;Option&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;Token&amp;gt;&lt;/span&gt; {
+    	&lt;span style=&#34;color: #177500&#34;&gt;// ponies and fairy dust in here...&lt;/span&gt;
+    }
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The rest of the code snippets that follow go inside the &lt;code&gt;next&lt;/code&gt; function. If we want to satisfy the Iterator semantics, we need to emit a token every time the predicate provided by our &lt;code&gt;filter&lt;/code&gt; matches:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;cidx&lt;/span&gt;, (&lt;span style=&#34;color: #000000&#34;&gt;bidx&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;)) &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;input&lt;/span&gt;[&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt;..]
+            .&lt;span style=&#34;color: #000000&#34;&gt;char_indices&lt;/span&gt;()
+            .&lt;span style=&#34;color: #000000&#34;&gt;enumerate&lt;/span&gt;()
+            .&lt;span style=&#34;color: #000000&#34;&gt;filter&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;filter&lt;/span&gt;) {
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We are slicing the input string starting at the current &lt;code&gt;byte_offset&lt;/code&gt;, then use &lt;code&gt;char_indices()&lt;/code&gt; on the iterator to also get the character index and then use &lt;code&gt;enumerate()&lt;/code&gt; to get the byte index. Equipped with the actual character and all kinds of offsets, we apply our filter function and if allowed to pass through craft our token and emit it:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;slice&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;input&lt;/span&gt;[&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt;..&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;bidx&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;skipped_bytes&lt;/span&gt;];
+&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;token&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Token::from_str&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;slice&lt;/span&gt;, &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;char_offset&lt;/span&gt;, &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;position&lt;/span&gt;);
+&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;char_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;char_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;slice&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;chars&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;count&lt;/span&gt;() &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;;
+&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;position&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;;
+&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;bidx&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;char_len&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;skipped_bytes&lt;/span&gt;;
+&lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;Some&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;token&lt;/span&gt;);
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;You can see that we are not only slicing out the token term but also adjusting the character and byte offsets properly. Now, what is this &lt;code&gt;skipped_bytes&lt;/code&gt; variable about? We&amp;rsquo;ll get to that in a second, but before that we need to cover another case: what happens if no split character is found or there are characters left after the last split character? To handle this, after our loop we need to handle the remainder:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;input&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;len&lt;/span&gt;() {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;slice&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;input&lt;/span&gt;[&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt;..];
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;token&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Token::from_str&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;slice&lt;/span&gt;, &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;char_offset&lt;/span&gt;, &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;position&lt;/span&gt;);
+    &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;input&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;len&lt;/span&gt;();
+    &lt;span style=&#34;color: #A90D91&#34;&gt;Some&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;token&lt;/span&gt;)
+} &lt;span style=&#34;color: #A90D91&#34;&gt;else&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;None&lt;/span&gt;
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If our byte offset is equal to the length of the input string we are done (signaled by returning &lt;code&gt;None&lt;/code&gt; to the iterator consumer), but in the other case we need to slice out the remaining bytes and return them as a final token.&lt;/p&gt;
+
+&lt;p&gt;Now that we&amp;rsquo;ve covered this lets get back to the &lt;code&gt;skipped_bytes&lt;/code&gt; thing from before.&lt;/p&gt;
+
+&lt;p&gt;We need to handle one more case: it can happen that more than one filter characters appear right after one another or at the very beginning of the text. Consider splitting on whitespace and the input looks like &lt;code&gt;hello \t\n world!&lt;/code&gt;. You want two tokens &lt;code&gt;hello&lt;/code&gt; and &lt;code&gt;world!&lt;/code&gt; and all the other whitespace should be consumed (accounted for in the byte offset, but not emitted inside an actual token term). To handle this case we keep track of the characters inside our for loop before emitting the token:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #177500&#34;&gt;// Temp variables to account skipping&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;skipped_bytes&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;;
+&lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;skipped_chars&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;;
+&lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;cidx&lt;/span&gt;, (&lt;span style=&#34;color: #000000&#34;&gt;bidx&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;)) &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;input&lt;/span&gt;[&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt;..]
+    .&lt;span style=&#34;color: #000000&#34;&gt;char_indices&lt;/span&gt;()
+    .&lt;span style=&#34;color: #000000&#34;&gt;enumerate&lt;/span&gt;()
+    .&lt;span style=&#34;color: #000000&#34;&gt;filter&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;filter&lt;/span&gt;) {
+        &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;char_len&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;len_utf8&lt;/span&gt;();
+
+        &lt;span style=&#34;color: #177500&#34;&gt;// Check and skip chars if needed&lt;/span&gt;
+        &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cidx&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;skipped_chars&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt; {
+            &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;char_len&lt;/span&gt;;
+            &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;char_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;;
+            &lt;span style=&#34;color: #000000&#34;&gt;skipped_bytes&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;skipped_bytes&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;char_len&lt;/span&gt;;
+            &lt;span style=&#34;color: #000000&#34;&gt;skipped_chars&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;;
+            &lt;span style=&#34;color: #A90D91&#34;&gt;continue&lt;/span&gt;;
+        }
+
+        &lt;span style=&#34;color: #177500&#34;&gt;// Same as before down here&lt;/span&gt;
+        &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;slice&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;input&lt;/span&gt;[&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt;..&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;bidx&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;skipped_bytes&lt;/span&gt;];
+        &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;token&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Token::from_str&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;slice&lt;/span&gt;, &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;char_offset&lt;/span&gt;, &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;position&lt;/span&gt;);
+        &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;char_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;char_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;slice&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;chars&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;count&lt;/span&gt;() &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;;
+        &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;position&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;;
+        &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;bidx&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;char_len&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;skipped_bytes&lt;/span&gt;;
+        &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;Some&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;token&lt;/span&gt;);
+    }
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Here is the &lt;code&gt;next&lt;/code&gt; function in its full glory:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;next&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;Option&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;Token&amp;gt;&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;skipped_bytes&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;skipped_chars&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;;
+    &lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;cidx&lt;/span&gt;, (&lt;span style=&#34;color: #000000&#34;&gt;bidx&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;)) &lt;span style=&#34;color: #A90D91&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;input&lt;/span&gt;[&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt;..]
+        .&lt;span style=&#34;color: #000000&#34;&gt;char_indices&lt;/span&gt;()
+        .&lt;span style=&#34;color: #000000&#34;&gt;enumerate&lt;/span&gt;()
+        .&lt;span style=&#34;color: #000000&#34;&gt;filter&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;filter&lt;/span&gt;)
+        {
+            &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;char_len&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;len_utf8&lt;/span&gt;();
+            &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;cidx&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;skipped_chars&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt; {
+                &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;char_len&lt;/span&gt;;
+                &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;char_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;;
+                &lt;span style=&#34;color: #000000&#34;&gt;skipped_bytes&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;skipped_bytes&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;char_len&lt;/span&gt;;
+                &lt;span style=&#34;color: #000000&#34;&gt;skipped_chars&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;;
+                &lt;span style=&#34;color: #A90D91&#34;&gt;continue&lt;/span&gt;;
+            }
+
+            &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;slice&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;input&lt;/span&gt;[&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt;..&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;bidx&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;skipped_bytes&lt;/span&gt;];
+            &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;token&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Token::from_str&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;slice&lt;/span&gt;, &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;char_offset&lt;/span&gt;, &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;position&lt;/span&gt;);
+            &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;char_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;char_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;slice&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;chars&lt;/span&gt;().&lt;span style=&#34;color: #000000&#34;&gt;count&lt;/span&gt;() &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;;
+            &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;position&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;;
+            &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;bidx&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;char_len&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;skipped_bytes&lt;/span&gt;;
+            &lt;span style=&#34;color: #A90D91&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;Some&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;token&lt;/span&gt;);
+        }
+
+    &lt;span style=&#34;color: #A90D91&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;input&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;len&lt;/span&gt;() {
+        &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;slice&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;input&lt;/span&gt;[&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt;..];
+        &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;token&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Token::from_str&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;slice&lt;/span&gt;, &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;char_offset&lt;/span&gt;, &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;position&lt;/span&gt;);
+        &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;byte_offset&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;input&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;len&lt;/span&gt;();
+        &lt;span style=&#34;color: #A90D91&#34;&gt;Some&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;token&lt;/span&gt;)
+    } &lt;span style=&#34;color: #A90D91&#34;&gt;else&lt;/span&gt; {
+        &lt;span style=&#34;color: #A90D91&#34;&gt;None&lt;/span&gt;
+    }
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;How would we implement a &lt;code&gt;Whitespace&lt;/code&gt; tokenizer with this? One might be tempted to match against &lt;code&gt;&#39; &#39;&lt;/code&gt;, but keep in mind that whitespace, when dealing with unicode, can be many more different characters so its best to not hardcode them in a gigantic match clause and instead use a built-in function.&lt;/p&gt;
+
+&lt;p&gt;Here is our &lt;code&gt;WhitespaceTokenizer&lt;/code&gt;:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;WhitespaceTokenizer&lt;/span&gt;;
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;impl&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;&amp;#39;a&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Tokenizer&amp;lt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;&amp;#39;a&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;WhitespaceTokenizer&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;TokenIter&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;CharTokenIter&amp;lt;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;&amp;#39;a&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;gt;&lt;/span&gt;;
+
+    &lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;tokenize&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #5B269A&#34;&gt;self&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;input:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #836C28&#34;&gt;&amp;#39;a&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;str&lt;/span&gt;) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Self::TokenIter&lt;/span&gt; {
+        &lt;span style=&#34;color: #000000&#34;&gt;CharTokenIter::new&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;is_whitespace&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;input&lt;/span&gt;)
+    }
+}
+
+&lt;span style=&#34;color: #633820&#34;&gt;#[inline]&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;is_whitespace&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;input:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;(&lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;, (&lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;char&lt;/span&gt;))) &lt;span style=&#34;color: #000000&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;bool&lt;/span&gt; {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; (&lt;span style=&#34;color: #000000&#34;&gt;_&lt;/span&gt;, (&lt;span style=&#34;color: #000000&#34;&gt;_&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;)) &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;*input&lt;/span&gt;;
+    &lt;span style=&#34;color: #000000&#34;&gt;c&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;is_whitespace&lt;/span&gt;()
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We initialize the &lt;code&gt;CharTokenIter&lt;/code&gt; and in use the &lt;a href=&#34;https://doc.rust-lang.org/std/primitive.char.html#method.is_whitespace&#34;&gt;char::is_whitespace()&lt;/a&gt; method to check for a unicode whitespace character. Using it is now pretty simple, consider this test case:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;#[test]&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;should_split_between_words&lt;/span&gt;() {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;expected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;vec!&lt;/span&gt;[&lt;span style=&#34;color: #000000&#34;&gt;Token::from_str&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;hello&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;), &lt;span style=&#34;color: #000000&#34;&gt;Token::from_str&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;world&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #1C01CE&#34;&gt;6&lt;/span&gt;, &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;)];
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;actually&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;WhitespaceTokenizer&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;tokenize&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;hello world&amp;quot;&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;collect::&amp;lt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;Vec&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;Token&amp;gt;&amp;gt;&lt;/span&gt;();
+    &lt;span style=&#34;color: #000000&#34;&gt;assert_eq!&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;expected&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;actually&lt;/span&gt;);
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This implementation also works with all kinds of unicode characters that may have different byte lengths (and this is where our different tracking of character and byte offsets becomes important):&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;#[test]&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;should_handle_mixed_chars&lt;/span&gt;() {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;expected&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;vec!&lt;/span&gt;[&lt;span style=&#34;color: #000000&#34;&gt;Token::from_str&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;abc界&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;), &lt;span style=&#34;color: #000000&#34;&gt;Token::from_str&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;abc界&amp;quot;&lt;/span&gt;, &lt;span style=&#34;color: #1C01CE&#34;&gt;5&lt;/span&gt;, &lt;span style=&#34;color: #1C01CE&#34;&gt;1&lt;/span&gt;)];
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;actually&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;WhitespaceTokenizer&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;tokenize&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;abc界 abc界&amp;quot;&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;collect::&amp;lt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;Vec&lt;/span&gt;&lt;span style=&#34;color: #000000&#34;&gt;&amp;lt;Token&amp;gt;&amp;gt;&lt;/span&gt;();
+    &lt;span style=&#34;color: #000000&#34;&gt;assert_eq!&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;expected&lt;/span&gt;, &lt;span style=&#34;color: #000000&#34;&gt;actually&lt;/span&gt;);
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Before we move on to benchmarks, lets take a quick look at the corresponding &lt;a href=&#34;https://github.com/blevesearch/bleve/blob/master/analysis/tokenizer/character/character.go&#34;&gt;go implementation&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;The &lt;a href=&#34;https://github.com/blevesearch/bleve/blob/master/analysis/tokenizer/character/character.go#L35&#34;&gt;CharacterTokenizer&lt;/a&gt; loops through each &lt;a href=&#34;https://blog.golang.org/strings&#34;&gt;rune&lt;/a&gt; and very similar to our implementation keeps track of all kinds of offsets and slices out terms as needed. The big difference is that it can&amp;rsquo;t do explicit stack allocations and upfront allocates a 1024 element slice for its &lt;code&gt;TokenStream&lt;/code&gt; which would be extended if more tokens are needed.&lt;/p&gt;
+
+&lt;p&gt;The &lt;a href=&#34;https://github.com/blevesearch/bleve/blob/master/analysis/tokenizer/whitespace/whitespace.go#L32&#34;&gt;WhitespaceTokenizer&lt;/a&gt; is also very similar and calls a runtime-provided function that checks if the given rune is a unicode whitespace character or not.&lt;/p&gt;
+
+&lt;h2 id=&#34;benchmarks&#34;&gt;Benchmarks&lt;/h2&gt;
+
+&lt;p&gt;This is what you came for, right? Lets see how our implementation performs in comparison to the go one. To establish a meaningful baseline we need to define a common text corpus that is used for the benchmark.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Edit:&lt;/strong&gt; I forgot to mention the versions used: Rust is at &lt;code&gt;1.14.0-nightly&lt;/code&gt; since the benchmarking tool is unstable and the version of go used is &lt;code&gt;go1.7.1 darwin/amd64&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;I copied the text out of the &lt;a href=&#34;https://en.wikipedia.org/wiki/Rust_(programming_language)&#34;&gt;Rust Wikipedia&lt;/a&gt; page that is exact 1000 characters long and contains around 150-160 tokens depending on the type of tokenizer used.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;INPUT:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;&amp;#39;static&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;str&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt;
+    &lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;In addition to conventional static typing, before version 0.4, Rust also supported \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     typestates. The typestate system modeled assertions before and after program statements, \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     through use of a special check statement. Discrepancies could be discovered at compile time, \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     rather than when a program was running, as might be the case with assertions in C or C++ \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     code. The typestate concept was not unique to Rust, as it was first introduced in the \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     language NIL. Typestates were removed because in practice they found little use, though the \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     same functionality can still be achieved with branding patterns.&lt;/span&gt;
+
+&lt;span style=&#34;color: #C41A16&#34;&gt;The style changed between \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     0.2, 0.3 and 0.4. Version 0.2 introduced classes for the first time, with version 0.3 adding \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     a number of features including destructors and polymorphism through the use of interfaces. \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     In Rust 0.4, traits were added as a means to provide inheritance; In January 2014, the \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     editor-in-chief of Dr Dobb&amp;#39;s, Andrew Binstock, commented on Rust&amp;#39;s chances to become a \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     competitor to C++.&amp;quot;&lt;/span&gt;;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If we split on unicode whitespace, there are exactly 159 tokens.&lt;/p&gt;
+
+&lt;p&gt;Here is our benchmark for rust:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;#[bench]&lt;/span&gt;
+&lt;span style=&#34;color: #A90D91&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;bench_whitespace_tokenizer&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;b:&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;mut&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;Bencher&lt;/span&gt;) {
+    &lt;span style=&#34;color: #A90D91&#34;&gt;let&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;t&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;WhitespaceTokenizer&lt;/span&gt;;
+   &lt;span style=&#34;color: #000000&#34;&gt;b&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;iter&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;||&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;t&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;tokenize&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;INPUT&lt;/span&gt;).&lt;span style=&#34;color: #000000&#34;&gt;last&lt;/span&gt;());
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Running with &lt;code&gt;cargo +nightly bench&lt;/code&gt; on my machine (a 2,5GHz i7, OSX, 16GB RAM), rust reports:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;test bench_whitespace_tokenizer ... bench:       6,972 ns/iter (+/- 1,148)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;It takes 7 microseconds to process 159 tokens, so it can process 23 tokens per microsecond. This translates into roughly 23 million tokens per second. Put differently, with this input text we can tokenize around 136MB/s on a single core.&lt;/p&gt;
+
+&lt;p&gt;Here is our go equivalent in bleve:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;var&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;sampleLargeInput&lt;/span&gt; = []&lt;span style=&#34;color: #A90D91&#34;&gt;byte&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;`In addition to conventional static typing, before version 0.4, Rust also supported \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     typestates. The typestate system modeled assertions before and after program statements, \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     through use of a special check statement. Discrepancies could be discovered at compile time, \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     rather than when a program was running, as might be the case with assertions in C or C++ \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     code. The typestate concept was not unique to Rust, as it was first introduced in the \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     language NIL. Typestates were removed because in practice they found little use, though the \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     same functionality can still be achieved with branding patterns.&lt;/span&gt;
+
+&lt;span style=&#34;color: #C41A16&#34;&gt;The style changed between \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     0.2, 0.3 and 0.4. Version 0.2 introduced classes for the first time, with version 0.3 adding \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     a number of features including destructors and polymorphism through the use of interfaces. \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     In Rust 0.4, traits were added as a means to provide inheritance; In January 2014, the \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     editor-in-chief of Dr Dobb&amp;#39;s, Andrew Binstock, commented on Rust&amp;#39;s chances to become a \&lt;/span&gt;
+&lt;span style=&#34;color: #C41A16&#34;&gt;     competitor to C++.`&lt;/span&gt;)
+
+&lt;span style=&#34;color: #A90D91&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;BenchmarkTokenizeEnglishText&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;b&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;*testing&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;B&lt;/span&gt;) {
+
+	&lt;span style=&#34;color: #000000&#34;&gt;tokenizer&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;character&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;NewCharacterTokenizer&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;notSpace&lt;/span&gt;)
+	&lt;span style=&#34;color: #000000&#34;&gt;b&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;ResetTimer&lt;/span&gt;()
+
+	&lt;span style=&#34;color: #A90D91&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;0&lt;/span&gt;; &lt;span style=&#34;color: #000000&#34;&gt;i&lt;/span&gt; &amp;lt; &lt;span style=&#34;color: #000000&#34;&gt;b&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;N&lt;/span&gt;; &lt;span style=&#34;color: #000000&#34;&gt;i++&lt;/span&gt; {
+		&lt;span style=&#34;color: #000000&#34;&gt;tokenizer&lt;/span&gt;.&lt;span style=&#34;color: #000000&#34;&gt;Tokenize&lt;/span&gt;(&lt;span style=&#34;color: #000000&#34;&gt;sampleLargeInput&lt;/span&gt;)
+	}
+
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;It reports:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;BenchmarkTokenizeEnglishText-8   	   50000	     22893 ns/op	   19072 B/op	     171 allocs/op
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;So each run takes close to 23 microseconds compared of 7 in Rust! That&amp;rsquo;s roughly three times slower, clocking at
+around 7 million tokens per second or 41MB/s per core.&lt;/p&gt;
+
+&lt;p&gt;Why is that? Let&amp;rsquo;s try disabling the stack allocation optimization in rust by setting the &lt;code&gt;MAX_STACK_TERM_LEN&lt;/code&gt; to 0 and rerun the benchmark:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;test bench_whitespace_tokenizer ... bench:      10,154 ns/iter (+/- 1,553)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;We lost a couple microseconds here, but I think the rest is just LLVM and Rust being really good at optimizing the iterator and loop code (keep in mind we are still stack-allocating the tokens themselves while in go I&amp;rsquo;m pretty sure its heap allocated as well in the big &lt;code&gt;TokenStream&lt;/code&gt; slice).&lt;/p&gt;
+
+&lt;p&gt;Now with any kind of microbenchmarking it is hard to say how the difference will look like on your hardware and dataset. More realistic numbers could be gathered by tokenizing large chunks of for example the Wikipedia dataset and then looking at the overall numbers. Of course your mileage may also vary per machine, so if you are curious please run the benchmarks on your hardware - and please post them in the comments below!&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Scheduling Timers on OS X with Rust and Kqueue</title>

@@ -7,7 +7,7 @@ tags = ["rust", "text", "indexing", "analysis"]
 slug = "Text-Analysis-in-Rust-Tokenization"
 +++
 
-I work for [Couchbase](http://www.couchbase.com/) where we are currently developing full text search capabilities based on [bleve](blevesearch.com). Bleve is implemented in [go](golang.org) and inspired by [Apache Lucene](http://lucene.apache.org/core/), the reference implementation when it comes to full text search. While I am not directly involved in developing bleve I was curious about how it works internally and did take a look at the analyzers it provides.
+I work for [Couchbase](http://www.couchbase.com/) where we are currently developing full text search capabilities based on [bleve](http://blevesearch.com/). Bleve is implemented in [go](http://golang.org/) and inspired by [Apache Lucene](http://lucene.apache.org/core/), the reference implementation when it comes to full text search. While I am not directly involved in developing bleve I was curious about how it works internally and did take a look at the analyzers it provides.
 
 Analyzers take your free form text and turn it into tokens which can then be used for indexing or queries. Since I know our team is currently at work doing performance optimizations in all places I wanted to take a stab at implementing similar analyzers in [Rust](https://www.rust-lang.org/) and see how they perform in comparison.
 
@@ -46,7 +46,7 @@ The `Token` contains the `term` sliced by the tokenizer and also related metadat
 
 One problem with this approach is that the `String` implicitly performs a heap allocation, and when we are slicing hundreds or thousands of small tokens we are allocating lots of small chunks on the heap.
 
-The first idea to avoid this is using a `&str` instead, but we potentially need to modify the term and then we are back at heap allocations (as an exercise for the reader, using [Cow](https://doc.rust-lang.org/std/borrow/enum.Cow.html) could also be an option). So, how can we make this more efficient?
+The first idea to avoid this is using a `&str` instead, but we potentially need to modify the term and then we are back at heap allocations (as an exercise for the reader or as a future blog post, using [Cow](https://doc.rust-lang.org/std/borrow/enum.Cow.html) could also be an option). So, how can we make this more efficient?
 
 One thing I realized during experimentation and later researching on the web is that when you are tokenizing text you mostly end up with lots of small tokens which maybe are even filtered out in the next step of the process. It would be nice if could stack allocate those small terms and as a fallback perform heap allocation for the rest! It turns out we can do just that, and here is one way:
 
