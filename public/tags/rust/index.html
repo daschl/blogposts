@@ -64,6 +64,217 @@
             
             <div class="posts">
                 
+                <h1 class="content-subhead">02 Jan 2017</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="http://nitschinger.at/Rust-on-the-Wifi-Pineapple-and-OpenWRT/" class="post-title">Rust on the WiFi Pineapple (and OpenWrt)</a>
+
+                        <p class="post-meta">
+                            
+                            
+                        </p>
+                    </header>
+
+                    <div class="post-description">
+                        
+
+<p>Over the holidays I wanted to get a very simple <a href="https://www.rust-lang.org">Rust</a> application running on my <a href="https://wifipineapple.com/">WiFi Pineapple Nano</a>. Since I don&rsquo;t have much experience with embedded systems and cross-compilation, it sounded like something fun to do and I was sure I might learn a thing or two. Many hours later and lots of frustration, I ended up with a simple solution that I&rsquo;d like to share in this post.</p>
+
+<p>The major obstacle to overcome is building your own standard library, since Rust doesn&rsquo;t ship with one for our target out of the box. I first tried it &ldquo;the old way&rdquo; by checking out the source and running through all the steps described in <a href="https://github.com/japaric/rust-cross">rust-cross</a>. While I got it to build in the end it still didn&rsquo;t work because of some version issues (I compiled with <code>rustc 1.16.0-dev (4ecc85beb 2016-12-28)</code> and the same version but <code>rustc 1.16.0-nightly (4ecc85beb 2016-12-28)</code> <a href="https://gist.github.com/daschl/b4f87ae707ecff297a1602135f3f940b">rejected running it</a>).</p>
+
+<p>Close to giving up at this point after spending hours on it, I found the <a href="https://github.com/japaric/xargo">xargo</a> wrapper around <code>cargo</code>, an awesome project by <a href="https://github.com/japaric">Jorge Aparicio</a>. With this tool I got it to work fairly quickly and this is also the approach we&rsquo;ll be following in this post. We still need to handle a couple of extra steps not outlined in the <code>xargo</code> documentation, so I hope this post provides extra value to some of you.</p>
+
+<h2 id="which-target">Which target?</h2>
+
+<p>Before we get into the weeds we need to do our homework first and figure out the compilation target for cross compilation. Once you SSH into your pineapple and run <code>uname -a</code> you&rsquo;ll see something like this:</p>
+
+<pre><code>root@Pineapple:~# uname -a
+Linux Pineapple 3.18.36 #40 Fri Oct 28 05:42:22 UTC 2016 mips GNU/Linux
+</code></pre>
+
+<p>This is the output from my WiFi Pineapple NANO running the 1.1.3 firmware. The important part here is <strong>mips</strong>, which gives us a clue which platform the pineapple is running on. The device is built on top of <a href="https://openwrt.org/">OpenWRT</a>, a linux distribution for embedded devices.</p>
+
+<p>The <code>/etc/openwrt_release</code> file provides more information about the OpenWrt release itself:</p>
+
+<pre><code>root@Pineapple:~# cat /etc/openwrt_release
+DISTRIB_ID='OpenWrt'
+DISTRIB_RELEASE='Chaos Calmer'
+DISTRIB_REVISION='r49403'
+DISTRIB_CODENAME='chaos_calmer'
+DISTRIB_TARGET='ar71xx/generic'
+DISTRIB_DESCRIPTION='OpenWrt Chaos Calmer 15.05.1'
+DISTRIB_TAINTS='no-all no-ipv6 busybox'
+</code></pre>
+
+<p>Our target is ‘ar71xx/generic’, running OpenWrt ChaosCalmer 15.05.1. Looking for more info <a href="https://dev.openwrt.org/wiki/platforms">here</a>, we can see that its a <a href="https://en.wikipedia.org/wiki/Endianness#Big-endian">big endian</a> platform based on the Atheros AR71xx/AR724x/913x chipset.</p>
+
+<p>That gives us enough information to locate <a href="https://downloads.openwrt.org/chaos_calmer/15.05.1/ar71xx/generic/">this download page</a> for our chipset and especially we need to download <a href="https://downloads.openwrt.org/chaos_calmer/15.05.1/ar71xx/generic/OpenWrt-SDK-15.05.1-ar71xx-generic_gcc-4.8-linaro_uClibc-0.9.33.2.Linux-x86_64.tar.bz2">the correct SDK</a>.</p>
+
+<p>OpenWrt only provides the SDK for Linux as a host platform, so if you are running on Windows or OSX you&rsquo;ll need a virtual machine to follow the steps.</p>
+
+<h2 id="openwrt-sdk-setup">OpenWRT SDK Setup</h2>
+
+<p>To make sure our toolchain works we can compile and run a simple &ldquo;Hello World&rdquo; from C code by using the SDK directly. This will make sure that we have everything set up properly, since Rust builds on those binaries at a later stage.</p>
+
+<p>Unpack the archive and add these environment variables to your <code>.bashrc</code> (or equivalent) so that you don&rsquo;t run into path issues.</p>
+
+<pre><code>export PATH=$PATH:~/openwrt/staging_dir/toolchain-mips_34kc_gcc-4.8-linaro_uClibc-0.9.33.2/bin/
+export STAGING_DIR=~/openwrt/staging_dir/
+</code></pre>
+
+<p>We are adding the SDK <code>gcc</code> binaries to our <code>PATH</code> and also provide the <code>STAGING_DIR</code> environment variable that the SDK needs while building. Note that I&rsquo;ve renamed the <code>OpenWrt-SDK-15.05.1-ar71xx-generic_gcc-4.8-linaro_uClibc-0.9.33.2.Linux-x86_64</code> (wow&hellip;) directory after extraction simply to <code>openwrt</code> so its easier to read the command line. Note: make sure to reload/source your <code>.bashrc</code> file if you want to stay in the current terminal or open a new one so the changes take effect.</p>
+
+<p>Here is a very simple hello world in C (<code>hello.c</code>):</p>
+<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #633820">#include</span><span style="color: #177500">&lt;stdio.h&gt;</span><span style="color: #633820"></span>
+
+<span style="color: #000000">main</span>() {
+        <span style="color: #000000">printf</span>(<span style="color: #C41A16">&quot;Hello, World!\n&quot;</span>);
+}
+</pre></div>
+
+<p>You can compile it with:</p>
+
+<pre><code>$ mips-openwrt-linux-gcc hello.c -o hello
+</code></pre>
+
+<p>If it compiles without issues, copy it to the device and run it!</p>
+
+<pre><code>$ scp hello root@172.16.42.1:~
+$ ssh root@172.16.42.1
+
+root@Pineapple:~# ./hello
+Hello, World!
+root@Pineapple:~#
+</code></pre>
+
+<h2 id="cross-compiling-rust">Cross-Compiling Rust</h2>
+
+<p>At this point we know that the SDK is set up correctly and we can compile and run C code on the pineapple just fine.</p>
+
+<p>To proceed, we need a nightly rust version, ideally set up through <a href="https://rustup.rs/">rustup</a> which is
+the preferred way to manage your rust environments by now.</p>
+
+<pre><code>$ rustup install nightly
+$ rustup default nightly
+</code></pre>
+
+<p>Don&rsquo;t forget to add the source component, otherwise it won&rsquo;t work down the road:</p>
+
+<pre><code>$ rustup component add rust-src
+</code></pre>
+
+<p>Finally, you should end up with a version similar to mine:</p>
+
+<pre><code>$ rustc -Vv
+rustc 1.16.0-nightly (4ecc85beb 2016-12-28)
+binary: rustc
+commit-hash: 4ecc85beb339aa8089d936e450b0d800bdf580ae
+commit-date: 2016-12-28
+host: x86_64-unknown-linux-gnu
+release: 1.16.0-nightly
+LLVM version: 3.9
+</code></pre>
+
+<p>Now, install <code>xargo</code> and wait for it to compile:</p>
+
+<pre><code>$ cargo install xargo
+</code></pre>
+
+<p>We are pretty much set now, but we haven&rsquo;t figured out which <code>rustc</code> target to use. Looking at the long output of <code>rustc --print target-list</code>, the one we need to use is <strong>mips-unknown-linux-uclibc</strong> (since we are compiling against the <code>mips</code> architecture and this OpenWRT version is compiled with <a href="https://uclibc.org/">uclibc</a>)</p>
+
+<p>Let&rsquo;s create a hello world project with cargo:</p>
+
+<pre><code>$ cargo new hello --bin
+     Created binary (application) `hello` project
+</code></pre>
+
+<p>Before we can build it, there are a couple modifications we need to make. First, we need to adapt the <code>Cargo.toml</code> to <code>abort</code> on <code>panic</code>. I don&rsquo;t know why this is the case, but the <code>xargo</code> README says we
+should do it and it also fails to compile otherwise.</p>
+
+<pre><code>$ cat Cargo.toml
+[package]
+name = &quot;hello&quot;
+version = &quot;0.1.0&quot;
+authors = [&quot;you&quot;]
+
+[dependencies]
+
+[profile.dev]
+panic = &quot;abort&quot;
+
+[profile.release]
+panic = &quot;abort&quot;
+</code></pre>
+
+<p>Next, we need to tell <code>cargo</code> to use a different linker for our <code>mips</code> target since the one on our host doesn&rsquo;t work for our target. This is done by providing a custom config within the <code>.cargo/config</code> file:</p>
+
+<pre><code>$ cat .cargo/config
+[build]
+target = &quot;mips-unknown-linux-uclibc&quot;
+
+[target.mips-unknown-linux-uclibc]
+linker = &quot;mips-openwrt-linux-gcc&quot;
+</code></pre>
+
+<p>Finally, we need to add a <code>Xargo.toml</code> in order to tell <code>xargo</code> to also build the standard library for us:</p>
+
+<pre><code>$ cat Xargo.toml
+[target.mips-unknown-linux-uclibc.dependencies.std]
+features = []
+</code></pre>
+
+<p>Now we are all set! Run <code>xargo build</code> (not <code>cargo build</code>) and watch the magic happen. The first time <code>xargo</code> will build the standard library for you, but subsequent builds will just reuse the compiled libraries so its even quicker. The second time it will look like this:</p>
+
+<pre><code>$ xargo build
+   Compiling hello v0.1.0 (file:///home/vagrant/src/hello)
+    Finished debug [unoptimized + debuginfo] target(s) in 0.17 secs
+</code></pre>
+
+<p>Looking into our <code>target/</code> directory we can see that there is now a <code>hello</code> binary
+available for our <code>mips-unknown-linux-uclibc</code> target!</p>
+
+<pre><code>~/src/hello$ tree target/
+target/
+|-- debug
+|   |-- build
+|   |-- deps
+|   |-- examples
+|   `-- native
+`-- mips-unknown-linux-uclibc
+    `-- debug
+        |-- build
+        |-- deps
+        |   `-- hello-e7c80b1b0618ec37
+        |-- examples
+        |-- hello           &lt;----------- this one ------
+        `-- native
+</code></pre>
+
+<p>Of course, running it on our host won&rsquo;t work:</p>
+
+<pre><code>$ ./target/mips-unknown-linux-uclibc/debug/hello
+-bash: ./target/mips-unknown-linux-uclibc/debug/hello: cannot execute binary file: Exec format error
+</code></pre>
+
+<p>As a final step, copy the file over to your pineapple and run it (here I&rsquo;m copying it to the mounted SD card just for fun):</p>
+
+<pre><code>$ scp target/mips-unknown-linux-uclibc/debug/hello root@172.16.42:/sd
+$ ssh root@172.16.42.1 '/sd/hello'
+Hello, world!
+</code></pre>
+
+<p>That&rsquo;s it! We just cross-compiled and ran a Rust program on a WiFi Pineapple.</p>
+
+<h2 id="one-last-thing">One last thing&hellip;</h2>
+
+<p>While researching this topic I was made aware that there is still an open issue for the <a href="https://github.com/rust-lang/libc">libc</a> crate to fully support the <code>mips-unknown-linux-uclibc</code> target. It seems to work mostly but until <a href="https://github.com/rust-lang/libc/issues/361">the issue</a> is resolved keep in mind that you might run into some weird issues.</p>
+
+<p>Let me know if I missed anything or if you are also interested in running Rust on the WiFi Pineapple or similar OpenWrt devices! I&rsquo;d like to close this post with a special thanks to <a href="https://github.com/japaric">Jorge Aparicio</a> who is tirelessly working on making the cross compilation and embedded experience with Rust better every day (<a href="https://github.com/japaric/xargo">xargo</a>, <a href="https://github.com/japaric/trust">trust</a>, <a href="https://github.com/japaric/cross">cross</a>,&hellip;).</p>
+
+                    </div>
+                </section>
+                
                 <h1 class="content-subhead">28 Oct 2016</h1>
                 <section class="post">
                     <header class="post-header">
@@ -79,7 +290,7 @@
                     <div class="post-description">
                         
 
-<p>I work for <a href="http://www.couchbase.com/">Couchbase</a> where we are currently developing full text search capabilities based on <a href="blevesearch.com">bleve</a>. Bleve is implemented in <a href="golang.org">go</a> and inspired by <a href="http://lucene.apache.org/core/">Apache Lucene</a>, the reference implementation when it comes to full text search. While I am not directly involved in developing bleve I was curious about how it works internally and did take a look at the analyzers it provides.</p>
+<p>I work for <a href="http://www.couchbase.com/">Couchbase</a> where we are currently developing full text search capabilities based on <a href="http://blevesearch.com/">bleve</a>. Bleve is implemented in <a href="http://golang.org/">go</a> and inspired by <a href="http://lucene.apache.org/core/">Apache Lucene</a>, the reference implementation when it comes to full text search. While I am not directly involved in developing bleve I was curious about how it works internally and did take a look at the analyzers it provides.</p>
 
 <p>Analyzers take your free form text and turn it into tokens which can then be used for indexing or queries. Since I know our team is currently at work doing performance optimizations in all places I wanted to take a stab at implementing similar analyzers in <a href="https://www.rust-lang.org/">Rust</a> and see how they perform in comparison.</p>
 
@@ -115,7 +326,7 @@
 
 <p>One problem with this approach is that the <code>String</code> implicitly performs a heap allocation, and when we are slicing hundreds or thousands of small tokens we are allocating lots of small chunks on the heap.</p>
 
-<p>The first idea to avoid this is using a <code>&amp;str</code> instead, but we potentially need to modify the term and then we are back at heap allocations (as an exercise for the reader, using <a href="https://doc.rust-lang.org/std/borrow/enum.Cow.html">Cow</a> could also be an option). So, how can we make this more efficient?</p>
+<p>The first idea to avoid this is using a <code>&amp;str</code> instead, but we potentially need to modify the term and then we are back at heap allocations (as an exercise for the reader or as a future blog post, using <a href="https://doc.rust-lang.org/std/borrow/enum.Cow.html">Cow</a> could also be an option). So, how can we make this more efficient?</p>
 
 <p>One thing I realized during experimentation and later researching on the web is that when you are tokenizing text you mostly end up with lots of small tokens which maybe are even filtered out in the next step of the process. It would be nice if could stack allocate those small terms and as a fallback perform heap allocation for the rest! It turns out we can do just that, and here is one way:</p>
 <div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">const</span> <span style="color: #000000">MAX_STACK_TERM_LEN:</span> <span style="color: #A90D91">usize</span> <span style="color: #000000">=</span> <span style="color: #1C01CE">15</span>;

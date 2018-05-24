@@ -6,8 +6,211 @@
     <description>Recent content on daschl writes. sometimes.</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Fri, 28 Oct 2016 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Mon, 02 Jan 2017 00:00:00 +0000</lastBuildDate>
     <atom:link href="http://nitschinger.at/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Rust on the WiFi Pineapple (and OpenWrt)</title>
+      <link>http://nitschinger.at/Rust-on-the-Wifi-Pineapple-and-OpenWRT/</link>
+      <pubDate>Mon, 02 Jan 2017 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/Rust-on-the-Wifi-Pineapple-and-OpenWRT/</guid>
+      <description>
+
+&lt;p&gt;Over the holidays I wanted to get a very simple &lt;a href=&#34;https://www.rust-lang.org&#34;&gt;Rust&lt;/a&gt; application running on my &lt;a href=&#34;https://wifipineapple.com/&#34;&gt;WiFi Pineapple Nano&lt;/a&gt;. Since I don&amp;rsquo;t have much experience with embedded systems and cross-compilation, it sounded like something fun to do and I was sure I might learn a thing or two. Many hours later and lots of frustration, I ended up with a simple solution that I&amp;rsquo;d like to share in this post.&lt;/p&gt;
+
+&lt;p&gt;The major obstacle to overcome is building your own standard library, since Rust doesn&amp;rsquo;t ship with one for our target out of the box. I first tried it &amp;ldquo;the old way&amp;rdquo; by checking out the source and running through all the steps described in &lt;a href=&#34;https://github.com/japaric/rust-cross&#34;&gt;rust-cross&lt;/a&gt;. While I got it to build in the end it still didn&amp;rsquo;t work because of some version issues (I compiled with &lt;code&gt;rustc 1.16.0-dev (4ecc85beb 2016-12-28)&lt;/code&gt; and the same version but &lt;code&gt;rustc 1.16.0-nightly (4ecc85beb 2016-12-28)&lt;/code&gt; &lt;a href=&#34;https://gist.github.com/daschl/b4f87ae707ecff297a1602135f3f940b&#34;&gt;rejected running it&lt;/a&gt;).&lt;/p&gt;
+
+&lt;p&gt;Close to giving up at this point after spending hours on it, I found the &lt;a href=&#34;https://github.com/japaric/xargo&#34;&gt;xargo&lt;/a&gt; wrapper around &lt;code&gt;cargo&lt;/code&gt;, an awesome project by &lt;a href=&#34;https://github.com/japaric&#34;&gt;Jorge Aparicio&lt;/a&gt;. With this tool I got it to work fairly quickly and this is also the approach we&amp;rsquo;ll be following in this post. We still need to handle a couple of extra steps not outlined in the &lt;code&gt;xargo&lt;/code&gt; documentation, so I hope this post provides extra value to some of you.&lt;/p&gt;
+
+&lt;h2 id=&#34;which-target&#34;&gt;Which target?&lt;/h2&gt;
+
+&lt;p&gt;Before we get into the weeds we need to do our homework first and figure out the compilation target for cross compilation. Once you SSH into your pineapple and run &lt;code&gt;uname -a&lt;/code&gt; you&amp;rsquo;ll see something like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;root@Pineapple:~# uname -a
+Linux Pineapple 3.18.36 #40 Fri Oct 28 05:42:22 UTC 2016 mips GNU/Linux
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This is the output from my WiFi Pineapple NANO running the 1.1.3 firmware. The important part here is &lt;strong&gt;mips&lt;/strong&gt;, which gives us a clue which platform the pineapple is running on. The device is built on top of &lt;a href=&#34;https://openwrt.org/&#34;&gt;OpenWRT&lt;/a&gt;, a linux distribution for embedded devices.&lt;/p&gt;
+
+&lt;p&gt;The &lt;code&gt;/etc/openwrt_release&lt;/code&gt; file provides more information about the OpenWrt release itself:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;root@Pineapple:~# cat /etc/openwrt_release
+DISTRIB_ID=&#39;OpenWrt&#39;
+DISTRIB_RELEASE=&#39;Chaos Calmer&#39;
+DISTRIB_REVISION=&#39;r49403&#39;
+DISTRIB_CODENAME=&#39;chaos_calmer&#39;
+DISTRIB_TARGET=&#39;ar71xx/generic&#39;
+DISTRIB_DESCRIPTION=&#39;OpenWrt Chaos Calmer 15.05.1&#39;
+DISTRIB_TAINTS=&#39;no-all no-ipv6 busybox&#39;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Our target is ‘ar71xx/generic’, running OpenWrt ChaosCalmer 15.05.1. Looking for more info &lt;a href=&#34;https://dev.openwrt.org/wiki/platforms&#34;&gt;here&lt;/a&gt;, we can see that its a &lt;a href=&#34;https://en.wikipedia.org/wiki/Endianness#Big-endian&#34;&gt;big endian&lt;/a&gt; platform based on the Atheros AR71xx/AR724x/913x chipset.&lt;/p&gt;
+
+&lt;p&gt;That gives us enough information to locate &lt;a href=&#34;https://downloads.openwrt.org/chaos_calmer/15.05.1/ar71xx/generic/&#34;&gt;this download page&lt;/a&gt; for our chipset and especially we need to download &lt;a href=&#34;https://downloads.openwrt.org/chaos_calmer/15.05.1/ar71xx/generic/OpenWrt-SDK-15.05.1-ar71xx-generic_gcc-4.8-linaro_uClibc-0.9.33.2.Linux-x86_64.tar.bz2&#34;&gt;the correct SDK&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;OpenWrt only provides the SDK for Linux as a host platform, so if you are running on Windows or OSX you&amp;rsquo;ll need a virtual machine to follow the steps.&lt;/p&gt;
+
+&lt;h2 id=&#34;openwrt-sdk-setup&#34;&gt;OpenWRT SDK Setup&lt;/h2&gt;
+
+&lt;p&gt;To make sure our toolchain works we can compile and run a simple &amp;ldquo;Hello World&amp;rdquo; from C code by using the SDK directly. This will make sure that we have everything set up properly, since Rust builds on those binaries at a later stage.&lt;/p&gt;
+
+&lt;p&gt;Unpack the archive and add these environment variables to your &lt;code&gt;.bashrc&lt;/code&gt; (or equivalent) so that you don&amp;rsquo;t run into path issues.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;export PATH=$PATH:~/openwrt/staging_dir/toolchain-mips_34kc_gcc-4.8-linaro_uClibc-0.9.33.2/bin/
+export STAGING_DIR=~/openwrt/staging_dir/
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;We are adding the SDK &lt;code&gt;gcc&lt;/code&gt; binaries to our &lt;code&gt;PATH&lt;/code&gt; and also provide the &lt;code&gt;STAGING_DIR&lt;/code&gt; environment variable that the SDK needs while building. Note that I&amp;rsquo;ve renamed the &lt;code&gt;OpenWrt-SDK-15.05.1-ar71xx-generic_gcc-4.8-linaro_uClibc-0.9.33.2.Linux-x86_64&lt;/code&gt; (wow&amp;hellip;) directory after extraction simply to &lt;code&gt;openwrt&lt;/code&gt; so its easier to read the command line. Note: make sure to reload/source your &lt;code&gt;.bashrc&lt;/code&gt; file if you want to stay in the current terminal or open a new one so the changes take effect.&lt;/p&gt;
+
+&lt;p&gt;Here is a very simple hello world in C (&lt;code&gt;hello.c&lt;/code&gt;):&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;#include&lt;/span&gt;&lt;span style=&#34;color: #177500&#34;&gt;&amp;lt;stdio.h&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;&lt;/span&gt;
+
+&lt;span style=&#34;color: #000000&#34;&gt;main&lt;/span&gt;() {
+        &lt;span style=&#34;color: #000000&#34;&gt;printf&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Hello, World!\n&amp;quot;&lt;/span&gt;);
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;You can compile it with:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ mips-openwrt-linux-gcc hello.c -o hello
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;If it compiles without issues, copy it to the device and run it!&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ scp hello root@172.16.42.1:~
+$ ssh root@172.16.42.1
+
+root@Pineapple:~# ./hello
+Hello, World!
+root@Pineapple:~#
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h2 id=&#34;cross-compiling-rust&#34;&gt;Cross-Compiling Rust&lt;/h2&gt;
+
+&lt;p&gt;At this point we know that the SDK is set up correctly and we can compile and run C code on the pineapple just fine.&lt;/p&gt;
+
+&lt;p&gt;To proceed, we need a nightly rust version, ideally set up through &lt;a href=&#34;https://rustup.rs/&#34;&gt;rustup&lt;/a&gt; which is
+the preferred way to manage your rust environments by now.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ rustup install nightly
+$ rustup default nightly
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Don&amp;rsquo;t forget to add the source component, otherwise it won&amp;rsquo;t work down the road:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ rustup component add rust-src
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Finally, you should end up with a version similar to mine:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ rustc -Vv
+rustc 1.16.0-nightly (4ecc85beb 2016-12-28)
+binary: rustc
+commit-hash: 4ecc85beb339aa8089d936e450b0d800bdf580ae
+commit-date: 2016-12-28
+host: x86_64-unknown-linux-gnu
+release: 1.16.0-nightly
+LLVM version: 3.9
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now, install &lt;code&gt;xargo&lt;/code&gt; and wait for it to compile:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ cargo install xargo
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;We are pretty much set now, but we haven&amp;rsquo;t figured out which &lt;code&gt;rustc&lt;/code&gt; target to use. Looking at the long output of &lt;code&gt;rustc --print target-list&lt;/code&gt;, the one we need to use is &lt;strong&gt;mips-unknown-linux-uclibc&lt;/strong&gt; (since we are compiling against the &lt;code&gt;mips&lt;/code&gt; architecture and this OpenWRT version is compiled with &lt;a href=&#34;https://uclibc.org/&#34;&gt;uclibc&lt;/a&gt;)&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s create a hello world project with cargo:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ cargo new hello --bin
+     Created binary (application) `hello` project
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Before we can build it, there are a couple modifications we need to make. First, we need to adapt the &lt;code&gt;Cargo.toml&lt;/code&gt; to &lt;code&gt;abort&lt;/code&gt; on &lt;code&gt;panic&lt;/code&gt;. I don&amp;rsquo;t know why this is the case, but the &lt;code&gt;xargo&lt;/code&gt; README says we
+should do it and it also fails to compile otherwise.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ cat Cargo.toml
+[package]
+name = &amp;quot;hello&amp;quot;
+version = &amp;quot;0.1.0&amp;quot;
+authors = [&amp;quot;you&amp;quot;]
+
+[dependencies]
+
+[profile.dev]
+panic = &amp;quot;abort&amp;quot;
+
+[profile.release]
+panic = &amp;quot;abort&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Next, we need to tell &lt;code&gt;cargo&lt;/code&gt; to use a different linker for our &lt;code&gt;mips&lt;/code&gt; target since the one on our host doesn&amp;rsquo;t work for our target. This is done by providing a custom config within the &lt;code&gt;.cargo/config&lt;/code&gt; file:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ cat .cargo/config
+[build]
+target = &amp;quot;mips-unknown-linux-uclibc&amp;quot;
+
+[target.mips-unknown-linux-uclibc]
+linker = &amp;quot;mips-openwrt-linux-gcc&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Finally, we need to add a &lt;code&gt;Xargo.toml&lt;/code&gt; in order to tell &lt;code&gt;xargo&lt;/code&gt; to also build the standard library for us:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ cat Xargo.toml
+[target.mips-unknown-linux-uclibc.dependencies.std]
+features = []
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now we are all set! Run &lt;code&gt;xargo build&lt;/code&gt; (not &lt;code&gt;cargo build&lt;/code&gt;) and watch the magic happen. The first time &lt;code&gt;xargo&lt;/code&gt; will build the standard library for you, but subsequent builds will just reuse the compiled libraries so its even quicker. The second time it will look like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ xargo build
+   Compiling hello v0.1.0 (file:///home/vagrant/src/hello)
+    Finished debug [unoptimized + debuginfo] target(s) in 0.17 secs
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Looking into our &lt;code&gt;target/&lt;/code&gt; directory we can see that there is now a &lt;code&gt;hello&lt;/code&gt; binary
+available for our &lt;code&gt;mips-unknown-linux-uclibc&lt;/code&gt; target!&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;~/src/hello$ tree target/
+target/
+|-- debug
+|   |-- build
+|   |-- deps
+|   |-- examples
+|   `-- native
+`-- mips-unknown-linux-uclibc
+    `-- debug
+        |-- build
+        |-- deps
+        |   `-- hello-e7c80b1b0618ec37
+        |-- examples
+        |-- hello           &amp;lt;----------- this one ------
+        `-- native
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Of course, running it on our host won&amp;rsquo;t work:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ ./target/mips-unknown-linux-uclibc/debug/hello
+-bash: ./target/mips-unknown-linux-uclibc/debug/hello: cannot execute binary file: Exec format error
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;As a final step, copy the file over to your pineapple and run it (here I&amp;rsquo;m copying it to the mounted SD card just for fun):&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ scp target/mips-unknown-linux-uclibc/debug/hello root@172.16.42:/sd
+$ ssh root@172.16.42.1 &#39;/sd/hello&#39;
+Hello, world!
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;That&amp;rsquo;s it! We just cross-compiled and ran a Rust program on a WiFi Pineapple.&lt;/p&gt;
+
+&lt;h2 id=&#34;one-last-thing&#34;&gt;One last thing&amp;hellip;&lt;/h2&gt;
+
+&lt;p&gt;While researching this topic I was made aware that there is still an open issue for the &lt;a href=&#34;https://github.com/rust-lang/libc&#34;&gt;libc&lt;/a&gt; crate to fully support the &lt;code&gt;mips-unknown-linux-uclibc&lt;/code&gt; target. It seems to work mostly but until &lt;a href=&#34;https://github.com/rust-lang/libc/issues/361&#34;&gt;the issue&lt;/a&gt; is resolved keep in mind that you might run into some weird issues.&lt;/p&gt;
+
+&lt;p&gt;Let me know if I missed anything or if you are also interested in running Rust on the WiFi Pineapple or similar OpenWrt devices! I&amp;rsquo;d like to close this post with a special thanks to &lt;a href=&#34;https://github.com/japaric&#34;&gt;Jorge Aparicio&lt;/a&gt; who is tirelessly working on making the cross compilation and embedded experience with Rust better every day (&lt;a href=&#34;https://github.com/japaric/xargo&#34;&gt;xargo&lt;/a&gt;, &lt;a href=&#34;https://github.com/japaric/trust&#34;&gt;trust&lt;/a&gt;, &lt;a href=&#34;https://github.com/japaric/cross&#34;&gt;cross&lt;/a&gt;,&amp;hellip;).&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Text Analysis in Rust - Tokenization</title>
@@ -17,7 +220,7 @@
       <guid>http://nitschinger.at/Text-Analysis-in-Rust-Tokenization/</guid>
       <description>
 
-&lt;p&gt;I work for &lt;a href=&#34;http://www.couchbase.com/&#34;&gt;Couchbase&lt;/a&gt; where we are currently developing full text search capabilities based on &lt;a href=&#34;blevesearch.com&#34;&gt;bleve&lt;/a&gt;. Bleve is implemented in &lt;a href=&#34;golang.org&#34;&gt;go&lt;/a&gt; and inspired by &lt;a href=&#34;http://lucene.apache.org/core/&#34;&gt;Apache Lucene&lt;/a&gt;, the reference implementation when it comes to full text search. While I am not directly involved in developing bleve I was curious about how it works internally and did take a look at the analyzers it provides.&lt;/p&gt;
+&lt;p&gt;I work for &lt;a href=&#34;http://www.couchbase.com/&#34;&gt;Couchbase&lt;/a&gt; where we are currently developing full text search capabilities based on &lt;a href=&#34;http://blevesearch.com/&#34;&gt;bleve&lt;/a&gt;. Bleve is implemented in &lt;a href=&#34;http://golang.org/&#34;&gt;go&lt;/a&gt; and inspired by &lt;a href=&#34;http://lucene.apache.org/core/&#34;&gt;Apache Lucene&lt;/a&gt;, the reference implementation when it comes to full text search. While I am not directly involved in developing bleve I was curious about how it works internally and did take a look at the analyzers it provides.&lt;/p&gt;
 
 &lt;p&gt;Analyzers take your free form text and turn it into tokens which can then be used for indexing or queries. Since I know our team is currently at work doing performance optimizations in all places I wanted to take a stab at implementing similar analyzers in &lt;a href=&#34;https://www.rust-lang.org/&#34;&gt;Rust&lt;/a&gt; and see how they perform in comparison.&lt;/p&gt;
 
@@ -53,7 +256,7 @@
 
 &lt;p&gt;One problem with this approach is that the &lt;code&gt;String&lt;/code&gt; implicitly performs a heap allocation, and when we are slicing hundreds or thousands of small tokens we are allocating lots of small chunks on the heap.&lt;/p&gt;
 
-&lt;p&gt;The first idea to avoid this is using a &lt;code&gt;&amp;amp;str&lt;/code&gt; instead, but we potentially need to modify the term and then we are back at heap allocations (as an exercise for the reader, using &lt;a href=&#34;https://doc.rust-lang.org/std/borrow/enum.Cow.html&#34;&gt;Cow&lt;/a&gt; could also be an option). So, how can we make this more efficient?&lt;/p&gt;
+&lt;p&gt;The first idea to avoid this is using a &lt;code&gt;&amp;amp;str&lt;/code&gt; instead, but we potentially need to modify the term and then we are back at heap allocations (as an exercise for the reader or as a future blog post, using &lt;a href=&#34;https://doc.rust-lang.org/std/borrow/enum.Cow.html&#34;&gt;Cow&lt;/a&gt; could also be an option). So, how can we make this more efficient?&lt;/p&gt;
 
 &lt;p&gt;One thing I realized during experimentation and later researching on the web is that when you are tokenizing text you mostly end up with lots of small tokens which maybe are even filtered out in the next step of the process. It would be nice if could stack allocate those small terms and as a fallback perform heap allocation for the rest! It turns out we can do just that, and here is one way:&lt;/p&gt;
 &lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;const&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;MAX_STACK_TERM_LEN:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;15&lt;/span&gt;;
@@ -3533,241 +3736,6 @@ notice: Finished catalog run in 0.77 seconds
 &lt;p&gt;If you want to interact with one of the nodes instead of the whole cluster, you can always specify the node identifier. For example, if you want to start only the first node you can do it with the &lt;code&gt;vagrant up node1&lt;/code&gt; command.&lt;/p&gt;
 
 &lt;p&gt;To me, this is a very fast and clean way to provision server nodes. I just need to change a few lines in a file and get a new cluster without much hassle. Even more important, I can put those config files in version control and &lt;a href=&#34;https://github.com/daschl/vagrants&#34;&gt;share them&lt;/a&gt; with other folks!&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>Logging with the Couchbase Java Client</title>
-      <link>http://nitschinger.at/Logging-with-the-Couchbase-Java-Client/</link>
-      <pubDate>Thu, 16 May 2013 00:00:00 +0000</pubDate>
-      
-      <guid>http://nitschinger.at/Logging-with-the-Couchbase-Java-Client/</guid>
-      <description>
-
-&lt;h2 id=&#34;introduction&#34;&gt;Introduction&lt;/h2&gt;
-
-&lt;p&gt;There is a huge variety in logging frameworks for Java, and its hard to please everyone. To understand how logging is currently handled in the SDK, we have to go back a few years. As you may know, the SDK depends on the &lt;a href=&#34;https://code.google.com/p/spymemcached/&#34;&gt;spymemcached&lt;/a&gt; library and therefore also inherits its logging mechanisms. Back in the days when &lt;a href=&#34;https://twitter.com/dlsspy&#34;&gt;@dustin&lt;/a&gt; wrote spy, there was no good abstraction for logging available (like SLF4J), so he wrote his own. Nowadays things have changed, but spy still inherits this legacy.&lt;/p&gt;
-
-&lt;p&gt;At the time of writing, the SDK supports logging to a simple default logger (logs to STDERR from INFO level up), &lt;a href=&#34;http://logging.apache.org/log4j/1.2/&#34;&gt;Log4J&lt;/a&gt; and the SunLogger (java.util.logging). In the upcoming 2.9.0 release of spymemcached, it will also support the SLF4J logging facade where you can plug in your own implementation. The next version of the SDK (most likely 1.1.7) will depend on spy 2.9, so you&amp;rsquo;ll also get the benefits there.&lt;/p&gt;
-
-&lt;p&gt;Before we dig into the concepts, here are the supported Log Levels (defined by &lt;code&gt;net.spy.memcached.compat.log.Level&lt;/code&gt;):&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;TRACE (with 2.9)&lt;/li&gt;
-&lt;li&gt;DEBUG&lt;/li&gt;
-&lt;li&gt;INFO&lt;/li&gt;
-&lt;li&gt;WARN&lt;/li&gt;
-&lt;li&gt;ERROR&lt;/li&gt;
-&lt;li&gt;FATAL&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;Keep in mind that different loggers implement different levels, so for some of them a mapping needs top happen. This will be noted during the descriptions of each implementation.&lt;/p&gt;
-
-&lt;p&gt;We&amp;rsquo;ll now look at the different logging mechanisms available and how you can configure them. SLF4J will be covered towards the end.&lt;/p&gt;
-
-&lt;h2 id=&#34;switching-logging&#34;&gt;Switching Logging&lt;/h2&gt;
-
-&lt;p&gt;If you don&amp;rsquo;t change anything, the default logger will be used. This mechanism just prints log messages to STDERR (from INFO level upwards). Chances are that you want to integrate the SDK with the same logging library that you use as well. The LoggerFactory inside spy decides at construction which one to choose, based on a system property. So you can either change this programmatically or through a param to the &lt;code&gt;java&lt;/code&gt; command.&lt;/p&gt;
-
-&lt;p&gt;If you want to use the Log4JLogger programmatically, do it this way (before initializing the &lt;code&gt;CouchbaseClient&lt;/code&gt; object):&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;Properties systemProperties = System.getProperties();
-systemProperties.put(&amp;quot;net.spy.log.LoggerImpl&amp;quot;, &amp;quot;net.spy.memcached.compat.log.Log4JLogger&amp;quot;);
-System.setProperties(systemProperties);
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Of course, you need to add the Log4J JAR to your CLASSPATH to make it work (as we&amp;rsquo;ll see later). Alternatively, you can set it this way on the comman dline:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;java -Dnet.spy.log.LoggerImpl=net.spy.memcached.compat.log.Log4JLogger ...
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Now that we know how to enable the different implementations, let&amp;rsquo;s look at them in greater detail.&lt;/p&gt;
-
-&lt;h2 id=&#34;the-simple-default-logger&#34;&gt;The Simple Default Logger&lt;/h2&gt;
-
-&lt;p&gt;If you don&amp;rsquo;t change anything, the SDK will use the DefaultLogger (net.spy.memcached.compat.log.DefaultLogger). This logger has no dependencies and prints every log message that is INFO level or higher (INFO, WARN, ERROR and FATAL) to the systems STDERR. Since the STDERR is covered by most IDEs automatically, you&amp;rsquo;ll also see them in the console output window.&lt;/p&gt;
-
-&lt;p&gt;Since its so simple, you can&amp;rsquo;t customize this behavior. Every log message gets timestamped as well (the format is &lt;code&gt;yyyy-MM-dd HH:mm:ss.SSS&lt;/code&gt;). Connecting to Couchbase commonly looks like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;2013-05-07 12:28:41.852 INFO com.couchbase.client.CouchbaseConnection:  Added {QA sa=/127.0.0.1:11210, #Rops=0, #Wops=0, #iq=0, topRop=null, topWop=null, toWrite=0, interested=0} to connect queue
-2013-05-07 12:28:41.862 INFO com.couchbase.client.CouchbaseConnection:  Connection state changed for sun.nio.ch.SelectionKeyImpl@3d9360e2
-2013-05-07 12:28:41.887 INFO com.couchbase.client.ViewConnection:  Added localhost to connect queue
-2013-05-07 12:28:41.888 INFO com.couchbase.client.CouchbaseClient:  viewmode property isn&#39;t defined. Setting viewmode to production mode
-2013-05-07 12:28:41.986 INFO com.couchbase.client.CouchbaseConnection:  Shut down Couchbase client
-2013-05-07 12:28:41.991 INFO com.couchbase.client.ViewConnection:  Node localhost has no ops in the queue
-2013-05-07 12:28:41.992 INFO com.couchbase.client.ViewNode:  I/O reactor terminated for localhost
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;So the format is always: &lt;code&gt;&amp;lt;timestamp&amp;gt; &amp;lt;level&amp;gt; &amp;lt;classname&amp;gt; &amp;lt;message&amp;gt;&lt;/code&gt;. Remeber that DEBUG messages or so will not be logged, so you won&amp;rsquo;t see them with the DefaultLogger.&lt;/p&gt;
-
-&lt;h2 id=&#34;the-sunlogger-java-util-logging&#34;&gt;The SunLogger (java.util.logging)&lt;/h2&gt;
-
-&lt;p&gt;The SunLogger also doesn&amp;rsquo;t introduce additional dependencies, since it depends on the &lt;code&gt;java.util.logging&lt;/code&gt; implementation. The &lt;code&gt;java.util.logging.Level&lt;/code&gt; enum defines the following levels: ALL, CONFIG, FINEST, FINER, FINE, INFO, WARNING, SEVERE and OFF. Since this does not map well to our defined Levels, here is the mapping that happens:&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;TRACE to FINEST (with 2.9)&lt;/li&gt;
-&lt;li&gt;DEBUG to FINE&lt;/li&gt;
-&lt;li&gt;INFO to INFO&lt;/li&gt;
-&lt;li&gt;WARN to WARNING&lt;/li&gt;
-&lt;li&gt;ERROR to SEVERE&lt;/li&gt;
-&lt;li&gt;FATAL to SEVERE&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;Without any further changes, the SunLogger also prints from INFO level upwards like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;May 7, 2013 12:42:16 PM com.couchbase.client.CouchbaseProperties setPropertyFile
-INFO: Could not load properties file &amp;quot;cbclient.properties&amp;quot; because: File not found with system classloader.
-May 7, 2013 12:42:16 PM net.spy.memcached.MemcachedConnection createConnections
-INFO: Added {QA sa=/127.0.0.1:11210, #Rops=0, #Wops=0, #iq=0, topRop=null, topWop=null, toWrite=0, interested=0} to connect queue
-May 7, 2013 12:42:16 PM net.spy.memcached.MemcachedConnection handleIO
-INFO: Connection state changed for sun.nio.ch.SelectionKeyImpl@4ce2cb55
-May 7, 2013 12:42:16 PM com.couchbase.client.ViewConnection createConnections
-INFO: Added localhost to connect queue
-May 7, 2013 12:42:16 PM com.couchbase.client.CouchbaseClient &amp;lt;init&amp;gt;
-INFO: viewmode property isn&#39;t defined. Setting viewmode to production mode
-May 7, 2013 12:42:16 PM com.couchbase.client.CouchbaseConnection run
-INFO: Shut down Couchbase client
-May 7, 2013 12:42:16 PM com.couchbase.client.ViewConnection shutdown
-INFO: Node localhost has no ops in the queue
-May 7, 2013 12:42:16 PM com.couchbase.client.ViewNode$1 run
-INFO: I/O reactor terminated for localhost
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;If you want to change the log level to DEBUG and lower, you can do it like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;Logger.getLogger(&amp;quot;com.couchbase.client&amp;quot;).setLevel(Level.FINEST);
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Now there is one more thing you need to do if you want to print all debug messages to the console. You set the logging level correctly, but the &lt;code&gt;ConsoleHandler&lt;/code&gt; is not set to debug yet (so most likely you will pay the price for debug logging, but won&amp;rsquo;t actually see anything in your IDE).&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;for(Handler h : Logger.getLogger(&amp;quot;com.couchbase.client&amp;quot;).getParent().getHandlers()) {
-    if(h instanceof ConsoleHandler) {
-        h.setLevel(Level.FINEST);
-    }
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;So, here is a full example on how to use the &lt;code&gt;SunLogger&lt;/code&gt; and get all Debug messages on the console.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;Properties systemProperties = System.getProperties();
-systemProperties.put(&amp;quot;net.spy.log.LoggerImpl&amp;quot;, &amp;quot;net.spy.memcached.compat.log.SunLogger&amp;quot;);
-System.setProperties(systemProperties);
-
-Logger logger = Logger.getLogger(&amp;quot;com.couchbase.client&amp;quot;);
-logger.setLevel(Level.FINEST);
-for(Handler h : logger.getParent().getHandlers()) {
-    if(h instanceof ConsoleHandler){
-        h.setLevel(Level.FINEST);
-    }
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Then just go ahead and create your &lt;code&gt;CouchbaseClient&lt;/code&gt; object, you will see detailed output like this (trimmed here):&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;May 7, 2013 12:54:34 PM com.couchbase.client.vbucket.ReconfigurableObserver update
-FINEST: Received an update, notifying reconfigurables about a com.couchbase.client.vbucket.config.Bucketcom.couchbase.client.vbucket.config.Bucket@3d77949
-May 7, 2013 12:54:34 PM com.couchbase.client.vbucket.ReconfigurableObserver update
-FINEST: Received an update, notifying reconfigurables about a com.couchbase.client.vbucket.config.Bucketcom.couchbase.client.vbucket.config.Bucket@4e927aef
-May 7, 2013 12:54:34 PM com.couchbase.client.vbucket.ReconfigurableObserver update
-FINEST: It says it is default and it&#39;s talking to /pools/default/bucketsStreaming/default?bucket_uuid=adfff22b70e09fafaa26ca37b7e05e9d
-May 7, 2013 12:54:34 PM com.couchbase.client.vbucket.ReconfigurableObserver update
-FINEST: It says it is default and it&#39;s talking to /pools/default/bucketsStreaming/default?bucket_uuid=adfff22b70e09fafaa26ca37b7e05e9d
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;h2 id=&#34;log4j&#34;&gt;Log4J&lt;/h2&gt;
-
-&lt;p&gt;Most people will need more flexibility, and Log4J was (and still is) standard in lots of applications. The SDK provides support for Log4J as well. To make it work, you first need to set the instance correctly:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;Properties systemProperties = System.getProperties();
-systemProperties.put(&amp;quot;net.spy.log.LoggerImpl&amp;quot;, &amp;quot;net.spy.memcached.compat.log.Log4JLogger&amp;quot;);
-System.setProperties(systemProperties);
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Now if you run this, you&amp;rsquo;ll get an error that some of the Log4J classes can not be found. This is not a surprise, because its not on the classpath. Let&amp;rsquo;s fix this by adding it accordingly. If you use maven, add the &lt;code&gt;log4j.log4j&lt;/code&gt; dependency (current version is 1.2.17). You can also just download the JAR and add it to the CLASSPATH as needed.&lt;/p&gt;
-
-&lt;p&gt;Now if we run it again, we get another error:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;log4j:WARN No appenders could be found for logger (com.couchbase.client.vbucket.ConfigurationProviderHTTP).
-log4j:WARN Please initialize the log4j system properly.
-log4j:WARN See http://logging.apache.org/log4j/1.2/faq.html#noconfig for more info.
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;One way to fix this is to get a correct &lt;code&gt;log4j.xml&lt;/code&gt; configuration file into our CLASSPATH, but to make it work quickly Log4J provides a &lt;code&gt;BasicConfigurator&lt;/code&gt;. Right after the system property configurations, add this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;org.apache.log4j.BasicConfigurator.configure();
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;If you run it with the code change applied, you will see that we get nicely printed log messages. You can also see that they show up straight from the DEBUG level (and even contain information from which thread they got logged):&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;69 [main] INFO com.couchbase.client.CouchbaseConnection  - Added {QA sa=/127.0.0.1:11210, #Rops=0, #Wops=0, #iq=0, topRop=null, topWop=null, toWrite=0, interested=0} to connect queue
-70 [main] DEBUG com.couchbase.client.vbucket.VBucketNodeLocator  - Updating nodesMap in VBucketNodeLocator.
-73 [main] DEBUG com.couchbase.client.vbucket.VBucketNodeLocator  - Adding node with hostname 127.0.0.1:11210.
-74 [main] DEBUG com.couchbase.client.vbucket.VBucketNodeLocator  - Node added is {QA sa=localhost/127.0.0.1:11210, #Rops=0, #Wops=0, #iq=0, topRop=null, topWop=null, toWrite=0, interested=8}.
-74 [Memcached IO over {MemcachedConnection to localhost/127.0.0.1:11210}] DEBUG com.couchbase.client.CouchbaseConnection  - Done dealing with queue.
-74 [Memcached IO over {MemcachedConnection to localhost/127.0.0.1:11210}] DEBUG com.couchbase.client.CouchbaseConnection  - Selecting with delay of 0ms
-79 [Memcached IO over {MemcachedConnection to localhost/127.0.0.1:11210}] DEBUG com.couchbase.client.CouchbaseConnection  - Selected 1, selected 1 keys
-79 [Memcached IO over
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;You can control the logging levels through the usual Log4J mechanisms. I won&amp;rsquo;t go into detail about them here, so please &lt;a href=&#34;http://logging.apache.org/log4j/1.2/manual.html&#34;&gt;check out&lt;/a&gt; their official documentation (for example on how to use the &lt;code&gt;PropertyConfigurator&lt;/code&gt; instead).&lt;/p&gt;
-
-&lt;p&gt;Speaking of Log4J, &lt;a href=&#34;https://twitter.com/zooldk&#34;&gt;Steffen Larsen&lt;/a&gt; implemented a &lt;a href=&#34;https://github.com/zooldk/log4j-couchbase&#34;&gt;Log4J appender&lt;/a&gt; to store logs in Couchbase (instead of a file)!&lt;/p&gt;
-
-&lt;h2 id=&#34;the-new-facade-slf4j&#34;&gt;The new Facade: SLF4J&lt;/h2&gt;
-
-&lt;p&gt;Not binding the application to a specific logging library is always a good idea. SLF4J is a facade for various pluggable logging frameworks behind it. So you can choose the logging implementation during runtime, be it &lt;a href=&#34;http://logback.qos.ch/&#34;&gt;logback&lt;/a&gt;, Log4J or others. Since we already tried Log4J, let&amp;rsquo;s make SLF4J work with Logback, one of the other very common log frameworks out there.&lt;/p&gt;
-
-&lt;p&gt;Note that SLF4J support will be available in the 1.9.0 release of spymemcached and therefore also in one of the next releases of the Couchbase Java SDK.&lt;/p&gt;
-
-&lt;p&gt;First, we need to configure it accordingly:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;Properties systemProperties = System.getProperties();
-systemProperties.put(&amp;quot;net.spy.log.LoggerImpl&amp;quot;, &amp;quot;net.spy.memcached.compat.log.SLF4JLogger&amp;quot;);
-System.setProperties(systemProperties);
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Now, we need to include two JARs into our classpath. The first one is the SLF4J facade API and the other one is our logging framework of choice. The facade API package is called &lt;code&gt;slf4j-api&lt;/code&gt; (this package always needs to be in place) and since we want to use logback we need to include the &lt;code&gt;logback-classic&lt;/code&gt; JAR. Note that this is not specific to the SDK, you can find this information &lt;a href=&#34;http://logback.qos.ch/manual/introduction.html&#34;&gt;here&lt;/a&gt;. If you use maven, you can use this snippet:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;&amp;lt;dependency&amp;gt;
-  &amp;lt;groupId&amp;gt;org.slf4j&amp;lt;/groupId&amp;gt;
-  &amp;lt;artifactId&amp;gt;slf4j-api&amp;lt;/artifactId&amp;gt;
-  &amp;lt;version&amp;gt;1.7.5&amp;lt;/version&amp;gt;
-&amp;lt;/dependency&amp;gt;
-&amp;lt;dependency&amp;gt;
-  &amp;lt;groupId&amp;gt;ch.qos.logback&amp;lt;/groupId&amp;gt;
-  &amp;lt;artifactId&amp;gt;logback-classic&amp;lt;/artifactId&amp;gt;
-  &amp;lt;version&amp;gt;1.0.12&amp;lt;/version&amp;gt;
-&amp;lt;/dependency&amp;gt;
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;SLF4J will automatically pick up our logback implementation, so the logs will look like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;13:25:43.692 [main] INFO  c.c.client.CouchbaseConnection - Added {QA sa=/127.0.0.1:11210, #Rops=0, #Wops=0, #iq=0, topRop=null, topWop=null, toWrite=0, interested=0} to connect queue
-13:25:43.694 [main] DEBUG c.c.c.vbucket.VBucketNodeLocator - Updating nodesMap in VBucketNodeLocator.
-13:25:43.697 [main] DEBUG c.c.c.vbucket.VBucketNodeLocator - Adding node with hostname 127.0.0.1:11210.
-13:25:43.697 [main] DEBUG c.c.c.vbucket.VBucketNodeLocator - Node added is {QA sa=localhost/127.0.0.1:11210, #Rops=0, #Wops=0, #iq=0, topRop=null, topWop=null, toWrite=0, interested=8}.
-13:25:43.698 [Memcached IO over {MemcachedConnection to localhost/127.0.0.1:11210}] DEBUG c.c.client.CouchbaseConnection - Done dealing with queue.
-13:25:43.699 [Memcached IO over {MemcachedConnection to localhost/127.0.0.1:11210}] DEBUG c.c.client.CouchbaseConnection - Selecting with delay of 0ms
-13:25:43.702 [Memcached IO over {MemcachedConnection to localhost/127.0.0.1:11210}] DEBUG c.c.client.CouchbaseConnection - Selected 1, selected 1 keys
-13:25:43.703 [Memcached IO over {MemcachedConnection to localhost/127.0.0.1:11210}] DEBUG c.c.client.CouchbaseConnection - Handling IO for:  sun.nio.ch.SelectionKeyImpl@48ff2413 (r=false, w=false, c=true, op={QA sa=localhost/127.0.0.1:11210, #Rops=0, #Wops=0, #iq=0, topRop=null, topWop=null, toWrite=0, interested=8})
-13:25:43.703 [Memcached IO over {MemcachedConnection to localhost/127.0.0.1:11210}] INFO  c.c.client.CouchbaseConnection - Connection state changed for sun.nio.ch.SelectionKeyImpl@48ff2413
-13:25:43.713
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;As you can see, they also include DEBUG level logging here. If you don&amp;rsquo;t include the logging implementation during runtime, SLF4J will complain at startup:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;SLF4J: Failed to load class &amp;quot;org.slf4j.impl.StaticLoggerBinder&amp;quot;.
-SLF4J: Defaulting to no-operation (NOP) logger implementation
-SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;If you want to learn how to configure logback, &lt;a href=&#34;http://logback.qos.ch/manual/configuration.html&#34;&gt;look here&lt;/a&gt;.&lt;/p&gt;
-
-&lt;h2 id=&#34;summary&#34;&gt;Summary&lt;/h2&gt;
-
-&lt;p&gt;Once you know the abstraction in spymemcached and how it works, switching logging implementations is easy and straightforward. If you work with one of the Couchbase people to report errors, please try to include output with DEBUG turned on, because this includes lots of useful information that can be used to determine the failure sources.&lt;/p&gt;
-
-&lt;p&gt;With the SLF4J facade added in the next spy release (2.9), you will be able to plug every large logging framework out there into the SDK. Let us know if you see a use case not covered with these mechanisms or if you have other comments on this.&lt;/p&gt;
 </description>
     </item>
     

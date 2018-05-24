@@ -9,6 +9,209 @@
     <atom:link href="http://nitschinger.at/tags/rust/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
+      <title>Rust on the WiFi Pineapple (and OpenWrt)</title>
+      <link>http://nitschinger.at/Rust-on-the-Wifi-Pineapple-and-OpenWRT/</link>
+      <pubDate>Mon, 02 Jan 2017 00:00:00 +0000</pubDate>
+      
+      <guid>http://nitschinger.at/Rust-on-the-Wifi-Pineapple-and-OpenWRT/</guid>
+      <description>
+
+&lt;p&gt;Over the holidays I wanted to get a very simple &lt;a href=&#34;https://www.rust-lang.org&#34;&gt;Rust&lt;/a&gt; application running on my &lt;a href=&#34;https://wifipineapple.com/&#34;&gt;WiFi Pineapple Nano&lt;/a&gt;. Since I don&amp;rsquo;t have much experience with embedded systems and cross-compilation, it sounded like something fun to do and I was sure I might learn a thing or two. Many hours later and lots of frustration, I ended up with a simple solution that I&amp;rsquo;d like to share in this post.&lt;/p&gt;
+
+&lt;p&gt;The major obstacle to overcome is building your own standard library, since Rust doesn&amp;rsquo;t ship with one for our target out of the box. I first tried it &amp;ldquo;the old way&amp;rdquo; by checking out the source and running through all the steps described in &lt;a href=&#34;https://github.com/japaric/rust-cross&#34;&gt;rust-cross&lt;/a&gt;. While I got it to build in the end it still didn&amp;rsquo;t work because of some version issues (I compiled with &lt;code&gt;rustc 1.16.0-dev (4ecc85beb 2016-12-28)&lt;/code&gt; and the same version but &lt;code&gt;rustc 1.16.0-nightly (4ecc85beb 2016-12-28)&lt;/code&gt; &lt;a href=&#34;https://gist.github.com/daschl/b4f87ae707ecff297a1602135f3f940b&#34;&gt;rejected running it&lt;/a&gt;).&lt;/p&gt;
+
+&lt;p&gt;Close to giving up at this point after spending hours on it, I found the &lt;a href=&#34;https://github.com/japaric/xargo&#34;&gt;xargo&lt;/a&gt; wrapper around &lt;code&gt;cargo&lt;/code&gt;, an awesome project by &lt;a href=&#34;https://github.com/japaric&#34;&gt;Jorge Aparicio&lt;/a&gt;. With this tool I got it to work fairly quickly and this is also the approach we&amp;rsquo;ll be following in this post. We still need to handle a couple of extra steps not outlined in the &lt;code&gt;xargo&lt;/code&gt; documentation, so I hope this post provides extra value to some of you.&lt;/p&gt;
+
+&lt;h2 id=&#34;which-target&#34;&gt;Which target?&lt;/h2&gt;
+
+&lt;p&gt;Before we get into the weeds we need to do our homework first and figure out the compilation target for cross compilation. Once you SSH into your pineapple and run &lt;code&gt;uname -a&lt;/code&gt; you&amp;rsquo;ll see something like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;root@Pineapple:~# uname -a
+Linux Pineapple 3.18.36 #40 Fri Oct 28 05:42:22 UTC 2016 mips GNU/Linux
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This is the output from my WiFi Pineapple NANO running the 1.1.3 firmware. The important part here is &lt;strong&gt;mips&lt;/strong&gt;, which gives us a clue which platform the pineapple is running on. The device is built on top of &lt;a href=&#34;https://openwrt.org/&#34;&gt;OpenWRT&lt;/a&gt;, a linux distribution for embedded devices.&lt;/p&gt;
+
+&lt;p&gt;The &lt;code&gt;/etc/openwrt_release&lt;/code&gt; file provides more information about the OpenWrt release itself:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;root@Pineapple:~# cat /etc/openwrt_release
+DISTRIB_ID=&#39;OpenWrt&#39;
+DISTRIB_RELEASE=&#39;Chaos Calmer&#39;
+DISTRIB_REVISION=&#39;r49403&#39;
+DISTRIB_CODENAME=&#39;chaos_calmer&#39;
+DISTRIB_TARGET=&#39;ar71xx/generic&#39;
+DISTRIB_DESCRIPTION=&#39;OpenWrt Chaos Calmer 15.05.1&#39;
+DISTRIB_TAINTS=&#39;no-all no-ipv6 busybox&#39;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Our target is ‘ar71xx/generic’, running OpenWrt ChaosCalmer 15.05.1. Looking for more info &lt;a href=&#34;https://dev.openwrt.org/wiki/platforms&#34;&gt;here&lt;/a&gt;, we can see that its a &lt;a href=&#34;https://en.wikipedia.org/wiki/Endianness#Big-endian&#34;&gt;big endian&lt;/a&gt; platform based on the Atheros AR71xx/AR724x/913x chipset.&lt;/p&gt;
+
+&lt;p&gt;That gives us enough information to locate &lt;a href=&#34;https://downloads.openwrt.org/chaos_calmer/15.05.1/ar71xx/generic/&#34;&gt;this download page&lt;/a&gt; for our chipset and especially we need to download &lt;a href=&#34;https://downloads.openwrt.org/chaos_calmer/15.05.1/ar71xx/generic/OpenWrt-SDK-15.05.1-ar71xx-generic_gcc-4.8-linaro_uClibc-0.9.33.2.Linux-x86_64.tar.bz2&#34;&gt;the correct SDK&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;OpenWrt only provides the SDK for Linux as a host platform, so if you are running on Windows or OSX you&amp;rsquo;ll need a virtual machine to follow the steps.&lt;/p&gt;
+
+&lt;h2 id=&#34;openwrt-sdk-setup&#34;&gt;OpenWRT SDK Setup&lt;/h2&gt;
+
+&lt;p&gt;To make sure our toolchain works we can compile and run a simple &amp;ldquo;Hello World&amp;rdquo; from C code by using the SDK directly. This will make sure that we have everything set up properly, since Rust builds on those binaries at a later stage.&lt;/p&gt;
+
+&lt;p&gt;Unpack the archive and add these environment variables to your &lt;code&gt;.bashrc&lt;/code&gt; (or equivalent) so that you don&amp;rsquo;t run into path issues.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;export PATH=$PATH:~/openwrt/staging_dir/toolchain-mips_34kc_gcc-4.8-linaro_uClibc-0.9.33.2/bin/
+export STAGING_DIR=~/openwrt/staging_dir/
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;We are adding the SDK &lt;code&gt;gcc&lt;/code&gt; binaries to our &lt;code&gt;PATH&lt;/code&gt; and also provide the &lt;code&gt;STAGING_DIR&lt;/code&gt; environment variable that the SDK needs while building. Note that I&amp;rsquo;ve renamed the &lt;code&gt;OpenWrt-SDK-15.05.1-ar71xx-generic_gcc-4.8-linaro_uClibc-0.9.33.2.Linux-x86_64&lt;/code&gt; (wow&amp;hellip;) directory after extraction simply to &lt;code&gt;openwrt&lt;/code&gt; so its easier to read the command line. Note: make sure to reload/source your &lt;code&gt;.bashrc&lt;/code&gt; file if you want to stay in the current terminal or open a new one so the changes take effect.&lt;/p&gt;
+
+&lt;p&gt;Here is a very simple hello world in C (&lt;code&gt;hello.c&lt;/code&gt;):&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;#include&lt;/span&gt;&lt;span style=&#34;color: #177500&#34;&gt;&amp;lt;stdio.h&amp;gt;&lt;/span&gt;&lt;span style=&#34;color: #633820&#34;&gt;&lt;/span&gt;
+
+&lt;span style=&#34;color: #000000&#34;&gt;main&lt;/span&gt;() {
+        &lt;span style=&#34;color: #000000&#34;&gt;printf&lt;/span&gt;(&lt;span style=&#34;color: #C41A16&#34;&gt;&amp;quot;Hello, World!\n&amp;quot;&lt;/span&gt;);
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;You can compile it with:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ mips-openwrt-linux-gcc hello.c -o hello
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;If it compiles without issues, copy it to the device and run it!&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ scp hello root@172.16.42.1:~
+$ ssh root@172.16.42.1
+
+root@Pineapple:~# ./hello
+Hello, World!
+root@Pineapple:~#
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h2 id=&#34;cross-compiling-rust&#34;&gt;Cross-Compiling Rust&lt;/h2&gt;
+
+&lt;p&gt;At this point we know that the SDK is set up correctly and we can compile and run C code on the pineapple just fine.&lt;/p&gt;
+
+&lt;p&gt;To proceed, we need a nightly rust version, ideally set up through &lt;a href=&#34;https://rustup.rs/&#34;&gt;rustup&lt;/a&gt; which is
+the preferred way to manage your rust environments by now.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ rustup install nightly
+$ rustup default nightly
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Don&amp;rsquo;t forget to add the source component, otherwise it won&amp;rsquo;t work down the road:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ rustup component add rust-src
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Finally, you should end up with a version similar to mine:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ rustc -Vv
+rustc 1.16.0-nightly (4ecc85beb 2016-12-28)
+binary: rustc
+commit-hash: 4ecc85beb339aa8089d936e450b0d800bdf580ae
+commit-date: 2016-12-28
+host: x86_64-unknown-linux-gnu
+release: 1.16.0-nightly
+LLVM version: 3.9
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now, install &lt;code&gt;xargo&lt;/code&gt; and wait for it to compile:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ cargo install xargo
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;We are pretty much set now, but we haven&amp;rsquo;t figured out which &lt;code&gt;rustc&lt;/code&gt; target to use. Looking at the long output of &lt;code&gt;rustc --print target-list&lt;/code&gt;, the one we need to use is &lt;strong&gt;mips-unknown-linux-uclibc&lt;/strong&gt; (since we are compiling against the &lt;code&gt;mips&lt;/code&gt; architecture and this OpenWRT version is compiled with &lt;a href=&#34;https://uclibc.org/&#34;&gt;uclibc&lt;/a&gt;)&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s create a hello world project with cargo:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ cargo new hello --bin
+     Created binary (application) `hello` project
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Before we can build it, there are a couple modifications we need to make. First, we need to adapt the &lt;code&gt;Cargo.toml&lt;/code&gt; to &lt;code&gt;abort&lt;/code&gt; on &lt;code&gt;panic&lt;/code&gt;. I don&amp;rsquo;t know why this is the case, but the &lt;code&gt;xargo&lt;/code&gt; README says we
+should do it and it also fails to compile otherwise.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ cat Cargo.toml
+[package]
+name = &amp;quot;hello&amp;quot;
+version = &amp;quot;0.1.0&amp;quot;
+authors = [&amp;quot;you&amp;quot;]
+
+[dependencies]
+
+[profile.dev]
+panic = &amp;quot;abort&amp;quot;
+
+[profile.release]
+panic = &amp;quot;abort&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Next, we need to tell &lt;code&gt;cargo&lt;/code&gt; to use a different linker for our &lt;code&gt;mips&lt;/code&gt; target since the one on our host doesn&amp;rsquo;t work for our target. This is done by providing a custom config within the &lt;code&gt;.cargo/config&lt;/code&gt; file:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ cat .cargo/config
+[build]
+target = &amp;quot;mips-unknown-linux-uclibc&amp;quot;
+
+[target.mips-unknown-linux-uclibc]
+linker = &amp;quot;mips-openwrt-linux-gcc&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Finally, we need to add a &lt;code&gt;Xargo.toml&lt;/code&gt; in order to tell &lt;code&gt;xargo&lt;/code&gt; to also build the standard library for us:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ cat Xargo.toml
+[target.mips-unknown-linux-uclibc.dependencies.std]
+features = []
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now we are all set! Run &lt;code&gt;xargo build&lt;/code&gt; (not &lt;code&gt;cargo build&lt;/code&gt;) and watch the magic happen. The first time &lt;code&gt;xargo&lt;/code&gt; will build the standard library for you, but subsequent builds will just reuse the compiled libraries so its even quicker. The second time it will look like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ xargo build
+   Compiling hello v0.1.0 (file:///home/vagrant/src/hello)
+    Finished debug [unoptimized + debuginfo] target(s) in 0.17 secs
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Looking into our &lt;code&gt;target/&lt;/code&gt; directory we can see that there is now a &lt;code&gt;hello&lt;/code&gt; binary
+available for our &lt;code&gt;mips-unknown-linux-uclibc&lt;/code&gt; target!&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;~/src/hello$ tree target/
+target/
+|-- debug
+|   |-- build
+|   |-- deps
+|   |-- examples
+|   `-- native
+`-- mips-unknown-linux-uclibc
+    `-- debug
+        |-- build
+        |-- deps
+        |   `-- hello-e7c80b1b0618ec37
+        |-- examples
+        |-- hello           &amp;lt;----------- this one ------
+        `-- native
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Of course, running it on our host won&amp;rsquo;t work:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ ./target/mips-unknown-linux-uclibc/debug/hello
+-bash: ./target/mips-unknown-linux-uclibc/debug/hello: cannot execute binary file: Exec format error
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;As a final step, copy the file over to your pineapple and run it (here I&amp;rsquo;m copying it to the mounted SD card just for fun):&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ scp target/mips-unknown-linux-uclibc/debug/hello root@172.16.42:/sd
+$ ssh root@172.16.42.1 &#39;/sd/hello&#39;
+Hello, world!
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;That&amp;rsquo;s it! We just cross-compiled and ran a Rust program on a WiFi Pineapple.&lt;/p&gt;
+
+&lt;h2 id=&#34;one-last-thing&#34;&gt;One last thing&amp;hellip;&lt;/h2&gt;
+
+&lt;p&gt;While researching this topic I was made aware that there is still an open issue for the &lt;a href=&#34;https://github.com/rust-lang/libc&#34;&gt;libc&lt;/a&gt; crate to fully support the &lt;code&gt;mips-unknown-linux-uclibc&lt;/code&gt; target. It seems to work mostly but until &lt;a href=&#34;https://github.com/rust-lang/libc/issues/361&#34;&gt;the issue&lt;/a&gt; is resolved keep in mind that you might run into some weird issues.&lt;/p&gt;
+
+&lt;p&gt;Let me know if I missed anything or if you are also interested in running Rust on the WiFi Pineapple or similar OpenWrt devices! I&amp;rsquo;d like to close this post with a special thanks to &lt;a href=&#34;https://github.com/japaric&#34;&gt;Jorge Aparicio&lt;/a&gt; who is tirelessly working on making the cross compilation and embedded experience with Rust better every day (&lt;a href=&#34;https://github.com/japaric/xargo&#34;&gt;xargo&lt;/a&gt;, &lt;a href=&#34;https://github.com/japaric/trust&#34;&gt;trust&lt;/a&gt;, &lt;a href=&#34;https://github.com/japaric/cross&#34;&gt;cross&lt;/a&gt;,&amp;hellip;).&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
       <title>Text Analysis in Rust - Tokenization</title>
       <link>http://nitschinger.at/Text-Analysis-in-Rust-Tokenization/</link>
       <pubDate>Fri, 28 Oct 2016 00:00:00 +0000</pubDate>
@@ -16,7 +219,7 @@
       <guid>http://nitschinger.at/Text-Analysis-in-Rust-Tokenization/</guid>
       <description>
 
-&lt;p&gt;I work for &lt;a href=&#34;http://www.couchbase.com/&#34;&gt;Couchbase&lt;/a&gt; where we are currently developing full text search capabilities based on &lt;a href=&#34;blevesearch.com&#34;&gt;bleve&lt;/a&gt;. Bleve is implemented in &lt;a href=&#34;golang.org&#34;&gt;go&lt;/a&gt; and inspired by &lt;a href=&#34;http://lucene.apache.org/core/&#34;&gt;Apache Lucene&lt;/a&gt;, the reference implementation when it comes to full text search. While I am not directly involved in developing bleve I was curious about how it works internally and did take a look at the analyzers it provides.&lt;/p&gt;
+&lt;p&gt;I work for &lt;a href=&#34;http://www.couchbase.com/&#34;&gt;Couchbase&lt;/a&gt; where we are currently developing full text search capabilities based on &lt;a href=&#34;http://blevesearch.com/&#34;&gt;bleve&lt;/a&gt;. Bleve is implemented in &lt;a href=&#34;http://golang.org/&#34;&gt;go&lt;/a&gt; and inspired by &lt;a href=&#34;http://lucene.apache.org/core/&#34;&gt;Apache Lucene&lt;/a&gt;, the reference implementation when it comes to full text search. While I am not directly involved in developing bleve I was curious about how it works internally and did take a look at the analyzers it provides.&lt;/p&gt;
 
 &lt;p&gt;Analyzers take your free form text and turn it into tokens which can then be used for indexing or queries. Since I know our team is currently at work doing performance optimizations in all places I wanted to take a stab at implementing similar analyzers in &lt;a href=&#34;https://www.rust-lang.org/&#34;&gt;Rust&lt;/a&gt; and see how they perform in comparison.&lt;/p&gt;
 
@@ -52,7 +255,7 @@
 
 &lt;p&gt;One problem with this approach is that the &lt;code&gt;String&lt;/code&gt; implicitly performs a heap allocation, and when we are slicing hundreds or thousands of small tokens we are allocating lots of small chunks on the heap.&lt;/p&gt;
 
-&lt;p&gt;The first idea to avoid this is using a &lt;code&gt;&amp;amp;str&lt;/code&gt; instead, but we potentially need to modify the term and then we are back at heap allocations (as an exercise for the reader, using &lt;a href=&#34;https://doc.rust-lang.org/std/borrow/enum.Cow.html&#34;&gt;Cow&lt;/a&gt; could also be an option). So, how can we make this more efficient?&lt;/p&gt;
+&lt;p&gt;The first idea to avoid this is using a &lt;code&gt;&amp;amp;str&lt;/code&gt; instead, but we potentially need to modify the term and then we are back at heap allocations (as an exercise for the reader or as a future blog post, using &lt;a href=&#34;https://doc.rust-lang.org/std/borrow/enum.Cow.html&#34;&gt;Cow&lt;/a&gt; could also be an option). So, how can we make this more efficient?&lt;/p&gt;
 
 &lt;p&gt;One thing I realized during experimentation and later researching on the web is that when you are tokenizing text you mostly end up with lots of small tokens which maybe are even filtered out in the next step of the process. It would be nice if could stack allocate those small terms and as a fallback perform heap allocation for the rest! It turns out we can do just that, and here is one way:&lt;/p&gt;
 &lt;div class=&#34;highlight&#34; style=&#34;background: #ffffff&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #A90D91&#34;&gt;const&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;MAX_STACK_TERM_LEN:&lt;/span&gt; &lt;span style=&#34;color: #A90D91&#34;&gt;usize&lt;/span&gt; &lt;span style=&#34;color: #000000&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #1C01CE&#34;&gt;15&lt;/span&gt;;
