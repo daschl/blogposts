@@ -8,3 +8,4 @@ pygmentsStyle = "xcode"
 disqusShortname = "daschl"
 twitterName = "daschl"
 githubName = "daschl"
+disablePathToLower = true

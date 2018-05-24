@@ -1,95 +1,24 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>daschl writes. sometimes.</title>
-    <link>http://nitschinger.at/tags/jvm/index.xml</link>
-    <description>Recent content on daschl writes. sometimes.</description>
+    <title>Jvm on daschl writes. sometimes.</title>
+    <link>https://nitschinger.at/tags/jvm/</link>
+    <description>Recent content in Jvm on daschl writes. sometimes.</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <atom:link href="http://nitschinger.at/tags/jvm/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 24 Jun 2013 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="https://nitschinger.at/tags/jvm/index.xml" rel="self" type="application/rss+xml" />
+    
     
     <item>
       <title>Printing JVM generated Assembler on Mac OS X</title>
-      <link>http://nitschinger.at/Printing-JVM-generated-Assembler-on-Mac-OS-X/</link>
+      <link>https://nitschinger.at/Printing-JVM-generated-Assembler-on-Mac-OS-X/</link>
       <pubDate>Mon, 24 Jun 2013 00:00:00 +0000</pubDate>
       
-      <guid>http://nitschinger.at/Printing-JVM-generated-Assembler-on-Mac-OS-X/</guid>
-      <description>&lt;p&gt;Thankfully, the JVM abstracts all of the nitty gritty details from us. Sometimes though, we need to peel off the first layers and see what&amp;rsquo;s going on underneath. If you are curious (and here may be dragons) and want to learn about the actual &lt;a href=&#34;http://en.wikipedia.org/wiki/Assembly_language&#34;&gt;assembler&lt;/a&gt; that your code is generating, the JVM provides mechanisms to inspect it.&lt;/p&gt;
-
-&lt;p&gt;Since I wanted to make it work on my development machine and didn&amp;rsquo;t find something comprehensive for Mac, here is how to do it.&lt;/p&gt;
-
-&lt;p&gt;First, make sure to have a more or less recent JDK installed. Mac ships with Java 6, but I think you want to upgrade to 7. You can grab the JDK packages from &lt;a href=&#34;http://www.oracle.com/technetwork/java/javase/downloads/jdk7-downloads-1880260.html&#34;&gt;here&lt;/a&gt; if you haven&amp;rsquo;t already.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;~ $ java -version
-java version &amp;quot;1.7.0_17&amp;quot;
-Java(TM) SE Runtime Environment (build 1.7.0_17-b02)
-Java HotSpot(TM) 64-Bit Server VM (build 23.7-b01, mixed mode)
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Now to enable the ASM output, you need to pass in two flags, namely &lt;code&gt;UnlockDiagnosticVMOptions&lt;/code&gt; and &lt;code&gt;PrintAssembly&lt;/code&gt;. Because the generated ASM is different for each runtime, you need to pass it to the &lt;code&gt;java&lt;/code&gt; command and not &lt;code&gt;javac&lt;/code&gt;.&lt;/p&gt;
-
-&lt;p&gt;Create a very simple script like this and name it &lt;code&gt;Main.java&lt;/code&gt;:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;public class Main {
-    public static void main(String[] args) {
-        System.out.println(&amp;quot;Hello World&amp;quot;);
-    }
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Now, we&amp;rsquo;re going to compile and run it with those options:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;michael@daschlbook ~/Downloads/java $ javac Main.java &amp;amp;&amp;amp; java -XX:+UnlockDiagnosticVMOptions -XX:+PrintAssembly Main
-Java HotSpot(TM) 64-Bit Server VM warning: PrintAssembly is enabled; turning on DebugNonSafepoints to gain additional output
-Could not load hsdis-amd64.dylib; library not loadable; PrintAssembly is disabled
-Hello World
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Woops, not what we expected. The code did compile properly, but HotSpot complains about &lt;code&gt;hsdis-amd64.dylib&lt;/code&gt;. I had to google a bit to find it, but you can download &lt;a href=&#34;https://kenai.com/projects/base-hsdis/downloads/download/gnu-versions/hsdis-amd64.dylib&#34;&gt;the file&lt;/a&gt; from &lt;a href=&#34;https://kenai.com/projects/base-hsdis/downloads/directory/gnu-versions&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;Now we need to put it somewhere to make it loadable, and the easiest thing I found is to put it onto &lt;code&gt;LD_LIBRARY_PATH&lt;/code&gt;. Make sure to not override any other settings, but in my case the variable was empty so its straightforward.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;export LD_LIBRARY_PATH=~/PathToFile/
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;If you run our command again from before, you should now see &amp;ldquo;beautiful&amp;rdquo; ASM code generated:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;michael@daschlbook ~/Downloads/java $ javac Main.java &amp;amp;&amp;amp; java -XX:+UnlockDiagnosticVMOptions -XX:+PrintAssembly Main
-Java HotSpot(TM) 64-Bit Server VM warning: PrintAssembly is enabled; turning on DebugNonSafepoints to gain additional output
-Loaded disassembler from hsdis-amd64.dylib
-Decoding compiled method 0x000000010ac74150:
-  0x000000010ac742ba: add   [eax], al
-[Disassembling for mach=&#39;i386(base-hsdis)&#39;]
-[Entry Point]
-[Constants]
-  # {method} &#39;hashCode&#39; &#39;()I&#39; in &#39;java/lang/String&#39;
-  #           [sp+0x30]  (sp of caller)
-  0x000000010ac742a0: inc   esp
-  0x000000010ac742a1: mov   edx, [esi+0x8]
-  0x000000010ac742a4: dec   ecx
-  0x000000010ac742a5: shl   edx, 3
-  0x000000010ac742a8: dec   ecx
-  0x000000010ac742a9: cmp   eax, edx
-  0x000000010ac742ab: jnz   0x000000000ac4ba60  ;   {runtime_call}
-  0x000000010ac742b1: nop
-  0x000000010ac742b4: invalid   0x0f #size=0
-  0x000000010ac742b5: pop   ds
-  0x000000010ac742b6: test  [eax], al
-  0x000000010ac742b8: add   [eax], al
-  0x000000010ac742ba: add   [eax], al
-  0x000000010ac742bc: nop
-[Verified Entry Point]
-  0x000000010ac742c0: mov   [esp-0x14000], eax
-  0x000000010ac742c7: push  ebp
-  0x000000010ac742c8: dec   eax
-  0x000000010ac742c9: sub   esp, 0x0000000000000020
-                                                ;*synchronization entry
-                                                ; - java.lang.String::hashCode@-1 (line 1446)
-...
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Now I guess this is were the real fun starts, happy debugging!&lt;/p&gt;
-</description>
+      <guid>https://nitschinger.at/Printing-JVM-generated-Assembler-on-Mac-OS-X/</guid>
+      <description>Thankfully, the JVM abstracts all of the nitty gritty details from us. Sometimes though, we need to peel off the first layers and see what&amp;rsquo;s going on underneath. If you are curious (and here may be dragons) and want to learn about the actual assembler that your code is generating, the JVM provides mechanisms to inspect it.
+Since I wanted to make it work on my development machine and didn&amp;rsquo;t find something comprehensive for Mac, here is how to do it.</description>
     </item>
     
   </channel>

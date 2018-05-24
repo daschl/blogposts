@@ -1,37 +1,24 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>daschl writes. sometimes.</title>
-    <link>http://nitschinger.at/tags/mongodb/index.xml</link>
-    <description>Recent content on daschl writes. sometimes.</description>
+    <title>Mongodb on daschl writes. sometimes.</title>
+    <link>https://nitschinger.at/tags/mongodb/</link>
+    <description>Recent content in Mongodb on daschl writes. sometimes.</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <atom:link href="http://nitschinger.at/tags/mongodb/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 19 Nov 2010 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="https://nitschinger.at/tags/mongodb/index.xml" rel="self" type="application/rss+xml" />
+    
     
     <item>
       <title>Lithium Routes And MongoDB</title>
-      <link>http://nitschinger.at/Lithium-Routes-And-Mongo-DB/</link>
+      <link>https://nitschinger.at/Lithium-Routes-And-Mongo-DB/</link>
       <pubDate>Fri, 19 Nov 2010 00:00:00 +0000</pubDate>
       
-      <guid>http://nitschinger.at/Lithium-Routes-And-Mongo-DB/</guid>
-      <description>&lt;p&gt;Lithium comes with a powerful and flexible routing system. However, in its default configuration, you may encounter some problems with MongoDB-ObjectIDs and reverse routing. ObjectIDs are usually the &amp;ldquo;primary keys&amp;rdquo; of your Document in MongoDB, are 12 bytes long and consist of numbers and characters from &amp;lsquo;a&amp;rsquo; to &amp;lsquo;f&amp;rsquo;. A typical ObjectID would look similar to &lt;code&gt;4ce2d9f99436485e05000000&lt;/code&gt;.&lt;/p&gt;
-
-&lt;p&gt;If you take a closer look at the default routes that ship with Lithium, you&amp;rsquo;ll maybe notice that the &lt;code&gt;:id&lt;/code&gt; part only matches numbers (and not characters).&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;Router::connect(&#39;/{:controller}/{:action}/{:id:[0-9]+}.{:type}&#39;, array(&#39;id&#39; =&amp;gt; null));
-Router::connect(&#39;/{:controller}/{:action}/{:id:[0-9]+}&#39;);
-Router::connect(&#39;/{:controller}/{:action}/{:args}&#39;);
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;With this setup a call to &lt;code&gt;$this-&amp;gt;html-&amp;gt;link()&lt;/code&gt; with an MongoDB-ObjectID set as &lt;code&gt;id&lt;/code&gt; won&amp;rsquo;t work because the router is not able to find a matching route (this is called reverse routing). The solution to this &amp;ldquo;problem&amp;rdquo; is, that we need to modify the &lt;code&gt;:id&lt;/code&gt;-part of the &lt;code&gt;Router::connect&lt;/code&gt;-calls. Replace your default routes with the following code:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;Router::connect(&#39;/{:controller}/{:action}/{:id:[0-9a-f]{24}}.{:type}&#39;, array(&#39;id&#39; =&amp;gt; null));
-Router::connect(&#39;/{:controller}/{:action}/{:id:[0-9a-f]{24}}&#39;);
-Router::connect(&#39;/{:controller}/{:action}/{:args}&#39;);
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Now everything should work as expected with li3 and MongoDB ObjectIDs. A final note for the interested reader: if you leave out the &lt;code&gt;{24}&lt;/code&gt;-quantifier, then a route like &lt;code&gt;/posts/add&lt;/code&gt; won&amp;rsquo;t work because &lt;code&gt;add&lt;/code&gt; would also be a valid &lt;code&gt;id&lt;/code&gt; to the router.&lt;/p&gt;
-</description>
+      <guid>https://nitschinger.at/Lithium-Routes-And-Mongo-DB/</guid>
+      <description>Lithium comes with a powerful and flexible routing system. However, in its default configuration, you may encounter some problems with MongoDB-ObjectIDs and reverse routing. ObjectIDs are usually the &amp;ldquo;primary keys&amp;rdquo; of your Document in MongoDB, are 12 bytes long and consist of numbers and characters from &amp;lsquo;a&amp;rsquo; to &amp;lsquo;f&amp;rsquo;. A typical ObjectID would look similar to 4ce2d9f99436485e05000000.
+If you take a closer look at the default routes that ship with Lithium, you&amp;rsquo;ll maybe notice that the :id part only matches numbers (and not characters).</description>
     </item>
     
   </channel>

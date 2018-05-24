@@ -7,7 +7,7 @@
 
     <meta name="description" content="Learn about how to use the JCStress tool from the OpenJDK team to debug concurrency issues.">
 
-    <meta name="generator" content="Hugo 0.17" />
+    <meta name="generator" content="Hugo 0.40.3" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Debugging Concurrency Issues with OpenJDK Jcstress &middot; daschl writes. sometimes.">
@@ -26,10 +26,10 @@
         <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
     <!--<![endif]-->
 
-    <link rel="stylesheet" href="http://nitschinger.at//css/all.min.css">
+    <link rel="stylesheet" href="https://nitschinger.at/css/all.min.css">
     <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
 
-    <link rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." href="http://nitschinger.at//index.xml" />
+    <link rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." href="https://nitschinger.at/index.xml" />
 </head>
 <body>
 
@@ -38,26 +38,33 @@
     <div class="sidebar pure-u-1 pure-u-md-1-4">
     <div class="header">
         <hgroup>
-            <h1 class="brand-title"><a href="http://nitschinger.at/">daschl writes. sometimes.</a></h1>
+            <h1 class="brand-title">
+                <a href="https://nitschinger.at">daschl writes. sometimes.</a>
+            </h1>
             <h2 class="brand-tagline"></h2>
         </hgroup>
 
         <nav class="nav">
             <ul class="nav-list">
                 <li class="nav-item">
-                    <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
+                    <a class="pure-button" href="https://twitter.com/daschl">
+                        <i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl">
+                        <i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
+                    <a class="pure-button" href="https://nitschinger.at/index.xml">
+                        <i class="fa fa-rss"></i> rss</a>
+                </li>
+                <li class="nav-item">
+                    <a class="pure-button" href="https://nitschinger.at/imprint">Imprint</a>
                 </li>
             </ul>
         </nav>
     </div>
 </div>
-
 
     <div class="content pure-u-1 pure-u-md-3-4">
         <div>
@@ -67,7 +74,7 @@
                 <section class="post">
                     <header class="post-header">
 
-                        <a href="http://nitschinger.at/Debugging-Concurrency-Issues-with-Open-JDK-Jcstress/" class="post-title">Debugging Concurrency Issues with OpenJDK Jcstress</a>
+                        <a href="https://nitschinger.at/Debugging-Concurrency-Issues-with-Open-JDK-Jcstress/" class="post-title">Debugging Concurrency Issues with OpenJDK Jcstress</a>
 
                         <p class="post-meta">
                             
@@ -96,139 +103,133 @@ $ cd jcstress/
 </code></pre>
 
 <p>Now, go import the maven project in your favorite IDE (<a href="http://www.jetbrains.com/idea/">IntelliJ, what else?</a>). We need to add our own code and tests so that it can be picked up later. You can either add your code under test as a dependency into the <code>pom.xml</code> file or just copy it over to the project if it is self contained (so it&rsquo;s easier to play and poke around). If you want to follow along, add the <code>StringUtils.java</code> and the <code>StringUtilsTest.java</code> files to the <code>com.couchbase.client.tests.util</code> package:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">package</span> <span style="color: #000000">com.couchbase.client.tests.util;</span>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a90d91">package</span> <span style="color:#000">com.couchbase.client.tests.util</span><span style="color:#000">;</span>
 
-<span style="color: #A90D91">import</span> <span style="color: #000000">java.util.regex.Matcher;</span>
-<span style="color: #A90D91">import</span> <span style="color: #000000">java.util.regex.Pattern;</span>
+<span style="color:#a90d91">import</span> <span style="color:#000">java.util.regex.Matcher</span><span style="color:#000">;</span>
+<span style="color:#a90d91">import</span> <span style="color:#000">java.util.regex.Pattern</span><span style="color:#000">;</span>
 
-<span style="color: #177500">/**</span>
-<span style="color: #177500"> * Utility methods on string objects.</span>
-<span style="color: #177500"> */</span>
-<span style="color: #A90D91">public</span> <span style="color: #A90D91">final</span> <span style="color: #A90D91">class</span> <span style="color: #3F6E75">StringUtils</span> <span style="color: #000000">{</span>
+<span style="color:#177500">/**
+</span><span style="color:#177500"> * Utility methods on string objects.
+</span><span style="color:#177500"> */</span>
+<span style="color:#a90d91">public</span> <span style="color:#a90d91">final</span> <span style="color:#a90d91">class</span> <span style="color:#3f6e75">StringUtils</span> <span style="color:#000">{</span>
 
-    <span style="color: #177500">/**</span>
-<span style="color: #177500">     * A pattern to match on a signed integer value.</span>
-<span style="color: #177500">     */</span>
-    <span style="color: #A90D91">private</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">final</span> <span style="color: #000000">Pattern</span> <span style="color: #000000">decimalPattern</span> <span style="color: #000000">=</span> <span style="color: #000000">Pattern.</span><span style="color: #836C28">compile</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;^-?\\d+$&quot;</span><span style="color: #000000">);</span>
+    <span style="color:#177500">/**
+</span><span style="color:#177500">     * A pattern to match on a signed integer value.
+</span><span style="color:#177500">     */</span>
+    <span style="color:#a90d91">private</span> <span style="color:#a90d91">static</span> <span style="color:#a90d91">final</span> <span style="color:#000">Pattern</span> <span style="color:#000">decimalPattern</span> <span style="color:#000">=</span> <span style="color:#000">Pattern</span><span style="color:#000">.</span><span style="color:#836c28">compile</span><span style="color:#000">(</span><span style="color:#c41a16">&#34;^-?\\d+$&#34;</span><span style="color:#000">);</span>
 
-    <span style="color: #177500">/**</span>
-<span style="color: #177500">     * The matcher for the decimal pattern regex.</span>
-<span style="color: #177500">     */</span>
-    <span style="color: #A90D91">private</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">final</span> <span style="color: #000000">Matcher</span> <span style="color: #000000">decimalMatcher</span> <span style="color: #000000">=</span> <span style="color: #000000">decimalPattern.</span><span style="color: #836C28">matcher</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;&quot;</span><span style="color: #000000">);</span>
+    <span style="color:#177500">/**
+</span><span style="color:#177500">     * The matcher for the decimal pattern regex.
+</span><span style="color:#177500">     */</span>
+    <span style="color:#a90d91">private</span> <span style="color:#a90d91">static</span> <span style="color:#a90d91">final</span> <span style="color:#000">Matcher</span> <span style="color:#000">decimalMatcher</span> <span style="color:#000">=</span> <span style="color:#000">decimalPattern</span><span style="color:#000">.</span><span style="color:#836c28">matcher</span><span style="color:#000">(</span><span style="color:#c41a16">&#34;&#34;</span><span style="color:#000">);</span>
 
-    <span style="color: #177500">/**</span>
-<span style="color: #177500">     * Maximum supported key length.</span>
-<span style="color: #177500">     */</span>
-    <span style="color: #A90D91">private</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">final</span> <span style="color: #A90D91">int</span> <span style="color: #000000">MAX_KEY_LENGTH</span> <span style="color: #000000">=</span> <span style="color: #1C01CE">250</span><span style="color: #000000">;</span>
+    <span style="color:#177500">/**
+</span><span style="color:#177500">     * Maximum supported key length.
+</span><span style="color:#177500">     */</span>
+    <span style="color:#a90d91">private</span> <span style="color:#a90d91">static</span> <span style="color:#a90d91">final</span> <span style="color:#a90d91">int</span> <span style="color:#000">MAX_KEY_LENGTH</span> <span style="color:#000">=</span> <span style="color:#000">250</span><span style="color:#000">;</span>
 
-    <span style="color: #177500">/**</span>
-<span style="color: #177500">     * Exception thrown if the input key is too long.</span>
-<span style="color: #177500">     */</span>
-    <span style="color: #A90D91">private</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">final</span> <span style="color: #000000">IllegalArgumentException</span> <span style="color: #000000">KEY_TOO_LONG_EXCEPTION</span> <span style="color: #000000">=</span>
-        <span style="color: #A90D91">new</span> <span style="color: #000000">IllegalArgumentException(</span><span style="color: #C41A16">&quot;Key is too long (maxlen = &quot;</span>
-            <span style="color: #000000">+</span> <span style="color: #000000">MAX_KEY_LENGTH</span> <span style="color: #000000">+</span> <span style="color: #C41A16">&quot;)&quot;</span><span style="color: #000000">);</span>
+    <span style="color:#177500">/**
+</span><span style="color:#177500">     * Exception thrown if the input key is too long.
+</span><span style="color:#177500">     */</span>
+    <span style="color:#a90d91">private</span> <span style="color:#a90d91">static</span> <span style="color:#a90d91">final</span> <span style="color:#000">IllegalArgumentException</span> <span style="color:#000">KEY_TOO_LONG_EXCEPTION</span> <span style="color:#000">=</span>
+        <span style="color:#a90d91">new</span> <span style="color:#000">IllegalArgumentException</span><span style="color:#000">(</span><span style="color:#c41a16">&#34;Key is too long (maxlen = &#34;</span>
+            <span style="color:#000">+</span> <span style="color:#000">MAX_KEY_LENGTH</span> <span style="color:#000">+</span> <span style="color:#c41a16">&#34;)&#34;</span><span style="color:#000">);</span>
 
-    <span style="color: #177500">/**</span>
-<span style="color: #177500">     * Exception thrown if the input key is empty.</span>
-<span style="color: #177500">     */</span>
-    <span style="color: #A90D91">private</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">final</span> <span style="color: #000000">IllegalArgumentException</span> <span style="color: #000000">KEY_EMPTY_EXCEPTION</span> <span style="color: #000000">=</span>
-        <span style="color: #A90D91">new</span> <span style="color: #000000">IllegalArgumentException(</span><span style="color: #C41A16">&quot;Key must contain at least one character.&quot;</span><span style="color: #000000">);</span>
+    <span style="color:#177500">/**
+</span><span style="color:#177500">     * Exception thrown if the input key is empty.
+</span><span style="color:#177500">     */</span>
+    <span style="color:#a90d91">private</span> <span style="color:#a90d91">static</span> <span style="color:#a90d91">final</span> <span style="color:#000">IllegalArgumentException</span> <span style="color:#000">KEY_EMPTY_EXCEPTION</span> <span style="color:#000">=</span>
+        <span style="color:#a90d91">new</span> <span style="color:#000">IllegalArgumentException</span><span style="color:#000">(</span><span style="color:#c41a16">&#34;Key must contain at least one character.&#34;</span><span style="color:#000">);</span>
 
-    <span style="color: #177500">/**</span>
-<span style="color: #177500">     * Preset the stack traces for the static exceptions.</span>
-<span style="color: #177500">     */</span>
-    <span style="color: #A90D91">static</span> <span style="color: #000000">{</span>
-        <span style="color: #000000">KEY_TOO_LONG_EXCEPTION.</span><span style="color: #836C28">setStackTrace</span><span style="color: #000000">(</span><span style="color: #A90D91">new</span> <span style="color: #000000">StackTraceElement[</span><span style="color: #1C01CE">0</span><span style="color: #000000">]);</span>
-        <span style="color: #000000">KEY_EMPTY_EXCEPTION.</span><span style="color: #836C28">setStackTrace</span><span style="color: #000000">(</span><span style="color: #A90D91">new</span> <span style="color: #000000">StackTraceElement[</span><span style="color: #1C01CE">0</span><span style="color: #000000">]);</span>
-    <span style="color: #000000">}</span>
+    <span style="color:#177500">/**
+</span><span style="color:#177500">     * Preset the stack traces for the static exceptions.
+</span><span style="color:#177500">     */</span>
+    <span style="color:#a90d91">static</span> <span style="color:#000">{</span>
+        <span style="color:#000">KEY_TOO_LONG_EXCEPTION</span><span style="color:#000">.</span><span style="color:#836c28">setStackTrace</span><span style="color:#000">(</span><span style="color:#a90d91">new</span> <span style="color:#000">StackTraceElement</span><span style="color:#000">[</span><span style="color:#000">0</span><span style="color:#000">]);</span>
+        <span style="color:#000">KEY_EMPTY_EXCEPTION</span><span style="color:#000">.</span><span style="color:#836c28">setStackTrace</span><span style="color:#000">(</span><span style="color:#a90d91">new</span> <span style="color:#000">StackTraceElement</span><span style="color:#000">[</span><span style="color:#000">0</span><span style="color:#000">]);</span>
+    <span style="color:#000">}</span>
 
-    <span style="color: #177500">/**</span>
-<span style="color: #177500">     * Private constructor, since this is a purely static class.</span>
-<span style="color: #177500">     */</span>
-    <span style="color: #A90D91">private</span> <span style="color: #000000">StringUtils()</span> <span style="color: #000000">{</span>
-        <span style="color: #A90D91">throw</span> <span style="color: #A90D91">new</span> <span style="color: #000000">UnsupportedOperationException();</span>
-    <span style="color: #000000">}</span>
+    <span style="color:#177500">/**
+</span><span style="color:#177500">     * Private constructor, since this is a purely static class.
+</span><span style="color:#177500">     */</span>
+    <span style="color:#a90d91">private</span> <span style="color:#000">StringUtils</span><span style="color:#000">()</span> <span style="color:#000">{</span>
+        <span style="color:#a90d91">throw</span> <span style="color:#a90d91">new</span> <span style="color:#000">UnsupportedOperationException</span><span style="color:#000">();</span>
+    <span style="color:#000">}</span>
 
-    <span style="color: #177500">/**</span>
-<span style="color: #177500">     * Check if a given string is a JSON object.</span>
-<span style="color: #177500">     *</span>
-<span style="color: #177500">     * @param s the input string.</span>
-<span style="color: #177500">     * @return true if it is a JSON object, false otherwise.</span>
-<span style="color: #177500">     */</span>
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">boolean</span> <span style="color: #000000">isJsonObject(</span><span style="color: #A90D91">final</span> <span style="color: #000000">String</span> <span style="color: #000000">s)</span> <span style="color: #000000">{</span>
-        <span style="color: #A90D91">if</span> <span style="color: #000000">(s</span> <span style="color: #000000">==</span> <span style="color: #A90D91">null</span> <span style="color: #000000">||</span> <span style="color: #000000">s.</span><span style="color: #836C28">isEmpty</span><span style="color: #000000">())</span> <span style="color: #000000">{</span>
-            <span style="color: #A90D91">return</span> <span style="color: #A90D91">false</span><span style="color: #000000">;</span>
-        <span style="color: #000000">}</span>
+    <span style="color:#177500">/**
+</span><span style="color:#177500">     * Check if a given string is a JSON object.
+</span><span style="color:#177500">     *
+</span><span style="color:#177500">     * @param s the input string.
+</span><span style="color:#177500">     * @return true if it is a JSON object, false otherwise.
+</span><span style="color:#177500">     */</span>
+    <span style="color:#a90d91">public</span> <span style="color:#a90d91">static</span> <span style="color:#a90d91">boolean</span> <span style="color:#000">isJsonObject</span><span style="color:#000">(</span><span style="color:#a90d91">final</span> <span style="color:#000">String</span> <span style="color:#000">s</span><span style="color:#000">)</span> <span style="color:#000">{</span>
+        <span style="color:#a90d91">if</span> <span style="color:#000">(</span><span style="color:#000">s</span> <span style="color:#000">==</span> <span style="color:#a90d91">null</span> <span style="color:#000">||</span> <span style="color:#000">s</span><span style="color:#000">.</span><span style="color:#836c28">isEmpty</span><span style="color:#000">())</span> <span style="color:#000">{</span>
+            <span style="color:#a90d91">return</span> <span style="color:#a90d91">false</span><span style="color:#000">;</span>
+        <span style="color:#000">}</span>
 
-        <span style="color: #A90D91">if</span> <span style="color: #000000">(s.</span><span style="color: #836C28">startsWith</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;{&quot;</span><span style="color: #000000">)</span> <span style="color: #000000">||</span> <span style="color: #000000">s.</span><span style="color: #836C28">startsWith</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;[&quot;</span><span style="color: #000000">)</span>
-            <span style="color: #000000">||</span> <span style="color: #C41A16">&quot;true&quot;</span><span style="color: #000000">.</span><span style="color: #836C28">equals</span><span style="color: #000000">(s)</span> <span style="color: #000000">||</span> <span style="color: #C41A16">&quot;false&quot;</span><span style="color: #000000">.</span><span style="color: #836C28">equals</span><span style="color: #000000">(s)</span>
-            <span style="color: #000000">||</span> <span style="color: #C41A16">&quot;null&quot;</span><span style="color: #000000">.</span><span style="color: #836C28">equals</span><span style="color: #000000">(s)</span> <span style="color: #000000">||</span> <span style="color: #000000">decimalMatcher.</span><span style="color: #836C28">reset</span><span style="color: #000000">(s).</span><span style="color: #836C28">matches</span><span style="color: #000000">())</span> <span style="color: #000000">{</span>
-            <span style="color: #A90D91">return</span> <span style="color: #A90D91">true</span><span style="color: #000000">;</span>
-        <span style="color: #000000">}</span>
+        <span style="color:#a90d91">if</span> <span style="color:#000">(</span><span style="color:#000">s</span><span style="color:#000">.</span><span style="color:#836c28">startsWith</span><span style="color:#000">(</span><span style="color:#c41a16">&#34;{&#34;</span><span style="color:#000">)</span> <span style="color:#000">||</span> <span style="color:#000">s</span><span style="color:#000">.</span><span style="color:#836c28">startsWith</span><span style="color:#000">(</span><span style="color:#c41a16">&#34;[&#34;</span><span style="color:#000">)</span>
+            <span style="color:#000">||</span> <span style="color:#c41a16">&#34;true&#34;</span><span style="color:#000">.</span><span style="color:#836c28">equals</span><span style="color:#000">(</span><span style="color:#000">s</span><span style="color:#000">)</span> <span style="color:#000">||</span> <span style="color:#c41a16">&#34;false&#34;</span><span style="color:#000">.</span><span style="color:#836c28">equals</span><span style="color:#000">(</span><span style="color:#000">s</span><span style="color:#000">)</span>
+            <span style="color:#000">||</span> <span style="color:#c41a16">&#34;null&#34;</span><span style="color:#000">.</span><span style="color:#836c28">equals</span><span style="color:#000">(</span><span style="color:#000">s</span><span style="color:#000">)</span> <span style="color:#000">||</span> <span style="color:#000">decimalMatcher</span><span style="color:#000">.</span><span style="color:#836c28">reset</span><span style="color:#000">(</span><span style="color:#000">s</span><span style="color:#000">).</span><span style="color:#836c28">matches</span><span style="color:#000">())</span> <span style="color:#000">{</span>
+            <span style="color:#a90d91">return</span> <span style="color:#a90d91">true</span><span style="color:#000">;</span>
+        <span style="color:#000">}</span>
 
-        <span style="color: #A90D91">return</span> <span style="color: #A90D91">false</span><span style="color: #000000">;</span>
-    <span style="color: #000000">}</span>
+        <span style="color:#a90d91">return</span> <span style="color:#a90d91">false</span><span style="color:#000">;</span>
+    <span style="color:#000">}</span>
 
-<span style="color: #000000">}</span>
-</pre></div>
-
+<span style="color:#000">}</span></code></pre></div>
 <p>And the test:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">package</span> <span style="color: #000000">com.couchbase.client.tests.util;</span>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a90d91">package</span> <span style="color:#000">com.couchbase.client.tests.util</span><span style="color:#000">;</span>
 
-<span style="color: #A90D91">import</span> <span style="color: #000000">org.openjdk.jcstress.annotations.Actor;</span>
-<span style="color: #A90D91">import</span> <span style="color: #000000">org.openjdk.jcstress.annotations.JCStressTest;</span>
-<span style="color: #A90D91">import</span> <span style="color: #000000">org.openjdk.jcstress.annotations.State;</span>
-<span style="color: #A90D91">import</span> <span style="color: #000000">org.openjdk.jcstress.infra.results.IntResult2;</span>
+<span style="color:#a90d91">import</span> <span style="color:#000">org.openjdk.jcstress.annotations.Actor</span><span style="color:#000">;</span>
+<span style="color:#a90d91">import</span> <span style="color:#000">org.openjdk.jcstress.annotations.JCStressTest</span><span style="color:#000">;</span>
+<span style="color:#a90d91">import</span> <span style="color:#000">org.openjdk.jcstress.annotations.State</span><span style="color:#000">;</span>
+<span style="color:#a90d91">import</span> <span style="color:#000">org.openjdk.jcstress.infra.results.IntResult2</span><span style="color:#000">;</span>
 
-<span style="color: #000000">@JCStressTest</span>
-<span style="color: #000000">@State</span>
-<span style="color: #A90D91">public</span> <span style="color: #A90D91">class</span> <span style="color: #3F6E75">StringUtilsTest</span> <span style="color: #000000">{</span>
+<span style="color:#000">@JCStressTest</span>
+<span style="color:#000">@State</span>
+<span style="color:#a90d91">public</span> <span style="color:#a90d91">class</span> <span style="color:#3f6e75">StringUtilsTest</span> <span style="color:#000">{</span>
 
-    <span style="color: #000000">@Actor</span>
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">void</span> <span style="color: #000000">actor1(IntResult2</span> <span style="color: #000000">result)</span> <span style="color: #000000">{</span>
-        <span style="color: #A90D91">try</span> <span style="color: #000000">{</span>
-            <span style="color: #000000">result.</span><span style="color: #836C28">r1</span> <span style="color: #000000">=</span> <span style="color: #000000">StringUtils.</span><span style="color: #836C28">isJsonObject</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;1234&quot;</span><span style="color: #000000">)</span> <span style="color: #000000">?</span> <span style="color: #1C01CE">1</span> <span style="color: #000000">:</span> <span style="color: #1C01CE">0</span><span style="color: #000000">;</span>
-        <span style="color: #000000">}</span> <span style="color: #A90D91">catch</span><span style="color: #000000">(Exception</span> <span style="color: #000000">ex)</span> <span style="color: #000000">{</span>
-            <span style="color: #000000">result.</span><span style="color: #836C28">r1</span> <span style="color: #000000">=</span> <span style="color: #000000">-</span><span style="color: #1C01CE">1</span><span style="color: #000000">;</span>
-        <span style="color: #000000">}</span>
-    <span style="color: #000000">}</span>
+    <span style="color:#000">@Actor</span>
+    <span style="color:#a90d91">public</span> <span style="color:#a90d91">void</span> <span style="color:#000">actor1</span><span style="color:#000">(</span><span style="color:#000">IntResult2</span> <span style="color:#000">result</span><span style="color:#000">)</span> <span style="color:#000">{</span>
+        <span style="color:#a90d91">try</span> <span style="color:#000">{</span>
+            <span style="color:#000">result</span><span style="color:#000">.</span><span style="color:#836c28">r1</span> <span style="color:#000">=</span> <span style="color:#000">StringUtils</span><span style="color:#000">.</span><span style="color:#836c28">isJsonObject</span><span style="color:#000">(</span><span style="color:#c41a16">&#34;1234&#34;</span><span style="color:#000">)</span> <span style="color:#000">?</span> <span style="color:#000">1</span> <span style="color:#000">:</span> <span style="color:#000">0</span><span style="color:#000">;</span>
+        <span style="color:#000">}</span> <span style="color:#a90d91">catch</span><span style="color:#000">(</span><span style="color:#000">Exception</span> <span style="color:#000">ex</span><span style="color:#000">)</span> <span style="color:#000">{</span>
+            <span style="color:#000">result</span><span style="color:#000">.</span><span style="color:#836c28">r1</span> <span style="color:#000">=</span> <span style="color:#000">-</span><span style="color:#000">1</span><span style="color:#000">;</span>
+        <span style="color:#000">}</span>
+    <span style="color:#000">}</span>
 
-    <span style="color: #000000">@Actor</span>
-    <span style="color: #A90D91">public</span> <span style="color: #A90D91">void</span> <span style="color: #000000">actor2(IntResult2</span> <span style="color: #000000">result)</span> <span style="color: #000000">{</span>
-        <span style="color: #A90D91">try</span> <span style="color: #000000">{</span>
-            <span style="color: #000000">result.</span><span style="color: #836C28">r2</span> <span style="color: #000000">=</span> <span style="color: #000000">StringUtils.</span><span style="color: #836C28">isJsonObject</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;5678&quot;</span><span style="color: #000000">)</span> <span style="color: #000000">?</span> <span style="color: #1C01CE">1</span> <span style="color: #000000">:</span> <span style="color: #1C01CE">0</span><span style="color: #000000">;</span>
-        <span style="color: #000000">}</span> <span style="color: #A90D91">catch</span><span style="color: #000000">(Exception</span> <span style="color: #000000">ex)</span> <span style="color: #000000">{</span>
-            <span style="color: #000000">result.</span><span style="color: #836C28">r2</span> <span style="color: #000000">=</span> <span style="color: #000000">-</span><span style="color: #1C01CE">1</span><span style="color: #000000">;</span>
-        <span style="color: #000000">}</span>
-    <span style="color: #000000">}</span>
-<span style="color: #000000">}</span>
-</pre></div>
-
+    <span style="color:#000">@Actor</span>
+    <span style="color:#a90d91">public</span> <span style="color:#a90d91">void</span> <span style="color:#000">actor2</span><span style="color:#000">(</span><span style="color:#000">IntResult2</span> <span style="color:#000">result</span><span style="color:#000">)</span> <span style="color:#000">{</span>
+        <span style="color:#a90d91">try</span> <span style="color:#000">{</span>
+            <span style="color:#000">result</span><span style="color:#000">.</span><span style="color:#836c28">r2</span> <span style="color:#000">=</span> <span style="color:#000">StringUtils</span><span style="color:#000">.</span><span style="color:#836c28">isJsonObject</span><span style="color:#000">(</span><span style="color:#c41a16">&#34;5678&#34;</span><span style="color:#000">)</span> <span style="color:#000">?</span> <span style="color:#000">1</span> <span style="color:#000">:</span> <span style="color:#000">0</span><span style="color:#000">;</span>
+        <span style="color:#000">}</span> <span style="color:#a90d91">catch</span><span style="color:#000">(</span><span style="color:#000">Exception</span> <span style="color:#000">ex</span><span style="color:#000">)</span> <span style="color:#000">{</span>
+            <span style="color:#000">result</span><span style="color:#000">.</span><span style="color:#836c28">r2</span> <span style="color:#000">=</span> <span style="color:#000">-</span><span style="color:#000">1</span><span style="color:#000">;</span>
+        <span style="color:#000">}</span>
+    <span style="color:#000">}</span>
+<span style="color:#000">}</span></code></pre></div>
 <p>The test uses <code>@Actor</code> annotations to define the different actors of the system. You can see that both actors access the same static method and put the result (which is abbreviated to a simple true (1) / false (0) pattern) in the <code>IntResult2</code> object. Both actors share their results and if an exception
 is raised we store -1. Now what is that good for?</p>
 
 <p>We also need to add a description file for our test which sets the expecations on allowed and disallowed value combinations. Note that I tried to add my own .xml file, but somehow it didn&rsquo;t get picked up, so I modified an existing xml (to be specific the <code>resources/org/openjdk/jcstress/desc/atomic-boolean.xml</code>) and added the following:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #000000">&lt;test</span> <span style="color: #836C28">name=</span><span style="color: #C41A16">&quot;com.couchbase.client.tests.util.StringUtilsTest&quot;</span><span style="color: #000000">&gt;</span>
-    <span style="color: #000000">&lt;contributed-by&gt;</span>Michael Nitschinger<span style="color: #000000">&lt;/contributed-by&gt;</span>
-    <span style="color: #000000">&lt;description&gt;</span>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#000">&lt;test</span> <span style="color:#836c28">name=</span><span style="color:#c41a16">&#34;com.couchbase.client.tests.util.StringUtilsTest&#34;</span><span style="color:#000">&gt;</span>
+    <span style="color:#000">&lt;contributed-by&gt;</span>Michael Nitschinger<span style="color:#000">&lt;/contributed-by&gt;</span>
+    <span style="color:#000">&lt;description&gt;</span>
         Tests the thread-safeness of the StringUtil class.
-    <span style="color: #000000">&lt;/description&gt;</span>
-    <span style="color: #000000">&lt;case&gt;</span>
-        <span style="color: #000000">&lt;match&gt;</span>[1, 1]<span style="color: #000000">&lt;/match&gt;</span>
-        <span style="color: #000000">&lt;expect&gt;</span>ACCEPTABLE<span style="color: #000000">&lt;/expect&gt;</span>
-        <span style="color: #000000">&lt;description&gt;</span>
+    <span style="color:#000">&lt;/description&gt;</span>
+    <span style="color:#000">&lt;case&gt;</span>
+        <span style="color:#000">&lt;match&gt;</span>[1, 1]<span style="color:#000">&lt;/match&gt;</span>
+        <span style="color:#000">&lt;expect&gt;</span>ACCEPTABLE<span style="color:#000">&lt;/expect&gt;</span>
+        <span style="color:#000">&lt;description&gt;</span>
             Acceptable to see true.
-        <span style="color: #000000">&lt;/description&gt;</span>
-    <span style="color: #000000">&lt;/case&gt;</span>
-    <span style="color: #000000">&lt;unmatched&gt;</span>
-        <span style="color: #000000">&lt;expect&gt;</span>FORBIDDEN<span style="color: #000000">&lt;/expect&gt;</span>
-        <span style="color: #000000">&lt;description&gt;</span>
+        <span style="color:#000">&lt;/description&gt;</span>
+    <span style="color:#000">&lt;/case&gt;</span>
+    <span style="color:#000">&lt;unmatched&gt;</span>
+        <span style="color:#000">&lt;expect&gt;</span>FORBIDDEN<span style="color:#000">&lt;/expect&gt;</span>
+        <span style="color:#000">&lt;description&gt;</span>
             Other cases are not expected. -1 would mean an exception raised.
-        <span style="color: #000000">&lt;/description&gt;</span>
-    <span style="color: #000000">&lt;/unmatched&gt;</span>
-<span style="color: #000000">&lt;/test&gt;</span>
-</pre></div>
-
+        <span style="color:#000">&lt;/description&gt;</span>
+    <span style="color:#000">&lt;/unmatched&gt;</span>
+<span style="color:#000">&lt;/test&gt;</span></code></pre></div>
 <p>You can see that the only thing which is acceptable is that both actors always get <code>true</code> returned, all other combinations are simply forbidden (that is, marked as failure).</p>
 
 <p>Now that we&rsquo;ve got that set up, we need to compile the thing on the command line through maven:</p>
@@ -331,46 +332,47 @@ Done.
 
                     </div>
                     <div id="disqus_thread"></div>
-<script type="text/javascript">
-    var disqus_shortname = 'daschl';
-    var disqus_identifier = 'a3564b8d59a2331a4c30acf6f0179b8f85001b7edca74d867e07ef6a77aa09d3654416020a9327c1ad0acc8e0e32de1d1f0e768da8a660024fb44cc0ca974a9d';
-    var disqus_title = 'Debugging Concurrency Issues with OpenJDK Jcstress';
-    var disqus_url = 'http:\/\/nitschinger.at\/Debugging-Concurrency-Issues-with-Open-JDK-Jcstress\/';
-
+<script>
+    var disqus_config = function () {
+    this.page.identifier = 'a3564b8d59a2331a4c30acf6f0179b8f85001b7edca74d867e07ef6a77aa09d3654416020a9327c1ad0acc8e0e32de1d1f0e768da8a660024fb44cc0ca974a9d';
+    
+    
+    };
     (function() {
-        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
-        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "daschl" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
     })();
 </script>
-<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
                 </section>
             </div>
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-                <li>&copy; Michael Nitschinger 2010-2016</li>
+            <li>&copy; Michael Nitschinger 2010-2018</li>
         </ul>
     </div>
 </div>
-<script src="http://nitschinger.at//js/all.min.js"></script>
-<script type="text/javascript">
+<script src="https://nitschinger.at/js/all.min.js"></script>
+<script>
+    (function (i, s, o, g, r, a, m) {
+        i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
+            (i[r].q = i[r].q || []).push(arguments)
+        }, i[r].l = 1 * new Date(); a = s.createElement(o),
+            m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
+    })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
 
-  var _gaq = _gaq || [];
-  _gaq.push(['_setAccount', 'UA-19686689-1']);
-  _gaq.push(['_trackPageview']);
-
-  (function() {
-    var ga = document.createElement('script');
-    ga.src = ('https:' == document.location.protocol ? 'https://ssl' :
-        'http://www') + '.google-analytics.com/ga.js';
-    ga.setAttribute('async', 'true');
-    document.documentElement.firstChild.appendChild(ga);
-  })();
-
+    ga('create', 'UA-19686689-1', 'auto');
+    ga('send', 'pageview');
+    ga('set', 'anonymizeIp', true);
 </script>
-
         </div>
     </div>
 </div>

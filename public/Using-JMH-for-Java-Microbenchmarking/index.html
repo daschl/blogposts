@@ -7,7 +7,7 @@
 
     <meta name="description" content="This post shows you how to write solid microbenchmarks using the new OpenJDK JMH library.">
 
-    <meta name="generator" content="Hugo 0.17" />
+    <meta name="generator" content="Hugo 0.40.3" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Using JMH for Java Microbenchmarking &middot; daschl writes. sometimes.">
@@ -26,10 +26,10 @@
         <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
     <!--<![endif]-->
 
-    <link rel="stylesheet" href="http://nitschinger.at//css/all.min.css">
+    <link rel="stylesheet" href="https://nitschinger.at/css/all.min.css">
     <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
 
-    <link rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." href="http://nitschinger.at//index.xml" />
+    <link rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." href="https://nitschinger.at/index.xml" />
 </head>
 <body>
 
@@ -38,26 +38,33 @@
     <div class="sidebar pure-u-1 pure-u-md-1-4">
     <div class="header">
         <hgroup>
-            <h1 class="brand-title"><a href="http://nitschinger.at/">daschl writes. sometimes.</a></h1>
+            <h1 class="brand-title">
+                <a href="https://nitschinger.at">daschl writes. sometimes.</a>
+            </h1>
             <h2 class="brand-tagline"></h2>
         </hgroup>
 
         <nav class="nav">
             <ul class="nav-list">
                 <li class="nav-item">
-                    <a class="pure-button" href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
+                    <a class="pure-button" href="https://twitter.com/daschl">
+                        <i class="fa fa-twitter"></i> Twitter</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl"><i class="fa fa-github-alt"></i> github</a>
+                    <a class="pure-button" href="https://github.com/daschl">
+                        <i class="fa fa-github-alt"></i> github</a>
                 </li>
                 <li class="nav-item">
-                    <a class="pure-button" href="http://nitschinger.at//index.xml"><i class="fa fa-rss"></i> rss</a>
+                    <a class="pure-button" href="https://nitschinger.at/index.xml">
+                        <i class="fa fa-rss"></i> rss</a>
+                </li>
+                <li class="nav-item">
+                    <a class="pure-button" href="https://nitschinger.at/imprint">Imprint</a>
                 </li>
             </ul>
         </nav>
     </div>
 </div>
-
 
     <div class="content pure-u-1 pure-u-md-3-4">
         <div>
@@ -67,7 +74,7 @@
                 <section class="post">
                     <header class="post-header">
 
-                        <a href="http://nitschinger.at/Using-JMH-for-Java-Microbenchmarking/" class="post-title">Using JMH for Java Microbenchmarking</a>
+                        <a href="https://nitschinger.at/Using-JMH-for-Java-Microbenchmarking/" class="post-title">Using JMH for Java Microbenchmarking</a>
 
                         <p class="post-meta">
                             
@@ -93,43 +100,37 @@
 </code></pre>
 
 <p>Let&rsquo;s start a maven project in our IDE and add the following dependency (mad props to <a href="https://twitter.com/_godin_/status/403668134206242817">Evgeny Mandrikov</a> for putting it on maven central recently):</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #000000">&lt;dependency&gt;</span>
-  <span style="color: #000000">&lt;groupId&gt;</span>org.openjdk.jmh<span style="color: #000000">&lt;/groupId&gt;</span>
-  <span style="color: #000000">&lt;artifactId&gt;</span>jmh-core<span style="color: #000000">&lt;/artifactId&gt;</span>
-  <span style="color: #000000">&lt;version&gt;</span>0.1<span style="color: #000000">&lt;/version&gt;</span>
-<span style="color: #000000">&lt;/dependency&gt;</span>
-</pre></div>
-
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#000">&lt;dependency&gt;</span>
+  <span style="color:#000">&lt;groupId&gt;</span>org.openjdk.jmh<span style="color:#000">&lt;/groupId&gt;</span>
+  <span style="color:#000">&lt;artifactId&gt;</span>jmh-core<span style="color:#000">&lt;/artifactId&gt;</span>
+  <span style="color:#000">&lt;version&gt;</span>0.1<span style="color:#000">&lt;/version&gt;</span>
+<span style="color:#000">&lt;/dependency&gt;</span></code></pre></div>
 <p>Now let&rsquo;s write a main method that calls the underlying method of JMH so we can run it easily form our IDE:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">import</span> <span style="color: #000000">org.openjdk.jmh.Main;</span>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a90d91">import</span> <span style="color:#000">org.openjdk.jmh.Main</span><span style="color:#000">;</span>
 
-<span style="color: #A90D91">public</span> <span style="color: #A90D91">class</span> <span style="color: #3F6E75">Start</span> <span style="color: #000000">{</span>
-  <span style="color: #A90D91">public</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">void</span> <span style="color: #000000">main(String...</span> <span style="color: #000000">args)</span> <span style="color: #000000">{</span>
-    <span style="color: #000000">Main.</span><span style="color: #836C28">main</span><span style="color: #000000">(args);</span>
-  <span style="color: #000000">}</span>
-<span style="color: #000000">}</span>
-</pre></div>
-
+<span style="color:#a90d91">public</span> <span style="color:#a90d91">class</span> <span style="color:#3f6e75">Start</span> <span style="color:#000">{</span>
+  <span style="color:#a90d91">public</span> <span style="color:#a90d91">static</span> <span style="color:#a90d91">void</span> <span style="color:#000">main</span><span style="color:#000">(</span><span style="color:#000">String</span><span style="color:#000">...</span> <span style="color:#000">args</span><span style="color:#000">)</span> <span style="color:#000">{</span>
+    <span style="color:#000">Main</span><span style="color:#000">.</span><span style="color:#836c28">main</span><span style="color:#000">(</span><span style="color:#000">args</span><span style="color:#000">);</span>
+  <span style="color:#000">}</span>
+<span style="color:#000">}</span></code></pre></div>
 <p>If we hit run, all we&rsquo;ll see is:</p>
 
 <pre><code>No matching benchmarks. Miss-spelled regexp? Use -v for verbose output.
 </code></pre>
 
 <p>Which is good, because we know JMH is working and looking for our benchmarks. Let&rsquo;s write an empty one to get a feeling of how it works.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">package</span> <span style="color: #000000">benchmarks;</span>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a90d91">package</span> <span style="color:#000">benchmarks</span><span style="color:#000">;</span>
 
-<span style="color: #A90D91">import</span> <span style="color: #000000">org.openjdk.jmh.annotations.GenerateMicroBenchmark;</span>
+<span style="color:#a90d91">import</span> <span style="color:#000">org.openjdk.jmh.annotations.GenerateMicroBenchmark</span><span style="color:#000">;</span>
 
-<span style="color: #A90D91">public</span> <span style="color: #A90D91">class</span> <span style="color: #3F6E75">HelloWorld</span> <span style="color: #000000">{</span>
+<span style="color:#a90d91">public</span> <span style="color:#a90d91">class</span> <span style="color:#3f6e75">HelloWorld</span> <span style="color:#000">{</span>
 
-  <span style="color: #000000">@GenerateMicroBenchmark</span>
-  <span style="color: #A90D91">public</span> <span style="color: #A90D91">void</span> <span style="color: #000000">helloWorld()</span> <span style="color: #000000">{</span>
+  <span style="color:#000">@GenerateMicroBenchmark</span>
+  <span style="color:#a90d91">public</span> <span style="color:#a90d91">void</span> <span style="color:#000">helloWorld</span><span style="color:#000">()</span> <span style="color:#000">{</span>
 
-  <span style="color: #000000">}</span>
+  <span style="color:#000">}</span>
 
-<span style="color: #000000">}</span>
-</pre></div>
-
+<span style="color:#000">}</span></code></pre></div>
 <p>JMH will automatically pick it up from the CLASSPATH and start to run our benchmark. You will see lots of output (forks, warmup runs), but be patient until the end and you&rsquo;ll see something like this:</p>
 
 <pre><code># Fork: 1 of 1
@@ -164,79 +165,73 @@ b.HelloWorld.helloWorld    thrpt   1        10    1  3073969.337    65631.592   
 <h2 id="benchmarking-real-code">Benchmarking real code</h2>
 
 <p>Now all is fun, but let&rsquo;s test some real code. In Spymemcached, before we put a document on the wire we check that the key is not longer than allowed and - for ascii based operations - also check if they do not contain whitespace and so on. The code in question currently looks like this:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">public</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">void</span> <span style="color: #000000">validateKey(String</span> <span style="color: #000000">key,</span> <span style="color: #A90D91">boolean</span> <span style="color: #000000">binary)</span> <span style="color: #000000">{</span>
-  <span style="color: #A90D91">byte</span><span style="color: #000000">[]</span> <span style="color: #000000">keyBytes</span> <span style="color: #000000">=</span> <span style="color: #000000">KeyUtil.</span><span style="color: #836C28">getKeyBytes</span><span style="color: #000000">(key);</span>
-  <span style="color: #A90D91">if</span> <span style="color: #000000">(keyBytes.</span><span style="color: #836C28">length</span> <span style="color: #000000">&gt;</span> <span style="color: #000000">MemcachedClientIF.</span><span style="color: #836C28">MAX_KEY_LENGTH</span><span style="color: #000000">)</span> <span style="color: #000000">{</span>
-    <span style="color: #A90D91">throw</span> <span style="color: #A90D91">new</span> <span style="color: #000000">IllegalArgumentException(</span><span style="color: #C41A16">&quot;Key is too long (maxlen = &quot;</span>
-        <span style="color: #000000">+</span> <span style="color: #000000">MemcachedClientIF.</span><span style="color: #836C28">MAX_KEY_LENGTH</span> <span style="color: #000000">+</span> <span style="color: #C41A16">&quot;)&quot;</span><span style="color: #000000">);</span>
-  <span style="color: #000000">}</span>
-  <span style="color: #A90D91">if</span> <span style="color: #000000">(keyBytes.</span><span style="color: #836C28">length</span> <span style="color: #000000">==</span> <span style="color: #1C01CE">0</span><span style="color: #000000">)</span> <span style="color: #000000">{</span>
-    <span style="color: #A90D91">throw</span> <span style="color: #A90D91">new</span> <span style="color: #000000">IllegalArgumentException(</span>
-        <span style="color: #C41A16">&quot;Key must contain at least one character.&quot;</span><span style="color: #000000">);</span>
-  <span style="color: #000000">}</span>
-  <span style="color: #A90D91">if</span><span style="color: #000000">(!binary)</span> <span style="color: #000000">{</span>
-    <span style="color: #177500">// Validate the key</span>
-    <span style="color: #A90D91">for</span> <span style="color: #000000">(</span><span style="color: #A90D91">byte</span> <span style="color: #000000">b</span> <span style="color: #000000">:</span> <span style="color: #000000">keyBytes)</span> <span style="color: #000000">{</span>
-      <span style="color: #A90D91">if</span> <span style="color: #000000">(b</span> <span style="color: #000000">==</span> <span style="color: #2300CE">&#39; &#39;</span> <span style="color: #000000">||</span> <span style="color: #000000">b</span> <span style="color: #000000">==</span> <span style="color: #000000">&#39;\\n&#39;</span> <span style="color: #000000">||</span> <span style="color: #000000">b</span> <span style="color: #000000">==</span> <span style="color: #000000">&#39;\\r&#39;</span> <span style="color: #000000">||</span> <span style="color: #000000">b</span> <span style="color: #000000">==</span> <span style="color: #1C01CE">0</span><span style="color: #000000">)</span> <span style="color: #000000">{</span>
-        <span style="color: #A90D91">throw</span> <span style="color: #A90D91">new</span> <span style="color: #000000">IllegalArgumentException(</span>
-            <span style="color: #C41A16">&quot;Key contains invalid characters:  ``&quot;</span> <span style="color: #000000">+</span> <span style="color: #000000">key</span> <span style="color: #000000">+</span> <span style="color: #C41A16">&quot;&#39;&#39;&quot;</span><span style="color: #000000">);</span>
-      <span style="color: #000000">}</span>
-    <span style="color: #000000">}</span>
-  <span style="color: #000000">}</span>
-<span style="color: #000000">}</span>
-</pre></div>
-
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a90d91">public</span> <span style="color:#a90d91">static</span> <span style="color:#a90d91">void</span> <span style="color:#000">validateKey</span><span style="color:#000">(</span><span style="color:#000">String</span> <span style="color:#000">key</span><span style="color:#000">,</span> <span style="color:#a90d91">boolean</span> <span style="color:#000">binary</span><span style="color:#000">)</span> <span style="color:#000">{</span>
+  <span style="color:#a90d91">byte</span><span style="color:#000">[]</span> <span style="color:#000">keyBytes</span> <span style="color:#000">=</span> <span style="color:#000">KeyUtil</span><span style="color:#000">.</span><span style="color:#836c28">getKeyBytes</span><span style="color:#000">(</span><span style="color:#000">key</span><span style="color:#000">);</span>
+  <span style="color:#a90d91">if</span> <span style="color:#000">(</span><span style="color:#000">keyBytes</span><span style="color:#000">.</span><span style="color:#836c28">length</span> <span style="color:#000">&gt;</span> <span style="color:#000">MemcachedClientIF</span><span style="color:#000">.</span><span style="color:#836c28">MAX_KEY_LENGTH</span><span style="color:#000">)</span> <span style="color:#000">{</span>
+    <span style="color:#a90d91">throw</span> <span style="color:#a90d91">new</span> <span style="color:#000">IllegalArgumentException</span><span style="color:#000">(</span><span style="color:#c41a16">&#34;Key is too long (maxlen = &#34;</span>
+        <span style="color:#000">+</span> <span style="color:#000">MemcachedClientIF</span><span style="color:#000">.</span><span style="color:#836c28">MAX_KEY_LENGTH</span> <span style="color:#000">+</span> <span style="color:#c41a16">&#34;)&#34;</span><span style="color:#000">);</span>
+  <span style="color:#000">}</span>
+  <span style="color:#a90d91">if</span> <span style="color:#000">(</span><span style="color:#000">keyBytes</span><span style="color:#000">.</span><span style="color:#836c28">length</span> <span style="color:#000">==</span> <span style="color:#000">0</span><span style="color:#000">)</span> <span style="color:#000">{</span>
+    <span style="color:#a90d91">throw</span> <span style="color:#a90d91">new</span> <span style="color:#000">IllegalArgumentException</span><span style="color:#000">(</span>
+        <span style="color:#c41a16">&#34;Key must contain at least one character.&#34;</span><span style="color:#000">);</span>
+  <span style="color:#000">}</span>
+  <span style="color:#a90d91">if</span><span style="color:#000">(!</span><span style="color:#000">binary</span><span style="color:#000">)</span> <span style="color:#000">{</span>
+    <span style="color:#177500">// Validate the key
+</span><span style="color:#177500"></span>    <span style="color:#a90d91">for</span> <span style="color:#000">(</span><span style="color:#a90d91">byte</span> <span style="color:#000">b</span> <span style="color:#000">:</span> <span style="color:#000">keyBytes</span><span style="color:#000">)</span> <span style="color:#000">{</span>
+      <span style="color:#a90d91">if</span> <span style="color:#000">(</span><span style="color:#000">b</span> <span style="color:#000">==</span> <span style="color:#2300ce">&#39; &#39;</span> <span style="color:#000">||</span> <span style="color:#000">b</span> <span style="color:#000">==</span> <span style="color:#000">&#39;\\</span><span style="color:#000">n</span><span style="color:#000">&#39;</span> <span style="color:#000">||</span> <span style="color:#000">b</span> <span style="color:#000">==</span> <span style="color:#000">&#39;\\</span><span style="color:#000">r</span><span style="color:#000">&#39;</span> <span style="color:#000">||</span> <span style="color:#000">b</span> <span style="color:#000">==</span> <span style="color:#000">0</span><span style="color:#000">)</span> <span style="color:#000">{</span>
+        <span style="color:#a90d91">throw</span> <span style="color:#a90d91">new</span> <span style="color:#000">IllegalArgumentException</span><span style="color:#000">(</span>
+            <span style="color:#c41a16">&#34;Key contains invalid characters:  ``&#34;</span> <span style="color:#000">+</span> <span style="color:#000">key</span> <span style="color:#000">+</span> <span style="color:#c41a16">&#34;&#39;&#39;&#34;</span><span style="color:#000">);</span>
+      <span style="color:#000">}</span>
+    <span style="color:#000">}</span>
+  <span style="color:#000">}</span>
+<span style="color:#000">}</span></code></pre></div>
 <p>Let&rsquo;s say we don&rsquo;t care about optimizing it yet, but we want to see how it performs if the &ldquo;binary&rdquo; flag is applied or not. Obviously less work is done but we want to see how that turns out in practice. Let&rsquo;s add the dependency so we can use the static method directly from the code:</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #000000">&lt;dependency&gt;</span>
-  <span style="color: #000000">&lt;groupId&gt;</span>net.spy<span style="color: #000000">&lt;/groupId&gt;</span>
-  <span style="color: #000000">&lt;artifactId&gt;</span>spymemcached<span style="color: #000000">&lt;/artifactId&gt;</span>
-  <span style="color: #000000">&lt;version&gt;</span>2.10.2<span style="color: #000000">&lt;/version&gt;</span>
-<span style="color: #000000">&lt;/dependency&gt;</span>
-</pre></div>
-
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#000">&lt;dependency&gt;</span>
+  <span style="color:#000">&lt;groupId&gt;</span>net.spy<span style="color:#000">&lt;/groupId&gt;</span>
+  <span style="color:#000">&lt;artifactId&gt;</span>spymemcached<span style="color:#000">&lt;/artifactId&gt;</span>
+  <span style="color:#000">&lt;version&gt;</span>2.10.2<span style="color:#000">&lt;/version&gt;</span>
+<span style="color:#000">&lt;/dependency&gt;</span></code></pre></div>
 <p>And write a new benchmark that compares both approaches with variation.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">package</span> <span style="color: #000000">benchmarks;</span>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a90d91">package</span> <span style="color:#000">benchmarks</span><span style="color:#000">;</span>
 
-<span style="color: #A90D91">import</span> <span style="color: #000000">net.spy.memcached.util.StringUtils;</span>
-<span style="color: #A90D91">import</span> <span style="color: #000000">org.openjdk.jmh.annotations.GenerateMicroBenchmark;</span>
+<span style="color:#a90d91">import</span> <span style="color:#000">net.spy.memcached.util.StringUtils</span><span style="color:#000">;</span>
+<span style="color:#a90d91">import</span> <span style="color:#000">org.openjdk.jmh.annotations.GenerateMicroBenchmark</span><span style="color:#000">;</span>
 
-<span style="color: #A90D91">public</span> <span style="color: #A90D91">class</span> <span style="color: #3F6E75">KeyBench</span> <span style="color: #000000">{</span>
+<span style="color:#a90d91">public</span> <span style="color:#a90d91">class</span> <span style="color:#3f6e75">KeyBench</span> <span style="color:#000">{</span>
 
-  <span style="color: #177500">/**</span>
-<span style="color: #177500">   * 12 chars long</span>
-<span style="color: #177500">   */</span>
-  <span style="color: #A90D91">private</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">final</span> <span style="color: #000000">String</span> <span style="color: #000000">SHORT_KEY</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;user:michael&quot;</span><span style="color: #000000">;</span>
+  <span style="color:#177500">/**
+</span><span style="color:#177500">   * 12 chars long
+</span><span style="color:#177500">   */</span>
+  <span style="color:#a90d91">private</span> <span style="color:#a90d91">static</span> <span style="color:#a90d91">final</span> <span style="color:#000">String</span> <span style="color:#000">SHORT_KEY</span> <span style="color:#000">=</span> <span style="color:#c41a16">&#34;user:michael&#34;</span><span style="color:#000">;</span>
 
-  <span style="color: #177500">/**</span>
-<span style="color: #177500">   * 240 chars long</span>
-<span style="color: #177500">   */</span>
-  <span style="color: #A90D91">private</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">final</span> <span style="color: #000000">String</span> <span style="color: #000000">LONG_KEY</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;thisIsAFunkyKeyWith_underscores_AndAlso334&quot;</span> <span style="color: #000000">+</span>
-      <span style="color: #C41A16">&quot;3252545345NumberslthisIsAFunkyKeyWith_underscores_AndAlso3343252545345Numbe&quot;</span> <span style="color: #000000">+</span>
-      <span style="color: #C41A16">&quot;rslthisIsAFunkyKeyWith_underscores_AndAlso3343252545345NumberslthisIsAFunkyK&quot;</span> <span style="color: #000000">+</span>
-      <span style="color: #C41A16">&quot;eyWith_underscores_AndAlso3343252545345Numbersl&quot;</span><span style="color: #000000">;</span>
+  <span style="color:#177500">/**
+</span><span style="color:#177500">   * 240 chars long
+</span><span style="color:#177500">   */</span>
+  <span style="color:#a90d91">private</span> <span style="color:#a90d91">static</span> <span style="color:#a90d91">final</span> <span style="color:#000">String</span> <span style="color:#000">LONG_KEY</span> <span style="color:#000">=</span> <span style="color:#c41a16">&#34;thisIsAFunkyKeyWith_underscores_AndAlso334&#34;</span> <span style="color:#000">+</span>
+      <span style="color:#c41a16">&#34;3252545345NumberslthisIsAFunkyKeyWith_underscores_AndAlso3343252545345Numbe&#34;</span> <span style="color:#000">+</span>
+      <span style="color:#c41a16">&#34;rslthisIsAFunkyKeyWith_underscores_AndAlso3343252545345NumberslthisIsAFunkyK&#34;</span> <span style="color:#000">+</span>
+      <span style="color:#c41a16">&#34;eyWith_underscores_AndAlso3343252545345Numbersl&#34;</span><span style="color:#000">;</span>
 
-  <span style="color: #000000">@GenerateMicroBenchmark</span>
-  <span style="color: #A90D91">public</span> <span style="color: #A90D91">void</span> <span style="color: #000000">validateShortKeyBinary()</span> <span style="color: #000000">{</span>
-    <span style="color: #000000">StringUtils.</span><span style="color: #836C28">validateKey</span><span style="color: #000000">(SHORT_KEY,</span> <span style="color: #A90D91">true</span><span style="color: #000000">);</span>
-  <span style="color: #000000">}</span>
+  <span style="color:#000">@GenerateMicroBenchmark</span>
+  <span style="color:#a90d91">public</span> <span style="color:#a90d91">void</span> <span style="color:#000">validateShortKeyBinary</span><span style="color:#000">()</span> <span style="color:#000">{</span>
+    <span style="color:#000">StringUtils</span><span style="color:#000">.</span><span style="color:#836c28">validateKey</span><span style="color:#000">(</span><span style="color:#000">SHORT_KEY</span><span style="color:#000">,</span> <span style="color:#a90d91">true</span><span style="color:#000">);</span>
+  <span style="color:#000">}</span>
 
-  <span style="color: #000000">@GenerateMicroBenchmark</span>
-  <span style="color: #A90D91">public</span> <span style="color: #A90D91">void</span> <span style="color: #000000">validateShortKeyAscii()</span> <span style="color: #000000">{</span>
-    <span style="color: #000000">StringUtils.</span><span style="color: #836C28">validateKey</span><span style="color: #000000">(SHORT_KEY,</span> <span style="color: #A90D91">false</span><span style="color: #000000">);</span>
-  <span style="color: #000000">}</span>
+  <span style="color:#000">@GenerateMicroBenchmark</span>
+  <span style="color:#a90d91">public</span> <span style="color:#a90d91">void</span> <span style="color:#000">validateShortKeyAscii</span><span style="color:#000">()</span> <span style="color:#000">{</span>
+    <span style="color:#000">StringUtils</span><span style="color:#000">.</span><span style="color:#836c28">validateKey</span><span style="color:#000">(</span><span style="color:#000">SHORT_KEY</span><span style="color:#000">,</span> <span style="color:#a90d91">false</span><span style="color:#000">);</span>
+  <span style="color:#000">}</span>
 
-  <span style="color: #000000">@GenerateMicroBenchmark</span>
-  <span style="color: #A90D91">public</span> <span style="color: #A90D91">void</span> <span style="color: #000000">validateLongKeyBinary()</span> <span style="color: #000000">{</span>
-    <span style="color: #000000">StringUtils.</span><span style="color: #836C28">validateKey</span><span style="color: #000000">(LONG_KEY,</span> <span style="color: #A90D91">true</span><span style="color: #000000">);</span>
-  <span style="color: #000000">}</span>
+  <span style="color:#000">@GenerateMicroBenchmark</span>
+  <span style="color:#a90d91">public</span> <span style="color:#a90d91">void</span> <span style="color:#000">validateLongKeyBinary</span><span style="color:#000">()</span> <span style="color:#000">{</span>
+    <span style="color:#000">StringUtils</span><span style="color:#000">.</span><span style="color:#836c28">validateKey</span><span style="color:#000">(</span><span style="color:#000">LONG_KEY</span><span style="color:#000">,</span> <span style="color:#a90d91">true</span><span style="color:#000">);</span>
+  <span style="color:#000">}</span>
 
-  <span style="color: #000000">@GenerateMicroBenchmark</span>
-  <span style="color: #A90D91">public</span> <span style="color: #A90D91">void</span> <span style="color: #000000">validateLongKeyAscii()</span> <span style="color: #000000">{</span>
-    <span style="color: #000000">StringUtils.</span><span style="color: #836C28">validateKey</span><span style="color: #000000">(LONG_KEY,</span> <span style="color: #A90D91">false</span><span style="color: #000000">);</span>
-  <span style="color: #000000">}</span>
-<span style="color: #000000">}</span>
-</pre></div>
-
+  <span style="color:#000">@GenerateMicroBenchmark</span>
+  <span style="color:#a90d91">public</span> <span style="color:#a90d91">void</span> <span style="color:#000">validateLongKeyAscii</span><span style="color:#000">()</span> <span style="color:#000">{</span>
+    <span style="color:#000">StringUtils</span><span style="color:#000">.</span><span style="color:#836c28">validateKey</span><span style="color:#000">(</span><span style="color:#000">LONG_KEY</span><span style="color:#000">,</span> <span style="color:#a90d91">false</span><span style="color:#000">);</span>
+  <span style="color:#000">}</span>
+<span style="color:#000">}</span></code></pre></div>
 <p>We also see how the performance differs for long and short keys. The first run we do is with 10 iterations and 1 fork:</p>
 
 <p>Result : 18093.561 ±(95%) 65.824 ±(99%) 94.575 ops/ms
@@ -278,116 +273,113 @@ b.HelloWorld.helloWorld    thrpt   1        10    1  3073969.337    65631.592   
 <h2 id="additional-information">Additional Information</h2>
 
 <p>As <a href="https://twitter.com/shipilev">Aleksey Shipilёv</a> points out in the comments, there is also a nice Java API that you can use, instead of just proxying &ldquo;main&rdquo; and emulating the command line. Here is an example that shows how to use it. Note that iterating the MAP is optional, but it gives you a code-readable way of the results. If you just call <code>new Runner(opts).run();</code>, you will see the identical output as above.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">public</span> <span style="color: #A90D91">static</span> <span style="color: #A90D91">void</span> <span style="color: #000000">main(String...</span> <span style="color: #000000">args)</span> <span style="color: #A90D91">throws</span> <span style="color: #000000">Exception</span> <span style="color: #000000">{</span>
-  <span style="color: #000000">Options</span> <span style="color: #000000">opts</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">OptionsBuilder()</span>
-      <span style="color: #000000">.</span><span style="color: #836C28">include</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;.*&quot;</span><span style="color: #000000">)</span>
-      <span style="color: #000000">.</span><span style="color: #836C28">warmupIterations</span><span style="color: #000000">(</span><span style="color: #1C01CE">10</span><span style="color: #000000">)</span>
-      <span style="color: #000000">.</span><span style="color: #836C28">measurementIterations</span><span style="color: #000000">(</span><span style="color: #1C01CE">10</span><span style="color: #000000">)</span>
-      <span style="color: #000000">.</span><span style="color: #836C28">jvmArgs</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;-server&quot;</span><span style="color: #000000">)</span>
-      <span style="color: #000000">.</span><span style="color: #836C28">forks</span><span style="color: #000000">(</span><span style="color: #1C01CE">1</span><span style="color: #000000">)</span>
-      <span style="color: #000000">.</span><span style="color: #836C28">outputFormat</span><span style="color: #000000">(OutputFormatType.</span><span style="color: #836C28">TextReport</span><span style="color: #000000">)</span>
-      <span style="color: #000000">.</span><span style="color: #836C28">build</span><span style="color: #000000">();</span>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a90d91">public</span> <span style="color:#a90d91">static</span> <span style="color:#a90d91">void</span> <span style="color:#000">main</span><span style="color:#000">(</span><span style="color:#000">String</span><span style="color:#000">...</span> <span style="color:#000">args</span><span style="color:#000">)</span> <span style="color:#a90d91">throws</span> <span style="color:#000">Exception</span> <span style="color:#000">{</span>
+  <span style="color:#000">Options</span> <span style="color:#000">opts</span> <span style="color:#000">=</span> <span style="color:#a90d91">new</span> <span style="color:#000">OptionsBuilder</span><span style="color:#000">()</span>
+      <span style="color:#000">.</span><span style="color:#836c28">include</span><span style="color:#000">(</span><span style="color:#c41a16">&#34;.*&#34;</span><span style="color:#000">)</span>
+      <span style="color:#000">.</span><span style="color:#836c28">warmupIterations</span><span style="color:#000">(</span><span style="color:#000">10</span><span style="color:#000">)</span>
+      <span style="color:#000">.</span><span style="color:#836c28">measurementIterations</span><span style="color:#000">(</span><span style="color:#000">10</span><span style="color:#000">)</span>
+      <span style="color:#000">.</span><span style="color:#836c28">jvmArgs</span><span style="color:#000">(</span><span style="color:#c41a16">&#34;-server&#34;</span><span style="color:#000">)</span>
+      <span style="color:#000">.</span><span style="color:#836c28">forks</span><span style="color:#000">(</span><span style="color:#000">1</span><span style="color:#000">)</span>
+      <span style="color:#000">.</span><span style="color:#836c28">outputFormat</span><span style="color:#000">(</span><span style="color:#000">OutputFormatType</span><span style="color:#000">.</span><span style="color:#836c28">TextReport</span><span style="color:#000">)</span>
+      <span style="color:#000">.</span><span style="color:#836c28">build</span><span style="color:#000">();</span>
 
-  <span style="color: #000000">Map&lt;BenchmarkRecord,RunResult&gt;</span> <span style="color: #000000">records</span> <span style="color: #000000">=</span> <span style="color: #A90D91">new</span> <span style="color: #000000">Runner(opts).</span><span style="color: #836C28">run</span><span style="color: #000000">();</span>
-  <span style="color: #A90D91">for</span> <span style="color: #000000">(Map.</span><span style="color: #836C28">Entry</span><span style="color: #000000">&lt;BenchmarkRecord,</span> <span style="color: #000000">RunResult&gt;</span> <span style="color: #000000">result</span> <span style="color: #000000">:</span> <span style="color: #000000">records.</span><span style="color: #836C28">entrySet</span><span style="color: #000000">())</span> <span style="color: #000000">{</span>
-    <span style="color: #000000">Result</span> <span style="color: #000000">r</span> <span style="color: #000000">=</span> <span style="color: #000000">result.</span><span style="color: #836C28">getValue</span><span style="color: #000000">().</span><span style="color: #836C28">getPrimaryResult</span><span style="color: #000000">();</span>
-    <span style="color: #000000">System.</span><span style="color: #836C28">out</span><span style="color: #000000">.</span><span style="color: #836C28">println</span><span style="color: #000000">(</span><span style="color: #C41A16">&quot;API replied benchmark score: &quot;</span>
-      <span style="color: #000000">+</span> <span style="color: #000000">r.</span><span style="color: #836C28">getScore</span><span style="color: #000000">()</span> <span style="color: #000000">+</span> <span style="color: #C41A16">&quot; &quot;</span>
-      <span style="color: #000000">+</span> <span style="color: #000000">r.</span><span style="color: #836C28">getScoreUnit</span><span style="color: #000000">()</span> <span style="color: #000000">+</span> <span style="color: #C41A16">&quot; over &quot;</span>
-      <span style="color: #000000">+</span> <span style="color: #000000">r.</span><span style="color: #836C28">getStatistics</span><span style="color: #000000">().</span><span style="color: #836C28">getN</span><span style="color: #000000">()</span> <span style="color: #000000">+</span> <span style="color: #C41A16">&quot; iterations&quot;</span><span style="color: #000000">);</span>
-  <span style="color: #000000">}</span>
-<span style="color: #000000">}</span>
-</pre></div>
-
+  <span style="color:#000">Map</span><span style="color:#000">&lt;</span><span style="color:#000">BenchmarkRecord</span><span style="color:#000">,</span><span style="color:#000">RunResult</span><span style="color:#000">&gt;</span> <span style="color:#000">records</span> <span style="color:#000">=</span> <span style="color:#a90d91">new</span> <span style="color:#000">Runner</span><span style="color:#000">(</span><span style="color:#000">opts</span><span style="color:#000">).</span><span style="color:#836c28">run</span><span style="color:#000">();</span>
+  <span style="color:#a90d91">for</span> <span style="color:#000">(</span><span style="color:#000">Map</span><span style="color:#000">.</span><span style="color:#836c28">Entry</span><span style="color:#000">&lt;</span><span style="color:#000">BenchmarkRecord</span><span style="color:#000">,</span> <span style="color:#000">RunResult</span><span style="color:#000">&gt;</span> <span style="color:#000">result</span> <span style="color:#000">:</span> <span style="color:#000">records</span><span style="color:#000">.</span><span style="color:#836c28">entrySet</span><span style="color:#000">())</span> <span style="color:#000">{</span>
+    <span style="color:#000">Result</span> <span style="color:#000">r</span> <span style="color:#000">=</span> <span style="color:#000">result</span><span style="color:#000">.</span><span style="color:#836c28">getValue</span><span style="color:#000">().</span><span style="color:#836c28">getPrimaryResult</span><span style="color:#000">();</span>
+    <span style="color:#000">System</span><span style="color:#000">.</span><span style="color:#836c28">out</span><span style="color:#000">.</span><span style="color:#836c28">println</span><span style="color:#000">(</span><span style="color:#c41a16">&#34;API replied benchmark score: &#34;</span>
+      <span style="color:#000">+</span> <span style="color:#000">r</span><span style="color:#000">.</span><span style="color:#836c28">getScore</span><span style="color:#000">()</span> <span style="color:#000">+</span> <span style="color:#c41a16">&#34; &#34;</span>
+      <span style="color:#000">+</span> <span style="color:#000">r</span><span style="color:#000">.</span><span style="color:#836c28">getScoreUnit</span><span style="color:#000">()</span> <span style="color:#000">+</span> <span style="color:#c41a16">&#34; over &#34;</span>
+      <span style="color:#000">+</span> <span style="color:#000">r</span><span style="color:#000">.</span><span style="color:#836c28">getStatistics</span><span style="color:#000">().</span><span style="color:#836c28">getN</span><span style="color:#000">()</span> <span style="color:#000">+</span> <span style="color:#c41a16">&#34; iterations&#34;</span><span style="color:#000">);</span>
+  <span style="color:#000">}</span>
+<span style="color:#000">}</span></code></pre></div>
 <p>Also, the constant keys used in the above example are subject to constant optimizations. To work around that, there is the @State annotation for the class and the static fields need to be instance variables. Here is the updated code sample for clarity, the numbers don&rsquo;t change for the purpose of this post.</p>
-<div class="highlight" style="background: #ffffff"><pre style="line-height: 125%"><span></span><span style="color: #A90D91">package</span> <span style="color: #000000">benchmarks;</span>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a90d91">package</span> <span style="color:#000">benchmarks</span><span style="color:#000">;</span>
 
-<span style="color: #A90D91">import</span> <span style="color: #000000">net.spy.memcached.util.StringUtils;</span>
-<span style="color: #A90D91">import</span> <span style="color: #000000">org.openjdk.jmh.annotations.GenerateMicroBenchmark;</span>
-<span style="color: #A90D91">import</span> <span style="color: #000000">org.openjdk.jmh.annotations.State;</span>
+<span style="color:#a90d91">import</span> <span style="color:#000">net.spy.memcached.util.StringUtils</span><span style="color:#000">;</span>
+<span style="color:#a90d91">import</span> <span style="color:#000">org.openjdk.jmh.annotations.GenerateMicroBenchmark</span><span style="color:#000">;</span>
+<span style="color:#a90d91">import</span> <span style="color:#000">org.openjdk.jmh.annotations.State</span><span style="color:#000">;</span>
 
-<span style="color: #000000">@State</span>
-<span style="color: #A90D91">public</span> <span style="color: #A90D91">class</span> <span style="color: #3F6E75">KeyBench</span> <span style="color: #000000">{</span>
+<span style="color:#000">@State</span>
+<span style="color:#a90d91">public</span> <span style="color:#a90d91">class</span> <span style="color:#3f6e75">KeyBench</span> <span style="color:#000">{</span>
 
-  <span style="color: #177500">/**</span>
-<span style="color: #177500">   * 12 chars long</span>
-<span style="color: #177500">   */</span>
-  <span style="color: #A90D91">private</span> <span style="color: #000000">String</span> <span style="color: #000000">SHORT_KEY</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;user:michael&quot;</span><span style="color: #000000">;</span>
+  <span style="color:#177500">/**
+</span><span style="color:#177500">   * 12 chars long
+</span><span style="color:#177500">   */</span>
+  <span style="color:#a90d91">private</span> <span style="color:#000">String</span> <span style="color:#000">SHORT_KEY</span> <span style="color:#000">=</span> <span style="color:#c41a16">&#34;user:michael&#34;</span><span style="color:#000">;</span>
 
-  <span style="color: #177500">/**</span>
-<span style="color: #177500">   * 240 chars long</span>
-<span style="color: #177500">   */</span>
-  <span style="color: #A90D91">private</span> <span style="color: #000000">String</span> <span style="color: #000000">LONG_KEY</span> <span style="color: #000000">=</span> <span style="color: #C41A16">&quot;thisIsAFunkyKeyWith_underscores_AndAlso334&quot;</span> <span style="color: #000000">+</span>
-      <span style="color: #C41A16">&quot;3252545345NumberslthisIsAFunkyKeyWith_underscores_AndAlso3343252545345Numbe&quot;</span> <span style="color: #000000">+</span>
-      <span style="color: #C41A16">&quot;rslthisIsAFunkyKeyWith_underscores_AndAlso3343252545345NumberslthisIsAFunkyK&quot;</span> <span style="color: #000000">+</span>
-      <span style="color: #C41A16">&quot;eyWith_underscores_AndAlso3343252545345Numbersl&quot;</span><span style="color: #000000">;</span>
+  <span style="color:#177500">/**
+</span><span style="color:#177500">   * 240 chars long
+</span><span style="color:#177500">   */</span>
+  <span style="color:#a90d91">private</span> <span style="color:#000">String</span> <span style="color:#000">LONG_KEY</span> <span style="color:#000">=</span> <span style="color:#c41a16">&#34;thisIsAFunkyKeyWith_underscores_AndAlso334&#34;</span> <span style="color:#000">+</span>
+      <span style="color:#c41a16">&#34;3252545345NumberslthisIsAFunkyKeyWith_underscores_AndAlso3343252545345Numbe&#34;</span> <span style="color:#000">+</span>
+      <span style="color:#c41a16">&#34;rslthisIsAFunkyKeyWith_underscores_AndAlso3343252545345NumberslthisIsAFunkyK&#34;</span> <span style="color:#000">+</span>
+      <span style="color:#c41a16">&#34;eyWith_underscores_AndAlso3343252545345Numbersl&#34;</span><span style="color:#000">;</span>
 
-  <span style="color: #000000">@GenerateMicroBenchmark</span>
-  <span style="color: #A90D91">public</span> <span style="color: #A90D91">void</span> <span style="color: #000000">validateShortKeyBinary()</span> <span style="color: #000000">{</span>
-    <span style="color: #000000">StringUtils.</span><span style="color: #836C28">validateKey</span><span style="color: #000000">(SHORT_KEY,</span> <span style="color: #A90D91">true</span><span style="color: #000000">);</span>
-  <span style="color: #000000">}</span>
+  <span style="color:#000">@GenerateMicroBenchmark</span>
+  <span style="color:#a90d91">public</span> <span style="color:#a90d91">void</span> <span style="color:#000">validateShortKeyBinary</span><span style="color:#000">()</span> <span style="color:#000">{</span>
+    <span style="color:#000">StringUtils</span><span style="color:#000">.</span><span style="color:#836c28">validateKey</span><span style="color:#000">(</span><span style="color:#000">SHORT_KEY</span><span style="color:#000">,</span> <span style="color:#a90d91">true</span><span style="color:#000">);</span>
+  <span style="color:#000">}</span>
 
-  <span style="color: #000000">@GenerateMicroBenchmark</span>
-  <span style="color: #A90D91">public</span> <span style="color: #A90D91">void</span> <span style="color: #000000">validateShortKeyAscii()</span> <span style="color: #000000">{</span>
-    <span style="color: #000000">StringUtils.</span><span style="color: #836C28">validateKey</span><span style="color: #000000">(SHORT_KEY,</span> <span style="color: #A90D91">false</span><span style="color: #000000">);</span>
-  <span style="color: #000000">}</span>
+  <span style="color:#000">@GenerateMicroBenchmark</span>
+  <span style="color:#a90d91">public</span> <span style="color:#a90d91">void</span> <span style="color:#000">validateShortKeyAscii</span><span style="color:#000">()</span> <span style="color:#000">{</span>
+    <span style="color:#000">StringUtils</span><span style="color:#000">.</span><span style="color:#836c28">validateKey</span><span style="color:#000">(</span><span style="color:#000">SHORT_KEY</span><span style="color:#000">,</span> <span style="color:#a90d91">false</span><span style="color:#000">);</span>
+  <span style="color:#000">}</span>
 
-  <span style="color: #000000">@GenerateMicroBenchmark</span>
-  <span style="color: #A90D91">public</span> <span style="color: #A90D91">void</span> <span style="color: #000000">validateLongKeyBinary()</span> <span style="color: #000000">{</span>
-    <span style="color: #000000">StringUtils.</span><span style="color: #836C28">validateKey</span><span style="color: #000000">(LONG_KEY,</span> <span style="color: #A90D91">true</span><span style="color: #000000">);</span>
-  <span style="color: #000000">}</span>
+  <span style="color:#000">@GenerateMicroBenchmark</span>
+  <span style="color:#a90d91">public</span> <span style="color:#a90d91">void</span> <span style="color:#000">validateLongKeyBinary</span><span style="color:#000">()</span> <span style="color:#000">{</span>
+    <span style="color:#000">StringUtils</span><span style="color:#000">.</span><span style="color:#836c28">validateKey</span><span style="color:#000">(</span><span style="color:#000">LONG_KEY</span><span style="color:#000">,</span> <span style="color:#a90d91">true</span><span style="color:#000">);</span>
+  <span style="color:#000">}</span>
 
-  <span style="color: #000000">@GenerateMicroBenchmark</span>
-  <span style="color: #A90D91">public</span> <span style="color: #A90D91">void</span> <span style="color: #000000">validateLongKeyAscii()</span> <span style="color: #000000">{</span>
-    <span style="color: #000000">StringUtils.</span><span style="color: #836C28">validateKey</span><span style="color: #000000">(LONG_KEY,</span> <span style="color: #A90D91">false</span><span style="color: #000000">);</span>
-  <span style="color: #000000">}</span>
-<span style="color: #000000">}</span>
-</pre></div>
-
+  <span style="color:#000">@GenerateMicroBenchmark</span>
+  <span style="color:#a90d91">public</span> <span style="color:#a90d91">void</span> <span style="color:#000">validateLongKeyAscii</span><span style="color:#000">()</span> <span style="color:#000">{</span>
+    <span style="color:#000">StringUtils</span><span style="color:#000">.</span><span style="color:#836c28">validateKey</span><span style="color:#000">(</span><span style="color:#000">LONG_KEY</span><span style="color:#000">,</span> <span style="color:#a90d91">false</span><span style="color:#000">);</span>
+  <span style="color:#000">}</span>
+<span style="color:#000">}</span></code></pre></div>
 <p>Thanks for pointing it out Aleksey!</p>
 
                     </div>
                     <div id="disqus_thread"></div>
-<script type="text/javascript">
-    var disqus_shortname = 'daschl';
-    var disqus_identifier = '23a93829d88ddda2cac2f4d4c5ec7870a63530838c5e5c0d6cb5e74699602db0eb3c24d16f1649e984e828bcf2beb16e7782b2d7849239c53e057bd489088495';
-    var disqus_title = 'Using JMH for Java Microbenchmarking';
-    var disqus_url = 'http:\/\/nitschinger.at\/Using-JMH-for-Java-Microbenchmarking\/';
-
+<script>
+    var disqus_config = function () {
+    this.page.identifier = '23a93829d88ddda2cac2f4d4c5ec7870a63530838c5e5c0d6cb5e74699602db0eb3c24d16f1649e984e828bcf2beb16e7782b2d7849239c53e057bd489088495';
+    
+    
+    };
     (function() {
-        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
-        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "daschl" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
     })();
 </script>
-<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
                 </section>
             </div>
             <div class="footer">
     <div class="pure-menu pure-menu-horizontal pure-menu-open">
         <ul>
-                <li>&copy; Michael Nitschinger 2010-2016</li>
+            <li>&copy; Michael Nitschinger 2010-2018</li>
         </ul>
     </div>
 </div>
-<script src="http://nitschinger.at//js/all.min.js"></script>
-<script type="text/javascript">
+<script src="https://nitschinger.at/js/all.min.js"></script>
+<script>
+    (function (i, s, o, g, r, a, m) {
+        i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
+            (i[r].q = i[r].q || []).push(arguments)
+        }, i[r].l = 1 * new Date(); a = s.createElement(o),
+            m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
+    })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
 
-  var _gaq = _gaq || [];
-  _gaq.push(['_setAccount', 'UA-19686689-1']);
-  _gaq.push(['_trackPageview']);
-
-  (function() {
-    var ga = document.createElement('script');
-    ga.src = ('https:' == document.location.protocol ? 'https://ssl' :
-        'http://www') + '.google-analytics.com/ga.js';
-    ga.setAttribute('async', 'true');
-    document.documentElement.firstChild.appendChild(ga);
-  })();
-
+    ga('create', 'UA-19686689-1', 'auto');
+    ga('send', 'pageview');
+    ga('set', 'anonymizeIp', true);
 </script>
-
         </div>
     </div>
 </div>

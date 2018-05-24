@@ -1,90 +1,23 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>daschl writes. sometimes.</title>
-    <link>http://nitschinger.at/tags/cookies/index.xml</link>
-    <description>Recent content on daschl writes. sometimes.</description>
+    <title>Cookies on daschl writes. sometimes.</title>
+    <link>https://nitschinger.at/tags/cookies/</link>
+    <description>Recent content in Cookies on daschl writes. sometimes.</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <atom:link href="http://nitschinger.at/tags/cookies/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 20 Jan 2012 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="https://nitschinger.at/tags/cookies/index.xml" rel="self" type="application/rss+xml" />
+    
     
     <item>
       <title>Session Encryption with Lithium</title>
-      <link>http://nitschinger.at/Session-Encryption-with-Lithium/</link>
+      <link>https://nitschinger.at/Session-Encryption-with-Lithium/</link>
       <pubDate>Fri, 20 Jan 2012 00:00:00 +0000</pubDate>
       
-      <guid>http://nitschinger.at/Session-Encryption-with-Lithium/</guid>
-      <description>
-
-&lt;h2 id=&#34;the-basics&#34;&gt;The Basics&lt;/h2&gt;
-
-&lt;p&gt;If you check out the &lt;code&gt;master&lt;/code&gt; branch, you can use the new &lt;code&gt;Encrypt&lt;/code&gt; strategy to encrypt your session data automatically. This means that you can read and write session data in cleartext and they will be encrypted on the fly before getting stored (in a cookie, for example). You can read my post about &amp;ldquo;baking cookies like a chef&amp;rdquo; for  PHPAdvent 2011 &lt;a href=&#34;http://phpadvent.org/2011/bake-cookies-like-a-chef-by-michael-nitschinger&#34;&gt;here&lt;/a&gt;. The article covers both HMAC signatures and encryption, and is a good place to start. This post will go a little bit deeper in how to use and configure the &lt;code&gt;Encrypt&lt;/code&gt; strategy in Lithium. Note that you need to have the &lt;a href=&#34;http://php.net/manual/en/book.mcrypt.php&#34;&gt;mcrypt&lt;/a&gt; extension installed and enabled for this to work.&lt;/p&gt;
-
-&lt;p&gt;Here&amp;rsquo;s the simplest configuration you can start with:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;Session::config(array(&#39;default&#39; =&amp;gt; array(
-    &#39;adapter&#39; =&amp;gt; &#39;Cookie&#39;,
-    &#39;strategies&#39; =&amp;gt; array(&#39;Encrypt&#39; =&amp;gt; array(&#39;secret&#39; =&amp;gt; &#39;f00bar$l1thium&#39;))
-)));
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;This will store all your session data in a cookie. If you don&amp;rsquo;t change anything else, your data will be encrypted with &lt;a href=&#34;http://en.wikipedia.org/wiki/Advanced_Encryption_Standard&#34;&gt;AES&lt;/a&gt; in  &lt;a href=&#34;http://en.wikipedia.org/wiki/Block_cipher_modes_of_operation#Cipher-block_chaining_.28CBC.29&#34;&gt;CBC&lt;/a&gt; mode with a block size of 256 bits (32 byte). This is a secure and sensible default, so if you don&amp;rsquo;t need anything special just stick with the defaults.&lt;/p&gt;
-
-&lt;p&gt;You can now read and write cleartext data and it will be encrypted on the fly for you. For example:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;Session::write(&#39;key&#39;, &#39;my secret value&#39;);
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;The result will look like this on the client side:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;appcookie[__encrypted]=c3Rqv%2FFYnuwAevxeseII7lOvyoOTi2foMfB%2FCoO4l4FcutRvBn7qq%2BZrPVWC%2FzEYEiSSFMWv7EhEx4ew99%2FmPQ%3D%3D
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;You can then read the value again with &lt;code&gt;Session::read(&#39;key&#39;);&lt;/code&gt; or delete it with &lt;code&gt;Session::delete(&#39;key&#39;);&lt;/code&gt;.&lt;/p&gt;
-
-&lt;p&gt;That&amp;rsquo;s it. If you don&amp;rsquo;t want to dig into the internals, you can safely stop reading now and implement it in your own application.&lt;/p&gt;
-
-&lt;h2 id=&#34;further-discussion&#34;&gt;Further Discussion&lt;/h2&gt;
-
-&lt;p&gt;Still here? Awesome!&lt;/p&gt;
-
-&lt;p&gt;While the &lt;code&gt;mcrypt&lt;/code&gt; extension does the heavy lifting for us, the &lt;code&gt;Encrypt&lt;/code&gt; strategy abstracts necessary cruft like vector generation, key strengthening and resource management. While this is okay for most parts of the framework, in my opinion, when it comes to security, you should have a good understanding what is going on under the hood. Code ist not perfect, and it may contain semantical or design flaws that put your whole application (and customers) to risk. Also, security standards shift over time and what is now secure may not be in a few months.&lt;/p&gt;
-
-&lt;p&gt;If you don&amp;rsquo;t override the default settings, Lithium encrypts your data with the &lt;code&gt;MCRYPT_RIJNDAEL_128&lt;/code&gt; cipher in &lt;code&gt;MCRYPT_MODE_CBC&lt;/code&gt; mode. What
-most developers get wrong is the fact that the &lt;code&gt;128&lt;/code&gt; doesn&amp;rsquo;t represent the strength of the key size, but the block size that is used. Strictly
-speaking, &lt;code&gt;MCRYPT_RIJNDAEL_256&lt;/code&gt; is not part of the AES standard (because AES has a fixed block size of 128 bits and a key size of 128, 192 or 256 bits). The key size is determined by the length of the key that you pass to the &lt;code&gt;mcrypt&lt;/code&gt; extension.&lt;/p&gt;
-
-&lt;p&gt;So to make sure we use the longest key possible, we hash the given secret with &lt;code&gt;sha256&lt;/code&gt; and then substring the length we need. As &lt;code&gt;mcrypt&lt;/code&gt; tells us which key lengths are supported for which cipher (through &lt;a href=&#34;http://php.net/manual/en/function.mcrypt-enc-get-key-size.php&#34;&gt;mcrypt_enc_get_key_size&lt;/a&gt;), it is possible to determine the strongest key length. Note that this doesn&amp;rsquo;t mean that you should use weak keys in the first place just because they get hashed anyway. In practice, you will only create them once so make sure they contain enough entropy.&lt;/p&gt;
-
-&lt;p&gt;As always, the Lithium core provides sensible defaults but also lets you outgrow the framework if you need to. You can specify your own cipher or mode like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;Session::config(array(&#39;default&#39; =&amp;gt; array(
-    &#39;adapter&#39; =&amp;gt; &#39;Cookie&#39;,
-    &#39;strategies&#39; =&amp;gt; array(&#39;Encrypt&#39; =&amp;gt; array(
-        &#39;cipher&#39; =&amp;gt; MCRYPT_RIJNDAEL_256,
-        &#39;mode&#39;   =&amp;gt; MCRYPT_MODE_ECB, // Don&#39;t use ECB when you don&#39;t have to!
-        &#39;secret&#39;     =&amp;gt; &#39;f00bar$l1thium&#39;
-    ))
-)));
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Here&amp;rsquo;s a list of &lt;a href=&#34;http://www.php.net/manual/en/mcrypt.ciphers.php&#34;&gt;ciphers&lt;/a&gt; and &lt;a href=&#34;http://www.php.net/manual/en/mcrypt.constants.php&#34;&gt;modes&lt;/a&gt; you can use. Of course you need to make sure that your custom cipher/mode combination is supported.&lt;/p&gt;
-
-&lt;p&gt;If you don&amp;rsquo;t like how Lithium hashes your key or if you want to has it on your own, there&amp;rsquo;s also a way to do this. If the length of your key is equal or longer than the longest key size supported by the algorithm, it gets passed through unchanged. Here&amp;rsquo;s how it works:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;protected function _hashSecret($key) {
-    $size = mcrypt_enc_get_key_size(static::$_resource);
-
-    if (strlen($key) &amp;gt;= $size) {
-        return $key;
-    }
-
-    return substr(hash(&#39;sha256&#39;, $key, true), 0, $size);
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;In my opinion, you should always encrypt your data if it gets stored on the client side. Lithium provides a convenient and transparent way to do it, so go ahead and use it in your own applications to make them more secure.&lt;/p&gt;
-</description>
+      <guid>https://nitschinger.at/Session-Encryption-with-Lithium/</guid>
+      <description>The Basics If you check out the master branch, you can use the new Encrypt strategy to encrypt your session data automatically. This means that you can read and write session data in cleartext and they will be encrypted on the fly before getting stored (in a cookie, for example). You can read my post about &amp;ldquo;baking cookies like a chef&amp;rdquo; for PHPAdvent 2011 here. The article covers both HMAC signatures and encryption, and is a good place to start.</description>
     </item>
     
   </channel>
