@@ -7,7 +7,7 @@
 
     <meta name="description" content="">
 
-    <meta name="generator" content="Hugo 0.40.3" />
+    <meta name="generator" content="Hugo 0.42.1" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Hwloc &middot; daschl writes. sometimes.">
@@ -121,7 +121,8 @@ hwloc = &quot;0.3.0&quot;
 
     <span style="color:#177500">// Debug Print all the Support Flags
 </span><span style="color:#177500"></span>    <span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;All Flags:</span><span style="color:#c41a16">\n</span><span style="color:#c41a16">{:?}&#34;</span>, <span style="color:#000">topo</span>.<span style="color:#000">support</span>());
-}</code></pre></div>
+}
+</code></pre></div>
 <p>On Linux:</p>
 
 <pre><code>CPU Binding (current process) supported: true
@@ -195,7 +196,8 @@ Machine (490MB) + Socket P#0 + L2d (6144KB)
     <span style="color:#a90d91">let</span> <span style="color:#000">core_depth</span> <span style="color:#000">=</span> <span style="color:#000">topo</span>.<span style="color:#000">depth_or_below_for_type</span>(<span style="color:#000">&amp;</span><span style="color:#000">ObjectType</span>::<span style="color:#000">Core</span>).<span style="color:#000">unwrap</span>();
     <span style="color:#a90d91">let</span> <span style="color:#000">all_cores</span> <span style="color:#000">=</span> <span style="color:#000">topo</span>.<span style="color:#000">objects_at_depth</span>(<span style="color:#000">core_depth</span>);
     <span style="color:#000">all_cores</span>.<span style="color:#000">last</span>().<span style="color:#000">unwrap</span>()
-}</code></pre></div>
+}
+</code></pre></div>
 <p>This prints the following on the linux machine:</p>
 
 <pre><code>Cpu Binding before explicit bind: Some(0-3)
@@ -215,7 +217,8 @@ Cpu Location after explicit bind: Some(3)
     <span style="color:#a90d91">let</span> <span style="color:#000">core_depth</span> <span style="color:#000">=</span> <span style="color:#000">topo</span>.<span style="color:#000">depth_or_below_for_type</span>(<span style="color:#000">&amp;</span><span style="color:#000">ObjectType</span>::<span style="color:#000">Core</span>).<span style="color:#000">unwrap</span>();
     <span style="color:#a90d91">let</span> <span style="color:#000">all_cores</span> <span style="color:#000">=</span> <span style="color:#000">topo</span>.<span style="color:#000">objects_at_depth</span>(<span style="color:#000">core_depth</span>);
     <span style="color:#000">all_cores</span>.<span style="color:#000">last</span>().<span style="color:#000">unwrap</span>()
-}</code></pre></div>
+}
+</code></pre></div>
 <p>Now that we have our &ldquo;target&rdquo;, we can start binding the current process there. To visualise what&rsquo;s going on, we also print the binding and location for the current process before and after the explicit binding:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;Cpu Binding before explicit bind: {:?}&#34;</span>, <span style="color:#000">topo</span>.<span style="color:#000">get_cpubind</span>(<span style="color:#000">CPUBIND_PROCESS</span>));
 <span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;Cpu Location before explicit bind: {:?}&#34;</span>, <span style="color:#000">topo</span>.<span style="color:#000">get_cpu_location</span>(<span style="color:#000">CPUBIND_PROCESS</span>));
@@ -226,7 +229,8 @@ Cpu Location after explicit bind: Some(3)
 }
 
 <span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;Cpu Binding after explicit bind: {:?}&#34;</span>, <span style="color:#000">topo</span>.<span style="color:#000">get_cpubind</span>(<span style="color:#000">CPUBIND_PROCESS</span>));
-<span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;Cpu Location after explicit bind: {:?}&#34;</span>, <span style="color:#000">topo</span>.<span style="color:#000">get_cpu_location</span>(<span style="color:#000">CPUBIND_PROCESS</span>));</code></pre></div>
+<span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;Cpu Location after explicit bind: {:?}&#34;</span>, <span style="color:#000">topo</span>.<span style="color:#000">get_cpu_location</span>(<span style="color:#000">CPUBIND_PROCESS</span>));
+</code></pre></div>
 <p>The current <code>CpuSet</code> of the process (which you can retrieve through <code>get_cpubind(CPUBIND_PROCESS)</code>) contains all possibles cores where the operating system might dispatch the process on. In our case it prints <code>0-3</code> which means all four cores are possible. The call to <code>get_cpu_location()</code> gives us the current core location, but this can change between subsequent calls as the operating system moves the process around.</p>
 
 <p>Finally we override the current binding with our custom one (the new <code>CpuSet</code> only contains the last core rather than all four) and apply some simple matching to make sure the binding didn&rsquo;t fail for some reason. The last <code>println!</code> calls are just there to visually validate the new binding.</p>
@@ -240,7 +244,8 @@ Cpu Location after explicit bind: Some(3)
   <span style="color:#177500">//...
 </span><span style="color:#177500"></span>  <span style="color:#a90d91">let</span> <span style="color:#000">pid</span> <span style="color:#000">=</span> <span style="color:#a90d91">unsafe</span> { <span style="color:#000">libc</span>::<span style="color:#000">getpid</span>() };
   <span style="color:#177500">//...
-</span><span style="color:#177500"></span>}</code></pre></div>
+</span><span style="color:#177500"></span>}
+</code></pre></div>
 <p>Once we have our pid, we will reuse the code from the last example to get the last core where we want to bind the process to:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">fn</span> <span style="color:#000">main</span>() {
   <span style="color:#177500">//...
@@ -253,7 +258,8 @@ Cpu Location after explicit bind: Some(3)
     <span style="color:#a90d91">let</span> <span style="color:#000">core_depth</span> <span style="color:#000">=</span> <span style="color:#000">topo</span>.<span style="color:#000">depth_or_below_for_type</span>(<span style="color:#000">&amp;</span><span style="color:#000">ObjectType</span>::<span style="color:#000">Core</span>).<span style="color:#000">unwrap</span>();
     <span style="color:#a90d91">let</span> <span style="color:#000">all_cores</span> <span style="color:#000">=</span> <span style="color:#000">topo</span>.<span style="color:#000">objects_at_depth</span>(<span style="color:#000">core_depth</span>);
     <span style="color:#000">all_cores</span>.<span style="color:#000">last</span>().<span style="color:#000">unwrap</span>()
-}</code></pre></div>
+}
+</code></pre></div>
 <p>Now we can use the same methods as previously, but with the <code>for_process()</code> suffix. Here is the full example, again with some debug print statements to visualise what&rsquo;s going on:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">extern</span> <span style="color:#a90d91">crate</span> <span style="color:#000">hwloc</span>;
 <span style="color:#a90d91">extern</span> <span style="color:#a90d91">crate</span> <span style="color:#000">libc</span>;
@@ -283,7 +289,8 @@ Cpu Location after explicit bind: Some(3)
     <span style="color:#a90d91">let</span> <span style="color:#000">core_depth</span> <span style="color:#000">=</span> <span style="color:#000">topo</span>.<span style="color:#000">depth_or_below_for_type</span>(<span style="color:#000">&amp;</span><span style="color:#000">ObjectType</span>::<span style="color:#000">Core</span>).<span style="color:#000">unwrap</span>();
     <span style="color:#a90d91">let</span> <span style="color:#000">all_cores</span> <span style="color:#000">=</span> <span style="color:#000">topo</span>.<span style="color:#000">objects_at_depth</span>(<span style="color:#000">core_depth</span>);
     <span style="color:#000">all_cores</span>.<span style="color:#000">last</span>().<span style="color:#000">unwrap</span>()
-}</code></pre></div>
+}
+</code></pre></div>
 <p>If we run this on our linux box, this is the output:</p>
 
 <pre><code>Binding Process with PID 3034
@@ -346,14 +353,16 @@ Last Known CPU Location: 3
         <span style="color:#a90d91">Some</span>(<span style="color:#000">val</span>) <span style="color:#000">=&gt;</span> <span style="color:#000">val</span>.<span style="color:#000">cpuset</span>().<span style="color:#000">unwrap</span>(),
         <span style="color:#a90d91">None</span> <span style="color:#000">=&gt;</span> <span style="color:#000">panic</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;No Core found with id {}&#34;</span>, <span style="color:#000">idx</span>)
     }
-}</code></pre></div>
+}
+</code></pre></div>
 <p>Before the binding we need to identify the number of cores - that&rsquo;s an easy task for <code>hwloc</code>:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">let</span> <span style="color:#000">num_cores</span> <span style="color:#000">=</span> {
     <span style="color:#a90d91">let</span> <span style="color:#000">topo_rc</span> <span style="color:#000">=</span> <span style="color:#000">topo</span>.<span style="color:#000">clone</span>();
     <span style="color:#a90d91">let</span> <span style="color:#000">topo_locked</span> <span style="color:#000">=</span> <span style="color:#000">topo_rc</span>.<span style="color:#000">lock</span>().<span style="color:#000">unwrap</span>();
     (<span style="color:#000">*</span><span style="color:#000">topo_locked</span>).<span style="color:#000">objects_with_type</span>(<span style="color:#000">&amp;</span><span style="color:#000">ObjectType</span>::<span style="color:#000">Core</span>).<span style="color:#000">unwrap</span>().<span style="color:#000">len</span>()
 };
-<span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;Found {} cores.&#34;</span>, <span style="color:#000">num_cores</span>);</code></pre></div>
+<span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;Found {} cores.&#34;</span>, <span style="color:#000">num_cores</span>);
+</code></pre></div>
 <p>The code finds all cores through <code>objects_with_type(&amp;ObjectType::Core)</code> and counts them. Note that we need to do use proper rust synchronization mechanisms around our <code>Topology</code> since we are accessing it from multiple threads in the code.</p>
 
 <p>The next piece spawns one thread for each core and joins on the main thread to wait until they complete:</p>
@@ -366,22 +375,26 @@ Last Known CPU Location: 3
 
     <span style="color:#a90d91">for</span> <span style="color:#000">h</span> <span style="color:#a90d91">in</span> <span style="color:#000">handles</span> {
         <span style="color:#000">h</span>.<span style="color:#000">join</span>().<span style="color:#000">unwrap</span>();
-    }</code></pre></div>
+    }
+</code></pre></div>
 <p>Next up we load the current thread ID through some <code>libc</code> unsafe magic, lock the <code>Topology</code> for safety and then read the current <code>CpuSet</code> for the thread (to print it out later):</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">let</span> <span style="color:#000">tid</span> <span style="color:#000">=</span> <span style="color:#a90d91">unsafe</span> { <span style="color:#000">libc</span>::<span style="color:#000">pthread_self</span>() };
 <span style="color:#a90d91">let</span> <span style="color:#a90d91">mut</span> <span style="color:#000">locked_topo</span> <span style="color:#000">=</span> <span style="color:#000">child_topo</span>.<span style="color:#000">lock</span>().<span style="color:#000">unwrap</span>();
 
-<span style="color:#a90d91">let</span> <span style="color:#000">before</span> <span style="color:#000">=</span> <span style="color:#000">locked_topo</span>.<span style="color:#000">get_cpubind_for_thread</span>(<span style="color:#000">tid</span>, <span style="color:#000">CPUBIND_THREAD</span>);</code></pre></div>
+<span style="color:#a90d91">let</span> <span style="color:#000">before</span> <span style="color:#000">=</span> <span style="color:#000">locked_topo</span>.<span style="color:#000">get_cpubind_for_thread</span>(<span style="color:#000">tid</span>, <span style="color:#000">CPUBIND_THREAD</span>);
+</code></pre></div>
 <p>The next part is important:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">let</span> <span style="color:#000">bind_to</span> <span style="color:#000">=</span> <span style="color:#000">cpuset_for_core</span>(<span style="color:#000">&amp;*</span><span style="color:#000">locked_topo</span>, <span style="color:#000">i</span>);
 
-<span style="color:#000">locked_topo</span>.<span style="color:#000">set_cpubind_for_thread</span>(<span style="color:#000">tid</span>, <span style="color:#000">bind_to</span>, <span style="color:#000">CPUBIND_THREAD</span>).<span style="color:#000">unwrap</span>();</code></pre></div>
+<span style="color:#000">locked_topo</span>.<span style="color:#000">set_cpubind_for_thread</span>(<span style="color:#000">tid</span>, <span style="color:#000">bind_to</span>, <span style="color:#000">CPUBIND_THREAD</span>).<span style="color:#000">unwrap</span>();
+</code></pre></div>
 <p>The helper function <code>cpuset_for_core</code> accepts an integer which represents the thread number (not the <code>tid</code>) and loops through the cores available on the <code>Topology</code>. It then returns the right <code>CpuSet</code> for the given index, so the first thread will be pinned to Core 0, the second one to Core 1 and so forth. Then, we use the <code>set_cpubind_for_thread()</code> method to bass in the current thread id as well as the <code>CpuSet</code> to apply and the <code>CPUBIND_THREAD</code> identifier which is needed.</p>
 
 <p>Finally we just collect the new binding and then print it out for visualisation:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">let</span> <span style="color:#000">after</span> <span style="color:#000">=</span> <span style="color:#000">locked_topo</span>.<span style="color:#000">get_cpubind_for_thread</span>(<span style="color:#000">tid</span>, <span style="color:#000">CPUBIND_THREAD</span>);
 
-<span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;Thread {}: Before {:?}, After {:?}&#34;</span>, <span style="color:#000">i</span>, <span style="color:#000">before</span>, <span style="color:#000">after</span>);</code></pre></div>
+<span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;Thread {}: Before {:?}, After {:?}&#34;</span>, <span style="color:#000">i</span>, <span style="color:#000">before</span>, <span style="color:#000">after</span>);
+</code></pre></div>
 <p>Running this on our 4-core machine prints:</p>
 
 <pre><code>Found 4 cores.
@@ -497,16 +510,20 @@ Hello, world!
         <span style="color:#a90d91">Ok</span>(<span style="color:#000">c</span>) <span style="color:#000">=&gt;</span> <span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;There are {} cores on this machine.&#34;</span>, <span style="color:#000">c</span>.<span style="color:#000">len</span>()),
         <span style="color:#a90d91">Err</span>(<span style="color:#000">e</span>) <span style="color:#000">=&gt;</span> <span style="color:#000">panic</span><span style="color:#000">!</span>(<span style="color:#000">format</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;Could not load cores because of: {:?}&#34;</span>, <span style="color:#000">e</span>))
     }
-}</code></pre></div>
+}
+</code></pre></div>
 <p>Let&rsquo;s break the code apart a bit. The first thing you always need to do is create a <a href="http://nitschinger.at/hwloc-rs/rustdoc/0.2.0/hwloc/struct.Topology.html">Topology</a>. The <code>Topology</code> is your logical representation of the actual mapped hardware.</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">let</span> <span style="color:#000">topology</span> <span style="color:#000">=</span> <span style="color:#000">Topology</span>::<span style="color:#000">new</span>();</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">let</span> <span style="color:#000">topology</span> <span style="color:#000">=</span> <span style="color:#000">Topology</span>::<span style="color:#000">new</span>();
+</code></pre></div>
 <p>Now that we have the <code>Topology</code>, we can ask it to return all <a href="http://nitschinger.at/hwloc-rs/rustdoc/0.2.0/hwloc/struct.TopologyObject.html">TopologyObjects</a> with a specific <a href="http://nitschinger.at/hwloc-rs/rustdoc/0.2.0/hwloc/enum.ObjectType.html">ObjectType</a>. One type is <code>Core</code> which maps to a computation unit on the physical hardware (most of the time a CPU Core).</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">let</span> <span style="color:#000">cores</span> <span style="color:#000">=</span> <span style="color:#000">topology</span>.<span style="color:#000">objects_with_type</span>(<span style="color:#000">&amp;</span><span style="color:#000">ObjectType</span>::<span style="color:#000">Core</span>);</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">let</span> <span style="color:#000">cores</span> <span style="color:#000">=</span> <span style="color:#000">topology</span>.<span style="color:#000">objects_with_type</span>(<span style="color:#000">&amp;</span><span style="color:#000">ObjectType</span>::<span style="color:#000">Core</span>);
+</code></pre></div>
 <p>Since not every ObjectType is available on every hardware, it might not be possible to figure out the actual objects. Because of this, the <code>objects_with_type</code> method returns a <code>Result&lt;Vec&lt;&amp;TopologyObject&gt;, TypeDepthError&gt;</code>. We can now utilize pattern matching to distinguish between success and error, and if it is successful print out the length of the <a href="https://doc.rust-lang.org/std/vec/struct.Vec.html#method.len">Vector</a>:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">match</span> <span style="color:#000">cores</span> {
     <span style="color:#a90d91">Ok</span>(<span style="color:#000">c</span>) <span style="color:#000">=&gt;</span> <span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;There are {} cores on this machine.&#34;</span>, <span style="color:#000">c</span>.<span style="color:#000">len</span>()),
     <span style="color:#a90d91">Err</span>(<span style="color:#000">e</span>) <span style="color:#000">=&gt;</span> <span style="color:#000">panic</span><span style="color:#000">!</span>(<span style="color:#000">format</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;Could not load cores because of: {:?}&#34;</span>, <span style="color:#000">e</span>))
-}</code></pre></div>
+}
+</code></pre></div>
 <p>If you run the code you should see an output like this (My machine is equipped with an i7 quadcore):</p>
 
 <pre><code>~/rust/hwloc-playground $ cargo run
@@ -523,7 +540,8 @@ There are 4 cores on this machine.
 </span><span style="color:#177500"></span><span style="color:#a90d91">match</span> <span style="color:#000">cores</span> {
     <span style="color:#a90d91">Ok</span>(<span style="color:#000">c</span>) <span style="color:#000">=&gt;</span> <span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;There are {} processing units on this machine.&#34;</span>, <span style="color:#000">c</span>.<span style="color:#000">len</span>()),
     <span style="color:#a90d91">Err</span>(<span style="color:#000">e</span>) <span style="color:#000">=&gt;</span> <span style="color:#000">panic</span><span style="color:#000">!</span>(<span style="color:#000">format</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;Could not load processing units because of: {:?}&#34;</span>, <span style="color:#000">e</span>))
-}</code></pre></div>
+}
+</code></pre></div>
 <p>My i7 indeed has hyperthreading enabled, so this prints:</p>
 
 <pre><code>~/rust/hwloc-playground $ cargo run
@@ -560,9 +578,11 @@ There are 8 processing units on this machine.
             }
         }
     }
-}</code></pre></div>
+}
+</code></pre></div>
 <p>First, we load all the processing units:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">let</span> <span style="color:#000">pus</span> <span style="color:#000">=</span> <span style="color:#000">topology</span>.<span style="color:#000">objects_with_type</span>(<span style="color:#000">&amp;</span><span style="color:#000">ObjectType</span>::<span style="color:#000">PU</span>).<span style="color:#000">ok</span>().<span style="color:#000">expect</span>(<span style="color:#c41a16">&#34;Could not load PUs!&#34;</span>);</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">let</span> <span style="color:#000">pus</span> <span style="color:#000">=</span> <span style="color:#000">topology</span>.<span style="color:#000">objects_with_type</span>(<span style="color:#000">&amp;</span><span style="color:#000">ObjectType</span>::<span style="color:#000">PU</span>).<span style="color:#000">ok</span>().<span style="color:#000">expect</span>(<span style="color:#c41a16">&#34;Could not load PUs!&#34;</span>);
+</code></pre></div>
 <p>Next up, we iterate through each unit and print its logical index:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#177500">// Iterate through each PU
 </span><span style="color:#177500"></span><span style="color:#a90d91">for</span> <span style="color:#000">pu</span> <span style="color:#a90d91">in</span> <span style="color:#000">&amp;</span><span style="color:#000">pus</span> {
@@ -570,7 +590,8 @@ There are 8 processing units on this machine.
 </span><span style="color:#177500"></span>    <span style="color:#000">print</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;PU #{} is on Core &#34;</span>, <span style="color:#000">pu</span>.<span style="color:#000">logical_index</span>());
 
     <span style="color:#177500">// ...
-</span><span style="color:#177500"></span>}</code></pre></div>
+</span><span style="color:#177500"></span>}
+</code></pre></div>
 <p>Finally, we can walk up the tree of parents for each unit until we arrive at the Core level and print out its logical index as well. Notice how easy the walking is with the <code>while let</code> construct. This works because <code>TopologyObject#parent()</code> returns an <code>Option&lt;&amp;TopologyOption&gt;</code>.</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#177500">// Walk up the parent chain until the Core is found and print its id.
 </span><span style="color:#177500"></span><span style="color:#a90d91">let</span> <span style="color:#a90d91">mut</span> <span style="color:#000">parent</span> <span style="color:#000">=</span> <span style="color:#000">pu</span>.<span style="color:#000">parent</span>();
@@ -581,7 +602,8 @@ There are 8 processing units on this machine.
     } <span style="color:#a90d91">else</span> {
         <span style="color:#000">parent</span> <span style="color:#000">=</span> <span style="color:#000">p</span>.<span style="color:#000">parent</span>();
     }
-}</code></pre></div>
+}
+</code></pre></div>
 <p>On my machine this prints:</p>
 
 <pre><code> ~/rust/hwloc-playground $ cargo run
@@ -619,7 +641,8 @@ PU #7 is on Core 3
 			<span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;{}: {}&#34;</span>, <span style="color:#000">idx</span>, <span style="color:#000">object</span>);
 		}
 	}
-}</code></pre></div>
+}
+</code></pre></div>
 <p>The code iterates through each level until the final topology depth is reached and on each level it prints all the TopologyObjects. This is the result on my machine:</p>
 
 <pre><code>*** Objects at level 0
@@ -679,11 +702,14 @@ PU #7 is on Core 3
 	<span style="color:#a90d91">for</span> <span style="color:#000">i</span> <span style="color:#a90d91">in</span> <span style="color:#1c01ce">0</span>..<span style="color:#000">obj</span>.<span style="color:#000">arity</span>() {
 		<span style="color:#000">print_children</span>(<span style="color:#000">topo</span>, <span style="color:#000">obj</span>.<span style="color:#000">children</span>()[<span style="color:#000">i</span> <span style="color:#a90d91">as</span> <span style="color:#a90d91">usize</span>], <span style="color:#000">depth</span> <span style="color:#000">+</span> <span style="color:#1c01ce">1</span>);
 	}
-}</code></pre></div>
+}
+</code></pre></div>
 <p>We define a method called <code>print_children</code> which is called recursively:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">fn</span> <span style="color:#000">print_children</span>(<span style="color:#000">topo</span>: <span style="color:#a90d91">&amp;</span><span style="color:#3f6e75">Topology</span>, <span style="color:#000">obj</span>: <span style="color:#a90d91">&amp;</span><span style="color:#3f6e75">TopologyObject</span>, <span style="color:#000">depth</span>: <span style="color:#a90d91">usize</span>)</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">fn</span> <span style="color:#000">print_children</span>(<span style="color:#000">topo</span>: <span style="color:#a90d91">&amp;</span><span style="color:#3f6e75">Topology</span>, <span style="color:#000">obj</span>: <span style="color:#a90d91">&amp;</span><span style="color:#3f6e75">TopologyObject</span>, <span style="color:#000">depth</span>: <span style="color:#a90d91">usize</span>)
+</code></pre></div>
 <p>Note the funky padding variable is just there to create a left-padding for the tree view:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">let</span> <span style="color:#000">padding</span> <span style="color:#000">=</span> <span style="color:#000">std</span>::<span style="color:#000">iter</span>::<span style="color:#000">repeat</span>(<span style="color:#c41a16">&#34; &#34;</span>).<span style="color:#000">take</span>(<span style="color:#000">depth</span>).<span style="color:#000">collect</span>::<span style="color:#000">&lt;</span><span style="color:#a90d91">String</span><span style="color:#000">&gt;</span>();</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">let</span> <span style="color:#000">padding</span> <span style="color:#000">=</span> <span style="color:#000">std</span>::<span style="color:#000">iter</span>::<span style="color:#000">repeat</span>(<span style="color:#c41a16">&#34; &#34;</span>).<span style="color:#000">take</span>(<span style="color:#000">depth</span>).<span style="color:#000">collect</span>::<span style="color:#000">&lt;</span><span style="color:#a90d91">String</span><span style="color:#000">&gt;</span>();
+</code></pre></div>
 <p>Running the code above gives the same information but in a different style:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"> <span style="color:#000">~/</span><span style="color:#000">rust</span><span style="color:#000">/</span><span style="color:#000">hwloc</span><span style="color:#000">-</span><span style="color:#000">playground</span> <span style="color:#633820">$</span> <span style="color:#000">cargo</span> <span style="color:#000">run</span>
    <span style="color:#000">Compiling</span> <span style="color:#000">hwloc</span><span style="color:#000">-</span><span style="color:#000">playground</span> <span style="color:#000">v0</span>.<span style="color:#1c01ce">1.0</span> (<span style="color:#000">file</span>:<span style="color:#c41a16">///Users/michael/rust/hwloc-playground)
@@ -711,7 +737,8 @@ PU #7 is on Core 3
     <span style="color:#000">L1d</span> (<span style="color:#1c01ce">32</span><span style="color:#000">KB</span>): <span style="color:#000">#</span><span style="color:#1c01ce">3</span>
      <span style="color:#000">Core</span> (): <span style="color:#000">#</span><span style="color:#1c01ce">3</span>
       <span style="color:#000">PU</span> (): <span style="color:#000">#</span><span style="color:#1c01ce">6</span>
-      <span style="color:#000">PU</span> (): <span style="color:#000">#</span><span style="color:#1c01ce">7</span></code></pre></div>
+      <span style="color:#000">PU</span> (): <span style="color:#000">#</span><span style="color:#1c01ce">7</span>
+</code></pre></div>
 <p>What you can spot here immediately is that each core has its own L2 cache (as well as a L1 data cache) while at the same time they all share the same L3 cache.</p>
 
 <h2 id="cpu-caches">CPU Caches</h2>
@@ -745,7 +772,8 @@ PU #7 is on Core 3
 
     <span style="color:#177500">// Print out the result
 </span><span style="color:#177500"></span>	<span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;*** Logical processor 0 has {} caches totalling {} KB&#34;</span>, <span style="color:#000">levels</span>, <span style="color:#000">size</span> <span style="color:#000">/</span> <span style="color:#1c01ce">1024</span>);
-}</code></pre></div>
+}
+</code></pre></div>
 <p>We are using a similar technique as in the examples above, but this time we just add up all the capacity for each cache and then print it out.</p>
 
 <pre><code> ~/rust/hwloc-playground $ cargo run

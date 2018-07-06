@@ -20,7 +20,7 @@ When I think about tokenizers and transformers the first thing that comes to min
 ## Tokenizers and Tokens
 So lets define our `Tokenizer` as a trait which emits an `Iterator` of `Tokens`:
 
-```rust
+```rs
 pub trait Tokenizer<'a> {
     /// A Tokenizer always needs to produce an Iterator of Tokens.
     type TokenIter: Iterator<Item = Token>;
@@ -34,13 +34,14 @@ Note: I can't wait for [impl Traits](https://github.com/rust-lang/rust/issues/34
 
 Lets take a first stab at the `Token`:
 
-```rust
+{{< highlight rust >}}
 pub struct Token {
     term: String,
     start_offset: usize,
     position: usize,
 }
-```
+{{< /highlight >}}
+
 
 The `Token` contains the `term` sliced by the tokenizer and also related metadata like its absolute start offset in bytes as well as the relative position of the token in the stream. We need this information down the road for indexing and querying.
 

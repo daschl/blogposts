@@ -7,7 +7,7 @@
 
     <meta name="description" content="">
 
-    <meta name="generator" content="Hugo 0.40.3" />
+    <meta name="generator" content="Hugo 0.42.1" />
     <meta name="twitter:card" content="summary">
     
     <meta name="twitter:title" content="Rust &middot; daschl writes. sometimes.">
@@ -308,21 +308,25 @@ Hello, world!
 <h2 id="tokenizers-and-tokens">Tokenizers and Tokens</h2>
 
 <p>So lets define our <code>Tokenizer</code> as a trait which emits an <code>Iterator</code> of <code>Tokens</code>:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">pub</span> <span style="color:#a90d91">trait</span> <span style="color:#000">Tokenizer</span><span style="color:#000">&lt;</span><span style="color:#836c28">&#39;a</span><span style="color:#000">&gt;</span> {
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rs" data-lang="rs"><span style="color:#a90d91">pub</span> <span style="color:#a90d91">trait</span> <span style="color:#000">Tokenizer</span><span style="color:#000">&lt;</span><span style="color:#836c28">&#39;a</span><span style="color:#000">&gt;</span> {
     <span style="color:#c41a16">/// A Tokenizer always needs to produce an Iterator of Tokens.
 </span><span style="color:#c41a16"></span>    <span style="color:#a90d91">type</span> <span style="color:#3f6e75">TokenIter</span>: <span style="color:#a90d91">Iterator</span><span style="color:#000">&lt;</span><span style="color:#000">Item</span> <span style="color:#000">=</span> <span style="color:#000">Token</span><span style="color:#000">&gt;</span>;
 
     <span style="color:#c41a16">/// Takes the input string and tokenizes it based on the implementations rules.
 </span><span style="color:#c41a16"></span>    <span style="color:#a90d91">fn</span> <span style="color:#000">tokenize</span>(<span style="color:#000">&amp;</span><span style="color:#5b269a">self</span>, <span style="color:#000">input</span>: <span style="color:#a90d91">&amp;</span><span style="color:#836c28">&#39;a</span> <span style="color:#a90d91">str</span>) -&gt; <span style="color:#3f6e75">Self</span>::<span style="color:#000">TokenIter</span>;
-}</code></pre></div>
+}
+</code></pre></div>
 <p>Note: I can&rsquo;t wait for <a href="https://github.com/rust-lang/rust/issues/34511">impl Traits</a> to land when it also supports trait functions, then this would clean up the declarations even further.</p>
 
 <p>Lets take a first stab at the <code>Token</code>:</p>
+
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">pub</span> <span style="color:#a90d91">struct</span> <span style="color:#3f6e75">Token</span> {
     <span style="color:#000">term</span>: <span style="color:#a90d91">String</span>,
     <span style="color:#000">start_offset</span>: <span style="color:#a90d91">usize</span>,
     <span style="color:#000">position</span>: <span style="color:#a90d91">usize</span>,
-}</code></pre></div>
+}
+</code></pre></div>
+
 <p>The <code>Token</code> contains the <code>term</code> sliced by the tokenizer and also related metadata like its absolute start offset in bytes as well as the relative position of the token in the stream. We need this information down the road for indexing and querying.</p>
 
 <p>One problem with this approach is that the <code>String</code> implicitly performs a heap allocation, and when we are slicing hundreds or thousands of small tokens we are allocating lots of small chunks on the heap.</p>
@@ -341,7 +345,8 @@ Hello, world!
     <span style="color:#000">term</span>: <span style="color:#3f6e75">Term</span>,
     <span style="color:#000">start_offset</span>: <span style="color:#a90d91">usize</span>,
     <span style="color:#000">position</span>: <span style="color:#a90d91">usize</span>,
-}</code></pre></div>
+}
+</code></pre></div>
 <p>Woops, our <code>Token</code> just got a little more complex. Our term is now an <a href="https://doc.rust-lang.org/book/enums.html">Enum</a> which is either a stack allocated <a href="https://docs.rs/arrayvec/0.3.20/arrayvec/struct.ArrayString.html">ArrayString</a> or a heap allocated <a href="https://doc.rust-lang.org/std/string/struct.String.html">String</a>. Note that the <code>ArrayString</code> implementation comes from the <a href="https://crates.io/crates/arrayvec">arrayvec</a> crate and basically provides string functionality on top of a stack allocated array.</p>
 
 <p>The nice thing about this is that we are not leaking this implementation detail to the caller, since we can always work with string slices on creation and access:</p>
@@ -371,7 +376,8 @@ Hello, world!
             <span style="color:#000">Term</span>::<span style="color:#000">Stack</span>(<span style="color:#a90d91">ref</span> <span style="color:#000">s</span>) <span style="color:#000">=&gt;</span> <span style="color:#000">s</span>.<span style="color:#000">as_ref</span>(),
         }
     }
-}</code></pre></div>
+}
+</code></pre></div>
 <p>At this point we&rsquo;ve departed from our go counterpart in two significant ways: we are using an iterator instead of <a href="https://github.com/blevesearch/bleve/blob/master/analysis/type.go#L61-L67">operating on a heap allocated array of tokens</a> and we are using stack allocations for small tokens instead of heap allocating a <a href="https://github.com/blevesearch/bleve/blob/master/analysis/type.go#L41">Token</a> and its term. I don&rsquo;t know if go is doing escape analysis and optimizations in this case, but based on the benchmarks (read on) I don&rsquo;t think so.</p>
 
 <p>You might wonder why I selected a stack term length of 15 as the point where we start to do heap allocations. There is no fancy math behind it, I just tried tokenizing all kinds of text snippets and found this to be the sweet spot. Try it out for yourself, you&rsquo;ll see that when you are increasing the size by a larger number the whole tokenization gets slower since rust needs to move those huge chunks around on the stack. Oh, and I did pick 15 and not 16 since the <code>ArrayString</code> needs one byte for internal storage. If you get different numbers I&rsquo;d love to read about it in the comments!</p>
@@ -391,7 +397,8 @@ Hello, world!
     <span style="color:#000">byte_offset</span>: <span style="color:#a90d91">usize</span>,
     <span style="color:#000">char_offset</span>: <span style="color:#a90d91">usize</span>,
     <span style="color:#000">position</span>: <span style="color:#a90d91">usize</span>,
-}</code></pre></div>
+}
+</code></pre></div>
 <p>It takes a <code>filter</code> which is the function the implementations set when the <code>CharTokenIter</code> is created. Naturally it also stores a reference to the original <code>input</code> since it needs to create the tokens from it. Finally three variables are used to keep internal state that we&rsquo;ll see getting populated in a second. <code>byte_offset</code> stores the absolute offset in bytes of the token term, the <code>char_offset</code> does the same but it only counts full characters. Finally the <code>position</code> stores the relative position of the tokens in the stream. If you wonder why we are handling characters and bytes separately, welcome to the world of <a href="https://en.wikipedia.org/wiki/Unicode">Unicode</a>.</p>
 
 <p>We can make creating our iterator a bit nicer:</p>
@@ -399,7 +406,8 @@ Hello, world!
     <span style="color:#a90d91">pub</span> <span style="color:#a90d91">fn</span> <span style="color:#000">new</span>(<span style="color:#000">filter</span>: <span style="color:#3f6e75">fn</span>(<span style="color:#000">&amp;</span>(<span style="color:#a90d91">usize</span>, (<span style="color:#a90d91">usize</span>, <span style="color:#000">char</span>))) -&gt; <span style="color:#a90d91">bool</span>, <span style="color:#000">input</span>: <span style="color:#a90d91">&amp;</span><span style="color:#836c28">&#39;a</span> <span style="color:#a90d91">str</span>) -&gt; <span style="color:#3f6e75">Self</span> {
         <span style="color:#000">CharTokenIter</span> { <span style="color:#000">filter</span>: <span style="color:#3f6e75">filter</span>, <span style="color:#000">input</span>: <span style="color:#3f6e75">input</span>, <span style="color:#000">byte_offset</span>: <span style="color:#1c01ce">0</span>, <span style="color:#000">char_offset</span>: <span style="color:#1c01ce">0</span>, <span style="color:#000">position</span>: <span style="color:#1c01ce">0</span> }
     }
-}</code></pre></div>
+}
+</code></pre></div>
 <p>Now, lets get to where the rubber meets the road. We need to implement the <code>Iterator</code> as specified in the contract, so our function looks like this:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">impl</span><span style="color:#000">&lt;</span><span style="color:#836c28">&#39;a</span><span style="color:#000">&gt;</span> <span style="color:#a90d91">Iterator</span> <span style="color:#a90d91">for</span> <span style="color:#000">CharTokenIter</span><span style="color:#000">&lt;</span><span style="color:#836c28">&#39;a</span><span style="color:#000">&gt;</span> {
     <span style="color:#a90d91">type</span> <span style="color:#3f6e75">Item</span> <span style="color:#000">=</span> <span style="color:#000">Token</span>;
@@ -407,20 +415,23 @@ Hello, world!
     <span style="color:#a90d91">fn</span> <span style="color:#000">next</span>(<span style="color:#000">&amp;</span><span style="color:#a90d91">mut</span> <span style="color:#5b269a">self</span>) -&gt; <span style="color:#a90d91">Option</span><span style="color:#000">&lt;</span><span style="color:#000">Token</span><span style="color:#000">&gt;</span> {
     	<span style="color:#177500">// ponies and fairy dust in here...
 </span><span style="color:#177500"></span>    }
-}</code></pre></div>
+}
+</code></pre></div>
 <p>The rest of the code snippets that follow go inside the <code>next</code> function. If we want to satisfy the Iterator semantics, we need to emit a token every time the predicate provided by our <code>filter</code> matches:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"> <span style="color:#a90d91">for</span> (<span style="color:#000">cidx</span>, (<span style="color:#000">bidx</span>, <span style="color:#000">c</span>)) <span style="color:#a90d91">in</span> <span style="color:#5b269a">self</span>.<span style="color:#000">input</span>[<span style="color:#5b269a">self</span>.<span style="color:#000">byte_offset</span>..]
             .<span style="color:#000">char_indices</span>()
             .<span style="color:#000">enumerate</span>()
             .<span style="color:#000">filter</span>(<span style="color:#000">&amp;</span><span style="color:#5b269a">self</span>.<span style="color:#000">filter</span>) {
-}</code></pre></div>
+}
+</code></pre></div>
 <p>We are slicing the input string starting at the current <code>byte_offset</code>, then use <code>char_indices()</code> on the iterator to also get the character index and then use <code>enumerate()</code> to get the byte index. Equipped with the actual character and all kinds of offsets, we apply our filter function and if allowed to pass through craft our token and emit it:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">let</span> <span style="color:#000">slice</span> <span style="color:#000">=</span> <span style="color:#000">&amp;</span><span style="color:#5b269a">self</span>.<span style="color:#000">input</span>[<span style="color:#5b269a">self</span>.<span style="color:#000">byte_offset</span>..<span style="color:#5b269a">self</span>.<span style="color:#000">byte_offset</span> <span style="color:#000">+</span> <span style="color:#000">bidx</span> <span style="color:#000">-</span> <span style="color:#000">skipped_bytes</span>];
 <span style="color:#a90d91">let</span> <span style="color:#000">token</span> <span style="color:#000">=</span> <span style="color:#000">Token</span>::<span style="color:#000">from_str</span>(<span style="color:#000">slice</span>, <span style="color:#5b269a">self</span>.<span style="color:#000">char_offset</span>, <span style="color:#5b269a">self</span>.<span style="color:#000">position</span>);
 <span style="color:#5b269a">self</span>.<span style="color:#000">char_offset</span> <span style="color:#000">=</span> <span style="color:#5b269a">self</span>.<span style="color:#000">char_offset</span> <span style="color:#000">+</span> <span style="color:#000">slice</span>.<span style="color:#000">chars</span>().<span style="color:#000">count</span>() <span style="color:#000">+</span> <span style="color:#1c01ce">1</span>;
 <span style="color:#5b269a">self</span>.<span style="color:#000">position</span> <span style="color:#000">+=</span> <span style="color:#1c01ce">1</span>;
 <span style="color:#5b269a">self</span>.<span style="color:#000">byte_offset</span> <span style="color:#000">=</span> <span style="color:#5b269a">self</span>.<span style="color:#000">byte_offset</span> <span style="color:#000">+</span> <span style="color:#000">bidx</span> <span style="color:#000">+</span> <span style="color:#000">char_len</span> <span style="color:#000">-</span> <span style="color:#000">skipped_bytes</span>;
-<span style="color:#a90d91">return</span> <span style="color:#a90d91">Some</span>(<span style="color:#000">token</span>);</code></pre></div>
+<span style="color:#a90d91">return</span> <span style="color:#a90d91">Some</span>(<span style="color:#000">token</span>);
+</code></pre></div>
 <p>You can see that we are not only slicing out the token term but also adjusting the character and byte offsets properly. Now, what is this <code>skipped_bytes</code> variable about? We&rsquo;ll get to that in a second, but before that we need to cover another case: what happens if no split character is found or there are characters left after the last split character? To handle this, after our loop we need to handle the remainder:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">if</span> <span style="color:#5b269a">self</span>.<span style="color:#000">byte_offset</span> <span style="color:#000">&lt;</span> <span style="color:#5b269a">self</span>.<span style="color:#000">input</span>.<span style="color:#000">len</span>() {
     <span style="color:#a90d91">let</span> <span style="color:#000">slice</span> <span style="color:#000">=</span> <span style="color:#000">&amp;</span><span style="color:#5b269a">self</span>.<span style="color:#000">input</span>[<span style="color:#5b269a">self</span>.<span style="color:#000">byte_offset</span>..];
@@ -429,7 +440,8 @@ Hello, world!
     <span style="color:#a90d91">Some</span>(<span style="color:#000">token</span>)
 } <span style="color:#a90d91">else</span> {
     <span style="color:#a90d91">None</span>
-}</code></pre></div>
+}
+</code></pre></div>
 <p>If our byte offset is equal to the length of the input string we are done (signaled by returning <code>None</code> to the iterator consumer), but in the other case we need to slice out the remaining bytes and return them as a final token.</p>
 
 <p>Now that we&rsquo;ve covered this lets get back to the <code>skipped_bytes</code> thing from before.</p>
@@ -460,7 +472,8 @@ Hello, world!
         <span style="color:#5b269a">self</span>.<span style="color:#000">position</span> <span style="color:#000">+=</span> <span style="color:#1c01ce">1</span>;
         <span style="color:#5b269a">self</span>.<span style="color:#000">byte_offset</span> <span style="color:#000">=</span> <span style="color:#5b269a">self</span>.<span style="color:#000">byte_offset</span> <span style="color:#000">+</span> <span style="color:#000">bidx</span> <span style="color:#000">+</span> <span style="color:#000">char_len</span> <span style="color:#000">-</span> <span style="color:#000">skipped_bytes</span>;
         <span style="color:#a90d91">return</span> <span style="color:#a90d91">Some</span>(<span style="color:#000">token</span>);
-    }</code></pre></div>
+    }
+</code></pre></div>
 <p>Here is the <code>next</code> function in its full glory:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">fn</span> <span style="color:#000">next</span>(<span style="color:#000">&amp;</span><span style="color:#a90d91">mut</span> <span style="color:#5b269a">self</span>) -&gt; <span style="color:#a90d91">Option</span><span style="color:#000">&lt;</span><span style="color:#000">Token</span><span style="color:#000">&gt;</span> {
     <span style="color:#a90d91">let</span> <span style="color:#a90d91">mut</span> <span style="color:#000">skipped_bytes</span> <span style="color:#000">=</span> <span style="color:#1c01ce">0</span>;
@@ -495,7 +508,8 @@ Hello, world!
     } <span style="color:#a90d91">else</span> {
         <span style="color:#a90d91">None</span>
     }
-}</code></pre></div>
+}
+</code></pre></div>
 <p>How would we implement a <code>Whitespace</code> tokenizer with this? One might be tempted to match against <code>' '</code>, but keep in mind that whitespace, when dealing with unicode, can be many more different characters so its best to not hardcode them in a gigantic match clause and instead use a built-in function.</p>
 
 <p>Here is our <code>WhitespaceTokenizer</code>:</p>
@@ -513,21 +527,24 @@ Hello, world!
 <span style="color:#a90d91">fn</span> <span style="color:#000">is_whitespace</span>(<span style="color:#000">input</span>: <span style="color:#a90d91">&amp;</span>(<span style="color:#a90d91">usize</span>, (<span style="color:#a90d91">usize</span>, <span style="color:#000">char</span>))) -&gt; <span style="color:#a90d91">bool</span> {
     <span style="color:#a90d91">let</span> (<span style="color:#000">_</span>, (<span style="color:#000">_</span>, <span style="color:#000">c</span>)) <span style="color:#000">=</span> <span style="color:#000">*</span><span style="color:#000">input</span>;
     <span style="color:#000">c</span>.<span style="color:#000">is_whitespace</span>()
-}</code></pre></div>
+}
+</code></pre></div>
 <p>We initialize the <code>CharTokenIter</code> and in use the <a href="https://doc.rust-lang.org/std/primitive.char.html#method.is_whitespace">char::is_whitespace()</a> method to check for a unicode whitespace character. Using it is now pretty simple, consider this test case:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#633820">#[test]</span>
 <span style="color:#a90d91">fn</span> <span style="color:#000">should_split_between_words</span>() {
     <span style="color:#a90d91">let</span> <span style="color:#000">expected</span> <span style="color:#000">=</span> <span style="color:#000">vec</span><span style="color:#000">!</span>[<span style="color:#000">Token</span>::<span style="color:#000">from_str</span>(<span style="color:#c41a16">&#34;hello&#34;</span>, <span style="color:#1c01ce">0</span>, <span style="color:#1c01ce">0</span>), <span style="color:#000">Token</span>::<span style="color:#000">from_str</span>(<span style="color:#c41a16">&#34;world&#34;</span>, <span style="color:#1c01ce">6</span>, <span style="color:#1c01ce">1</span>)];
     <span style="color:#a90d91">let</span> <span style="color:#000">actually</span> <span style="color:#000">=</span> <span style="color:#000">WhitespaceTokenizer</span>.<span style="color:#000">tokenize</span>(<span style="color:#c41a16">&#34;hello world&#34;</span>).<span style="color:#000">collect</span>::<span style="color:#000">&lt;</span><span style="color:#a90d91">Vec</span><span style="color:#000">&lt;</span><span style="color:#000">Token</span><span style="color:#000">&gt;&gt;</span>();
     <span style="color:#000">assert_eq</span><span style="color:#000">!</span>(<span style="color:#000">expected</span>, <span style="color:#000">actually</span>);
-}</code></pre></div>
+}
+</code></pre></div>
 <p>This implementation also works with all kinds of unicode characters that may have different byte lengths (and this is where our different tracking of character and byte offsets becomes important):</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#633820">#[test]</span>
 <span style="color:#a90d91">fn</span> <span style="color:#000">should_handle_mixed_chars</span>() {
     <span style="color:#a90d91">let</span> <span style="color:#000">expected</span> <span style="color:#000">=</span> <span style="color:#000">vec</span><span style="color:#000">!</span>[<span style="color:#000">Token</span>::<span style="color:#000">from_str</span>(<span style="color:#c41a16">&#34;abc界&#34;</span>, <span style="color:#1c01ce">0</span>, <span style="color:#1c01ce">0</span>), <span style="color:#000">Token</span>::<span style="color:#000">from_str</span>(<span style="color:#c41a16">&#34;abc界&#34;</span>, <span style="color:#1c01ce">5</span>, <span style="color:#1c01ce">1</span>)];
     <span style="color:#a90d91">let</span> <span style="color:#000">actually</span> <span style="color:#000">=</span> <span style="color:#000">WhitespaceTokenizer</span>.<span style="color:#000">tokenize</span>(<span style="color:#c41a16">&#34;abc界 abc界&#34;</span>).<span style="color:#000">collect</span>::<span style="color:#000">&lt;</span><span style="color:#a90d91">Vec</span><span style="color:#000">&lt;</span><span style="color:#000">Token</span><span style="color:#000">&gt;&gt;</span>();
     <span style="color:#000">assert_eq</span><span style="color:#000">!</span>(<span style="color:#000">expected</span>, <span style="color:#000">actually</span>);
-}</code></pre></div>
+}
+</code></pre></div>
 <p>Before we move on to benchmarks, lets take a quick look at the corresponding <a href="https://github.com/blevesearch/bleve/blob/master/analysis/tokenizer/character/character.go">go implementation</a>.</p>
 
 <p>The <a href="https://github.com/blevesearch/bleve/blob/master/analysis/tokenizer/character/character.go#L35">CharacterTokenizer</a> loops through each <a href="https://blog.golang.org/strings">rune</a> and very similar to our implementation keeps track of all kinds of offsets and slices out terms as needed. The big difference is that it can&rsquo;t do explicit stack allocations and upfront allocates a 1024 element slice for its <code>TokenStream</code> which would be extended if more tokens are needed.</p>
@@ -555,7 +572,8 @@ Hello, world!
 </span><span style="color:#c41a16">     a number of features including destructors and polymorphism through the use of interfaces. \
 </span><span style="color:#c41a16">     In Rust 0.4, traits were added as a means to provide inheritance; In January 2014, the \
 </span><span style="color:#c41a16">     editor-in-chief of Dr Dobb&#39;s, Andrew Binstock, commented on Rust&#39;s chances to become a \
-</span><span style="color:#c41a16">     competitor to C++.&#34;</span>;</code></pre></div>
+</span><span style="color:#c41a16">     competitor to C++.&#34;</span>;
+</code></pre></div>
 <p>If we split on unicode whitespace, there are exactly 159 tokens.</p>
 
 <p>Here is our benchmark for rust:</p>
@@ -563,7 +581,8 @@ Hello, world!
 <span style="color:#a90d91">fn</span> <span style="color:#000">bench_whitespace_tokenizer</span>(<span style="color:#000">b</span>: <span style="color:#a90d91">&amp;</span><span style="color:#3f6e75">mut</span> <span style="color:#000">Bencher</span>) {
     <span style="color:#a90d91">let</span> <span style="color:#000">t</span> <span style="color:#000">=</span> <span style="color:#000">WhitespaceTokenizer</span>;
    <span style="color:#000">b</span>.<span style="color:#000">iter</span>(<span style="color:#000">||</span> <span style="color:#000">t</span>.<span style="color:#000">tokenize</span>(<span style="color:#000">INPUT</span>).<span style="color:#000">last</span>());
-}</code></pre></div>
+}
+</code></pre></div>
 <p>Running with <code>cargo +nightly bench</code> on my machine (a 2,5GHz i7, OSX, 16GB RAM), rust reports:</p>
 
 <pre><code>test bench_whitespace_tokenizer ... bench:       6,972 ns/iter (+/- 1,148)
@@ -666,7 +685,8 @@ this blog post.</p>
     <span style="color:#a90d91">struct</span> <span style="color:#000">kevent</span> <span style="color:#000">*</span><span style="color:#000">eventlist</span>, <span style="color:#a90d91">int</span> <span style="color:#000">nevents</span>, <span style="color:#a90d91">const</span> <span style="color:#a90d91">struct</span> <span style="color:#000">timespec</span> <span style="color:#000">*</span><span style="color:#000">timeout</span>);</code></pre></div>
 <p>which translate to the following rust signatures (from <code>nix</code>):</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">fn</span> <span style="color:#000">kqueue</span>() -&gt; <span style="color:#a90d91">Result</span><span style="color:#000">&lt;</span><span style="color:#000">RawFd</span><span style="color:#000">&gt;</span>
-<span style="color:#a90d91">fn</span> <span style="color:#000">kevent</span>(<span style="color:#000">kq</span>: <span style="color:#3f6e75">RawFd</span>, <span style="color:#000">changelist</span>: <span style="color:#a90d91">&amp;</span>[<span style="color:#000">KEvent</span>], <span style="color:#000">eventlist</span>: <span style="color:#a90d91">&amp;</span><span style="color:#3f6e75">mut</span> [<span style="color:#000">KEvent</span>], <span style="color:#000">timeout_ms</span>: <span style="color:#a90d91">usize</span>) -&gt; <span style="color:#a90d91">Result</span><span style="color:#000">&lt;</span><span style="color:#a90d91">usize</span><span style="color:#000">&gt;</span></code></pre></div>
+<span style="color:#a90d91">fn</span> <span style="color:#000">kevent</span>(<span style="color:#000">kq</span>: <span style="color:#3f6e75">RawFd</span>, <span style="color:#000">changelist</span>: <span style="color:#a90d91">&amp;</span>[<span style="color:#000">KEvent</span>], <span style="color:#000">eventlist</span>: <span style="color:#a90d91">&amp;</span><span style="color:#3f6e75">mut</span> [<span style="color:#000">KEvent</span>], <span style="color:#000">timeout_ms</span>: <span style="color:#a90d91">usize</span>) -&gt; <span style="color:#a90d91">Result</span><span style="color:#000">&lt;</span><span style="color:#a90d91">usize</span><span style="color:#000">&gt;</span>
+</code></pre></div>
 <p>The <code>kqueue</code> function translates into a system call and creates a   new kernel
 event queue and returns a descriptor. The <code>kevent</code> function is used to both
 register new <code>KEvents</code> as well as check if any of them are currently pending.</p>
@@ -680,7 +700,8 @@ and looks like this in rust (also from <code>nix</code>):</p>
     <span style="color:#a90d91">pub</span> <span style="color:#000">fflags</span>: <span style="color:#3f6e75">FilterFlag</span>,
     <span style="color:#a90d91">pub</span> <span style="color:#000">data</span>: <span style="color:#3f6e75">intptr_t</span>,
     <span style="color:#a90d91">pub</span> <span style="color:#000">udata</span>: <span style="color:#a90d91">usize</span>,
-}</code></pre></div>
+}
+</code></pre></div>
 <p>The <code>ident</code> holds a value which is used to identify the event. Depending on the
 configured filter its type and meaning can change (but is very often a file
 descriptor). The <code>filter</code> is important since it determines the kernel filter to
@@ -721,7 +742,8 @@ way:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">extern</span> <span style="color:#a90d91">crate</span> <span style="color:#000">nix</span>;
 
 <span style="color:#a90d91">use</span> <span style="color:#000">nix</span>::<span style="color:#000">sys</span>::<span style="color:#000">event</span>::{<span style="color:#000">KEvent</span>, <span style="color:#000">kqueue</span>, <span style="color:#000">kevent</span>, <span style="color:#000">EventFilter</span>, <span style="color:#000">FilterFlag</span>};
-<span style="color:#a90d91">use</span> <span style="color:#000">nix</span>::<span style="color:#000">sys</span>::<span style="color:#000">event</span>::{<span style="color:#000">EV_ADD</span>, <span style="color:#000">EV_ENABLE</span>};</code></pre></div>
+<span style="color:#a90d91">use</span> <span style="color:#000">nix</span>::<span style="color:#000">sys</span>::<span style="color:#000">event</span>::{<span style="color:#000">EV_ADD</span>, <span style="color:#000">EV_ENABLE</span>};
+</code></pre></div>
 <p>Next, we add a helper function that encapsulates the <code>KEvent</code> creation:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">fn</span> <span style="color:#000">event</span>(<span style="color:#000">id</span>: <span style="color:#a90d91">usize</span>, <span style="color:#000">timer</span>: <span style="color:#a90d91">isize</span>) -&gt; <span style="color:#3f6e75">KEvent</span> {
     <span style="color:#000">KEvent</span> {
@@ -732,7 +754,8 @@ way:</p>
         <span style="color:#000">data</span>: <span style="color:#3f6e75">timer</span>,
         <span style="color:#000">udata</span>: <span style="color:#1c01ce">0</span>,
     }
-}</code></pre></div>
+}
+</code></pre></div>
 <p>Here the caller passes in the event id as well as the timer in milliseconds. Since
 we want to get a timer event we need to use the <code>EventFilter::EVFILT_TIMER</code> filter.
 The <code>EV_ADD | EV_ENABLE</code> indicates we want to add and enable the timer at the same
@@ -749,7 +772,8 @@ runs each second and one that runs every 1.5 seconds:</p>
 </span><span style="color:#177500"></span><span style="color:#a90d91">let</span> <span style="color:#a90d91">mut</span> <span style="color:#000">changes</span> <span style="color:#000">=</span> <span style="color:#000">vec</span><span style="color:#000">!</span>[<span style="color:#000">event</span>(<span style="color:#1c01ce">1</span>, <span style="color:#1c01ce">1000</span>), <span style="color:#000">event</span>(<span style="color:#1c01ce">2</span>, <span style="color:#1c01ce">1500</span>)];
 
 <span style="color:#177500">// Register the events in the `changelist`.
-</span><span style="color:#177500"></span><span style="color:#000">kevent</span>(<span style="color:#000">kq</span>, <span style="color:#000">changes</span>.<span style="color:#000">as_slice</span>(), <span style="color:#000">&amp;</span><span style="color:#a90d91">mut</span> [], <span style="color:#1c01ce">0</span>).<span style="color:#000">unwrap</span>();</code></pre></div>
+</span><span style="color:#177500"></span><span style="color:#000">kevent</span>(<span style="color:#000">kq</span>, <span style="color:#000">changes</span>.<span style="color:#000">as_slice</span>(), <span style="color:#000">&amp;</span><span style="color:#a90d91">mut</span> [], <span style="color:#1c01ce">0</span>).<span style="color:#000">unwrap</span>();
+</code></pre></div>
 <p>Kqueue now knows about the events we are interested in, so it&rsquo;s time to run
 a loop and poll until they happen:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">loop</span> {
@@ -763,7 +787,8 @@ a loop and poll until they happen:</p>
     <span style="color:#a90d91">Err</span>(<span style="color:#000">e</span>) <span style="color:#000">=&gt;</span> <span style="color:#000">panic</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;{:?}&#34;</span>, <span style="color:#000">e</span>), <span style="color:#177500">// Panic on Errors
 </span><span style="color:#177500"></span>    <span style="color:#000">_</span> <span style="color:#000">=&gt;</span> () <span style="color:#177500">// Ignore Ok(0),
 </span><span style="color:#177500"></span>  }
-}</code></pre></div>
+}
+</code></pre></div>
 <p>We poll <code>kevent</code> and the <code>changes</code> slice is updated with the results on each
 poll with the <code>eventlist</code>. <code>kevent</code> returns either an <code>Err</code> or <code>Ok</code> with the
 number of events that are available now. Note that <code>Ok(0)</code> is a special case
@@ -923,7 +948,8 @@ Exception in thread &quot;main&quot; java.lang.UnsatisfiedLinkError: Adder.add(I
 <span style="color:#633820">#[no_mangle]</span>
 <span style="color:#a90d91">pub</span> <span style="color:#a90d91">extern</span> <span style="color:#a90d91">fn</span> <span style="color:#000">Java_Adder_add</span>(<span style="color:#000">jre</span>: <span style="color:#000">*</span><span style="color:#a90d91">mut</span> <span style="color:#000">JNIEnv</span>, <span style="color:#000">class</span>: <span style="color:#000">*</span><span style="color:#a90d91">const</span> <span style="color:#000">c_void</span>, <span style="color:#000">v1</span>: <span style="color:#3f6e75">c_int</span>, <span style="color:#000">v2</span>: <span style="color:#3f6e75">c_int</span>) -&gt; <span style="color:#3f6e75">c_int</span> {
     <span style="color:#000">v1</span> <span style="color:#000">+</span> <span style="color:#000">v2</span>
-}</code></pre></div>
+}
+</code></pre></div>
 <p>Alright, so what&rsquo;s going on here?</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#633820">#[repr(C)]</span>
 <span style="color:#a90d91">pub</span> <span style="color:#a90d91">struct</span> <span style="color:#3f6e75">JNINativeInterface</span> {
@@ -934,7 +960,8 @@ Exception in thread &quot;main&quot; java.lang.UnsatisfiedLinkError: Adder.add(I
     <span style="color:#177500">// ...
 </span><span style="color:#177500"></span>}
 
-<span style="color:#a90d91">pub</span> <span style="color:#a90d91">type</span> <span style="color:#3f6e75">JNIEnv</span> <span style="color:#000">=</span> <span style="color:#000">*</span><span style="color:#a90d91">const</span> <span style="color:#000">JNINativeInterface</span>;</code></pre></div>
+<span style="color:#a90d91">pub</span> <span style="color:#a90d91">type</span> <span style="color:#3f6e75">JNIEnv</span> <span style="color:#000">=</span> <span style="color:#000">*</span><span style="color:#a90d91">const</span> <span style="color:#000">JNINativeInterface</span>;
+</code></pre></div>
 <p>The JVM exports a <code>jni.h</code> header file which contains its primary interfaces when interacting through JNI. Normally we&rsquo;d write a proper Rust C FFI binding here and keep our code idiomatic, but for now all we need is a pointer to the <code>JNIEnv</code> (even if we don&rsquo;t actually use it, it gets passed in to our <code>add</code> method as an argument). If you take a look at the <a href="http://hg.openjdk.java.net/jdk8/jdk8/jdk/file/687fd7c7986d/src/share/javavm/export/jni.h#l214">actual jni.h</a> you can see that we get away with lots of handwaving for now.</p>
 
 <p>Btw, how on earth did we know that the JVM expects a method with the signature of <code>fn Java_Adder_add(jre: *mut JNIEnv, class: *const c_void, v1: c_int, v2: c_int) -&gt; c_int</code>? The answer lies in the <code>javah</code> command and some conversion of C to Rust. If you run <code>javah Adder</code> you get a <code>Adder.h</code> file which looks like:</p>
@@ -967,7 +994,8 @@ Exception in thread &quot;main&quot; java.lang.UnsatisfiedLinkError: Adder.add(I
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#633820">#[no_mangle]</span>
 <span style="color:#a90d91">pub</span> <span style="color:#a90d91">extern</span> <span style="color:#a90d91">fn</span> <span style="color:#000">Java_Adder_add</span>(<span style="color:#000">jre</span>: <span style="color:#000">*</span><span style="color:#a90d91">mut</span> <span style="color:#000">JNIEnv</span>, <span style="color:#000">class</span>: <span style="color:#000">*</span><span style="color:#a90d91">const</span> <span style="color:#000">c_void</span>, <span style="color:#000">v1</span>: <span style="color:#3f6e75">c_int</span>, <span style="color:#000">v2</span>: <span style="color:#3f6e75">c_int</span>) -&gt; <span style="color:#3f6e75">c_int</span> {
     <span style="color:#000">v1</span> <span style="color:#000">+</span> <span style="color:#000">v2</span>
-}</code></pre></div>
+}
+</code></pre></div>
 <p>Make sure you don&rsquo;t forget the <code>#[no_mangle]</code> which tells Rust to turn off its name mangling so that there are no issues while linking (try it out and you&rsquo;ll see the <code>UnsatisfiedLinkError</code> again). Finally its time to compile the <code>crate</code> once more and run the Java class again. Note that you don&rsquo;t need to recompile the Java code every time you make a change to the Rust code. Just rebuild with cargo and run the Java file again, it will pick up the freshly created <code>dylib</code>.</p>
 
 <pre><code>$ cargo build
@@ -1046,7 +1074,8 @@ hwloc = &quot;0.3.0&quot;
 
     <span style="color:#177500">// Debug Print all the Support Flags
 </span><span style="color:#177500"></span>    <span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;All Flags:</span><span style="color:#c41a16">\n</span><span style="color:#c41a16">{:?}&#34;</span>, <span style="color:#000">topo</span>.<span style="color:#000">support</span>());
-}</code></pre></div>
+}
+</code></pre></div>
 <p>On Linux:</p>
 
 <pre><code>CPU Binding (current process) supported: true
@@ -1120,7 +1149,8 @@ Machine (490MB) + Socket P#0 + L2d (6144KB)
     <span style="color:#a90d91">let</span> <span style="color:#000">core_depth</span> <span style="color:#000">=</span> <span style="color:#000">topo</span>.<span style="color:#000">depth_or_below_for_type</span>(<span style="color:#000">&amp;</span><span style="color:#000">ObjectType</span>::<span style="color:#000">Core</span>).<span style="color:#000">unwrap</span>();
     <span style="color:#a90d91">let</span> <span style="color:#000">all_cores</span> <span style="color:#000">=</span> <span style="color:#000">topo</span>.<span style="color:#000">objects_at_depth</span>(<span style="color:#000">core_depth</span>);
     <span style="color:#000">all_cores</span>.<span style="color:#000">last</span>().<span style="color:#000">unwrap</span>()
-}</code></pre></div>
+}
+</code></pre></div>
 <p>This prints the following on the linux machine:</p>
 
 <pre><code>Cpu Binding before explicit bind: Some(0-3)
@@ -1140,7 +1170,8 @@ Cpu Location after explicit bind: Some(3)
     <span style="color:#a90d91">let</span> <span style="color:#000">core_depth</span> <span style="color:#000">=</span> <span style="color:#000">topo</span>.<span style="color:#000">depth_or_below_for_type</span>(<span style="color:#000">&amp;</span><span style="color:#000">ObjectType</span>::<span style="color:#000">Core</span>).<span style="color:#000">unwrap</span>();
     <span style="color:#a90d91">let</span> <span style="color:#000">all_cores</span> <span style="color:#000">=</span> <span style="color:#000">topo</span>.<span style="color:#000">objects_at_depth</span>(<span style="color:#000">core_depth</span>);
     <span style="color:#000">all_cores</span>.<span style="color:#000">last</span>().<span style="color:#000">unwrap</span>()
-}</code></pre></div>
+}
+</code></pre></div>
 <p>Now that we have our &ldquo;target&rdquo;, we can start binding the current process there. To visualise what&rsquo;s going on, we also print the binding and location for the current process before and after the explicit binding:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;Cpu Binding before explicit bind: {:?}&#34;</span>, <span style="color:#000">topo</span>.<span style="color:#000">get_cpubind</span>(<span style="color:#000">CPUBIND_PROCESS</span>));
 <span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;Cpu Location before explicit bind: {:?}&#34;</span>, <span style="color:#000">topo</span>.<span style="color:#000">get_cpu_location</span>(<span style="color:#000">CPUBIND_PROCESS</span>));
@@ -1151,7 +1182,8 @@ Cpu Location after explicit bind: Some(3)
 }
 
 <span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;Cpu Binding after explicit bind: {:?}&#34;</span>, <span style="color:#000">topo</span>.<span style="color:#000">get_cpubind</span>(<span style="color:#000">CPUBIND_PROCESS</span>));
-<span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;Cpu Location after explicit bind: {:?}&#34;</span>, <span style="color:#000">topo</span>.<span style="color:#000">get_cpu_location</span>(<span style="color:#000">CPUBIND_PROCESS</span>));</code></pre></div>
+<span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;Cpu Location after explicit bind: {:?}&#34;</span>, <span style="color:#000">topo</span>.<span style="color:#000">get_cpu_location</span>(<span style="color:#000">CPUBIND_PROCESS</span>));
+</code></pre></div>
 <p>The current <code>CpuSet</code> of the process (which you can retrieve through <code>get_cpubind(CPUBIND_PROCESS)</code>) contains all possibles cores where the operating system might dispatch the process on. In our case it prints <code>0-3</code> which means all four cores are possible. The call to <code>get_cpu_location()</code> gives us the current core location, but this can change between subsequent calls as the operating system moves the process around.</p>
 
 <p>Finally we override the current binding with our custom one (the new <code>CpuSet</code> only contains the last core rather than all four) and apply some simple matching to make sure the binding didn&rsquo;t fail for some reason. The last <code>println!</code> calls are just there to visually validate the new binding.</p>
@@ -1165,7 +1197,8 @@ Cpu Location after explicit bind: Some(3)
   <span style="color:#177500">//...
 </span><span style="color:#177500"></span>  <span style="color:#a90d91">let</span> <span style="color:#000">pid</span> <span style="color:#000">=</span> <span style="color:#a90d91">unsafe</span> { <span style="color:#000">libc</span>::<span style="color:#000">getpid</span>() };
   <span style="color:#177500">//...
-</span><span style="color:#177500"></span>}</code></pre></div>
+</span><span style="color:#177500"></span>}
+</code></pre></div>
 <p>Once we have our pid, we will reuse the code from the last example to get the last core where we want to bind the process to:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">fn</span> <span style="color:#000">main</span>() {
   <span style="color:#177500">//...
@@ -1178,7 +1211,8 @@ Cpu Location after explicit bind: Some(3)
     <span style="color:#a90d91">let</span> <span style="color:#000">core_depth</span> <span style="color:#000">=</span> <span style="color:#000">topo</span>.<span style="color:#000">depth_or_below_for_type</span>(<span style="color:#000">&amp;</span><span style="color:#000">ObjectType</span>::<span style="color:#000">Core</span>).<span style="color:#000">unwrap</span>();
     <span style="color:#a90d91">let</span> <span style="color:#000">all_cores</span> <span style="color:#000">=</span> <span style="color:#000">topo</span>.<span style="color:#000">objects_at_depth</span>(<span style="color:#000">core_depth</span>);
     <span style="color:#000">all_cores</span>.<span style="color:#000">last</span>().<span style="color:#000">unwrap</span>()
-}</code></pre></div>
+}
+</code></pre></div>
 <p>Now we can use the same methods as previously, but with the <code>for_process()</code> suffix. Here is the full example, again with some debug print statements to visualise what&rsquo;s going on:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">extern</span> <span style="color:#a90d91">crate</span> <span style="color:#000">hwloc</span>;
 <span style="color:#a90d91">extern</span> <span style="color:#a90d91">crate</span> <span style="color:#000">libc</span>;
@@ -1208,7 +1242,8 @@ Cpu Location after explicit bind: Some(3)
     <span style="color:#a90d91">let</span> <span style="color:#000">core_depth</span> <span style="color:#000">=</span> <span style="color:#000">topo</span>.<span style="color:#000">depth_or_below_for_type</span>(<span style="color:#000">&amp;</span><span style="color:#000">ObjectType</span>::<span style="color:#000">Core</span>).<span style="color:#000">unwrap</span>();
     <span style="color:#a90d91">let</span> <span style="color:#000">all_cores</span> <span style="color:#000">=</span> <span style="color:#000">topo</span>.<span style="color:#000">objects_at_depth</span>(<span style="color:#000">core_depth</span>);
     <span style="color:#000">all_cores</span>.<span style="color:#000">last</span>().<span style="color:#000">unwrap</span>()
-}</code></pre></div>
+}
+</code></pre></div>
 <p>If we run this on our linux box, this is the output:</p>
 
 <pre><code>Binding Process with PID 3034
@@ -1271,14 +1306,16 @@ Last Known CPU Location: 3
         <span style="color:#a90d91">Some</span>(<span style="color:#000">val</span>) <span style="color:#000">=&gt;</span> <span style="color:#000">val</span>.<span style="color:#000">cpuset</span>().<span style="color:#000">unwrap</span>(),
         <span style="color:#a90d91">None</span> <span style="color:#000">=&gt;</span> <span style="color:#000">panic</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;No Core found with id {}&#34;</span>, <span style="color:#000">idx</span>)
     }
-}</code></pre></div>
+}
+</code></pre></div>
 <p>Before the binding we need to identify the number of cores - that&rsquo;s an easy task for <code>hwloc</code>:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">let</span> <span style="color:#000">num_cores</span> <span style="color:#000">=</span> {
     <span style="color:#a90d91">let</span> <span style="color:#000">topo_rc</span> <span style="color:#000">=</span> <span style="color:#000">topo</span>.<span style="color:#000">clone</span>();
     <span style="color:#a90d91">let</span> <span style="color:#000">topo_locked</span> <span style="color:#000">=</span> <span style="color:#000">topo_rc</span>.<span style="color:#000">lock</span>().<span style="color:#000">unwrap</span>();
     (<span style="color:#000">*</span><span style="color:#000">topo_locked</span>).<span style="color:#000">objects_with_type</span>(<span style="color:#000">&amp;</span><span style="color:#000">ObjectType</span>::<span style="color:#000">Core</span>).<span style="color:#000">unwrap</span>().<span style="color:#000">len</span>()
 };
-<span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;Found {} cores.&#34;</span>, <span style="color:#000">num_cores</span>);</code></pre></div>
+<span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;Found {} cores.&#34;</span>, <span style="color:#000">num_cores</span>);
+</code></pre></div>
 <p>The code finds all cores through <code>objects_with_type(&amp;ObjectType::Core)</code> and counts them. Note that we need to do use proper rust synchronization mechanisms around our <code>Topology</code> since we are accessing it from multiple threads in the code.</p>
 
 <p>The next piece spawns one thread for each core and joins on the main thread to wait until they complete:</p>
@@ -1291,22 +1328,26 @@ Last Known CPU Location: 3
 
     <span style="color:#a90d91">for</span> <span style="color:#000">h</span> <span style="color:#a90d91">in</span> <span style="color:#000">handles</span> {
         <span style="color:#000">h</span>.<span style="color:#000">join</span>().<span style="color:#000">unwrap</span>();
-    }</code></pre></div>
+    }
+</code></pre></div>
 <p>Next up we load the current thread ID through some <code>libc</code> unsafe magic, lock the <code>Topology</code> for safety and then read the current <code>CpuSet</code> for the thread (to print it out later):</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">let</span> <span style="color:#000">tid</span> <span style="color:#000">=</span> <span style="color:#a90d91">unsafe</span> { <span style="color:#000">libc</span>::<span style="color:#000">pthread_self</span>() };
 <span style="color:#a90d91">let</span> <span style="color:#a90d91">mut</span> <span style="color:#000">locked_topo</span> <span style="color:#000">=</span> <span style="color:#000">child_topo</span>.<span style="color:#000">lock</span>().<span style="color:#000">unwrap</span>();
 
-<span style="color:#a90d91">let</span> <span style="color:#000">before</span> <span style="color:#000">=</span> <span style="color:#000">locked_topo</span>.<span style="color:#000">get_cpubind_for_thread</span>(<span style="color:#000">tid</span>, <span style="color:#000">CPUBIND_THREAD</span>);</code></pre></div>
+<span style="color:#a90d91">let</span> <span style="color:#000">before</span> <span style="color:#000">=</span> <span style="color:#000">locked_topo</span>.<span style="color:#000">get_cpubind_for_thread</span>(<span style="color:#000">tid</span>, <span style="color:#000">CPUBIND_THREAD</span>);
+</code></pre></div>
 <p>The next part is important:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">let</span> <span style="color:#000">bind_to</span> <span style="color:#000">=</span> <span style="color:#000">cpuset_for_core</span>(<span style="color:#000">&amp;*</span><span style="color:#000">locked_topo</span>, <span style="color:#000">i</span>);
 
-<span style="color:#000">locked_topo</span>.<span style="color:#000">set_cpubind_for_thread</span>(<span style="color:#000">tid</span>, <span style="color:#000">bind_to</span>, <span style="color:#000">CPUBIND_THREAD</span>).<span style="color:#000">unwrap</span>();</code></pre></div>
+<span style="color:#000">locked_topo</span>.<span style="color:#000">set_cpubind_for_thread</span>(<span style="color:#000">tid</span>, <span style="color:#000">bind_to</span>, <span style="color:#000">CPUBIND_THREAD</span>).<span style="color:#000">unwrap</span>();
+</code></pre></div>
 <p>The helper function <code>cpuset_for_core</code> accepts an integer which represents the thread number (not the <code>tid</code>) and loops through the cores available on the <code>Topology</code>. It then returns the right <code>CpuSet</code> for the given index, so the first thread will be pinned to Core 0, the second one to Core 1 and so forth. Then, we use the <code>set_cpubind_for_thread()</code> method to bass in the current thread id as well as the <code>CpuSet</code> to apply and the <code>CPUBIND_THREAD</code> identifier which is needed.</p>
 
 <p>Finally we just collect the new binding and then print it out for visualisation:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">let</span> <span style="color:#000">after</span> <span style="color:#000">=</span> <span style="color:#000">locked_topo</span>.<span style="color:#000">get_cpubind_for_thread</span>(<span style="color:#000">tid</span>, <span style="color:#000">CPUBIND_THREAD</span>);
 
-<span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;Thread {}: Before {:?}, After {:?}&#34;</span>, <span style="color:#000">i</span>, <span style="color:#000">before</span>, <span style="color:#000">after</span>);</code></pre></div>
+<span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;Thread {}: Before {:?}, After {:?}&#34;</span>, <span style="color:#000">i</span>, <span style="color:#000">before</span>, <span style="color:#000">after</span>);
+</code></pre></div>
 <p>Running this on our 4-core machine prints:</p>
 
 <pre><code>Found 4 cores.
@@ -1422,16 +1463,20 @@ Hello, world!
         <span style="color:#a90d91">Ok</span>(<span style="color:#000">c</span>) <span style="color:#000">=&gt;</span> <span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;There are {} cores on this machine.&#34;</span>, <span style="color:#000">c</span>.<span style="color:#000">len</span>()),
         <span style="color:#a90d91">Err</span>(<span style="color:#000">e</span>) <span style="color:#000">=&gt;</span> <span style="color:#000">panic</span><span style="color:#000">!</span>(<span style="color:#000">format</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;Could not load cores because of: {:?}&#34;</span>, <span style="color:#000">e</span>))
     }
-}</code></pre></div>
+}
+</code></pre></div>
 <p>Let&rsquo;s break the code apart a bit. The first thing you always need to do is create a <a href="http://nitschinger.at/hwloc-rs/rustdoc/0.2.0/hwloc/struct.Topology.html">Topology</a>. The <code>Topology</code> is your logical representation of the actual mapped hardware.</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">let</span> <span style="color:#000">topology</span> <span style="color:#000">=</span> <span style="color:#000">Topology</span>::<span style="color:#000">new</span>();</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">let</span> <span style="color:#000">topology</span> <span style="color:#000">=</span> <span style="color:#000">Topology</span>::<span style="color:#000">new</span>();
+</code></pre></div>
 <p>Now that we have the <code>Topology</code>, we can ask it to return all <a href="http://nitschinger.at/hwloc-rs/rustdoc/0.2.0/hwloc/struct.TopologyObject.html">TopologyObjects</a> with a specific <a href="http://nitschinger.at/hwloc-rs/rustdoc/0.2.0/hwloc/enum.ObjectType.html">ObjectType</a>. One type is <code>Core</code> which maps to a computation unit on the physical hardware (most of the time a CPU Core).</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">let</span> <span style="color:#000">cores</span> <span style="color:#000">=</span> <span style="color:#000">topology</span>.<span style="color:#000">objects_with_type</span>(<span style="color:#000">&amp;</span><span style="color:#000">ObjectType</span>::<span style="color:#000">Core</span>);</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">let</span> <span style="color:#000">cores</span> <span style="color:#000">=</span> <span style="color:#000">topology</span>.<span style="color:#000">objects_with_type</span>(<span style="color:#000">&amp;</span><span style="color:#000">ObjectType</span>::<span style="color:#000">Core</span>);
+</code></pre></div>
 <p>Since not every ObjectType is available on every hardware, it might not be possible to figure out the actual objects. Because of this, the <code>objects_with_type</code> method returns a <code>Result&lt;Vec&lt;&amp;TopologyObject&gt;, TypeDepthError&gt;</code>. We can now utilize pattern matching to distinguish between success and error, and if it is successful print out the length of the <a href="https://doc.rust-lang.org/std/vec/struct.Vec.html#method.len">Vector</a>:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">match</span> <span style="color:#000">cores</span> {
     <span style="color:#a90d91">Ok</span>(<span style="color:#000">c</span>) <span style="color:#000">=&gt;</span> <span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;There are {} cores on this machine.&#34;</span>, <span style="color:#000">c</span>.<span style="color:#000">len</span>()),
     <span style="color:#a90d91">Err</span>(<span style="color:#000">e</span>) <span style="color:#000">=&gt;</span> <span style="color:#000">panic</span><span style="color:#000">!</span>(<span style="color:#000">format</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;Could not load cores because of: {:?}&#34;</span>, <span style="color:#000">e</span>))
-}</code></pre></div>
+}
+</code></pre></div>
 <p>If you run the code you should see an output like this (My machine is equipped with an i7 quadcore):</p>
 
 <pre><code>~/rust/hwloc-playground $ cargo run
@@ -1448,7 +1493,8 @@ There are 4 cores on this machine.
 </span><span style="color:#177500"></span><span style="color:#a90d91">match</span> <span style="color:#000">cores</span> {
     <span style="color:#a90d91">Ok</span>(<span style="color:#000">c</span>) <span style="color:#000">=&gt;</span> <span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;There are {} processing units on this machine.&#34;</span>, <span style="color:#000">c</span>.<span style="color:#000">len</span>()),
     <span style="color:#a90d91">Err</span>(<span style="color:#000">e</span>) <span style="color:#000">=&gt;</span> <span style="color:#000">panic</span><span style="color:#000">!</span>(<span style="color:#000">format</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;Could not load processing units because of: {:?}&#34;</span>, <span style="color:#000">e</span>))
-}</code></pre></div>
+}
+</code></pre></div>
 <p>My i7 indeed has hyperthreading enabled, so this prints:</p>
 
 <pre><code>~/rust/hwloc-playground $ cargo run
@@ -1485,9 +1531,11 @@ There are 8 processing units on this machine.
             }
         }
     }
-}</code></pre></div>
+}
+</code></pre></div>
 <p>First, we load all the processing units:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">let</span> <span style="color:#000">pus</span> <span style="color:#000">=</span> <span style="color:#000">topology</span>.<span style="color:#000">objects_with_type</span>(<span style="color:#000">&amp;</span><span style="color:#000">ObjectType</span>::<span style="color:#000">PU</span>).<span style="color:#000">ok</span>().<span style="color:#000">expect</span>(<span style="color:#c41a16">&#34;Could not load PUs!&#34;</span>);</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">let</span> <span style="color:#000">pus</span> <span style="color:#000">=</span> <span style="color:#000">topology</span>.<span style="color:#000">objects_with_type</span>(<span style="color:#000">&amp;</span><span style="color:#000">ObjectType</span>::<span style="color:#000">PU</span>).<span style="color:#000">ok</span>().<span style="color:#000">expect</span>(<span style="color:#c41a16">&#34;Could not load PUs!&#34;</span>);
+</code></pre></div>
 <p>Next up, we iterate through each unit and print its logical index:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#177500">// Iterate through each PU
 </span><span style="color:#177500"></span><span style="color:#a90d91">for</span> <span style="color:#000">pu</span> <span style="color:#a90d91">in</span> <span style="color:#000">&amp;</span><span style="color:#000">pus</span> {
@@ -1495,7 +1543,8 @@ There are 8 processing units on this machine.
 </span><span style="color:#177500"></span>    <span style="color:#000">print</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;PU #{} is on Core &#34;</span>, <span style="color:#000">pu</span>.<span style="color:#000">logical_index</span>());
 
     <span style="color:#177500">// ...
-</span><span style="color:#177500"></span>}</code></pre></div>
+</span><span style="color:#177500"></span>}
+</code></pre></div>
 <p>Finally, we can walk up the tree of parents for each unit until we arrive at the Core level and print out its logical index as well. Notice how easy the walking is with the <code>while let</code> construct. This works because <code>TopologyObject#parent()</code> returns an <code>Option&lt;&amp;TopologyOption&gt;</code>.</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#177500">// Walk up the parent chain until the Core is found and print its id.
 </span><span style="color:#177500"></span><span style="color:#a90d91">let</span> <span style="color:#a90d91">mut</span> <span style="color:#000">parent</span> <span style="color:#000">=</span> <span style="color:#000">pu</span>.<span style="color:#000">parent</span>();
@@ -1506,7 +1555,8 @@ There are 8 processing units on this machine.
     } <span style="color:#a90d91">else</span> {
         <span style="color:#000">parent</span> <span style="color:#000">=</span> <span style="color:#000">p</span>.<span style="color:#000">parent</span>();
     }
-}</code></pre></div>
+}
+</code></pre></div>
 <p>On my machine this prints:</p>
 
 <pre><code> ~/rust/hwloc-playground $ cargo run
@@ -1544,7 +1594,8 @@ PU #7 is on Core 3
 			<span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;{}: {}&#34;</span>, <span style="color:#000">idx</span>, <span style="color:#000">object</span>);
 		}
 	}
-}</code></pre></div>
+}
+</code></pre></div>
 <p>The code iterates through each level until the final topology depth is reached and on each level it prints all the TopologyObjects. This is the result on my machine:</p>
 
 <pre><code>*** Objects at level 0
@@ -1604,11 +1655,14 @@ PU #7 is on Core 3
 	<span style="color:#a90d91">for</span> <span style="color:#000">i</span> <span style="color:#a90d91">in</span> <span style="color:#1c01ce">0</span>..<span style="color:#000">obj</span>.<span style="color:#000">arity</span>() {
 		<span style="color:#000">print_children</span>(<span style="color:#000">topo</span>, <span style="color:#000">obj</span>.<span style="color:#000">children</span>()[<span style="color:#000">i</span> <span style="color:#a90d91">as</span> <span style="color:#a90d91">usize</span>], <span style="color:#000">depth</span> <span style="color:#000">+</span> <span style="color:#1c01ce">1</span>);
 	}
-}</code></pre></div>
+}
+</code></pre></div>
 <p>We define a method called <code>print_children</code> which is called recursively:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">fn</span> <span style="color:#000">print_children</span>(<span style="color:#000">topo</span>: <span style="color:#a90d91">&amp;</span><span style="color:#3f6e75">Topology</span>, <span style="color:#000">obj</span>: <span style="color:#a90d91">&amp;</span><span style="color:#3f6e75">TopologyObject</span>, <span style="color:#000">depth</span>: <span style="color:#a90d91">usize</span>)</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">fn</span> <span style="color:#000">print_children</span>(<span style="color:#000">topo</span>: <span style="color:#a90d91">&amp;</span><span style="color:#3f6e75">Topology</span>, <span style="color:#000">obj</span>: <span style="color:#a90d91">&amp;</span><span style="color:#3f6e75">TopologyObject</span>, <span style="color:#000">depth</span>: <span style="color:#a90d91">usize</span>)
+</code></pre></div>
 <p>Note the funky padding variable is just there to create a left-padding for the tree view:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">let</span> <span style="color:#000">padding</span> <span style="color:#000">=</span> <span style="color:#000">std</span>::<span style="color:#000">iter</span>::<span style="color:#000">repeat</span>(<span style="color:#c41a16">&#34; &#34;</span>).<span style="color:#000">take</span>(<span style="color:#000">depth</span>).<span style="color:#000">collect</span>::<span style="color:#000">&lt;</span><span style="color:#a90d91">String</span><span style="color:#000">&gt;</span>();</code></pre></div>
+<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#a90d91">let</span> <span style="color:#000">padding</span> <span style="color:#000">=</span> <span style="color:#000">std</span>::<span style="color:#000">iter</span>::<span style="color:#000">repeat</span>(<span style="color:#c41a16">&#34; &#34;</span>).<span style="color:#000">take</span>(<span style="color:#000">depth</span>).<span style="color:#000">collect</span>::<span style="color:#000">&lt;</span><span style="color:#a90d91">String</span><span style="color:#000">&gt;</span>();
+</code></pre></div>
 <p>Running the code above gives the same information but in a different style:</p>
 <div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"> <span style="color:#000">~/</span><span style="color:#000">rust</span><span style="color:#000">/</span><span style="color:#000">hwloc</span><span style="color:#000">-</span><span style="color:#000">playground</span> <span style="color:#633820">$</span> <span style="color:#000">cargo</span> <span style="color:#000">run</span>
    <span style="color:#000">Compiling</span> <span style="color:#000">hwloc</span><span style="color:#000">-</span><span style="color:#000">playground</span> <span style="color:#000">v0</span>.<span style="color:#1c01ce">1.0</span> (<span style="color:#000">file</span>:<span style="color:#c41a16">///Users/michael/rust/hwloc-playground)
@@ -1636,7 +1690,8 @@ PU #7 is on Core 3
     <span style="color:#000">L1d</span> (<span style="color:#1c01ce">32</span><span style="color:#000">KB</span>): <span style="color:#000">#</span><span style="color:#1c01ce">3</span>
      <span style="color:#000">Core</span> (): <span style="color:#000">#</span><span style="color:#1c01ce">3</span>
       <span style="color:#000">PU</span> (): <span style="color:#000">#</span><span style="color:#1c01ce">6</span>
-      <span style="color:#000">PU</span> (): <span style="color:#000">#</span><span style="color:#1c01ce">7</span></code></pre></div>
+      <span style="color:#000">PU</span> (): <span style="color:#000">#</span><span style="color:#1c01ce">7</span>
+</code></pre></div>
 <p>What you can spot here immediately is that each core has its own L2 cache (as well as a L1 data cache) while at the same time they all share the same L3 cache.</p>
 
 <h2 id="cpu-caches">CPU Caches</h2>
@@ -1670,7 +1725,8 @@ PU #7 is on Core 3
 
     <span style="color:#177500">// Print out the result
 </span><span style="color:#177500"></span>	<span style="color:#000">println</span><span style="color:#000">!</span>(<span style="color:#c41a16">&#34;*** Logical processor 0 has {} caches totalling {} KB&#34;</span>, <span style="color:#000">levels</span>, <span style="color:#000">size</span> <span style="color:#000">/</span> <span style="color:#1c01ce">1024</span>);
-}</code></pre></div>
+}
+</code></pre></div>
 <p>We are using a similar technique as in the examples above, but this time we just add up all the capacity for each cache and then print it out.</p>
 
 <pre><code> ~/rust/hwloc-playground $ cargo run

@@ -3,9 +3,10 @@ languageCode = "en-us"
 title = "daschl writes. sometimes."
 author = "Michael Nitschinger"
 theme = "purehugo"
-PygmentsCodeFences = true
-pygmentsStyle = "xcode"
 disqusShortname = "daschl"
 twitterName = "daschl"
 githubName = "daschl"
 disablePathToLower = true
+pygmentsCodeFences = true
+pygmentsStyle = "xcode"
+pygmentsOptions = "linenos=table"
