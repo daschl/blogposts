@@ -108,35 +108,5 @@ Since I wanted to make it work on my development machine and didn&amp;rsquo;t fi
 Normally, when talking about the SDK we mean everything that is needed to get you going (Client library, documentation, release notes,&amp;hellip;).</description>
     </item>
     
-    <item>
-      <title>Never awaitUninterruptibly() on Netty Channels</title>
-      <link>https://nitschinger.at/Never-await-Uninterruptibly-on-Netty-Channels/</link>
-      <pubDate>Tue, 05 Mar 2013 00:00:00 +0000</pubDate>
-      
-      <guid>https://nitschinger.at/Never-await-Uninterruptibly-on-Netty-Channels/</guid>
-      <description>TL:DR; When acquiring Channels in Netty, always use a ChannelFutureListener and never awaitUninterruptibly(). Curious why? Read on.
-In the Java SDK for Couchbase, we use Netty to establish and maintain a streaming connection to one of the cluster nodes in order to get notified when topology changes happen. This streaming connection needs to be established during the bootstrap process of the client and we need to block until the connection is established (actually we don&amp;rsquo;t need to, but the current implementation works that way).</description>
-    </item>
-    
-    <item>
-      <title>New Features in the Couchbase Java Client 1.1-dp4</title>
-      <link>https://nitschinger.at/New-Features-in-the-Couchbase-Java-Client-1-1-dp4/</link>
-      <pubDate>Wed, 07 Nov 2012 00:00:00 +0000</pubDate>
-      
-      <guid>https://nitschinger.at/New-Features-in-the-Couchbase-Java-Client-1-1-dp4/</guid>
-      <description>Introduction The latest Java Developer Preview (dp4) is hot off the press, and therefore I thought it would be a good idea to show you how to use some of the brand-new features that are now available. This post will show you how to use the new ComplexKey class for view queries and also how to create and delete buckets directly from your SDK.
-First, we added a very flexible way of providing parameters to view queries.</description>
-    </item>
-    
-    <item>
-      <title>A Real-Time chat with Play, Java and Couchbase - Part 1</title>
-      <link>https://nitschinger.at/A-Real-Time-chat-with-Play-Java-and-Couchbase-Part-1/</link>
-      <pubDate>Tue, 17 Jul 2012 00:00:00 +0000</pubDate>
-      
-      <guid>https://nitschinger.at/A-Real-Time-chat-with-Play-Java-and-Couchbase-Part-1/</guid>
-      <description>Introduction I&amp;rsquo;ve been mostly blogging about PHP and Lithium, but recently I&amp;rsquo;ve also been looking into a very promising framework on the JVM - the play! framework. The current version (2.0) brings lots of enhancements and features and is (at least to me) the first framework that really boosts developer productivity on the JVM (and that I would work with in my free time).
-In this project, we&amp;rsquo;ll develop a chat application (called couchplay) that allows people to login with a username and then talk to others in real-time.</description>
-    </item>
-    
   </channel>
 </rss>

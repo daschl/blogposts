@@ -1,3 +1,9 @@
+---
+title: "Imprint"
+date: 2018-07-06T14:03:36+02:00
+draft: false
+---
+
 # Imprint
 
 Datenschutzerklärung

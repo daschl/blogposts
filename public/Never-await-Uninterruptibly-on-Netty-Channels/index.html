@@ -1,90 +1,69 @@
-<!doctype html>
-<html lang="en">
-<head>
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Never awaitUninterruptibly() on Netty Channels &middot; daschl writes. sometimes.</title>
-
-    <meta name="description" content="A quick tip about waiting on Channels in Netty.">
-
-    <meta name="generator" content="Hugo 0.42.1" />
-    <meta name="twitter:card" content="summary">
-    
-    <meta name="twitter:title" content="Never awaitUninterruptibly() on Netty Channels &middot; daschl writes. sometimes.">
-    <meta name="twitter:description" content="A quick tip about waiting on Channels in Netty.">
-
-    <meta property="og:type" content="article">
-    <meta property="og:title" content="Never awaitUninterruptibly() on Netty Channels &middot; daschl writes. sometimes.">
-    <meta property="og:description" content="A quick tip about waiting on Channels in Netty.">
-
-    <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Oxygen:400,700' rel='stylesheet' type='text/css'>
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
-    <!--[if lte IE 8]>
-        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-old-ie-min.css">
-    <![endif]-->
-    <!--[if gt IE 8]><!-->
-        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
-    <!--<![endif]-->
-
-    <link rel="stylesheet" href="https://nitschinger.at/css/all.min.css">
-    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
-
-    <link rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." href="https://nitschinger.at/index.xml" />
-</head>
-<body>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.42.2" />
 
 
-<div id="layout" class="pure-g">
-    <div class="sidebar pure-u-1 pure-u-md-1-4">
-    <div class="header">
-        <hgroup>
-            <h1 class="brand-title">
-                <a href="https://nitschinger.at">daschl writes. sometimes.</a>
-            </h1>
-            <h2 class="brand-tagline"></h2>
-        </hgroup>
+<title>Never awaitUninterruptibly() on Netty Channels - daschl writes. sometimes.</title>
+<meta property="og:title" content="Never awaitUninterruptibly() on Netty Channels - daschl writes. sometimes.">
 
+
+
+  
+  <meta property="description" content="A quick tip about waiting on Channels in Netty.">
+  
+
+
+
+
+
+
+<link rel="stylesheet" href="https://nitschinger.at/css/main.css" media="all">
+<link rel="stylesheet" href="https://nitschinger.at/css/fonts.css">
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
         <nav class="nav">
-            <ul class="nav-list">
-                <li class="nav-item">
-                    <a class="pure-button" href="https://twitter.com/daschl">
-                        <i class="fa fa-twitter"></i> Twitter</a>
-                </li>
-                <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl">
-                        <i class="fa fa-github-alt"></i> github</a>
-                </li>
-                <li class="nav-item">
-                    <a class="pure-button" href="https://nitschinger.at/index.xml">
-                        <i class="fa fa-rss"></i> rss</a>
-                </li>
-                <li class="nav-item">
-                    <a class="pure-button" href="https://nitschinger.at/imprint">Imprint</a>
-                </li>
-            </ul>
-        </nav>
-    </div>
-</div>
+  <a href="https://nitschinger.at/" class="nav-title">
+    daschl blogs. sometimes.
+  </a>
 
-    <div class="content pure-u-1 pure-u-md-3-4">
-        <div>
-            
-            <div class="posts">
-                <h1 class="content-subhead">05 Mar 2013</h1>
-                <section class="post">
-                    <header class="post-header">
+  <ul class="nav-links">
+    
+    <li>
+      <a href="/tags">tags</a>
+    </li>
+    
+    <li>
+      <a href="/imprint/">imprint</a>
+    </li>
+    
+    <li>
+      <a href="https://twitter.com/daschl">-&gt; twitter</a>
+    </li>
+    
+    <li>
+      <a href="https://github.com/daschl">-&gt; github</a>
+    </li>
+    
+  </ul>
+</nav>
+      </header>
 
-                        <a href="https://nitschinger.at/Never-await-Uninterruptibly-on-Netty-Channels/" class="post-title">Never awaitUninterruptibly() on Netty Channels</a>
 
-                        <p class="post-meta">
-                            
-                            
-                        </p>
-                    </header>
-                    
-                    
-                    <div class="post-description">
-                        <p>TL:DR; When acquiring <a href="http://netty.io/3.6/api/org/jboss/netty/channel/Channel.html">Channels</a> in <a href="http://netty.io">Netty</a>, always use a <a href="http://netty.io/3.6/api/org/jboss/netty/channel/ChannelFutureListener.html">ChannelFutureListener</a> and never <a href="http://docs.jboss.org/netty/3.2/api/org/jboss/netty/channel/ChannelFuture.html#awaitUninterruptibly()">awaitUninterruptibly()</a>. Curious why? Read on.</p>
+<main class="content" role="main">
+  <article class="article">
+    <h1 class="article-title">Never awaitUninterruptibly() on Netty Channels</h1>
+    
+    <span class="article-date">2013-03-05</span>
+    
+
+    <div class="article-content">
+      <p>TL:DR; When acquiring <a href="http://netty.io/3.6/api/org/jboss/netty/channel/Channel.html">Channels</a> in <a href="http://netty.io">Netty</a>, always use a <a href="http://netty.io/3.6/api/org/jboss/netty/channel/ChannelFutureListener.html">ChannelFutureListener</a> and never <a href="http://docs.jboss.org/netty/3.2/api/org/jboss/netty/channel/ChannelFuture.html#awaitUninterruptibly()">awaitUninterruptibly()</a>. Curious why? Read on.</p>
 
 <p>In the <a href="http://www.couchbase.com/develop/java/current">Java SDK</a> for <a href="http://www.couchbase.com/">Couchbase</a>, we use Netty to establish and maintain a streaming connection to one of the cluster nodes in order to get notified when topology changes happen. This streaming connection needs to be established during the bootstrap process of the client and we need to block until the connection is established (actually we don&rsquo;t need to, but the current implementation works that way). The old implementation to acquire the Channel looked like this:</p>
 
@@ -148,8 +127,9 @@ try {
 
 <p>In the end we still block on the caller thread, but we are compliant with Netty. The main takeaway for me is that you should never block on acquiring Channels in Netty, just because of the fact that your client side code may be used in a server side context as well. This is especially true for library developers like me.</p>
 
-                    </div>
-                    <div id="disqus_thread"></div>
+    </div>
+
+    <div id="disqus_thread"></div>
 <script>
     var disqus_config = function () {
     
@@ -169,43 +149,47 @@ try {
 </script>
 <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
 <a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
-                </section>
-            </div>
-            <div class="footer">
-    <div class="pure-menu pure-menu-horizontal pure-menu-open">
-        <ul>
-            <li>&copy; Michael Nitschinger 2010-2018</li>
-        </ul>
-    </div>
+
+    <ul class="article-taxonomy">
+       
+      <li>
+        <i class="fa fa-tags"></i>
+        <a href="/%20tags/%20java">java</a>
+        <a href="/%20tags/%20couchbase">couchbase</a>
+        <a href="/%20tags/%20netty">netty</a>
+      </li>
+      
+  </article>
+
+</main>
+
+<footer class="footer">
+  <ul class="footer-links">
+    <li>
+      <a href="https://nitschinger.at/index.xml" type="application/rss+xml" target="_blank">
+        <i class="fa fa-rss"></i> RSS feed</a>
+    </li>
+    <li>
+      <a href="https://github.com/mobybit/hugo-natrium-theme">
+        <i class="fa fa-github"></i> Built with Hugo &amp; Natrium Theme</a>
+    </li>
+  </ul>
+</footer>
+
 </div>
-<script src="https://nitschinger.at/js/all.min.js"></script>
-<script>
-    (function (i, s, o, g, r, a, m) {
-        i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
-            (i[r].q = i[r].q || []).push(arguments)
-        }, i[r].l = 1 * new Date(); a = s.createElement(o),
-            m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
-    })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
-
-    ga('create', 'UA-19686689-1', 'auto');
-    ga('send', 'pageview');
-    ga('set', 'anonymizeIp', true);
-</script>
-        </div>
-    </div>
-</div>
-
 
 <script>
-(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  (function (i, s, o, g, r, a, m) {
+    i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
+      (i[r].q = i[r].q || []).push(arguments)
+    }, i[r].l = 1 * new Date(); a = s.createElement(o),
+      m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
+  })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
 
-ga('create', '', 'auto');
-ga('send', 'pageview');
-
+  ga('create', 'UA-19686689-1', 'auto');
+  ga('send', 'pageview');
+  ga('set', 'anonymizeIp', true);
 </script>
-
 </body>
+
 </html>

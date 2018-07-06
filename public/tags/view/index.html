@@ -1,182 +1,110 @@
-<!doctype html>
-<html lang="en">
-<head>
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>View &middot; daschl writes. sometimes.</title>
-
-    <meta name="description" content="">
-
-    <meta name="generator" content="Hugo 0.42.1" />
-    <meta name="twitter:card" content="summary">
-    
-    <meta name="twitter:title" content="View &middot; daschl writes. sometimes.">
-    <meta name="twitter:description" content="">
-
-    <meta property="og:type" content="article">
-    <meta property="og:title" content="View &middot; daschl writes. sometimes.">
-    <meta property="og:description" content="">
-
-    <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Oxygen:400,700' rel='stylesheet' type='text/css'>
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
-    <!--[if lte IE 8]>
-        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-old-ie-min.css">
-    <![endif]-->
-    <!--[if gt IE 8]><!-->
-        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
-    <!--<![endif]-->
-
-    <link rel="stylesheet" href="https://nitschinger.at/css/all.min.css">
-    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
-
-    <link rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." href="https://nitschinger.at/index.xml" />
-</head>
-<body>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.42.2" />
 
 
-<div id="layout" class="pure-g">
-    <div class="sidebar pure-u-1 pure-u-md-1-4">
-    <div class="header">
-        <hgroup>
-            <h1 class="brand-title">
-                <a href="https://nitschinger.at">daschl writes. sometimes.</a>
-            </h1>
-            <h2 class="brand-tagline"></h2>
-        </hgroup>
+<title>View - daschl writes. sometimes.</title>
+<meta property="og:title" content="View - daschl writes. sometimes.">
 
+
+
+  
+
+
+
+
+
+<link href="https://nitschinger.at/tags/view/index.xml" rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." />
+
+
+<link rel="stylesheet" href="https://nitschinger.at/css/main.css" media="all">
+<link rel="stylesheet" href="https://nitschinger.at/css/fonts.css">
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
         <nav class="nav">
-            <ul class="nav-list">
-                <li class="nav-item">
-                    <a class="pure-button" href="https://twitter.com/daschl">
-                        <i class="fa fa-twitter"></i> Twitter</a>
-                </li>
-                <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl">
-                        <i class="fa fa-github-alt"></i> github</a>
-                </li>
-                <li class="nav-item">
-                    <a class="pure-button" href="https://nitschinger.at/index.xml">
-                        <i class="fa fa-rss"></i> rss</a>
-                </li>
-                <li class="nav-item">
-                    <a class="pure-button" href="https://nitschinger.at/imprint">Imprint</a>
-                </li>
-            </ul>
-        </nav>
-    </div>
-</div>
+  <a href="https://nitschinger.at/" class="nav-title">
+    daschl blogs. sometimes.
+  </a>
 
-    <div class="content pure-u-1 pure-u-md-3-4">
-        <div>
-            
-            <div class="posts">
-                
-                <h1 class="content-subhead">20 Nov 2010</h1>
-                <section class="post">
-                    <header class="post-header">
+  <ul class="nav-links">
+    
+    <li>
+      <a href="/tags">tags</a>
+    </li>
+    
+    <li>
+      <a href="/imprint/">imprint</a>
+    </li>
+    
+    <li>
+      <a href="https://twitter.com/daschl">-&gt; twitter</a>
+    </li>
+    
+    <li>
+      <a href="https://github.com/daschl">-&gt; github</a>
+    </li>
+    
+  </ul>
+</nav>
+      </header>
 
-                        <a href="https://nitschinger.at/Add-an-RSS-Feed-to-your-blog-with-Lithium/" class="post-title">Add an RSS-Feed to your blog with Lithium</a>
 
-                        <p class="post-meta">
-                            
-                            
-                        </p>
-                    </header>
+<main class="content" role="main">
 
-                    <div class="post-description">
-                        <p>Adding an RSS-Feed to your blog with li3 is really straightforward, because all the infrastructure you need is already at your fingertips. I assume that you already have some posts stored in your database, you serve them to your users via <code>/posts</code> and the new RSS-File should be accessible via <code>/posts.rss</code>.</p>
+  <div class="list">
+    <h2 class="list-title">View</h2>
+    
+     
+        <nav class="list-item">
+      <a href="https://nitschinger.at/Add-an-RSS-Feed-to-your-blog-with-Lithium/">Add an RSS-Feed to your blog with Lithium</a>
+      <span class="list-item-date">
+        2010-11-20
+      </span>
+    </nav>
 
-<p>First, we need to tell Lithium that we want to add another Media-Type to our application. Add the following to your <code>app/config/bootstrap/media.php</code>-File (and don&rsquo;t forget to uncomment it in <code>app/config/bootstrap.php</code>). You can also comment the other code out in this file if you don&rsquo;t need it.</p>
 
-<pre><code>use lithium\net\http\Media;
-Media::type('rss', 'application/rss+xml');
-</code></pre>
+    
+   </div>
 
-<p>Next, let&rsquo;s add a link to our <code>default.html.php</code>-Layout so that our feed shows up in the browser.</p>
+  
 
-<pre><code>&lt;?= $this-&gt;html-&gt;link('RSS-Feed', '/posts.rss', array('type' =&gt; 'rss')); ?&gt;
-</code></pre>
 
-<p>Before we start to create our RSS-Views, check that your <code>PostsController::index()</code>-Method looks something like this and returns one or more posts to the View.</p>
 
-<pre><code>public function index() {
-    $posts = Post::all(array('order' =&gt; array('created' =&gt; 'DESC')));
-    return compact('posts');
-}
-</code></pre>
+</main>
 
-<p>Alright, first create a new <code>default.rss.php</code>-Layout (in <code>app/views/layouts</code>):</p>
+<footer class="footer">
+  <ul class="footer-links">
+    <li>
+      <a href="https://nitschinger.at/index.xml" type="application/rss+xml" target="_blank">
+        <i class="fa fa-rss"></i> RSS feed</a>
+    </li>
+    <li>
+      <a href="https://github.com/mobybit/hugo-natrium-theme">
+        <i class="fa fa-github"></i> Built with Hugo &amp; Natrium Theme</a>
+    </li>
+  </ul>
+</footer>
 
-<pre><code>&lt;?php echo '&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; ?&gt;'; ?&gt;
-    &lt;rss version=&quot;2.0&quot;&gt;
-        &lt;channel&gt;
-            &lt;title&gt;My cool Blog&lt;/title&gt;
-            &lt;description&gt;A short description about my blog.&lt;/description&gt;
-            &lt;link&gt;http://exampleblog.com/&lt;/link&gt;
-            &lt;lastBuildDate&gt;&lt;?= date('D, d M Y g:i:s O'); ?&gt;&lt;/lastBuildDate&gt;
-            &lt;pubDate&gt;&lt;?= date('D, d M Y g:i:s O'); ?&gt;&lt;/pubDate&gt;
-            &lt;?= $this-&gt;content(); ?&gt;
-        &lt;/channel&gt;
-    &lt;/rss&gt;
-</code></pre>
-
-<p>The previous code is just basic RSS-Markup. Feel free to add a custom title, description, link and so on. The <code>lastBuildDate</code> and <code>pubDate</code> are generated dynamically. <code>&lt;?= $this-&gt;content(); ?&gt;</code> will render our <code>posts</code>-View which we&rsquo;ll add now. Insert the following code in <code>app/views/posts/index.rss.php</code>:</p>
-
-<pre><code>    &lt;?php foreach($posts As $post): ?&gt;
-    &lt;item&gt;
-        &lt;title&gt;&lt;?= $post-&gt;title; ?&gt;&lt;/title&gt;
-        &lt;description&gt;&lt;?= $post-&gt;teaser; ?&gt;&lt;/description&gt;
-        &lt;link&gt;&lt;?= $this-&gt;html-&gt;link($post-&gt;title, array('Posts::show', 'slug' =&gt; $post-&gt;slug)); ?&gt;&lt;/link&gt;
-        &lt;guid isPermaLink=&quot;true&quot;&gt;http://exampleblog.com/&lt;?= $post-&gt;slug ?&gt;&lt;/guid&gt;
-        &lt;pubDate&gt;&lt;?= date('D, d M Y g:i:s O', $post-&gt;created-&gt;sec); ?&gt;&lt;/pubDate&gt;
-    &lt;/item&gt;
-    &lt;?php endforeach; ?&gt;
-</code></pre>
-
-<p>You may need to modify the attributes according to your database schema. If you need help on this, feel free to contact me or ask in #li3 on FreeNode.</p>
-
-<p>That&rsquo;s it! You&rsquo;ve added an RSS-Feed to your blog. You can now click the RSS-Icon in your browser or render it directly with <code>http://exampleblog.com/posts.rss</code>. BTW: that&rsquo;s exactly how I did it for this blog, so I hope that it should work for you too!</p>
-
-                    </div>
-                </section>
-                
-            </div>
-            
-
-            <div class="footer">
-    <div class="pure-menu pure-menu-horizontal pure-menu-open">
-        <ul>
-            <li>&copy; Michael Nitschinger 2010-2018</li>
-        </ul>
-    </div>
-</div>
-<script src="https://nitschinger.at/js/all.min.js"></script>
-<script>
-    (function (i, s, o, g, r, a, m) {
-        i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
-            (i[r].q = i[r].q || []).push(arguments)
-        }, i[r].l = 1 * new Date(); a = s.createElement(o),
-            m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
-    })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
-
-    ga('create', 'UA-19686689-1', 'auto');
-    ga('send', 'pageview');
-    ga('set', 'anonymizeIp', true);
-</script>
-        </div>
-    </div>
 </div>
 
 <script>
-(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  (function (i, s, o, g, r, a, m) {
+    i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
+      (i[r].q = i[r].q || []).push(arguments)
+    }, i[r].l = 1 * new Date(); a = s.createElement(o),
+      m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
+  })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
 
-ga('create', '', 'auto');
-ga('send', 'pageview');
-
+  ga('create', 'UA-19686689-1', 'auto');
+  ga('send', 'pageview');
+  ga('set', 'anonymizeIp', true);
 </script>
-
 </body>
+
 </html>

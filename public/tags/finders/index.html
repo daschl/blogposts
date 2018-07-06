@@ -1,230 +1,110 @@
-<!doctype html>
-<html lang="en">
-<head>
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Finders &middot; daschl writes. sometimes.</title>
-
-    <meta name="description" content="">
-
-    <meta name="generator" content="Hugo 0.42.1" />
-    <meta name="twitter:card" content="summary">
-    
-    <meta name="twitter:title" content="Finders &middot; daschl writes. sometimes.">
-    <meta name="twitter:description" content="">
-
-    <meta property="og:type" content="article">
-    <meta property="og:title" content="Finders &middot; daschl writes. sometimes.">
-    <meta property="og:description" content="">
-
-    <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Oxygen:400,700' rel='stylesheet' type='text/css'>
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
-    <!--[if lte IE 8]>
-        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-old-ie-min.css">
-    <![endif]-->
-    <!--[if gt IE 8]><!-->
-        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
-    <!--<![endif]-->
-
-    <link rel="stylesheet" href="https://nitschinger.at/css/all.min.css">
-    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
-
-    <link rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." href="https://nitschinger.at/index.xml" />
-</head>
-<body>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.42.2" />
 
 
-<div id="layout" class="pure-g">
-    <div class="sidebar pure-u-1 pure-u-md-1-4">
-    <div class="header">
-        <hgroup>
-            <h1 class="brand-title">
-                <a href="https://nitschinger.at">daschl writes. sometimes.</a>
-            </h1>
-            <h2 class="brand-tagline"></h2>
-        </hgroup>
+<title>Finders - daschl writes. sometimes.</title>
+<meta property="og:title" content="Finders - daschl writes. sometimes.">
 
+
+
+  
+
+
+
+
+
+<link href="https://nitschinger.at/tags/finders/index.xml" rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." />
+
+
+<link rel="stylesheet" href="https://nitschinger.at/css/main.css" media="all">
+<link rel="stylesheet" href="https://nitschinger.at/css/fonts.css">
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
         <nav class="nav">
-            <ul class="nav-list">
-                <li class="nav-item">
-                    <a class="pure-button" href="https://twitter.com/daschl">
-                        <i class="fa fa-twitter"></i> Twitter</a>
-                </li>
-                <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl">
-                        <i class="fa fa-github-alt"></i> github</a>
-                </li>
-                <li class="nav-item">
-                    <a class="pure-button" href="https://nitschinger.at/index.xml">
-                        <i class="fa fa-rss"></i> rss</a>
-                </li>
-                <li class="nav-item">
-                    <a class="pure-button" href="https://nitschinger.at/imprint">Imprint</a>
-                </li>
-            </ul>
-        </nav>
-    </div>
-</div>
+  <a href="https://nitschinger.at/" class="nav-title">
+    daschl blogs. sometimes.
+  </a>
 
-    <div class="content pure-u-1 pure-u-md-3-4">
-        <div>
-            
-            <div class="posts">
-                
-                <h1 class="content-subhead">03 Jun 2011</h1>
-                <section class="post">
-                    <header class="post-header">
+  <ul class="nav-links">
+    
+    <li>
+      <a href="/tags">tags</a>
+    </li>
+    
+    <li>
+      <a href="/imprint/">imprint</a>
+    </li>
+    
+    <li>
+      <a href="https://twitter.com/daschl">-&gt; twitter</a>
+    </li>
+    
+    <li>
+      <a href="https://github.com/daschl">-&gt; github</a>
+    </li>
+    
+  </ul>
+</nav>
+      </header>
 
-                        <a href="https://nitschinger.at/Custom-Finders-with-Lithium/" class="post-title">Custom Finders with Lithium</a>
 
-                        <p class="post-meta">
-                            
-                            
-                        </p>
-                    </header>
+<main class="content" role="main">
 
-                    <div class="post-description">
-                        <p>Finders assist you with often-used database queries so you don&rsquo;t have to write them over and over again. Out of the box, Lithium provides you with a bunch of them: <code>all</code>, <code>first</code>, <code>count</code> <code>list</code> and &ldquo;magic finders like&rdquo;
-<code>findById</code> or <code>findFirstById</code>. How these are constructed in the core is not
-relevant for now, but Lithium provides you with a mechanism to write your own finders easily.</p>
+  <div class="list">
+    <h2 class="list-title">Finders</h2>
+    
+     
+        <nav class="list-item">
+      <a href="https://nitschinger.at/Custom-Finders-with-Lithium/">Custom Finders with Lithium</a>
+      <span class="list-item-date">
+        2011-06-03
+      </span>
+    </nav>
 
-<p>To understand how we can implement our own finder, let&rsquo;s take a look at the built-in <code>first</code> one. If you want to dig deeper, look at the
-<a href="http://lithify.me/docs/lithium/data/Model::_findFilters%28%29">_findFilters()</a> method. The <code>_findFilters()</code> method constructs the default finders and returns them to the <code>Model::config()</code> method so that they are loaded when your model is initialized.</p>
 
-<pre><code>// ... some php code ...
-'first' =&gt; function($self, $params, $chain) {
-    $params['options']['limit'] = 1;
-    $data = $chain-&gt;next($self, $params, $chain);
-    $data = is_object($data) ? $data-&gt;rewind() : $data;
-    return $data ?: null;
-}
-// ... more finders ...
-</code></pre>
+    
+   </div>
 
-<p>Your custom finders will also take the same params, so they let&rsquo;s investigate them:</p>
+  
 
-<ul>
-<li><code>$self</code> contains the current model as a string</li>
-<li><code>$params</code> contains the find options that you already know like <code>order</code>
-or <code>conditions</code>.</li>
-<li><code>$chain</code> contains filter chain.</li>
-</ul>
 
-<p>As you may have recognized, this looks like our typical
-<a href="http://rad-dev.org/drafts/source/en/02_lithium_basics/02_filters.wiki">Filters</a> pattern in Lithium! In fact, all finders run through the filter system and this is good news for us: we can also adapt the default ones if we need to.</p>
 
-<p>Our code example first sets a <code>limit</code> option and then lets the chain move on. At the end of the chain, it sets the returned data to the beginning if its an object or just returns the array. Now it&rsquo;s time to write our own finder. To keep things simple at first, let&rsquo;s say we want to find the first five datasets in our model. Just add it to your controller for now, we&rsquo;ll see a bit later how to move it to your model.</p>
+</main>
 
-<pre><code>Tasks::finder('firstFive', function($self, $params, $chain) {
-    $params['options']['limit'] = 5;
-    $data = $chain-&gt;next($self, $params, $chain);
-    return $data ?: null;       
-});
-</code></pre>
+<footer class="footer">
+  <ul class="footer-links">
+    <li>
+      <a href="https://nitschinger.at/index.xml" type="application/rss+xml" target="_blank">
+        <i class="fa fa-rss"></i> RSS feed</a>
+    </li>
+    <li>
+      <a href="https://github.com/mobybit/hugo-natrium-theme">
+        <i class="fa fa-github"></i> Built with Hugo &amp; Natrium Theme</a>
+    </li>
+  </ul>
+</footer>
 
-<p>In our example we have a <code>Tasks</code> model who just has an <code>id</code> and a task <code>name</code> stored. Note that we use MySQL here so that noone can say I&rsquo;m always using MongoDB ;). We can now run our finder with one of the following methods:</p>
-
-<pre><code>$tasks = Tasks::find('firstFive')
-$tasks = Tasks::firstFive();
-</code></pre>
-
-<p>If you want to check the results immediately, you can use the handy <code>to('array')</code> method on the result set:</p>
-
-<pre><code>var_dump(Tasks::firstFive()-&gt;to('array'));
-
-// Should print something like
-array
-    1 =&gt; 
-        array
-            'id' =&gt; string '1' (length=1)
-            'title' =&gt; string 'first task' (length=10)
-    2 =&gt; 
-        array
-            'id' =&gt; string '2' (length=1)
-            'title' =&gt; string 'second task' (length=11)
-    3 =&gt; 
-        array
-            'id' =&gt; string '3' (length=1)
-            'title' =&gt; string 'third task' (length=10)
-    4 =&gt; 
-        array
-            'id' =&gt; string '4' (length=1)
-            'title' =&gt; string 'fourth task' (length=11)
-    5 =&gt; 
-        array
-            'id' =&gt; string '5' (length=1)
-            'title' =&gt; string 'fifth task' (length=10)
-</code></pre>
-
-<p>If you comment out the limit line in our filter, you can see that you get all results back from the database (just make sure you have more than five rows stored so you can see the difference).</p>
-
-<p>Recently, a new functionality was added to make custom finders a bit more flexible. You can now just hand over an array of params and you don&rsquo;t need to provide a full closure. This comes in handy when you just want to add a <code>limit</code> or a fixed set of <code>conditions</code>. Note that this is currently only available in the <code>x-relationships</code> branch. Once the whole relationship-related code gets merged into master, this feature will also be available.</p>
-
-<pre><code>Tasks::finder('myAwesomeFinder', array(
-    'fields' =&gt; array('id', 'name'),
-    'conditions' =&gt; array('id' =&gt; 2)
-));
-
-$tasks = Tasks::myAwesomeFinder();
-</code></pre>
-
-<p>You can also add the custom finder in your model, so you don&rsquo;t have to deal with it in the controller. According to the MVC pattern, I&rsquo;d recomend you to place it there. You can override the <code>__init()</code> method so that your finder will be loaded at runtime.</p>
-
-<pre><code>public static function __init() {
-    parent::__init();
-    static::finder('firstFive', function($self, $params, $chain) {
-        $params['options']['limit'] = 5;
-        $data = $chain-&gt;next($self, $params, $chain);
-        return $data ?: null;
-    });
-}
-</code></pre>
-
-<p>I think this is enough for a short introduction into custom finders, if you want to find out more you should check out the <a href="http://lithify.me/docs/lithium/data/Model::finder%28%29">Model::finder</a>
-method and poke around in the <a href="http://lithify.me/docs/lithium/data/Model::find%28%29">Model::find</a> source. Once the model part of the <a href="http://rad-dev.org/drafts/source">drafts</a> is finished, you&rsquo;ll finde more detailed documentation on this topic.</p>
-
-<p>With this tool in mind, interesting possibilities start to pop up. You can now easily add logging during development to your finders, add caching mechanisms and so on. Please cast your vote in the comments if you want to read more on this topic. So now go ahead and <a href="http://de.wikipedia.org/wiki/Don%E2%80%99t_repeat_yourself">DRY</a> up your controllers and models!</p>
-
-                    </div>
-                </section>
-                
-            </div>
-            
-
-            <div class="footer">
-    <div class="pure-menu pure-menu-horizontal pure-menu-open">
-        <ul>
-            <li>&copy; Michael Nitschinger 2010-2018</li>
-        </ul>
-    </div>
-</div>
-<script src="https://nitschinger.at/js/all.min.js"></script>
-<script>
-    (function (i, s, o, g, r, a, m) {
-        i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
-            (i[r].q = i[r].q || []).push(arguments)
-        }, i[r].l = 1 * new Date(); a = s.createElement(o),
-            m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
-    })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
-
-    ga('create', 'UA-19686689-1', 'auto');
-    ga('send', 'pageview');
-    ga('set', 'anonymizeIp', true);
-</script>
-        </div>
-    </div>
 </div>
 
 <script>
-(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  (function (i, s, o, g, r, a, m) {
+    i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
+      (i[r].q = i[r].q || []).push(arguments)
+    }, i[r].l = 1 * new Date(); a = s.createElement(o),
+      m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
+  })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
 
-ga('create', '', 'auto');
-ga('send', 'pageview');
-
+  ga('create', 'UA-19686689-1', 'auto');
+  ga('send', 'pageview');
+  ga('set', 'anonymizeIp', true);
 </script>
-
 </body>
+
 </html>

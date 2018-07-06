@@ -1,375 +1,110 @@
-<!doctype html>
-<html lang="en">
-<head>
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jcstress &middot; daschl writes. sometimes.</title>
-
-    <meta name="description" content="">
-
-    <meta name="generator" content="Hugo 0.42.1" />
-    <meta name="twitter:card" content="summary">
-    
-    <meta name="twitter:title" content="Jcstress &middot; daschl writes. sometimes.">
-    <meta name="twitter:description" content="">
-
-    <meta property="og:type" content="article">
-    <meta property="og:title" content="Jcstress &middot; daschl writes. sometimes.">
-    <meta property="og:description" content="">
-
-    <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Oxygen:400,700' rel='stylesheet' type='text/css'>
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
-    <!--[if lte IE 8]>
-        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-old-ie-min.css">
-    <![endif]-->
-    <!--[if gt IE 8]><!-->
-        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
-    <!--<![endif]-->
-
-    <link rel="stylesheet" href="https://nitschinger.at/css/all.min.css">
-    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
-
-    <link rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." href="https://nitschinger.at/index.xml" />
-</head>
-<body>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.42.2" />
 
 
-<div id="layout" class="pure-g">
-    <div class="sidebar pure-u-1 pure-u-md-1-4">
-    <div class="header">
-        <hgroup>
-            <h1 class="brand-title">
-                <a href="https://nitschinger.at">daschl writes. sometimes.</a>
-            </h1>
-            <h2 class="brand-tagline"></h2>
-        </hgroup>
+<title>Jcstress - daschl writes. sometimes.</title>
+<meta property="og:title" content="Jcstress - daschl writes. sometimes.">
 
+
+
+  
+
+
+
+
+
+<link href="https://nitschinger.at/tags/jcstress/index.xml" rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." />
+
+
+<link rel="stylesheet" href="https://nitschinger.at/css/main.css" media="all">
+<link rel="stylesheet" href="https://nitschinger.at/css/fonts.css">
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
         <nav class="nav">
-            <ul class="nav-list">
-                <li class="nav-item">
-                    <a class="pure-button" href="https://twitter.com/daschl">
-                        <i class="fa fa-twitter"></i> Twitter</a>
-                </li>
-                <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl">
-                        <i class="fa fa-github-alt"></i> github</a>
-                </li>
-                <li class="nav-item">
-                    <a class="pure-button" href="https://nitschinger.at/index.xml">
-                        <i class="fa fa-rss"></i> rss</a>
-                </li>
-                <li class="nav-item">
-                    <a class="pure-button" href="https://nitschinger.at/imprint">Imprint</a>
-                </li>
-            </ul>
-        </nav>
-    </div>
-</div>
+  <a href="https://nitschinger.at/" class="nav-title">
+    daschl blogs. sometimes.
+  </a>
 
-    <div class="content pure-u-1 pure-u-md-3-4">
-        <div>
-            
-            <div class="posts">
-                
-                <h1 class="content-subhead">27 May 2014</h1>
-                <section class="post">
-                    <header class="post-header">
-
-                        <a href="https://nitschinger.at/Debugging-Concurrency-Issues-with-Open-JDK-Jcstress/" class="post-title">Debugging Concurrency Issues with OpenJDK Jcstress</a>
-
-                        <p class="post-meta">
-                            
-                            
-                        </p>
-                    </header>
-
-                    <div class="post-description">
-                        
-
-<p>I fell in love with the Java Microbenchmarking Harness (<a href="http://openjdk.java.net/projects/code-tools/jmh/">JMH</a>) a few months ago since (in my opinion) it is the only sane way to do microbenchmarks of JVM code right now. I also poked around on their website for other tools they provide, and found that there is another very interesting tool called <a href="http://openjdk.java.net/projects/code-tools/jcstress/">jcstress</a>. It stands for Java Concurrency Stress tests and is used mainly by the OpenJDK people itself to make sure their code works correctly with regards to concurrency.</p>
-
-<p>As always, you need a motivating factor so today <a href="https://www.couchbase.com/issues/browse/SPY-170">a ticket</a> got opened which reported a race condition inside a utility class in the <a href="https://code.google.com/p/spymemcached/">spymemcached</a> library (which is also used by the Couchbase Java SDK). Before coming up with complicated code that simulates multi-threaded consumers of the API I thought I could just try out <code>jcstress</code> first.</p>
-
-<p>TL;DR: I managed to find, fix and verify the concurrency issue. If you want to learn how, read along.</p>
-
-<p>A short disclaimer: as you can guess, I&rsquo;m far away from an expert on the <code>jcstress</code> library and there could be information provided here that is plain wrong. The intent of this post is to show you how to set up <code>jcstress</code> and run your code against it. Also, I&rsquo;d like to thank <a href="https://twitter.com/shipilev">Aleksey Shipilёv</a> to help me verify/improve the test and look over it. He also told me that <code>jcstress</code> is not (yet) ready for a broad public consumption, so your mileage may vary.</p>
-
-<h1 id="setup">Setup</h1>
-
-<p>As <a href="http://openjdk.java.net/projects/code-tools/jcstress/">described</a> on the website, you need to clone the repository and build the whole thing. Also, make sure to have Java 8 installed for compiling it (I think running with older versions afterwards works).</p>
-
-<pre><code>$ hg clone http://hg.openjdk.java.net/code-tools/jcstress/ jcstress
-$ cd jcstress/
-</code></pre>
-
-<p>Now, go import the maven project in your favorite IDE (<a href="http://www.jetbrains.com/idea/">IntelliJ, what else?</a>). We need to add our own code and tests so that it can be picked up later. You can either add your code under test as a dependency into the <code>pom.xml</code> file or just copy it over to the project if it is self contained (so it&rsquo;s easier to play and poke around). If you want to follow along, add the <code>StringUtils.java</code> and the <code>StringUtilsTest.java</code> files to the <code>com.couchbase.client.tests.util</code> package:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a90d91">package</span> <span style="color:#000">com.couchbase.client.tests.util</span><span style="color:#000">;</span>
-
-<span style="color:#a90d91">import</span> <span style="color:#000">java.util.regex.Matcher</span><span style="color:#000">;</span>
-<span style="color:#a90d91">import</span> <span style="color:#000">java.util.regex.Pattern</span><span style="color:#000">;</span>
-
-<span style="color:#177500">/**
-</span><span style="color:#177500"> * Utility methods on string objects.
-</span><span style="color:#177500"> */</span>
-<span style="color:#a90d91">public</span> <span style="color:#a90d91">final</span> <span style="color:#a90d91">class</span> <span style="color:#3f6e75">StringUtils</span> <span style="color:#000">{</span>
-
-    <span style="color:#177500">/**
-</span><span style="color:#177500">     * A pattern to match on a signed integer value.
-</span><span style="color:#177500">     */</span>
-    <span style="color:#a90d91">private</span> <span style="color:#a90d91">static</span> <span style="color:#a90d91">final</span> <span style="color:#000">Pattern</span> <span style="color:#000">decimalPattern</span> <span style="color:#000">=</span> <span style="color:#000">Pattern</span><span style="color:#000">.</span><span style="color:#836c28">compile</span><span style="color:#000">(</span><span style="color:#c41a16">&#34;^-?\\d+$&#34;</span><span style="color:#000">);</span>
-
-    <span style="color:#177500">/**
-</span><span style="color:#177500">     * The matcher for the decimal pattern regex.
-</span><span style="color:#177500">     */</span>
-    <span style="color:#a90d91">private</span> <span style="color:#a90d91">static</span> <span style="color:#a90d91">final</span> <span style="color:#000">Matcher</span> <span style="color:#000">decimalMatcher</span> <span style="color:#000">=</span> <span style="color:#000">decimalPattern</span><span style="color:#000">.</span><span style="color:#836c28">matcher</span><span style="color:#000">(</span><span style="color:#c41a16">&#34;&#34;</span><span style="color:#000">);</span>
-
-    <span style="color:#177500">/**
-</span><span style="color:#177500">     * Maximum supported key length.
-</span><span style="color:#177500">     */</span>
-    <span style="color:#a90d91">private</span> <span style="color:#a90d91">static</span> <span style="color:#a90d91">final</span> <span style="color:#a90d91">int</span> <span style="color:#000">MAX_KEY_LENGTH</span> <span style="color:#000">=</span> <span style="color:#000">250</span><span style="color:#000">;</span>
-
-    <span style="color:#177500">/**
-</span><span style="color:#177500">     * Exception thrown if the input key is too long.
-</span><span style="color:#177500">     */</span>
-    <span style="color:#a90d91">private</span> <span style="color:#a90d91">static</span> <span style="color:#a90d91">final</span> <span style="color:#000">IllegalArgumentException</span> <span style="color:#000">KEY_TOO_LONG_EXCEPTION</span> <span style="color:#000">=</span>
-        <span style="color:#a90d91">new</span> <span style="color:#000">IllegalArgumentException</span><span style="color:#000">(</span><span style="color:#c41a16">&#34;Key is too long (maxlen = &#34;</span>
-            <span style="color:#000">+</span> <span style="color:#000">MAX_KEY_LENGTH</span> <span style="color:#000">+</span> <span style="color:#c41a16">&#34;)&#34;</span><span style="color:#000">);</span>
-
-    <span style="color:#177500">/**
-</span><span style="color:#177500">     * Exception thrown if the input key is empty.
-</span><span style="color:#177500">     */</span>
-    <span style="color:#a90d91">private</span> <span style="color:#a90d91">static</span> <span style="color:#a90d91">final</span> <span style="color:#000">IllegalArgumentException</span> <span style="color:#000">KEY_EMPTY_EXCEPTION</span> <span style="color:#000">=</span>
-        <span style="color:#a90d91">new</span> <span style="color:#000">IllegalArgumentException</span><span style="color:#000">(</span><span style="color:#c41a16">&#34;Key must contain at least one character.&#34;</span><span style="color:#000">);</span>
-
-    <span style="color:#177500">/**
-</span><span style="color:#177500">     * Preset the stack traces for the static exceptions.
-</span><span style="color:#177500">     */</span>
-    <span style="color:#a90d91">static</span> <span style="color:#000">{</span>
-        <span style="color:#000">KEY_TOO_LONG_EXCEPTION</span><span style="color:#000">.</span><span style="color:#836c28">setStackTrace</span><span style="color:#000">(</span><span style="color:#a90d91">new</span> <span style="color:#000">StackTraceElement</span><span style="color:#000">[</span><span style="color:#000">0</span><span style="color:#000">]);</span>
-        <span style="color:#000">KEY_EMPTY_EXCEPTION</span><span style="color:#000">.</span><span style="color:#836c28">setStackTrace</span><span style="color:#000">(</span><span style="color:#a90d91">new</span> <span style="color:#000">StackTraceElement</span><span style="color:#000">[</span><span style="color:#000">0</span><span style="color:#000">]);</span>
-    <span style="color:#000">}</span>
-
-    <span style="color:#177500">/**
-</span><span style="color:#177500">     * Private constructor, since this is a purely static class.
-</span><span style="color:#177500">     */</span>
-    <span style="color:#a90d91">private</span> <span style="color:#000">StringUtils</span><span style="color:#000">()</span> <span style="color:#000">{</span>
-        <span style="color:#a90d91">throw</span> <span style="color:#a90d91">new</span> <span style="color:#000">UnsupportedOperationException</span><span style="color:#000">();</span>
-    <span style="color:#000">}</span>
-
-    <span style="color:#177500">/**
-</span><span style="color:#177500">     * Check if a given string is a JSON object.
-</span><span style="color:#177500">     *
-</span><span style="color:#177500">     * @param s the input string.
-</span><span style="color:#177500">     * @return true if it is a JSON object, false otherwise.
-</span><span style="color:#177500">     */</span>
-    <span style="color:#a90d91">public</span> <span style="color:#a90d91">static</span> <span style="color:#a90d91">boolean</span> <span style="color:#000">isJsonObject</span><span style="color:#000">(</span><span style="color:#a90d91">final</span> <span style="color:#000">String</span> <span style="color:#000">s</span><span style="color:#000">)</span> <span style="color:#000">{</span>
-        <span style="color:#a90d91">if</span> <span style="color:#000">(</span><span style="color:#000">s</span> <span style="color:#000">==</span> <span style="color:#a90d91">null</span> <span style="color:#000">||</span> <span style="color:#000">s</span><span style="color:#000">.</span><span style="color:#836c28">isEmpty</span><span style="color:#000">())</span> <span style="color:#000">{</span>
-            <span style="color:#a90d91">return</span> <span style="color:#a90d91">false</span><span style="color:#000">;</span>
-        <span style="color:#000">}</span>
-
-        <span style="color:#a90d91">if</span> <span style="color:#000">(</span><span style="color:#000">s</span><span style="color:#000">.</span><span style="color:#836c28">startsWith</span><span style="color:#000">(</span><span style="color:#c41a16">&#34;{&#34;</span><span style="color:#000">)</span> <span style="color:#000">||</span> <span style="color:#000">s</span><span style="color:#000">.</span><span style="color:#836c28">startsWith</span><span style="color:#000">(</span><span style="color:#c41a16">&#34;[&#34;</span><span style="color:#000">)</span>
-            <span style="color:#000">||</span> <span style="color:#c41a16">&#34;true&#34;</span><span style="color:#000">.</span><span style="color:#836c28">equals</span><span style="color:#000">(</span><span style="color:#000">s</span><span style="color:#000">)</span> <span style="color:#000">||</span> <span style="color:#c41a16">&#34;false&#34;</span><span style="color:#000">.</span><span style="color:#836c28">equals</span><span style="color:#000">(</span><span style="color:#000">s</span><span style="color:#000">)</span>
-            <span style="color:#000">||</span> <span style="color:#c41a16">&#34;null&#34;</span><span style="color:#000">.</span><span style="color:#836c28">equals</span><span style="color:#000">(</span><span style="color:#000">s</span><span style="color:#000">)</span> <span style="color:#000">||</span> <span style="color:#000">decimalMatcher</span><span style="color:#000">.</span><span style="color:#836c28">reset</span><span style="color:#000">(</span><span style="color:#000">s</span><span style="color:#000">).</span><span style="color:#836c28">matches</span><span style="color:#000">())</span> <span style="color:#000">{</span>
-            <span style="color:#a90d91">return</span> <span style="color:#a90d91">true</span><span style="color:#000">;</span>
-        <span style="color:#000">}</span>
-
-        <span style="color:#a90d91">return</span> <span style="color:#a90d91">false</span><span style="color:#000">;</span>
-    <span style="color:#000">}</span>
-
-<span style="color:#000">}</span></code></pre></div>
-<p>And the test:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#a90d91">package</span> <span style="color:#000">com.couchbase.client.tests.util</span><span style="color:#000">;</span>
-
-<span style="color:#a90d91">import</span> <span style="color:#000">org.openjdk.jcstress.annotations.Actor</span><span style="color:#000">;</span>
-<span style="color:#a90d91">import</span> <span style="color:#000">org.openjdk.jcstress.annotations.JCStressTest</span><span style="color:#000">;</span>
-<span style="color:#a90d91">import</span> <span style="color:#000">org.openjdk.jcstress.annotations.State</span><span style="color:#000">;</span>
-<span style="color:#a90d91">import</span> <span style="color:#000">org.openjdk.jcstress.infra.results.IntResult2</span><span style="color:#000">;</span>
-
-<span style="color:#000">@JCStressTest</span>
-<span style="color:#000">@State</span>
-<span style="color:#a90d91">public</span> <span style="color:#a90d91">class</span> <span style="color:#3f6e75">StringUtilsTest</span> <span style="color:#000">{</span>
-
-    <span style="color:#000">@Actor</span>
-    <span style="color:#a90d91">public</span> <span style="color:#a90d91">void</span> <span style="color:#000">actor1</span><span style="color:#000">(</span><span style="color:#000">IntResult2</span> <span style="color:#000">result</span><span style="color:#000">)</span> <span style="color:#000">{</span>
-        <span style="color:#a90d91">try</span> <span style="color:#000">{</span>
-            <span style="color:#000">result</span><span style="color:#000">.</span><span style="color:#836c28">r1</span> <span style="color:#000">=</span> <span style="color:#000">StringUtils</span><span style="color:#000">.</span><span style="color:#836c28">isJsonObject</span><span style="color:#000">(</span><span style="color:#c41a16">&#34;1234&#34;</span><span style="color:#000">)</span> <span style="color:#000">?</span> <span style="color:#000">1</span> <span style="color:#000">:</span> <span style="color:#000">0</span><span style="color:#000">;</span>
-        <span style="color:#000">}</span> <span style="color:#a90d91">catch</span><span style="color:#000">(</span><span style="color:#000">Exception</span> <span style="color:#000">ex</span><span style="color:#000">)</span> <span style="color:#000">{</span>
-            <span style="color:#000">result</span><span style="color:#000">.</span><span style="color:#836c28">r1</span> <span style="color:#000">=</span> <span style="color:#000">-</span><span style="color:#000">1</span><span style="color:#000">;</span>
-        <span style="color:#000">}</span>
-    <span style="color:#000">}</span>
-
-    <span style="color:#000">@Actor</span>
-    <span style="color:#a90d91">public</span> <span style="color:#a90d91">void</span> <span style="color:#000">actor2</span><span style="color:#000">(</span><span style="color:#000">IntResult2</span> <span style="color:#000">result</span><span style="color:#000">)</span> <span style="color:#000">{</span>
-        <span style="color:#a90d91">try</span> <span style="color:#000">{</span>
-            <span style="color:#000">result</span><span style="color:#000">.</span><span style="color:#836c28">r2</span> <span style="color:#000">=</span> <span style="color:#000">StringUtils</span><span style="color:#000">.</span><span style="color:#836c28">isJsonObject</span><span style="color:#000">(</span><span style="color:#c41a16">&#34;5678&#34;</span><span style="color:#000">)</span> <span style="color:#000">?</span> <span style="color:#000">1</span> <span style="color:#000">:</span> <span style="color:#000">0</span><span style="color:#000">;</span>
-        <span style="color:#000">}</span> <span style="color:#a90d91">catch</span><span style="color:#000">(</span><span style="color:#000">Exception</span> <span style="color:#000">ex</span><span style="color:#000">)</span> <span style="color:#000">{</span>
-            <span style="color:#000">result</span><span style="color:#000">.</span><span style="color:#836c28">r2</span> <span style="color:#000">=</span> <span style="color:#000">-</span><span style="color:#000">1</span><span style="color:#000">;</span>
-        <span style="color:#000">}</span>
-    <span style="color:#000">}</span>
-<span style="color:#000">}</span></code></pre></div>
-<p>The test uses <code>@Actor</code> annotations to define the different actors of the system. You can see that both actors access the same static method and put the result (which is abbreviated to a simple true (1) / false (0) pattern) in the <code>IntResult2</code> object. Both actors share their results and if an exception
-is raised we store -1. Now what is that good for?</p>
-
-<p>We also need to add a description file for our test which sets the expecations on allowed and disallowed value combinations. Note that I tried to add my own .xml file, but somehow it didn&rsquo;t get picked up, so I modified an existing xml (to be specific the <code>resources/org/openjdk/jcstress/desc/atomic-boolean.xml</code>) and added the following:</p>
-<div class="highlight"><pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#000">&lt;test</span> <span style="color:#836c28">name=</span><span style="color:#c41a16">&#34;com.couchbase.client.tests.util.StringUtilsTest&#34;</span><span style="color:#000">&gt;</span>
-    <span style="color:#000">&lt;contributed-by&gt;</span>Michael Nitschinger<span style="color:#000">&lt;/contributed-by&gt;</span>
-    <span style="color:#000">&lt;description&gt;</span>
-        Tests the thread-safeness of the StringUtil class.
-    <span style="color:#000">&lt;/description&gt;</span>
-    <span style="color:#000">&lt;case&gt;</span>
-        <span style="color:#000">&lt;match&gt;</span>[1, 1]<span style="color:#000">&lt;/match&gt;</span>
-        <span style="color:#000">&lt;expect&gt;</span>ACCEPTABLE<span style="color:#000">&lt;/expect&gt;</span>
-        <span style="color:#000">&lt;description&gt;</span>
-            Acceptable to see true.
-        <span style="color:#000">&lt;/description&gt;</span>
-    <span style="color:#000">&lt;/case&gt;</span>
-    <span style="color:#000">&lt;unmatched&gt;</span>
-        <span style="color:#000">&lt;expect&gt;</span>FORBIDDEN<span style="color:#000">&lt;/expect&gt;</span>
-        <span style="color:#000">&lt;description&gt;</span>
-            Other cases are not expected. -1 would mean an exception raised.
-        <span style="color:#000">&lt;/description&gt;</span>
-    <span style="color:#000">&lt;/unmatched&gt;</span>
-<span style="color:#000">&lt;/test&gt;</span></code></pre></div>
-<p>You can see that the only thing which is acceptable is that both actors always get <code>true</code> returned, all other combinations are simply forbidden (that is, marked as failure).</p>
-
-<p>Now that we&rsquo;ve got that set up, we need to compile the thing on the command line through maven:</p>
-
-<pre><code>$ mvn clean install -pl tests-custom -am
-</code></pre>
-
-<p>Finally, we run the shaded jar and give it a regex so that only our own test gets picked up:</p>
-
-<pre><code>$ java -jar tests-custom/target/jcstress.jar -t &quot;.*StringUtils.*&quot;
-</code></pre>
-
-<p>The resulting output is as follows:</p>
-
-<pre><code>Java Concurrency Stress Tests
----------------------------------------------------------------------------------
-Rev: a119fb6622e3+, built by michael with 1.8.0_05 at 20140527-1040
-
-Burning up to figure out the exact CPU count....... done!
-
-Non-fatal: VM support for online deoptimization is not enabled, tests might miss some issues.
-Possible reasons are:
-  1) unsupported JDK, only JDK 8+ is supported;
-  2) -XX:+UnlockDiagnosticVMOptions -XX:+WhiteBoxAPI are missing;
-  3) the jcstress JAR is not added to -Xbootclasspath/a
-
-Non-fatal: VM support for @Contended is not enabled, tests might run slower.
-Possible reasons are:
-  1) unsupported JDK, only JDK 8+ is supported;
-  2) -XX:-RestrictContended is missing, or the jcstress JAR is not added to -Xbootclasspath/a
-
-FORKED MODE
-  Test preset mode: &quot;default&quot;
-  Writing the test results to &quot;jcstress.1401180107287&quot;
-  Parsing results to &quot;results/&quot;
-  Running each test matching &quot;.*StringUtils.*&quot; for 1 forks, 5 iterations, 1000 ms each
-  Solo stride size will be autobalanced within [10, 10000] elements
-  Hardware threads in use/available: 8/8, no yielding in use.
+  <ul class="nav-links">
+    
+    <li>
+      <a href="/tags">tags</a>
+    </li>
+    
+    <li>
+      <a href="/imprint/">imprint</a>
+    </li>
+    
+    <li>
+      <a href="https://twitter.com/daschl">-&gt; twitter</a>
+    </li>
+    
+    <li>
+      <a href="https://github.com/daschl">-&gt; github</a>
+    </li>
+    
+  </ul>
+</nav>
+      </header>
 
 
- (ETA:        n/a) (R: 5.90E+08) (T:   1/1) (F: 1/1) (I: 1/5)   [FAILED] com.couchbase.client.tests.util.StringUtilsTest
-                     Observed state     Occurrences        Expectation Interpretation      
-                             [1, 1] (    1,889,690)         ACCEPTABLE Acceptable to see true.                                     
-                             [0, 1] (          150)          FORBIDDEN Other cases are not expected. -1 would mean an exception ...
-                             [1, 0] (          130)          FORBIDDEN Other cases are not expected. -1 would mean an exception ...
+<main class="content" role="main">
 
- (ETA:   00:00:02) (R: 4.03E+06) (T:   1/1) (F: 1/1) (I: 2/5)       [OK] com.couchbase.client.tests.util.StringUtilsTest
- (ETA:   00:00:01) (R: 3.05E+06) (T:   1/1) (F: 1/1) (I: 3/5)       [OK] com.couchbase.client.tests.util.StringUtilsTest
- (ETA:   00:00:00) (R: 2.74E+06) (T:   1/1) (F: 1/1) (I: 4/5)       [OK] com.couchbase.client.tests.util.StringUtilsTest
- (ETA:        now) (R: 2.60E+06) (T:   1/1) (F: 1/1) (I: 5/5)       [OK] com.couchbase.client.tests.util.StringUtilsTest
-Reading the results back...
-Generating the report...
-Look at results/index.html for the complete run results.
+  <div class="list">
+    <h2 class="list-title">Jcstress</h2>
+    
+     
+        <nav class="list-item">
+      <a href="https://nitschinger.at/Debugging-Concurrency-Issues-with-Open-JDK-Jcstress/">Debugging Concurrency Issues with OpenJDK Jcstress</a>
+      <span class="list-item-date">
+        2014-05-27
+      </span>
+    </nav>
 
-Will throw any pending exceptions at this point.
-Exception in thread &quot;main&quot; java.lang.AssertionError: TEST FAILURES:
-com.couchbase.client.tests.util.StringUtilsTest: Observed forbidden state: [0, 1]
-com.couchbase.client.tests.util.StringUtilsTest: Observed forbidden state: [1, 0]
 
-	at org.openjdk.jcstress.infra.grading.ExceptionReportPrinter.parse(ExceptionReportPrinter.java:119)
-	at org.openjdk.jcstress.JCStress.run(JCStress.java:134)
-	at org.openjdk.jcstress.Main.main(Main.java:85)
-</code></pre>
+    
+   </div>
 
-<p>The command line output is very descriptive, but you can also open the <code>results/index.html</code> file for a nicer visualization. We can see that most of the time the output was acceptable, but 280 times we got non-consistent output. In those cases, one of the actors got <code>false</code> as a response instead of <code>true</code> pretty bad if you ask me!</p>
+  
 
-<p>You can look through the code if you want to find the race condition, but for those who are too lazy here is the code fix:</p>
 
-<pre><code>   /**
-    * Exception thrown if the input key is empty.
-@@ -112,7 +106,7 @@ public final class StringUtils {
 
-     if (s.startsWith(&quot;{&quot;) || s.startsWith(&quot;[&quot;)
-       || &quot;true&quot;.equals(s) || &quot;false&quot;.equals(s)
--      || &quot;null&quot;.equals(s) || decimalMatcher.reset(s).matches()) {
-+      || &quot;null&quot;.equals(s) || decimalPattern.matcher(s).matches()) {
-       return true;
-     }
-</code></pre>
+</main>
 
-<p>As it turns out, the <code>matcher</code> is not thread safe and there is a race condition between resetting the characters and matching them afterwards. If we fix it to always create a new <code>matcher</code>, the race condition should go away. So let&rsquo;s make the proposed changes and run the test again (don&rsquo;t forget to run <code>mvn clean install -pl tests-custom -am</code> again since we changed the code):</p>
+<footer class="footer">
+  <ul class="footer-links">
+    <li>
+      <a href="https://nitschinger.at/index.xml" type="application/rss+xml" target="_blank">
+        <i class="fa fa-rss"></i> RSS feed</a>
+    </li>
+    <li>
+      <a href="https://github.com/mobybit/hugo-natrium-theme">
+        <i class="fa fa-github"></i> Built with Hugo &amp; Natrium Theme</a>
+    </li>
+  </ul>
+</footer>
 
-<pre><code>*snip*
- (ETA:        n/a) (R: 1.82E+09) (T:   1/1) (F: 1/1) (I: 1/5)       [OK] com.couchbase.client.tests.util.StringUtilsTest
- (ETA:   00:00:02) (R: 1.13E+07) (T:   1/1) (F: 1/1) (I: 2/5)       [OK] com.couchbase.client.tests.util.StringUtilsTest
- (ETA:   00:00:01) (R: 8.90E+06) (T:   1/1) (F: 1/1) (I: 3/5)       [OK] com.couchbase.client.tests.util.StringUtilsTest
- (ETA:   00:00:00) (R: 7.98E+06) (T:   1/1) (F: 1/1) (I: 4/5)       [OK] com.couchbase.client.tests.util.StringUtilsTest
- (ETA:        now) (R: 7.61E+06) (T:   1/1) (F: 1/1) (I: 5/5)       [OK] com.couchbase.client.tests.util.StringUtilsTest
-Reading the results back...
-Generating the report...
-Look at results/index.html for the complete run results.
-
-Will throw any pending exceptions at this point.
-Done.
-</code></pre>
-
-<p>Look at that! Our results are now consistent. We can now be confident that our bugfix actually solved the race condition here.</p>
-
-<p>Give it a shot if you also need to debug concurrency issues in your codebase, but keep in mind that your mileage may vary. Thanks again to <a href="https://twitter.com/shipilev">Aleksey Shipilёv</a> for eyeballing the code and giving suggestions.</p>
-
-                    </div>
-                </section>
-                
-            </div>
-            
-
-            <div class="footer">
-    <div class="pure-menu pure-menu-horizontal pure-menu-open">
-        <ul>
-            <li>&copy; Michael Nitschinger 2010-2018</li>
-        </ul>
-    </div>
-</div>
-<script src="https://nitschinger.at/js/all.min.js"></script>
-<script>
-    (function (i, s, o, g, r, a, m) {
-        i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
-            (i[r].q = i[r].q || []).push(arguments)
-        }, i[r].l = 1 * new Date(); a = s.createElement(o),
-            m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
-    })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
-
-    ga('create', 'UA-19686689-1', 'auto');
-    ga('send', 'pageview');
-    ga('set', 'anonymizeIp', true);
-</script>
-        </div>
-    </div>
 </div>
 
 <script>
-(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  (function (i, s, o, g, r, a, m) {
+    i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
+      (i[r].q = i[r].q || []).push(arguments)
+    }, i[r].l = 1 * new Date(); a = s.createElement(o),
+      m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
+  })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
 
-ga('create', '', 'auto');
-ga('send', 'pageview');
-
+  ga('create', 'UA-19686689-1', 'auto');
+  ga('send', 'pageview');
+  ga('set', 'anonymizeIp', true);
 </script>
-
 </body>
+
 </html>

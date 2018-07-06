@@ -1,279 +1,110 @@
-<!doctype html>
-<html lang="en">
-<head>
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Packagist &middot; daschl writes. sometimes.</title>
-
-    <meta name="description" content="">
-
-    <meta name="generator" content="Hugo 0.42.1" />
-    <meta name="twitter:card" content="summary">
-    
-    <meta name="twitter:title" content="Packagist &middot; daschl writes. sometimes.">
-    <meta name="twitter:description" content="">
-
-    <meta property="og:type" content="article">
-    <meta property="og:title" content="Packagist &middot; daschl writes. sometimes.">
-    <meta property="og:description" content="">
-
-    <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Oxygen:400,700' rel='stylesheet' type='text/css'>
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
-    <!--[if lte IE 8]>
-        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-old-ie-min.css">
-    <![endif]-->
-    <!--[if gt IE 8]><!-->
-        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
-    <!--<![endif]-->
-
-    <link rel="stylesheet" href="https://nitschinger.at/css/all.min.css">
-    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
-
-    <link rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." href="https://nitschinger.at/index.xml" />
-</head>
-<body>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.42.2" />
 
 
-<div id="layout" class="pure-g">
-    <div class="sidebar pure-u-1 pure-u-md-1-4">
-    <div class="header">
-        <hgroup>
-            <h1 class="brand-title">
-                <a href="https://nitschinger.at">daschl writes. sometimes.</a>
-            </h1>
-            <h2 class="brand-tagline"></h2>
-        </hgroup>
+<title>Packagist - daschl writes. sometimes.</title>
+<meta property="og:title" content="Packagist - daschl writes. sometimes.">
 
+
+
+  
+
+
+
+
+
+<link href="https://nitschinger.at/tags/packagist/index.xml" rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." />
+
+
+<link rel="stylesheet" href="https://nitschinger.at/css/main.css" media="all">
+<link rel="stylesheet" href="https://nitschinger.at/css/fonts.css">
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
         <nav class="nav">
-            <ul class="nav-list">
-                <li class="nav-item">
-                    <a class="pure-button" href="https://twitter.com/daschl">
-                        <i class="fa fa-twitter"></i> Twitter</a>
-                </li>
-                <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl">
-                        <i class="fa fa-github-alt"></i> github</a>
-                </li>
-                <li class="nav-item">
-                    <a class="pure-button" href="https://nitschinger.at/index.xml">
-                        <i class="fa fa-rss"></i> rss</a>
-                </li>
-                <li class="nav-item">
-                    <a class="pure-button" href="https://nitschinger.at/imprint">Imprint</a>
-                </li>
-            </ul>
-        </nav>
-    </div>
-</div>
+  <a href="https://nitschinger.at/" class="nav-title">
+    daschl blogs. sometimes.
+  </a>
 
-    <div class="content pure-u-1 pure-u-md-3-4">
-        <div>
-            
-            <div class="posts">
-                
-                <h1 class="content-subhead">23 Jan 2012</h1>
-                <section class="post">
-                    <header class="post-header">
-
-                        <a href="https://nitschinger.at/Playing-with-Composer-and-Lithium/" class="post-title">Playing with Composer and Lithium</a>
-
-                        <p class="post-meta">
-                            
-                            
-                        </p>
-                    </header>
-
-                    <div class="post-description">
-                        
-
-<h2 id="about-composer">About Composer</h2>
-
-<p><a href="http://packagist.org/about-composer">Composer</a> is a command-line tool that helps you manage your application dependencies. It automatically
-fetches packages, resolves dependencies and is easy to configure. The really good thing about Composer is that it isn&rsquo;t bound to a specific framework and can be used with every kind of repository. Composer is similar to package managers like npm, so you may feel at home quickly.</p>
-
-<p>The default repository of Composer is <a href="http://packagist.org/">Packagist</a>. If you want to use Composer in your project, you basically need two things: a <code>composer.json</code> file in your application root and the <code>composer.phar</code> application file itself. The easiest way to get it is to download it <a href="http://getcomposer.org/composer.phar">directly</a> and drop it somewhere on your file system. A minimal <code>composer.json</code> file looks like this:</p>
-
-<pre><code>{
-    &quot;name&quot;: &quot;my-project&quot;,
-    &quot;version&quot;: &quot;1.0.0&quot;,
-    &quot;require&quot;: {
-        &quot;monolog/monolog&quot;: &quot;1.0.0&quot;
-    }
-}
-</code></pre>
-
-<p>As Packagist acts as the default repository, this will fetch the <a href="http://packagist.org/packages/monolog/monolog">monolog</a> library from there into the <code>vendor</code> directory. There are a lot of configuration options that can be found <a href="https://raw.github.com/composer/composer/master/doc/composer-schema.json">here</a>.</p>
-
-<p>Let&rsquo;s go through a quick example hands-on. Consider the following directory structure:</p>
-
-<pre><code>/web
-    composer.phar
-    /my-project
-        composer.json
-</code></pre>
-
-<p>If you execute the following commands:</p>
-
-<pre><code>$ cd my-project/
-$ php path/to/composer.phar install
-</code></pre>
-
-<p>Your directory structure will look like this afterwards:</p>
-
-<pre><code>/web
-    composer.phar
-    composer.lock
-    /my-project
-        composer.json
-        /vendor
-            /bin
-            /monolog
-                ....
-</code></pre>
-
-<p>If you stick with the defaults, all your dependencies will be installed in the <code>vendor</code> directory. Lithium uses the <code>libraries</code> directory to store the dependencies instead, but composer makes it easy to change the default directory (as you&rsquo;ll see shortly). You may also notice that there&rsquo;s a <code>bin</code> directory, which contains executable files (of course only if the installed  dependencies provide some).</p>
-
-<p>Composer also creates a <code>composer.lock</code> file that contains a &ldquo;frozen&rdquo; state of the current dependency tree.</p>
-
-<pre><code>{
-    &quot;hash&quot;: &quot;a725fb1bf93f5c534217bbce2897ddc9&quot;,
-    &quot;packages&quot;: [
-        {
-            &quot;package&quot;: &quot;monolog\/monolog&quot;,
-            &quot;version&quot;: &quot;1.0.0&quot;
-        }
-    ]
-}
-</code></pre>
-
-<h2 id="managing-lithium">Managing Lithium</h2>
-
-<p>Now that we know how to work with Composer, let&rsquo;s manage a Lithium application with it. Currently, Lithium doesn&rsquo;t provide Composer packages out of the box, but it&rsquo;s easy to write one.</p>
-
-<p>The first thing you want to do is clone (or download) the <code>framework</code> repository. You can also use the <code>li3 library extract</code> command but then you&rsquo;d have to change the <code>LITHIUM_LIBRARY_PATH</code> back to the default location.</p>
-
-<pre><code>$ git clone git://github.com/UnionOfRAD/framework.git composer-test
-Cloning into composer-test...
-remote: Counting objects: 29794, done.
-remote: Compressing objects: 100% (8622/8622), done.
-remote: Total 29794 (delta 18425), reused 29672 (delta 18332)
-Receiving objects: 100% (29794/29794), 3.94 MiB | 1.52 MiB/s, done.
-Resolving deltas: 100% (18425/18425), done.
-</code></pre>
-
-<p>Now, instead of initializing the git submodules (which would fetch the Lithium core the good old way), add this <code>composer.json</code> file to <code>/composer-test</code>.</p>
-
-<pre><code>{
-    &quot;name&quot;: &quot;composer-test&quot;,
-    &quot;version&quot;: &quot;0.1.0&quot;,
-    &quot;config&quot;: {
-        &quot;vendor-dir&quot;: &quot;libraries&quot;
-    },
+  <ul class="nav-links">
+    
+    <li>
+      <a href="/tags">tags</a>
+    </li>
+    
+    <li>
+      <a href="/imprint/">imprint</a>
+    </li>
+    
+    <li>
+      <a href="https://twitter.com/daschl">-&gt; twitter</a>
+    </li>
+    
+    <li>
+      <a href="https://github.com/daschl">-&gt; github</a>
+    </li>
+    
+  </ul>
+</nav>
+      </header>
 
 
-    &quot;repositories&quot;: {
-        &quot;UnionOfRAD&quot;: {
-            &quot;package&quot;: {
-                &quot;name&quot;: &quot;lithium&quot;,
-                &quot;version&quot;: &quot;master&quot;,
-                &quot;source&quot;: {
-                    &quot;url&quot;: &quot;git://github.com/UnionOfRAD/lithium.git&quot;,
-                    &quot;type&quot;: &quot;git&quot;,
-                    &quot;reference&quot;: &quot;master&quot;
-                }
-            }
-        }
-    },
+<main class="content" role="main">
 
-    &quot;require&quot;: {
-        &quot;lithium&quot;: &quot;master&quot;
-    }
-}
-</code></pre>
+  <div class="list">
+    <h2 class="list-title">Packagist</h2>
+    
+     
+        <nav class="list-item">
+      <a href="https://nitschinger.at/Playing-with-Composer-and-Lithium/">Playing with Composer and Lithium</a>
+      <span class="list-item-date">
+        2012-01-23
+      </span>
+    </nav>
 
-<p>The <code>vendor-dir</code> setting changes the default <code>vendor</code> directory to <code>libraries</code>, which is recognized automatically by the Lithium class loader. If you don&rsquo;t like this approach, you could also change the <code>LITHIUM_LIBRARY_PATH</code> and point it to the <code>vendor</code> directory or create a symlink, but we stick with it for now. The <code>repositories</code> setting
-adds the git repository of the lithium core (if Lithium would provide a package on Packagist, then you wouldn&rsquo;t have to do this). The <code>require</code> setting is where all your application dependencies go into. The key <code>lithium</code> here refers to the package name in the <code>repositories</code> setting above.</p>
 
-<p>Let&rsquo;s install the dependencies:</p>
+    
+   </div>
 
-<pre><code>$ php path/to/composer.phar install
-Installing dependencies
-Writing lock file
-Generating autoload files
-</code></pre>
+  
 
-<p>If you look into the <code>/composer-test/libraries</code> directory, you can see that the <code>lithium</code> directory has been added successfully.</p>
 
-<p>If we now want to install <a href="http://twig.sensiolabs.org/">twig</a>, we can modify our <code>composer.json</code> file accordingly:</p>
 
-<pre><code>&quot;require&quot;: {
-    &quot;lithium&quot;: &quot;master&quot;,
-    &quot;twig/extensions&quot;: &quot;master-dev&quot;
-}
-</code></pre>
+</main>
 
-<p>Not that the twig library is already available on Packagist, so we don&rsquo;t have to tell Composer where to find it. We can now run <code>composer.phar update</code> to update our dependencies (and the <code>composer.lock</code> file):</p>
+<footer class="footer">
+  <ul class="footer-links">
+    <li>
+      <a href="https://nitschinger.at/index.xml" type="application/rss+xml" target="_blank">
+        <i class="fa fa-rss"></i> RSS feed</a>
+    </li>
+    <li>
+      <a href="https://github.com/mobybit/hugo-natrium-theme">
+        <i class="fa fa-github"></i> Built with Hugo &amp; Natrium Theme</a>
+    </li>
+  </ul>
+</footer>
 
-<pre><code>$ php ../composer.phar update
-Updating dependencies
-- Package twig/twig (1.6.0-dev)
-    Downloading
-    Unpacking archive
-    Cleaning up
-
-- Package twig/extensions (master-dev)
-    Downloading
-    Unpacking archive
-    Cleaning up
-
-Writing lock file
-Generating autoload files
-</code></pre>
-
-<p>As you can see, Composer has automatically downloaded all dependencies needed by <code>twig/extensions</code> too!</p>
-
-<p>You can now start managing your dependencies through composer, regardless if they actually provide composer packages or not. There is an <a href="https://github.com/UnionOfRAD/lithium/issues/285">ongoing discussion</a> on how Lithium will handle dependency management in the future, so stay tuned.</p>
-
-                    </div>
-                </section>
-                
-            </div>
-            
-
-            <div class="footer">
-    <div class="pure-menu pure-menu-horizontal pure-menu-open">
-        <ul>
-            <li>&copy; Michael Nitschinger 2010-2018</li>
-        </ul>
-    </div>
-</div>
-<script src="https://nitschinger.at/js/all.min.js"></script>
-<script>
-    (function (i, s, o, g, r, a, m) {
-        i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
-            (i[r].q = i[r].q || []).push(arguments)
-        }, i[r].l = 1 * new Date(); a = s.createElement(o),
-            m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
-    })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
-
-    ga('create', 'UA-19686689-1', 'auto');
-    ga('send', 'pageview');
-    ga('set', 'anonymizeIp', true);
-</script>
-        </div>
-    </div>
 </div>
 
 <script>
-(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  (function (i, s, o, g, r, a, m) {
+    i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
+      (i[r].q = i[r].q || []).push(arguments)
+    }, i[r].l = 1 * new Date(); a = s.createElement(o),
+      m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
+  })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
 
-ga('create', '', 'auto');
-ga('send', 'pageview');
-
+  ga('create', 'UA-19686689-1', 'auto');
+  ga('send', 'pageview');
+  ga('set', 'anonymizeIp', true);
 </script>
-
 </body>
+
 </html>

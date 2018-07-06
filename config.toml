@@ -1,12 +1,42 @@
-baseurl = "https://nitschinger.at"
+baseURL = "https://nitschinger.at/"
 languageCode = "en-us"
 title = "daschl writes. sometimes."
 author = "Michael Nitschinger"
-theme = "purehugo"
-disqusShortname = "daschl"
-twitterName = "daschl"
-githubName = "daschl"
-disablePathToLower = true
-pygmentsCodeFences = true
-pygmentsStyle = "xcode"
+theme = "hugo-natrium-theme"
+rssLimit = 10
+paginate = 10
+pygmentsCodefences = true
+pygmentsStyle = "native"
 pygmentsOptions = "linenos=table"
+disablePathToLower = true
+disqusShortname = "daschl"
+
+[taxonomies]
+    category = "categories"  
+    tag = "tags"
+
+[permalinks]
+    post = "/:slug/"
+    page = "/:slug/"
+
+[[menu.main]]
+    name = "tags"
+    url = "/tags"
+    weight = 10
+
+[[menu.main]]
+    name = "-> twitter"
+    url = "https://twitter.com/daschl"
+    weight = 30
+
+[[menu.main]]
+    name = "-> github"
+    url = "https://github.com/daschl"
+    weight = 40
+
+[[menu.main]]
+    name = "imprint"
+    url = "/imprint/"
+    weight = 20
+
+[params]

@@ -1,194 +1,110 @@
-<!doctype html>
-<html lang="en">
-<head>
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fixtures &middot; daschl writes. sometimes.</title>
-
-    <meta name="description" content="">
-
-    <meta name="generator" content="Hugo 0.42.1" />
-    <meta name="twitter:card" content="summary">
-    
-    <meta name="twitter:title" content="Fixtures &middot; daschl writes. sometimes.">
-    <meta name="twitter:description" content="">
-
-    <meta property="og:type" content="article">
-    <meta property="og:title" content="Fixtures &middot; daschl writes. sometimes.">
-    <meta property="og:description" content="">
-
-    <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Oxygen:400,700' rel='stylesheet' type='text/css'>
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
-    <!--[if lte IE 8]>
-        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-old-ie-min.css">
-    <![endif]-->
-    <!--[if gt IE 8]><!-->
-        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
-    <!--<![endif]-->
-
-    <link rel="stylesheet" href="https://nitschinger.at/css/all.min.css">
-    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
-
-    <link rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." href="https://nitschinger.at/index.xml" />
-</head>
-<body>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.42.2" />
 
 
-<div id="layout" class="pure-g">
-    <div class="sidebar pure-u-1 pure-u-md-1-4">
-    <div class="header">
-        <hgroup>
-            <h1 class="brand-title">
-                <a href="https://nitschinger.at">daschl writes. sometimes.</a>
-            </h1>
-            <h2 class="brand-tagline"></h2>
-        </hgroup>
+<title>Fixtures - daschl writes. sometimes.</title>
+<meta property="og:title" content="Fixtures - daschl writes. sometimes.">
 
+
+
+  
+
+
+
+
+
+<link href="https://nitschinger.at/tags/fixtures/index.xml" rel="alternate" type="application/rss+xml" title="daschl writes. sometimes." />
+
+
+<link rel="stylesheet" href="https://nitschinger.at/css/main.css" media="all">
+<link rel="stylesheet" href="https://nitschinger.at/css/fonts.css">
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
         <nav class="nav">
-            <ul class="nav-list">
-                <li class="nav-item">
-                    <a class="pure-button" href="https://twitter.com/daschl">
-                        <i class="fa fa-twitter"></i> Twitter</a>
-                </li>
-                <li class="nav-item">
-                    <a class="pure-button" href="https://github.com/daschl">
-                        <i class="fa fa-github-alt"></i> github</a>
-                </li>
-                <li class="nav-item">
-                    <a class="pure-button" href="https://nitschinger.at/index.xml">
-                        <i class="fa fa-rss"></i> rss</a>
-                </li>
-                <li class="nav-item">
-                    <a class="pure-button" href="https://nitschinger.at/imprint">Imprint</a>
-                </li>
-            </ul>
-        </nav>
-    </div>
-</div>
+  <a href="https://nitschinger.at/" class="nav-title">
+    daschl blogs. sometimes.
+  </a>
 
-    <div class="content pure-u-1 pure-u-md-3-4">
-        <div>
-            
-            <div class="posts">
-                
-                <h1 class="content-subhead">04 Dec 2010</h1>
-                <section class="post">
-                    <header class="post-header">
+  <ul class="nav-links">
+    
+    <li>
+      <a href="/tags">tags</a>
+    </li>
+    
+    <li>
+      <a href="/imprint/">imprint</a>
+    </li>
+    
+    <li>
+      <a href="https://twitter.com/daschl">-&gt; twitter</a>
+    </li>
+    
+    <li>
+      <a href="https://github.com/daschl">-&gt; github</a>
+    </li>
+    
+  </ul>
+</nav>
+      </header>
 
-                        <a href="https://nitschinger.at/Introducing-Fixtures-for-Lithium/" class="post-title">Introducing Fixtures for Lithium</a>
 
-                        <p class="post-meta">
-                            
-                            
-                        </p>
-                    </header>
+<main class="content" role="main">
 
-                    <div class="post-description">
-                        <p>When you write tests for your classes (and you should), you may run into the problem that you create large arrays of test data in your code. Consider the following example:</p>
+  <div class="list">
+    <h2 class="list-title">Fixtures</h2>
+    
+     
+        <nav class="list-item">
+      <a href="https://nitschinger.at/Introducing-Fixtures-for-Lithium/">Introducing Fixtures for Lithium</a>
+      <span class="list-item-date">
+        2010-12-04
+      </span>
+    </nav>
 
-<pre><code>$expected = array(
-    'post1' =&gt; array(
-        'title' =&gt; 'My First Post',
-        'content' =&gt; 'First Content...'
-    ),
-    'post2' =&gt; array(
-        'title' =&gt; 'My Second Post',
-        'content' =&gt; 'Also some foobar text'
-    ),
-    'post3' =&gt; array(
-        'title' =&gt; 'My Third Post',
-        'content' =&gt; 'I like to write some foobar foo too'
-    )
-);
 
-$this-&gt;assertEqual($expected[0], Post::first());
-/* more tests down here */
-</code></pre>
+    
+   </div>
 
-<p>This creates a nested array of test data where each inner array mocks a <code>post</code> stored in the database. If we have to do this more than once (maybe in an other test we insert this data into the database to test validations), we may put the snippet in the <code>setUp()</code> method. A better approach would be to move this code in fixture files. The <code>li3_fixtures</code> plugin tries to help you with that and provides a simple and convenient approach to integrate fixtures in your tests.</p>
+  
 
-<p>Before we can use the plugin, we need to install it first. <code>li3_fixtures</code> doesn&rsquo;t have any dependencies, so this is straightforward. Note that for now you need a rad-dev.org-account to clone the repository.</p>
 
-<pre><code>$ cd /path/to/app/libraries
-$ git clone code@rad-dev.org:li3_fixtures.git
-$ mkdir /path/to/app/tests/fixtures
-</code></pre>
 
-<p>Now we need to tell our app to use the plugin, so fire up your editor and modify your <code>app/config/bootstrap/libraries.php</code>.</p>
+</main>
 
-<pre><code>Libraries::add('li3_fixtures');
-</code></pre>
+<footer class="footer">
+  <ul class="footer-links">
+    <li>
+      <a href="https://nitschinger.at/index.xml" type="application/rss+xml" target="_blank">
+        <i class="fa fa-rss"></i> RSS feed</a>
+    </li>
+    <li>
+      <a href="https://github.com/mobybit/hugo-natrium-theme">
+        <i class="fa fa-github"></i> Built with Hugo &amp; Natrium Theme</a>
+    </li>
+  </ul>
+</footer>
 
-<p>After that, we can create a sample fixture file in <code>app/tests/fixtures/posts.json</code>. Currently only json-files are supported, but xml-support is planned.</p>
-
-<pre><code>{
-    &quot;post1&quot;: {
-        &quot;title&quot;: &quot;My First Post&quot;,
-        &quot;body&quot;: &quot;First Content...&quot;
-    },
-    &quot;post2&quot;: {
-        &quot;title&quot;: &quot;My Second Post&quot;,
-        &quot;body&quot;: &quot;Also some foobar text&quot;
-    },
-    {
-        &quot;title&quot;: &quot;My Third Post&quot;,
-        &quot;body&quot;: &quot;I like to write some foobar foo too&quot;
-    }
-}
-</code></pre>
-
-<p>Now that we have our fixture file in place, lets see how the <code>$this-&gt;assertEqual()</code> looks like (don&rsquo;t forget to use the <code>li3_fixtures</code> plugin with <code>use li3_fixtures\test\Fixture;</code>):</p>
-
-<pre><code>$fixtures = Fixture::load('Post');
-$this-&gt;assertEqual($fixtures-&gt;first(), Post::first());
-</code></pre>
-
-<p>By convention, your <code>$model</code> in <code>Fixture::load($model)</code>well be lowercased and pluralized by the Inflector (so &lsquo;Post&rsquo; loads &lsquo;posts.json&rsquo;). The <code>load</code>-method also takes an optional argument where you can override various default settings like the extension or location of the fixture-file.</p>
-
-<p>As you can see, your test code is significantly smaller and easier to read. You may also notice the <code>first()</code>-method here. <code>li3_fixtures</code> makes use of the built in <code>lithium\util\Collection</code> class, which provides a powerful set of collection management methods like <code>first()</code>, <code>next()</code> or <code>prev()</code>. Check out the <code>lithium\util\Collection</code> documentation for more info on that.</p>
-
-<p>The project can be found at <a href="http://rad-dev.org/li3_fixtures">rad-dev.org/li3_fixtures</a> and is maintained by me, so if you have any comments or questions, feel free to ask comment here or contact me directly.</p>
-
-                    </div>
-                </section>
-                
-            </div>
-            
-
-            <div class="footer">
-    <div class="pure-menu pure-menu-horizontal pure-menu-open">
-        <ul>
-            <li>&copy; Michael Nitschinger 2010-2018</li>
-        </ul>
-    </div>
-</div>
-<script src="https://nitschinger.at/js/all.min.js"></script>
-<script>
-    (function (i, s, o, g, r, a, m) {
-        i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
-            (i[r].q = i[r].q || []).push(arguments)
-        }, i[r].l = 1 * new Date(); a = s.createElement(o),
-            m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
-    })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
-
-    ga('create', 'UA-19686689-1', 'auto');
-    ga('send', 'pageview');
-    ga('set', 'anonymizeIp', true);
-</script>
-        </div>
-    </div>
 </div>
 
 <script>
-(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  (function (i, s, o, g, r, a, m) {
+    i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
+      (i[r].q = i[r].q || []).push(arguments)
+    }, i[r].l = 1 * new Date(); a = s.createElement(o),
+      m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
+  })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
 
-ga('create', '', 'auto');
-ga('send', 'pageview');
-
+  ga('create', 'UA-19686689-1', 'auto');
+  ga('send', 'pageview');
+  ga('set', 'anonymizeIp', true);
 </script>
-
 </body>
+
 </html>
