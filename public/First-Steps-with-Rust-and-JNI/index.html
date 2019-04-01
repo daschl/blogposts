@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Hugo 0.42.2" />
+<meta name="generator" content="Hugo 0.54.0" />
 
 
 <title>First Steps with Rust and JNI - daschl writes. sometimes.</title>
@@ -120,10 +120,10 @@ Compiling highperf-adder v0.1.0 (file:///Users/michael/rust/highperf-adder)
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">17
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf">java.nio.file.Path</span>;
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf">java.nio.file.Paths</span>;
+<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">java.nio.file.Path</span>;
+<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">java.nio.file.Paths</span>;
 
-<span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf">Adder</span> {
+<span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf;text-decoration:underline">Adder</span> {
 
   <span style="color:#6ab825;font-weight:bold">static</span> {
     Path p = Paths.<span style="color:#bbb">get</span>(<span style="color:#ed9d13">&#34;target/debug/libhpa.dylib&#34;</span>);
@@ -214,7 +214,6 @@ Exception in thread &quot;main&quot; java.lang.UnsatisfiedLinkError: Adder.add(I
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">18
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">19
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">20
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">21
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#6ab825;font-weight:bold">extern</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">crate</span><span style="color:#666"> </span>libc;<span style="color:#666">
@@ -222,7 +221,7 @@ Exception in thread &quot;main&quot; java.lang.UnsatisfiedLinkError: Adder.add(I
 </span><span style="color:#666"></span><span style="color:#6ab825;font-weight:bold">use</span><span style="color:#666"> </span>libc::{c_void,<span style="color:#666"> </span>c_int};<span style="color:#666">
 </span><span style="color:#666">
 </span><span style="color:#666"></span><span style="color:#cd2828;font-weight:bold">#[repr(C)]</span><span style="color:#666">
-</span><span style="color:#666"></span><span style="color:#6ab825;font-weight:bold">pub</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">struct</span> <span style="color:#447fcf">JNINativeInterface</span><span style="color:#666"> </span>{<span style="color:#666">
+</span><span style="color:#666"></span><span style="color:#6ab825;font-weight:bold">pub</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">struct</span> <span style="color:#447fcf;text-decoration:underline">JNINativeInterface</span><span style="color:#666"> </span>{<span style="color:#666">
 </span><span style="color:#666">    </span>reserved0: *<span style="color:#6ab825;font-weight:bold">mut</span><span style="color:#666"> </span>c_void,<span style="color:#666">
 </span><span style="color:#666">    </span>reserved1: *<span style="color:#6ab825;font-weight:bold">mut</span><span style="color:#666"> </span>c_void,<span style="color:#666">
 </span><span style="color:#666">    </span>reserved2: *<span style="color:#6ab825;font-weight:bold">mut</span><span style="color:#666"> </span>c_void,<span style="color:#666">
@@ -231,13 +230,13 @@ Exception in thread &quot;main&quot; java.lang.UnsatisfiedLinkError: Adder.add(I
 </span><span style="color:#999;font-style:italic"></span><span style="color:#666">    </span><span style="color:#999;font-style:italic">// relevant for this very simple example...
 </span><span style="color:#999;font-style:italic"></span>}<span style="color:#666">
 </span><span style="color:#666">
-</span><span style="color:#666"></span><span style="color:#6ab825;font-weight:bold">pub</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">type</span> <span style="color:#447fcf">JNIEnv</span><span style="color:#666"> </span>=<span style="color:#666"> </span>*<span style="color:#6ab825;font-weight:bold">const</span><span style="color:#666"> </span>JNINativeInterface;<span style="color:#666">
+</span><span style="color:#666"></span><span style="color:#6ab825;font-weight:bold">pub</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">type</span> <span style="color:#447fcf;text-decoration:underline">JNIEnv</span><span style="color:#666"> </span>=<span style="color:#666"> </span>*<span style="color:#6ab825;font-weight:bold">const</span><span style="color:#666"> </span>JNINativeInterface;<span style="color:#666">
 </span><span style="color:#666">
 </span><span style="color:#666"></span><span style="color:#cd2828;font-weight:bold">#[no_mangle]</span><span style="color:#666">
-</span><span style="color:#666"></span><span style="color:#6ab825;font-weight:bold">pub</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">extern</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">fn</span> <span style="color:#447fcf">Java_Adder_add</span>(jre: *<span style="color:#6ab825;font-weight:bold">mut</span><span style="color:#666"> </span>JNIEnv,<span style="color:#666"> </span>class: *<span style="color:#6ab825;font-weight:bold">const</span><span style="color:#666"> </span>c_void,<span style="color:#666"> </span>v1: <span style="color:#447fcf">c_int</span>,<span style="color:#666"> </span>v2: <span style="color:#447fcf">c_int</span>)<span style="color:#666"> </span>-&gt; <span style="color:#447fcf">c_int</span><span style="color:#666"> </span>{<span style="color:#666">
+</span><span style="color:#666"></span><span style="color:#6ab825;font-weight:bold">pub</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">extern</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">fn</span> <span style="color:#447fcf">Java_Adder_add</span>(jre: *<span style="color:#6ab825;font-weight:bold">mut</span><span style="color:#666"> </span>JNIEnv,<span style="color:#666"> </span>class: *<span style="color:#6ab825;font-weight:bold">const</span><span style="color:#666"> </span>c_void,<span style="color:#666"> </span>v1: <span style="color:#447fcf;text-decoration:underline">c_int</span>,<span style="color:#666"> </span>v2: <span style="color:#447fcf;text-decoration:underline">c_int</span>)<span style="color:#666"> </span>-&gt; <span style="color:#447fcf;text-decoration:underline">c_int</span><span style="color:#666"> </span>{<span style="color:#666">
 </span><span style="color:#666">    </span>v1<span style="color:#666"> </span>+<span style="color:#666"> </span>v2<span style="color:#666">
 </span><span style="color:#666"></span>}<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>Alright, so what&rsquo;s going on here?</p>
@@ -253,11 +252,10 @@ Exception in thread &quot;main&quot; java.lang.UnsatisfiedLinkError: Adder.add(I
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 8
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 9
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">10
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">11
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#cd2828;font-weight:bold">#[repr(C)]</span><span style="color:#666">
-</span><span style="color:#666"></span><span style="color:#6ab825;font-weight:bold">pub</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">struct</span> <span style="color:#447fcf">JNINativeInterface</span><span style="color:#666"> </span>{<span style="color:#666">
+</span><span style="color:#666"></span><span style="color:#6ab825;font-weight:bold">pub</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">struct</span> <span style="color:#447fcf;text-decoration:underline">JNINativeInterface</span><span style="color:#666"> </span>{<span style="color:#666">
 </span><span style="color:#666">    </span>reserved0: *<span style="color:#6ab825;font-weight:bold">mut</span><span style="color:#666"> </span>c_void,<span style="color:#666">
 </span><span style="color:#666">    </span>reserved1: *<span style="color:#6ab825;font-weight:bold">mut</span><span style="color:#666"> </span>c_void,<span style="color:#666">
 </span><span style="color:#666">    </span>reserved2: *<span style="color:#6ab825;font-weight:bold">mut</span><span style="color:#666"> </span>c_void,<span style="color:#666">
@@ -265,8 +263,8 @@ Exception in thread &quot;main&quot; java.lang.UnsatisfiedLinkError: Adder.add(I
 </span><span style="color:#666">    </span><span style="color:#999;font-style:italic">// ...
 </span><span style="color:#999;font-style:italic"></span>}<span style="color:#666">
 </span><span style="color:#666">
-</span><span style="color:#666"></span><span style="color:#6ab825;font-weight:bold">pub</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">type</span> <span style="color:#447fcf">JNIEnv</span><span style="color:#666"> </span>=<span style="color:#666"> </span>*<span style="color:#6ab825;font-weight:bold">const</span><span style="color:#666"> </span>JNINativeInterface;<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span><span style="color:#666"></span><span style="color:#6ab825;font-weight:bold">pub</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">type</span> <span style="color:#447fcf;text-decoration:underline">JNIEnv</span><span style="color:#666"> </span>=<span style="color:#666"> </span>*<span style="color:#6ab825;font-weight:bold">const</span><span style="color:#666"> </span>JNINativeInterface;<span style="color:#666">
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>The JVM exports a <code>jni.h</code> header file which contains its primary interfaces when interacting through JNI. Normally we&rsquo;d write a proper Rust C FFI binding here and keep our code idiomatic, but for now all we need is a pointer to the <code>JNIEnv</code> (even if we don&rsquo;t actually use it, it gets passed in to our <code>add</code> method as an argument). If you take a look at the <a href="http://hg.openjdk.java.net/jdk8/jdk8/jdk/file/687fd7c7986d/src/share/javavm/export/jni.h#l214">actual jni.h</a> you can see that we get away with lots of handwaving for now.</p>
@@ -338,14 +336,13 @@ JNIEXPORT jint JNICALL Java_Adder_add
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">2
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">3
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">4
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">5
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#cd2828;font-weight:bold">#[no_mangle]</span><span style="color:#666">
-</span><span style="color:#666"></span><span style="color:#6ab825;font-weight:bold">pub</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">extern</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">fn</span> <span style="color:#447fcf">Java_Adder_add</span>(jre: *<span style="color:#6ab825;font-weight:bold">mut</span><span style="color:#666"> </span>JNIEnv,<span style="color:#666"> </span>class: *<span style="color:#6ab825;font-weight:bold">const</span><span style="color:#666"> </span>c_void,<span style="color:#666"> </span>v1: <span style="color:#447fcf">c_int</span>,<span style="color:#666"> </span>v2: <span style="color:#447fcf">c_int</span>)<span style="color:#666"> </span>-&gt; <span style="color:#447fcf">c_int</span><span style="color:#666"> </span>{<span style="color:#666">
+</span><span style="color:#666"></span><span style="color:#6ab825;font-weight:bold">pub</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">extern</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">fn</span> <span style="color:#447fcf">Java_Adder_add</span>(jre: *<span style="color:#6ab825;font-weight:bold">mut</span><span style="color:#666"> </span>JNIEnv,<span style="color:#666"> </span>class: *<span style="color:#6ab825;font-weight:bold">const</span><span style="color:#666"> </span>c_void,<span style="color:#666"> </span>v1: <span style="color:#447fcf;text-decoration:underline">c_int</span>,<span style="color:#666"> </span>v2: <span style="color:#447fcf;text-decoration:underline">c_int</span>)<span style="color:#666"> </span>-&gt; <span style="color:#447fcf;text-decoration:underline">c_int</span><span style="color:#666"> </span>{<span style="color:#666">
 </span><span style="color:#666">    </span>v1<span style="color:#666"> </span>+<span style="color:#666"> </span>v2<span style="color:#666">
 </span><span style="color:#666"></span>}<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>Make sure you don&rsquo;t forget the <code>#[no_mangle]</code> which tells Rust to turn off its name mangling so that there are no issues while linking (try it out and you&rsquo;ll see the <code>UnsatisfiedLinkError</code> again). Finally its time to compile the <code>crate</code> once more and run the Java class again. Note that you don&rsquo;t need to recompile the Java code every time you make a change to the Rust code. Just rebuild with cargo and run the Java file again, it will pick up the freshly created <code>dylib</code>.</p>
@@ -376,7 +373,7 @@ src/lib.rs:20 }
     </div>
 
     <div id="disqus_thread"></div>
-<script>
+<script type="application/javascript">
     var disqus_config = function () {
     
     

@@ -6,10 +6,21 @@
     <description>Recent content in Java on daschl writes. sometimes.</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Fri, 19 Feb 2016 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Mon, 01 Apr 2019 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="https://nitschinger.at/tags/java/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Reactive Barriers with Reactor</title>
+      <link>https://nitschinger.at/Reactive-Barriers-with-Reactor/</link>
+      <pubDate>Mon, 01 Apr 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Reactive-Barriers-with-Reactor/</guid>
+      <description>In the non-reactive java world, if you need a couple threads waiting on a barrier to move forward together, a common approach is to use a CountDownLatch.
+Here is how the documentation describes it succinctly:
+ A CountDownLatch is initialized with a given count. The await methods block until the current count reaches zero due to invocations of the countDown() method, after which all waiting threads are released and any subsequent invocations of await return immediately.</description>
+    </item>
     
     <item>
       <title>First Steps with Rust and JNI</title>
@@ -96,16 +107,6 @@ Since I wanted to make it work on my development machine and didn&amp;rsquo;t fi
       
       <guid>https://nitschinger.at/Logging-with-the-Couchbase-Java-Client/</guid>
       <description>Introduction There is a huge variety in logging frameworks for Java, and its hard to please everyone. To understand how logging is currently handled in the SDK, we have to go back a few years. As you may know, the SDK depends on the spymemcached library and therefore also inherits its logging mechanisms. Back in the days when @dustin wrote spy, there was no good abstraction for logging available (like SLF4J), so he wrote his own.</description>
-    </item>
-    
-    <item>
-      <title>Couchbase Java SDK Internals</title>
-      <link>https://nitschinger.at/Couchbase-Java-SDK-Internals/</link>
-      <pubDate>Wed, 17 Apr 2013 00:00:00 +0000</pubDate>
-      
-      <guid>https://nitschinger.at/Couchbase-Java-SDK-Internals/</guid>
-      <description>Motivation This blog post is intended to be a very detailed and informative article for those who already have used the Couchbase Java SDK and want to know how the internals work. This is not a introduction on how to use the Java SDK and we&amp;rsquo;ll cover some fairly advanced topics on the way.
-Normally, when talking about the SDK we mean everything that is needed to get you going (Client library, documentation, release notes,&amp;hellip;).</description>
     </item>
     
   </channel>

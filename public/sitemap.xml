@@ -3,6 +3,11 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>https://nitschinger.at/Reactive-Barriers-with-Reactor/</loc>
+    <lastmod>2019-04-01T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://nitschinger.at/imprint/</loc>
     <lastmod>2018-07-06T14:03:36+02:00</lastmod>
   </url>
@@ -423,7 +428,7 @@
   
   <url>
     <loc>https://nitschinger.at/tags/java/</loc>
-    <lastmod>2016-02-19T00:00:00+00:00</lastmod>
+    <lastmod>2019-04-01T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -603,7 +608,7 @@
   
   <url>
     <loc>https://nitschinger.at/post/</loc>
-    <lastmod>2017-01-02T00:00:00+00:00</lastmod>
+    <lastmod>2019-04-01T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -614,8 +619,14 @@
   </url>
   
   <url>
+    <loc>https://nitschinger.at/tags/reactive/</loc>
+    <lastmod>2019-04-01T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
     <loc>https://nitschinger.at/tags/reactor/</loc>
-    <lastmod>2013-08-13T00:00:00+00:00</lastmod>
+    <lastmod>2019-04-01T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -765,7 +776,7 @@
   
   <url>
     <loc>https://nitschinger.at/</loc>
-    <lastmod>2018-07-06T14:03:36+02:00</lastmod>
+    <lastmod>2019-04-01T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   

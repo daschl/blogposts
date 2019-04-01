@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Hugo 0.42.2" />
+<meta name="generator" content="Hugo 0.54.0" />
 
 
 <title>Using JMH for Java Microbenchmarking - daschl writes. sometimes.</title>
@@ -107,9 +107,9 @@
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">7
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf">org.openjdk.jmh.Main</span>;
+<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">org.openjdk.jmh.Main</span>;
 
-<span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf">Start</span> {
+<span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf;text-decoration:underline">Start</span> {
   <span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">static</span> <span style="color:#6ab825;font-weight:bold">void</span> <span style="color:#447fcf">main</span>(String... args) {
     Main.<span style="color:#bbb">main</span>(args);
   }
@@ -138,11 +138,11 @@
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">12
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">package</span> <span style="color:#447fcf">benchmarks</span>;
+<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">package</span> <span style="color:#447fcf;text-decoration:underline">benchmarks</span>;
 
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf">org.openjdk.jmh.annotations.GenerateMicroBenchmark</span>;
+<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">org.openjdk.jmh.annotations.GenerateMicroBenchmark</span>;
 
-<span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf">HelloWorld</span> {
+<span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf;text-decoration:underline">HelloWorld</span> {
 
   <span style="color:#ffa500">@GenerateMicroBenchmark</span>
   <span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">void</span> <span style="color:#447fcf">helloWorld</span>() {
@@ -294,12 +294,12 @@ b.HelloWorld.helloWorld    thrpt   1        10    1  3073969.337    65631.592   
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">40
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">package</span> <span style="color:#447fcf">benchmarks</span>;
+<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">package</span> <span style="color:#447fcf;text-decoration:underline">benchmarks</span>;
 
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf">net.spy.memcached.util.StringUtils</span>;
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf">org.openjdk.jmh.annotations.GenerateMicroBenchmark</span>;
+<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">net.spy.memcached.util.StringUtils</span>;
+<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">org.openjdk.jmh.annotations.GenerateMicroBenchmark</span>;
 
-<span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf">KeyBench</span> {
+<span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf;text-decoration:underline">KeyBench</span> {
 
   <span style="color:#999;font-style:italic">/**
 </span><span style="color:#999;font-style:italic">   * 12 chars long
@@ -468,14 +468,14 @@ b.HelloWorld.helloWorld    thrpt   1        10    1  3073969.337    65631.592   
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">42
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">package</span> <span style="color:#447fcf">benchmarks</span>;
+<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">package</span> <span style="color:#447fcf;text-decoration:underline">benchmarks</span>;
 
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf">net.spy.memcached.util.StringUtils</span>;
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf">org.openjdk.jmh.annotations.GenerateMicroBenchmark</span>;
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf">org.openjdk.jmh.annotations.State</span>;
+<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">net.spy.memcached.util.StringUtils</span>;
+<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">org.openjdk.jmh.annotations.GenerateMicroBenchmark</span>;
+<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">org.openjdk.jmh.annotations.State</span>;
 
 <span style="color:#ffa500">@State</span>
-<span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf">KeyBench</span> {
+<span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf;text-decoration:underline">KeyBench</span> {
 
   <span style="color:#999;font-style:italic">/**
 </span><span style="color:#999;font-style:italic">   * 12 chars long
@@ -517,7 +517,7 @@ b.HelloWorld.helloWorld    thrpt   1        10    1  3073969.337    65631.592   
     </div>
 
     <div id="disqus_thread"></div>
-<script>
+<script type="application/javascript">
     var disqus_config = function () {
     this.page.identifier = '23a93829d88ddda2cac2f4d4c5ec7870a63530838c5e5c0d6cb5e74699602db0eb3c24d16f1649e984e828bcf2beb16e7782b2d7849239c53e057bd489088495';
     

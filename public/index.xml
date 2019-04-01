@@ -6,9 +6,22 @@
     <description>Recent content on daschl writes. sometimes.</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Fri, 06 Jul 2018 14:03:36 +0200</lastBuildDate>
+    <lastBuildDate>Mon, 01 Apr 2019 00:00:00 +0000</lastBuildDate>
     
         <atom:link href="https://nitschinger.at/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    
+    <item>
+      <title>Reactive Barriers with Reactor</title>
+      <link>https://nitschinger.at/Reactive-Barriers-with-Reactor/</link>
+      <pubDate>Mon, 01 Apr 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Reactive-Barriers-with-Reactor/</guid>
+      <description>In the non-reactive java world, if you need a couple threads waiting on a barrier to move forward together, a common approach is to use a CountDownLatch.
+Here is how the documentation describes it succinctly:
+ A CountDownLatch is initialized with a given count. The await methods block until the current count reaches zero due to invocations of the countDown() method, after which all waiting threads are released and any subsequent invocations of await return immediately.</description>
+    </item>
     
     
     
@@ -104,17 +117,6 @@ To get the best performance out of hour hardware, it is important to understand 
       <guid>https://nitschinger.at/Bootstrapping-from-DNS-SRV-records-in-Java/</guid>
       <description>I know this topic has a very narrow audience, but I hope that one or two people out there scratching their heads will benefit from it.
 Here&amp;rsquo;s the itch we&amp;rsquo;re trying to scratch: is there an easy way to determine hostnames for - let&amp;rsquo;s say - a database connection? There are many ways to do this, like hardcoding it, providing them through a properties file and so on. All this techniques (maybe aside from fetching it over the network from a central storage) require some modifications on the server once one of the hostnames changes.</description>
-    </item>
-    
-    
-    
-    <item>
-      <title>Using JMH for Java Microbenchmarking</title>
-      <link>https://nitschinger.at/Using-JMH-for-Java-Microbenchmarking/</link>
-      <pubDate>Fri, 22 Nov 2013 00:00:00 +0000</pubDate>
-      
-      <guid>https://nitschinger.at/Using-JMH-for-Java-Microbenchmarking/</guid>
-      <description>So before we dive in, let&amp;rsquo;s rule two things out. First, I&amp;rsquo;m not a JVM expert and second, microbenchmarking is hard. The bigger problem is that it isn&amp;rsquo;t only hard but also looks very easy if you start. You put your test code in a loop, use System.nanoTime or something similar to measure the total time of the run and divide it by the number of runs. Doing it that way, you could very well let your cat estimate the results (mine would do it for proper catnip).</description>
     </item>
     
     

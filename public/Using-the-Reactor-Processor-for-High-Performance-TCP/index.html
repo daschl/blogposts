@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Hugo 0.42.2" />
+<meta name="generator" content="Hugo 0.54.0" />
 
 
 <title>Using the Reactor Processor for High-Performance TCP - daschl writes. sometimes.</title>
@@ -199,15 +199,15 @@ $ ./gradlew install
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">40
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf">reactor.core.Environment</span>;
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf">reactor.core.processor.Operation</span>;
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf">reactor.core.processor.Processor</span>;
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf">reactor.core.processor.spec.ProcessorSpec</span>;
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf">reactor.event.Event</span>;
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf">reactor.function.Supplier</span>;
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf">reactor.io.Buffer</span>;
+<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">reactor.core.Environment</span>;
+<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">reactor.core.processor.Operation</span>;
+<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">reactor.core.processor.Processor</span>;
+<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">reactor.core.processor.spec.ProcessorSpec</span>;
+<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">reactor.event.Event</span>;
+<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">reactor.function.Supplier</span>;
+<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">reactor.io.Buffer</span>;
 
-<span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf">MessageDispatcher</span> {
+<span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf;text-decoration:underline">MessageDispatcher</span> {
 
   <span style="color:#6ab825;font-weight:bold">private</span> <span style="color:#6ab825;font-weight:bold">final</span> Environment environment;
 
@@ -258,7 +258,7 @@ $ ./gradlew install
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">8
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf">EchoConsumer</span> <span style="color:#6ab825;font-weight:bold">implements</span> Consumer&lt;Event&lt;Buffer&gt;&gt; {
+<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf;text-decoration:underline">EchoConsumer</span> <span style="color:#6ab825;font-weight:bold">implements</span> Consumer&lt;Event&lt;Buffer&gt;&gt; {
 
   <span style="color:#ffa500">@Override</span>
   <span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">void</span> <span style="color:#447fcf">accept</span>(<span style="color:#6ab825;font-weight:bold">final</span> Event&lt;Buffer&gt; bufferEvent) {
@@ -285,10 +285,10 @@ $ ./gradlew install
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">12
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf">org.junit.Test</span>;
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf">reactor.io.Buffer</span>;
+<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">org.junit.Test</span>;
+<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">reactor.io.Buffer</span>;
 
-<span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf">MessageDispatcherTest</span> {
+<span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf;text-decoration:underline">MessageDispatcherTest</span> {
 
   <span style="color:#ffa500">@Test</span>
   <span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">void</span> <span style="color:#447fcf">echoSomeGarbage</span>() {
@@ -345,7 +345,7 @@ $ ./gradlew install
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">39
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf">Node</span> <span style="color:#6ab825;font-weight:bold">implements</span> Consumer&lt;Event&lt;Buffer&gt;&gt; {
+<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf;text-decoration:underline">Node</span> <span style="color:#6ab825;font-weight:bold">implements</span> Consumer&lt;Event&lt;Buffer&gt;&gt; {
 
   <span style="color:#6ab825;font-weight:bold">private</span> <span style="color:#6ab825;font-weight:bold">final</span> TcpClient&lt;Buffer, Buffer&gt; client;
   <span style="color:#6ab825;font-weight:bold">private</span> TcpConnection&lt;Buffer, Buffer&gt; conn = <span style="color:#6ab825;font-weight:bold">null</span>;
@@ -526,7 +526,7 @@ $ ./gradlew install
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">60
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf">BatchingNode</span> <span style="color:#6ab825;font-weight:bold">implements</span> BatchConsumer&lt;Event&lt;Buffer&gt;&gt; {
+<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf;text-decoration:underline">BatchingNode</span> <span style="color:#6ab825;font-weight:bold">implements</span> BatchConsumer&lt;Event&lt;Buffer&gt;&gt; {
 
   <span style="color:#6ab825;font-weight:bold">private</span> <span style="color:#6ab825;font-weight:bold">final</span> TcpClient&lt;Buffer, Buffer&gt; client;
   <span style="color:#6ab825;font-weight:bold">private</span> TcpConnection&lt;Buffer, Buffer&gt; conn = <span style="color:#6ab825;font-weight:bold">null</span>;
@@ -599,7 +599,7 @@ $ ./gradlew install
     </div>
 
     <div id="disqus_thread"></div>
-<script>
+<script type="application/javascript">
     var disqus_config = function () {
     
     

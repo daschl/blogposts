@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Hugo 0.42.2" />
+<meta name="generator" content="Hugo 0.54.0" />
 
 
 <title>Debugging Concurrency Issues with OpenJDK Jcstress - daschl writes. sometimes.</title>
@@ -160,15 +160,15 @@ $ cd jcstress/
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">74
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">package</span> <span style="color:#447fcf">com.couchbase.client.tests.util</span>;
+<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">package</span> <span style="color:#447fcf;text-decoration:underline">com.couchbase.client.tests.util</span>;
 
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf">java.util.regex.Matcher</span>;
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf">java.util.regex.Pattern</span>;
+<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">java.util.regex.Matcher</span>;
+<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">java.util.regex.Pattern</span>;
 
 <span style="color:#999;font-style:italic">/**
 </span><span style="color:#999;font-style:italic"> * Utility methods on string objects.
 </span><span style="color:#999;font-style:italic"> */</span>
-<span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">final</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf">StringUtils</span> {
+<span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">final</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf;text-decoration:underline">StringUtils</span> {
 
     <span style="color:#999;font-style:italic">/**
 </span><span style="color:#999;font-style:italic">     * A pattern to match on a signed integer value.
@@ -270,16 +270,16 @@ $ cd jcstress/
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">29
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">package</span> <span style="color:#447fcf">com.couchbase.client.tests.util</span>;
+<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">package</span> <span style="color:#447fcf;text-decoration:underline">com.couchbase.client.tests.util</span>;
 
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf">org.openjdk.jcstress.annotations.Actor</span>;
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf">org.openjdk.jcstress.annotations.JCStressTest</span>;
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf">org.openjdk.jcstress.annotations.State</span>;
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf">org.openjdk.jcstress.infra.results.IntResult2</span>;
+<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">org.openjdk.jcstress.annotations.Actor</span>;
+<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">org.openjdk.jcstress.annotations.JCStressTest</span>;
+<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">org.openjdk.jcstress.annotations.State</span>;
+<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">org.openjdk.jcstress.infra.results.IntResult2</span>;
 
 <span style="color:#ffa500">@JCStressTest</span>
 <span style="color:#ffa500">@State</span>
-<span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf">StringUtilsTest</span> {
+<span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf;text-decoration:underline">StringUtilsTest</span> {
 
     <span style="color:#ffa500">@Actor</span>
     <span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">void</span> <span style="color:#447fcf">actor1</span>(IntResult2 result) {
@@ -452,7 +452,7 @@ Done.
     </div>
 
     <div id="disqus_thread"></div>
-<script>
+<script type="application/javascript">
     var disqus_config = function () {
     this.page.identifier = 'a3564b8d59a2331a4c30acf6f0179b8f85001b7edca74d867e07ef6a77aa09d3654416020a9327c1ad0acc8e0e32de1d1f0e768da8a660024fb44cc0ca974a9d';
     

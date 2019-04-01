@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Hugo 0.42.2" />
+<meta name="generator" content="Hugo 0.54.0" />
 
 
 <title>Binding Threads And Processes to CPUs in Rust - daschl writes. sometimes.</title>
@@ -103,7 +103,6 @@ hwloc = &quot;0.3.0&quot;
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">17
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">18
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">19
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">20
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#6ab825;font-weight:bold">extern</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">crate</span><span style="color:#666"> </span>hwloc;<span style="color:#666">
@@ -125,7 +124,7 @@ hwloc = &quot;0.3.0&quot;
 </span><span style="color:#666">    </span><span style="color:#999;font-style:italic">// Debug Print all the Support Flags
 </span><span style="color:#999;font-style:italic"></span><span style="color:#666">    </span>println!(<span style="color:#ed9d13">&#34;All Flags:</span><span style="color:#ed9d13">\n</span><span style="color:#ed9d13">{:?}&#34;</span>,<span style="color:#666"> </span>topo.support());<span style="color:#666">
 </span><span style="color:#666"></span>}<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>On Linux:</p>
@@ -204,7 +203,6 @@ Machine (490MB) + Socket P#0 + L2d (6144KB)
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">26
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">27
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">28
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">29
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#6ab825;font-weight:bold">extern</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">crate</span><span style="color:#666"> </span>hwloc;<span style="color:#666">
@@ -230,12 +228,12 @@ Machine (490MB) + Socket P#0 + L2d (6144KB)
 </span><span style="color:#666"></span>}<span style="color:#666">
 </span><span style="color:#666">
 </span><span style="color:#666"></span><span style="color:#ed9d13">/// Helper method to find the last core
-</span><span style="color:#ed9d13"></span><span style="color:#6ab825;font-weight:bold">fn</span> <span style="color:#447fcf">last_core</span>(topo: <span style="color:#6ab825">&amp;</span><span style="color:#447fcf">mut</span><span style="color:#666"> </span>Topology)<span style="color:#666"> </span>-&gt; <span style="color:#6ab825">&amp;</span><span style="color:#447fcf">TopologyObject</span><span style="color:#666"> </span>{<span style="color:#666">
+</span><span style="color:#ed9d13"></span><span style="color:#6ab825;font-weight:bold">fn</span> <span style="color:#447fcf">last_core</span>(topo: <span style="color:#6ab825">&amp;</span><span style="color:#447fcf;text-decoration:underline">mut</span><span style="color:#666"> </span>Topology)<span style="color:#666"> </span>-&gt; <span style="color:#6ab825">&amp;</span><span style="color:#447fcf;text-decoration:underline">TopologyObject</span><span style="color:#666"> </span>{<span style="color:#666">
 </span><span style="color:#666">    </span><span style="color:#6ab825;font-weight:bold">let</span><span style="color:#666"> </span>core_depth<span style="color:#666"> </span>=<span style="color:#666"> </span>topo.depth_or_below_for_type(&amp;ObjectType::Core).unwrap();<span style="color:#666">
 </span><span style="color:#666">    </span><span style="color:#6ab825;font-weight:bold">let</span><span style="color:#666"> </span>all_cores<span style="color:#666"> </span>=<span style="color:#666"> </span>topo.objects_at_depth(core_depth);<span style="color:#666">
 </span><span style="color:#666">    </span>all_cores.last().unwrap()<span style="color:#666">
 </span><span style="color:#666"></span>}<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>This prints the following on the linux machine:</p>
@@ -260,7 +258,6 @@ Cpu Location after explicit bind: Some(3)
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 8
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 9
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">10
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">11
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#6ab825;font-weight:bold">let</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">mut</span><span style="color:#666"> </span>cpuset<span style="color:#666"> </span>=<span style="color:#666"> </span>last_core(&amp;<span style="color:#6ab825;font-weight:bold">mut</span><span style="color:#666"> </span>topo).cpuset().unwrap();<span style="color:#666">
@@ -268,12 +265,12 @@ Cpu Location after explicit bind: Some(3)
 </span><span style="color:#666">
 </span><span style="color:#666"></span><span style="color:#999;font-style:italic">//...
 </span><span style="color:#999;font-style:italic"></span><span style="color:#666">
-</span><span style="color:#666"></span><span style="color:#6ab825;font-weight:bold">fn</span> <span style="color:#447fcf">last_core</span>(topo: <span style="color:#6ab825">&amp;</span><span style="color:#447fcf">mut</span><span style="color:#666"> </span>Topology)<span style="color:#666"> </span>-&gt; <span style="color:#6ab825">&amp;</span><span style="color:#447fcf">TopologyObject</span><span style="color:#666"> </span>{<span style="color:#666">
+</span><span style="color:#666"></span><span style="color:#6ab825;font-weight:bold">fn</span> <span style="color:#447fcf">last_core</span>(topo: <span style="color:#6ab825">&amp;</span><span style="color:#447fcf;text-decoration:underline">mut</span><span style="color:#666"> </span>Topology)<span style="color:#666"> </span>-&gt; <span style="color:#6ab825">&amp;</span><span style="color:#447fcf;text-decoration:underline">TopologyObject</span><span style="color:#666"> </span>{<span style="color:#666">
 </span><span style="color:#666">    </span><span style="color:#6ab825;font-weight:bold">let</span><span style="color:#666"> </span>core_depth<span style="color:#666"> </span>=<span style="color:#666"> </span>topo.depth_or_below_for_type(&amp;ObjectType::Core).unwrap();<span style="color:#666">
 </span><span style="color:#666">    </span><span style="color:#6ab825;font-weight:bold">let</span><span style="color:#666"> </span>all_cores<span style="color:#666"> </span>=<span style="color:#666"> </span>topo.objects_at_depth(core_depth);<span style="color:#666">
 </span><span style="color:#666">    </span>all_cores.last().unwrap()<span style="color:#666">
 </span><span style="color:#666"></span>}<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>Now that we have our &ldquo;target&rdquo;, we can start binding the current process there. To visualise what&rsquo;s going on, we also print the binding and location for the current process before and after the explicit binding:</p>
@@ -289,7 +286,6 @@ Cpu Location after explicit bind: Some(3)
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 8
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 9
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">10
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">11
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust">println!(<span style="color:#ed9d13">&#34;Cpu Binding before explicit bind: {:?}&#34;</span>,<span style="color:#666"> </span>topo.get_cpubind(CPUBIND_PROCESS));<span style="color:#666">
@@ -302,7 +298,7 @@ Cpu Location after explicit bind: Some(3)
 </span><span style="color:#666">
 </span><span style="color:#666"></span>println!(<span style="color:#ed9d13">&#34;Cpu Binding after explicit bind: {:?}&#34;</span>,<span style="color:#666"> </span>topo.get_cpubind(CPUBIND_PROCESS));<span style="color:#666">
 </span><span style="color:#666"></span>println!(<span style="color:#ed9d13">&#34;Cpu Location after explicit bind: {:?}&#34;</span>,<span style="color:#666"> </span>topo.get_cpu_location(CPUBIND_PROCESS));<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>The current <code>CpuSet</code> of the process (which you can retrieve through <code>get_cpubind(CPUBIND_PROCESS)</code>) contains all possibles cores where the operating system might dispatch the process on. In our case it prints <code>0-3</code> which means all four cores are possible. The call to <code>get_cpu_location()</code> gives us the current core location, but this can change between subsequent calls as the operating system moves the process around.</p>
@@ -321,7 +317,6 @@ Cpu Location after explicit bind: Some(3)
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">5
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">6
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">7
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">8
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#6ab825;font-weight:bold">extern</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">crate</span><span style="color:#666"> </span>libc;<span style="color:#666">
@@ -331,7 +326,7 @@ Cpu Location after explicit bind: Some(3)
 </span><span style="color:#999;font-style:italic"></span><span style="color:#666">  </span><span style="color:#6ab825;font-weight:bold">let</span><span style="color:#666"> </span>pid<span style="color:#666"> </span>=<span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">unsafe</span><span style="color:#666"> </span>{<span style="color:#666"> </span>libc::getpid()<span style="color:#666"> </span>};<span style="color:#666">
 </span><span style="color:#666">  </span><span style="color:#999;font-style:italic">//...
 </span><span style="color:#999;font-style:italic"></span>}<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>Once we have our pid, we will reuse the code from the last example to get the last core where we want to bind the process to:</p>
@@ -349,7 +344,6 @@ Cpu Location after explicit bind: Some(3)
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">10
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">11
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">12
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">13
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#6ab825;font-weight:bold">fn</span> <span style="color:#447fcf">main</span>()<span style="color:#666"> </span>{<span style="color:#666">
@@ -359,12 +353,12 @@ Cpu Location after explicit bind: Some(3)
 </span><span style="color:#999;font-style:italic"></span>}<span style="color:#666">
 </span><span style="color:#666">
 </span><span style="color:#666"></span><span style="color:#ed9d13">/// Find the last core
-</span><span style="color:#ed9d13"></span><span style="color:#6ab825;font-weight:bold">fn</span> <span style="color:#447fcf">last_core</span>(topo: <span style="color:#6ab825">&amp;</span><span style="color:#447fcf">mut</span><span style="color:#666"> </span>Topology)<span style="color:#666"> </span>-&gt; <span style="color:#6ab825">&amp;</span><span style="color:#447fcf">TopologyObject</span><span style="color:#666"> </span>{<span style="color:#666">
+</span><span style="color:#ed9d13"></span><span style="color:#6ab825;font-weight:bold">fn</span> <span style="color:#447fcf">last_core</span>(topo: <span style="color:#6ab825">&amp;</span><span style="color:#447fcf;text-decoration:underline">mut</span><span style="color:#666"> </span>Topology)<span style="color:#666"> </span>-&gt; <span style="color:#6ab825">&amp;</span><span style="color:#447fcf;text-decoration:underline">TopologyObject</span><span style="color:#666"> </span>{<span style="color:#666">
 </span><span style="color:#666">    </span><span style="color:#6ab825;font-weight:bold">let</span><span style="color:#666"> </span>core_depth<span style="color:#666"> </span>=<span style="color:#666"> </span>topo.depth_or_below_for_type(&amp;ObjectType::Core).unwrap();<span style="color:#666">
 </span><span style="color:#666">    </span><span style="color:#6ab825;font-weight:bold">let</span><span style="color:#666"> </span>all_cores<span style="color:#666"> </span>=<span style="color:#666"> </span>topo.objects_at_depth(core_depth);<span style="color:#666">
 </span><span style="color:#666">    </span>all_cores.last().unwrap()<span style="color:#666">
 </span><span style="color:#666"></span>}<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>Now we can use the same methods as previously, but with the <code>for_process()</code> suffix. Here is the full example, again with some debug print statements to visualise what&rsquo;s going on:</p>
@@ -399,7 +393,6 @@ Cpu Location after explicit bind: Some(3)
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">27
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">28
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">29
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">30
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#6ab825;font-weight:bold">extern</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">crate</span><span style="color:#666"> </span>hwloc;<span style="color:#666">
@@ -426,12 +419,12 @@ Cpu Location after explicit bind: Some(3)
 </span><span style="color:#666"></span>}<span style="color:#666">
 </span><span style="color:#666">
 </span><span style="color:#666"></span><span style="color:#ed9d13">/// Find the last core
-</span><span style="color:#ed9d13"></span><span style="color:#6ab825;font-weight:bold">fn</span> <span style="color:#447fcf">last_core</span>(topo: <span style="color:#6ab825">&amp;</span><span style="color:#447fcf">mut</span><span style="color:#666"> </span>Topology)<span style="color:#666"> </span>-&gt; <span style="color:#6ab825">&amp;</span><span style="color:#447fcf">TopologyObject</span><span style="color:#666"> </span>{<span style="color:#666">
+</span><span style="color:#ed9d13"></span><span style="color:#6ab825;font-weight:bold">fn</span> <span style="color:#447fcf">last_core</span>(topo: <span style="color:#6ab825">&amp;</span><span style="color:#447fcf;text-decoration:underline">mut</span><span style="color:#666"> </span>Topology)<span style="color:#666"> </span>-&gt; <span style="color:#6ab825">&amp;</span><span style="color:#447fcf;text-decoration:underline">TopologyObject</span><span style="color:#666"> </span>{<span style="color:#666">
 </span><span style="color:#666">    </span><span style="color:#6ab825;font-weight:bold">let</span><span style="color:#666"> </span>core_depth<span style="color:#666"> </span>=<span style="color:#666"> </span>topo.depth_or_below_for_type(&amp;ObjectType::Core).unwrap();<span style="color:#666">
 </span><span style="color:#666">    </span><span style="color:#6ab825;font-weight:bold">let</span><span style="color:#666"> </span>all_cores<span style="color:#666"> </span>=<span style="color:#666"> </span>topo.objects_at_depth(core_depth);<span style="color:#666">
 </span><span style="color:#666">    </span>all_cores.last().unwrap()<span style="color:#666">
 </span><span style="color:#666"></span>}<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>If we run this on our linux box, this is the output:</p>
@@ -499,7 +492,6 @@ Last Known CPU Location: 3
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">45
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">46
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">47
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">48
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#6ab825;font-weight:bold">extern</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">crate</span><span style="color:#666"> </span>hwloc;<span style="color:#666">
@@ -542,14 +534,14 @@ Last Known CPU Location: 3
 </span><span style="color:#666">        </span>}<span style="color:#666">
 </span><span style="color:#666"></span>}<span style="color:#666">
 </span><span style="color:#666">
-</span><span style="color:#666"></span><span style="color:#6ab825;font-weight:bold">fn</span> <span style="color:#447fcf">cpuset_for_core</span>(topology: <span style="color:#6ab825">&amp;</span><span style="color:#447fcf">Topology</span>,<span style="color:#666"> </span>idx: <span style="color:#6ab825;font-weight:bold">usize</span>)<span style="color:#666"> </span>-&gt; <span style="color:#447fcf">CpuSet</span><span style="color:#666"> </span>{<span style="color:#666">
+</span><span style="color:#666"></span><span style="color:#6ab825;font-weight:bold">fn</span> <span style="color:#447fcf">cpuset_for_core</span>(topology: <span style="color:#6ab825">&amp;</span><span style="color:#447fcf;text-decoration:underline">Topology</span>,<span style="color:#666"> </span>idx: <span style="color:#6ab825;font-weight:bold">usize</span>)<span style="color:#666"> </span>-&gt; <span style="color:#447fcf;text-decoration:underline">CpuSet</span><span style="color:#666"> </span>{<span style="color:#666">
 </span><span style="color:#666">    </span><span style="color:#6ab825;font-weight:bold">let</span><span style="color:#666"> </span>cores<span style="color:#666"> </span>=<span style="color:#666"> </span>(*topology).objects_with_type(&amp;ObjectType::Core).unwrap();<span style="color:#666">
 </span><span style="color:#666">    </span><span style="color:#6ab825;font-weight:bold">match</span><span style="color:#666"> </span>cores.get(idx)<span style="color:#666"> </span>{<span style="color:#666">
 </span><span style="color:#666">        </span><span style="color:#24909d">Some</span>(val)<span style="color:#666"> </span>=&gt;<span style="color:#666"> </span>val.cpuset().unwrap(),<span style="color:#666">
 </span><span style="color:#666">        </span><span style="color:#24909d">None</span><span style="color:#666"> </span>=&gt;<span style="color:#666"> </span>panic!(<span style="color:#ed9d13">&#34;No Core found with id {}&#34;</span>,<span style="color:#666"> </span>idx)<span style="color:#666">
 </span><span style="color:#666">    </span>}<span style="color:#666">
 </span><span style="color:#666"></span>}<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>Before the binding we need to identify the number of cores - that&rsquo;s an easy task for <code>hwloc</code>:</p>
@@ -561,7 +553,6 @@ Last Known CPU Location: 3
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">4
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">5
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">6
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">7
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#6ab825;font-weight:bold">let</span><span style="color:#666"> </span>num_cores<span style="color:#666"> </span>=<span style="color:#666"> </span>{<span style="color:#666">
@@ -570,7 +561,7 @@ Last Known CPU Location: 3
 </span><span style="color:#666">    </span>(*topo_locked).objects_with_type(&amp;ObjectType::Core).unwrap().len()<span style="color:#666">
 </span><span style="color:#666"></span>};<span style="color:#666">
 </span><span style="color:#666"></span>println!(<span style="color:#ed9d13">&#34;Found {} cores.&#34;</span>,<span style="color:#666"> </span>num_cores);<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>The code finds all cores through <code>objects_with_type(&amp;ObjectType::Core)</code> and counts them. Note that we need to do use proper rust synchronization mechanisms around our <code>Topology</code> since we are accessing it from multiple threads in the code.</p>
@@ -588,7 +579,6 @@ Last Known CPU Location: 3
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 8
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 9
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">10
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">11
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#6ab825;font-weight:bold">let</span><span style="color:#666"> </span>handles: <span style="color:#24909d">Vec</span>&lt;_&gt;<span style="color:#666"> </span>=<span style="color:#666"> </span>(<span style="color:#3677a9">0</span>..num_cores).map(|i|<span style="color:#666"> </span>{<span style="color:#666">
@@ -601,7 +591,7 @@ Last Known CPU Location: 3
 </span><span style="color:#666">    </span><span style="color:#6ab825;font-weight:bold">for</span><span style="color:#666"> </span>h<span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">in</span><span style="color:#666"> </span>handles<span style="color:#666"> </span>{<span style="color:#666">
 </span><span style="color:#666">        </span>h.join().unwrap();<span style="color:#666">
 </span><span style="color:#666">    </span>}<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>Next up we load the current thread ID through some <code>libc</code> unsafe magic, lock the <code>Topology</code> for safety and then read the current <code>CpuSet</code> for the thread (to print it out later):</p>
@@ -611,14 +601,13 @@ Last Known CPU Location: 3
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">2
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">3
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">4
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">5
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#6ab825;font-weight:bold">let</span><span style="color:#666"> </span>tid<span style="color:#666"> </span>=<span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">unsafe</span><span style="color:#666"> </span>{<span style="color:#666"> </span>libc::pthread_self()<span style="color:#666"> </span>};<span style="color:#666">
 </span><span style="color:#666"></span><span style="color:#6ab825;font-weight:bold">let</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">mut</span><span style="color:#666"> </span>locked_topo<span style="color:#666"> </span>=<span style="color:#666"> </span>child_topo.lock().unwrap();<span style="color:#666">
 </span><span style="color:#666">
 </span><span style="color:#666"></span><span style="color:#6ab825;font-weight:bold">let</span><span style="color:#666"> </span>before<span style="color:#666"> </span>=<span style="color:#666"> </span>locked_topo.get_cpubind_for_thread(tid,<span style="color:#666"> </span>CPUBIND_THREAD);<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>The next part is important:</p>
@@ -627,13 +616,12 @@ Last Known CPU Location: 3
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">1
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">2
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">3
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">4
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#6ab825;font-weight:bold">let</span><span style="color:#666"> </span>bind_to<span style="color:#666"> </span>=<span style="color:#666"> </span>cpuset_for_core(&amp;*locked_topo,<span style="color:#666"> </span>i);<span style="color:#666">
 </span><span style="color:#666">
 </span><span style="color:#666"></span>locked_topo.set_cpubind_for_thread(tid,<span style="color:#666"> </span>bind_to,<span style="color:#666"> </span>CPUBIND_THREAD).unwrap();<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>The helper function <code>cpuset_for_core</code> accepts an integer which represents the thread number (not the <code>tid</code>) and loops through the cores available on the <code>Topology</code>. It then returns the right <code>CpuSet</code> for the given index, so the first thread will be pinned to Core 0, the second one to Core 1 and so forth. Then, we use the <code>set_cpubind_for_thread()</code> method to bass in the current thread id as well as the <code>CpuSet</code> to apply and the <code>CPUBIND_THREAD</code> identifier which is needed.</p>
@@ -644,13 +632,12 @@ Last Known CPU Location: 3
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">1
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">2
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">3
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">4
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#6ab825;font-weight:bold">let</span><span style="color:#666"> </span>after<span style="color:#666"> </span>=<span style="color:#666"> </span>locked_topo.get_cpubind_for_thread(tid,<span style="color:#666"> </span>CPUBIND_THREAD);<span style="color:#666">
 </span><span style="color:#666">
 </span><span style="color:#666"></span>println!(<span style="color:#ed9d13">&#34;Thread {}: Before {:?}, After {:?}&#34;</span>,<span style="color:#666"> </span>i,<span style="color:#666"> </span>before,<span style="color:#666"> </span>after);<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>Running this on our 4-core machine prints:</p>
@@ -671,7 +658,7 @@ Thread 3: Before Some(0-3), After Some(3)
     </div>
 
     <div id="disqus_thread"></div>
-<script>
+<script type="application/javascript">
     var disqus_config = function () {
     
     

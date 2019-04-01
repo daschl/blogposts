@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Hugo 0.42.2" />
+<meta name="generator" content="Hugo 0.54.0" />
 
 
 <title>Discovering Hardware Topology in Rust - daschl writes. sometimes.</title>
@@ -150,7 +150,6 @@ Hello, world!
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">15
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">16
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">17
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">18
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#6ab825;font-weight:bold">extern</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">crate</span><span style="color:#666"> </span>hwloc;<span style="color:#666">
@@ -170,29 +169,27 @@ Hello, world!
 </span><span style="color:#666">        </span><span style="color:#24909d">Err</span>(e)<span style="color:#666"> </span>=&gt;<span style="color:#666"> </span>panic!(format!(<span style="color:#ed9d13">&#34;Could not load cores because of: {:?}&#34;</span>,<span style="color:#666"> </span>e))<span style="color:#666">
 </span><span style="color:#666">    </span>}<span style="color:#666">
 </span><span style="color:#666"></span>}<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>Let&rsquo;s break the code apart a bit. The first thing you always need to do is create a <a href="http://nitschinger.at/hwloc-rs/rustdoc/0.2.0/hwloc/struct.Topology.html">Topology</a>. The <code>Topology</code> is your logical representation of the actual mapped hardware.</p>
 <div class="highlight"><div style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">1
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">2
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#6ab825;font-weight:bold">let</span><span style="color:#666"> </span>topology<span style="color:#666"> </span>=<span style="color:#666"> </span>Topology::new();<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>Now that we have the <code>Topology</code>, we can ask it to return all <a href="http://nitschinger.at/hwloc-rs/rustdoc/0.2.0/hwloc/struct.TopologyObject.html">TopologyObjects</a> with a specific <a href="http://nitschinger.at/hwloc-rs/rustdoc/0.2.0/hwloc/enum.ObjectType.html">ObjectType</a>. One type is <code>Core</code> which maps to a computation unit on the physical hardware (most of the time a CPU Core).</p>
 <div class="highlight"><div style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">1
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">2
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#6ab825;font-weight:bold">let</span><span style="color:#666"> </span>cores<span style="color:#666"> </span>=<span style="color:#666"> </span>topology.objects_with_type(&amp;ObjectType::Core);<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>Since not every ObjectType is available on every hardware, it might not be possible to figure out the actual objects. Because of this, the <code>objects_with_type</code> method returns a <code>Result&lt;Vec&lt;&amp;TopologyObject&gt;, TypeDepthError&gt;</code>. We can now utilize pattern matching to distinguish between success and error, and if it is successful print out the length of the <a href="https://doc.rust-lang.org/std/vec/struct.Vec.html#method.len">Vector</a>:</p>
@@ -202,14 +199,13 @@ Hello, world!
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">2
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">3
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">4
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">5
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#6ab825;font-weight:bold">match</span><span style="color:#666"> </span>cores<span style="color:#666"> </span>{<span style="color:#666">
 </span><span style="color:#666">    </span><span style="color:#24909d">Ok</span>(c)<span style="color:#666"> </span>=&gt;<span style="color:#666"> </span>println!(<span style="color:#ed9d13">&#34;There are {} cores on this machine.&#34;</span>,<span style="color:#666"> </span>c.len()),<span style="color:#666">
 </span><span style="color:#666">    </span><span style="color:#24909d">Err</span>(e)<span style="color:#666"> </span>=&gt;<span style="color:#666"> </span>panic!(format!(<span style="color:#ed9d13">&#34;Could not load cores because of: {:?}&#34;</span>,<span style="color:#666"> </span>e))<span style="color:#666">
 </span><span style="color:#666"></span>}<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>If you run the code you should see an output like this (My machine is equipped with an i7 quadcore):</p>
@@ -231,7 +227,6 @@ There are 4 cores on this machine.
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">6
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">7
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">8
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">9
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#999;font-style:italic">// Get all objects with type &#34;PU&#34;
@@ -242,7 +237,7 @@ There are 4 cores on this machine.
 </span><span style="color:#666">    </span><span style="color:#24909d">Ok</span>(c)<span style="color:#666"> </span>=&gt;<span style="color:#666"> </span>println!(<span style="color:#ed9d13">&#34;There are {} processing units on this machine.&#34;</span>,<span style="color:#666"> </span>c.len()),<span style="color:#666">
 </span><span style="color:#666">    </span><span style="color:#24909d">Err</span>(e)<span style="color:#666"> </span>=&gt;<span style="color:#666"> </span>panic!(format!(<span style="color:#ed9d13">&#34;Could not load processing units because of: {:?}&#34;</span>,<span style="color:#666"> </span>e))<span style="color:#666">
 </span><span style="color:#666"></span>}<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>My i7 indeed has hyperthreading enabled, so this prints:</p>
@@ -284,7 +279,6 @@ There are 8 processing units on this machine.
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">26
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">27
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">28
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">29
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#6ab825;font-weight:bold">extern</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">crate</span><span style="color:#666"> </span>hwloc;<span style="color:#666">
@@ -315,18 +309,17 @@ There are 8 processing units on this machine.
 </span><span style="color:#666">        </span>}<span style="color:#666">
 </span><span style="color:#666">    </span>}<span style="color:#666">
 </span><span style="color:#666"></span>}<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>First, we load all the processing units:</p>
 <div class="highlight"><div style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">1
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">2
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#6ab825;font-weight:bold">let</span><span style="color:#666"> </span>pus<span style="color:#666"> </span>=<span style="color:#666"> </span>topology.objects_with_type(&amp;ObjectType::PU).ok().expect(<span style="color:#ed9d13">&#34;Could not load PUs!&#34;</span>);<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>Next up, we iterate through each unit and print its logical index:</p>
@@ -339,7 +332,6 @@ There are 8 processing units on this machine.
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">5
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">6
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">7
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">8
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#999;font-style:italic">// Iterate through each PU
@@ -349,7 +341,7 @@ There are 8 processing units on this machine.
 </span><span style="color:#666">
 </span><span style="color:#666">    </span><span style="color:#999;font-style:italic">// ...
 </span><span style="color:#999;font-style:italic"></span>}<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>Finally, we can walk up the tree of parents for each unit until we arrive at the Core level and print out its logical index as well. Notice how easy the walking is with the <code>while let</code> construct. This works because <code>TopologyObject#parent()</code> returns an <code>Option&lt;&amp;TopologyOption&gt;</code>.</p>
@@ -365,7 +357,6 @@ There are 8 processing units on this machine.
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 8
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 9
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">10
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">11
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#999;font-style:italic">// Walk up the parent chain until the Core is found and print its id.
@@ -378,7 +369,7 @@ There are 8 processing units on this machine.
 </span><span style="color:#666">        </span>parent<span style="color:#666"> </span>=<span style="color:#666"> </span>p.parent();<span style="color:#666">
 </span><span style="color:#666">    </span>}<span style="color:#666">
 </span><span style="color:#666"></span>}<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>On my machine this prints:</p>
@@ -421,7 +412,6 @@ PU #7 is on Core 3
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">16
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">17
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">18
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">19
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#6ab825;font-weight:bold">extern</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">crate</span><span style="color:#666"> </span>hwloc;<span style="color:#666">
@@ -442,7 +432,7 @@ PU #7 is on Core 3
 </span><span style="color:#666">		</span>}<span style="color:#666">
 </span><span style="color:#666">	</span>}<span style="color:#666">
 </span><span style="color:#666"></span>}<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>The code iterates through each level until the final topology depth is reached and on each level it prints all the TopologyObjects. This is the result on my machine:</p>
@@ -507,7 +497,6 @@ PU #7 is on Core 3
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">21
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">22
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">23
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">24
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#6ab825;font-weight:bold">extern</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">crate</span><span style="color:#666"> </span>hwloc;<span style="color:#666">
@@ -524,7 +513,7 @@ PU #7 is on Core 3
 </span><span style="color:#666"></span>}<span style="color:#666">
 </span><span style="color:#666">
 </span><span style="color:#666"></span><span style="color:#999;font-style:italic">// Print children recursively
-</span><span style="color:#999;font-style:italic"></span><span style="color:#6ab825;font-weight:bold">fn</span> <span style="color:#447fcf">print_children</span>(topo: <span style="color:#6ab825">&amp;</span><span style="color:#447fcf">Topology</span>,<span style="color:#666"> </span>obj: <span style="color:#6ab825">&amp;</span><span style="color:#447fcf">TopologyObject</span>,<span style="color:#666"> </span>depth: <span style="color:#6ab825;font-weight:bold">usize</span>)<span style="color:#666"> </span>{<span style="color:#666">
+</span><span style="color:#999;font-style:italic"></span><span style="color:#6ab825;font-weight:bold">fn</span> <span style="color:#447fcf">print_children</span>(topo: <span style="color:#6ab825">&amp;</span><span style="color:#447fcf;text-decoration:underline">Topology</span>,<span style="color:#666"> </span>obj: <span style="color:#6ab825">&amp;</span><span style="color:#447fcf;text-decoration:underline">TopologyObject</span>,<span style="color:#666"> </span>depth: <span style="color:#6ab825;font-weight:bold">usize</span>)<span style="color:#666"> </span>{<span style="color:#666">
 </span><span style="color:#666">    </span><span style="color:#999;font-style:italic">// some padding for the tree print
 </span><span style="color:#999;font-style:italic"></span><span style="color:#666">	</span><span style="color:#6ab825;font-weight:bold">let</span><span style="color:#666"> </span>padding<span style="color:#666"> </span>=<span style="color:#666"> </span>std::iter::repeat(<span style="color:#ed9d13">&#34; &#34;</span>).take(depth).collect::&lt;<span style="color:#24909d">String</span>&gt;();<span style="color:#666">
 </span><span style="color:#666">	</span>println!(<span style="color:#ed9d13">&#34;{}{}: #{}&#34;</span>,<span style="color:#666"> </span>padding,<span style="color:#666"> </span>obj,<span style="color:#666"> </span>obj.os_index());<span style="color:#666">
@@ -533,29 +522,27 @@ PU #7 is on Core 3
 </span><span style="color:#666">		</span>print_children(topo,<span style="color:#666"> </span>obj.children()[i<span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">as</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">usize</span>],<span style="color:#666"> </span>depth<span style="color:#666"> </span>+<span style="color:#666"> </span><span style="color:#3677a9">1</span>);<span style="color:#666">
 </span><span style="color:#666">	</span>}<span style="color:#666">
 </span><span style="color:#666"></span>}<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>We define a method called <code>print_children</code> which is called recursively:</p>
 <div class="highlight"><div style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">1
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">2
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#6ab825;font-weight:bold">fn</span> <span style="color:#447fcf">print_children</span>(topo: <span style="color:#6ab825">&amp;</span><span style="color:#447fcf">Topology</span>,<span style="color:#666"> </span>obj: <span style="color:#6ab825">&amp;</span><span style="color:#447fcf">TopologyObject</span>,<span style="color:#666"> </span>depth: <span style="color:#6ab825;font-weight:bold">usize</span>)<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#6ab825;font-weight:bold">fn</span> <span style="color:#447fcf">print_children</span>(topo: <span style="color:#6ab825">&amp;</span><span style="color:#447fcf;text-decoration:underline">Topology</span>,<span style="color:#666"> </span>obj: <span style="color:#6ab825">&amp;</span><span style="color:#447fcf;text-decoration:underline">TopologyObject</span>,<span style="color:#666"> </span>depth: <span style="color:#6ab825;font-weight:bold">usize</span>)<span style="color:#666">
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>Note the funky padding variable is just there to create a left-padding for the tree view:</p>
 <div class="highlight"><div style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">1
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">2
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#6ab825;font-weight:bold">let</span><span style="color:#666"> </span>padding<span style="color:#666"> </span>=<span style="color:#666"> </span>std::iter::repeat(<span style="color:#ed9d13">&#34; &#34;</span>).take(depth).collect::&lt;<span style="color:#24909d">String</span>&gt;();<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>Running the code above gives the same information but in a different style:</p>
@@ -588,7 +575,6 @@ PU #7 is on Core 3
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">25
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">26
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">27
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">28
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#666"> </span>~/rust/hwloc-playground<span style="color:#666"> </span><span style="color:#cd2828;font-weight:bold">$</span><span style="color:#666"> </span>cargo<span style="color:#666"> </span>run<span style="color:#666">
@@ -618,7 +604,7 @@ PU #7 is on Core 3
 </span><span style="color:#666">     </span>Core<span style="color:#666"> </span>(): <span style="color:#a61717;background-color:#e3d2d2">#</span><span style="color:#3677a9">3</span><span style="color:#666">
 </span><span style="color:#666">      </span>PU<span style="color:#666"> </span>(): <span style="color:#a61717;background-color:#e3d2d2">#</span><span style="color:#3677a9">6</span><span style="color:#666">
 </span><span style="color:#666">      </span>PU<span style="color:#666"> </span>(): <span style="color:#a61717;background-color:#e3d2d2">#</span><span style="color:#3677a9">7</span><span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>What you can spot here immediately is that each core has its own L2 cache (as well as a L1 data cache) while at the same time they all share the same L3 cache.</p>
@@ -657,7 +643,6 @@ PU #7 is on Core 3
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">25
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">26
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">27
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">28
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#6ab825;font-weight:bold">extern</span><span style="color:#666"> </span><span style="color:#6ab825;font-weight:bold">crate</span><span style="color:#666"> </span>hwloc;<span style="color:#666">
@@ -687,7 +672,7 @@ PU #7 is on Core 3
 </span><span style="color:#666">    </span><span style="color:#999;font-style:italic">// Print out the result
 </span><span style="color:#999;font-style:italic"></span><span style="color:#666">	</span>println!(<span style="color:#ed9d13">&#34;*** Logical processor 0 has {} caches totalling {} KB&#34;</span>,<span style="color:#666"> </span>levels,<span style="color:#666"> </span>size<span style="color:#666"> </span>/<span style="color:#666"> </span><span style="color:#3677a9">1024</span>);<span style="color:#666">
 </span><span style="color:#666"></span>}<span style="color:#666">
-</span><span style="color:#666"></span></code></pre></td></tr></table>
+</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>We are using a similar technique as in the examples above, but this time we just add up all the capacity for each cache and then print it out.</p>
@@ -729,7 +714,7 @@ Memory:	16 GB
     </div>
 
     <div id="disqus_thread"></div>
-<script>
+<script type="application/javascript">
     var disqus_config = function () {
     
     

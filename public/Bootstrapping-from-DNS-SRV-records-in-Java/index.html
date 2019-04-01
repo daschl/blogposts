@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Hugo 0.42.2" />
+<meta name="generator" content="Hugo 0.54.0" />
 
 
 <title>Bootstrapping from DNS SRV records in Java - daschl writes. sometimes.</title>
@@ -140,7 +140,7 @@ _cbnodes._tcp.example.com.  0  IN  SRV  30  0  8091  node3.example.com.
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">59
 </span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">static</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf">DnsRecord</span> <span style="color:#6ab825;font-weight:bold">implements</span> Comparable&lt;DnsRecord&gt; {
+<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">static</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf;text-decoration:underline">DnsRecord</span> <span style="color:#6ab825;font-weight:bold">implements</span> Comparable&lt;DnsRecord&gt; {
     <span style="color:#6ab825;font-weight:bold">private</span> <span style="color:#6ab825;font-weight:bold">final</span> <span style="color:#6ab825;font-weight:bold">int</span> priority;
     <span style="color:#6ab825;font-weight:bold">private</span> <span style="color:#6ab825;font-weight:bold">final</span> <span style="color:#6ab825;font-weight:bold">int</span> weight;
     <span style="color:#6ab825;font-weight:bold">private</span> <span style="color:#6ab825;font-weight:bold">final</span> <span style="color:#6ab825;font-weight:bold">int</span> port;
@@ -290,7 +290,7 @@ when(mockedContext.<span style="color:#bbb">getAttributes</span>(service, <span 
     </div>
 
     <div id="disqus_thread"></div>
-<script>
+<script type="application/javascript">
     var disqus_config = function () {
     
     

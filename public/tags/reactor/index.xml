@@ -6,10 +6,21 @@
     <description>Recent content in Reactor on daschl writes. sometimes.</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Tue, 13 Aug 2013 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Mon, 01 Apr 2019 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="https://nitschinger.at/tags/reactor/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Reactive Barriers with Reactor</title>
+      <link>https://nitschinger.at/Reactive-Barriers-with-Reactor/</link>
+      <pubDate>Mon, 01 Apr 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Reactive-Barriers-with-Reactor/</guid>
+      <description>In the non-reactive java world, if you need a couple threads waiting on a barrier to move forward together, a common approach is to use a CountDownLatch.
+Here is how the documentation describes it succinctly:
+ A CountDownLatch is initialized with a given count. The await methods block until the current count reaches zero due to invocations of the countDown() method, after which all waiting threads are released and any subsequent invocations of await return immediately.</description>
+    </item>
     
     <item>
       <title>Using the Reactor Processor for High-Performance TCP</title>
