@@ -3,11 +3,10 @@
   <head>
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Hugo 0.54.0" />
+<meta name="generator" content="Hugo 0.74.3" />
 
 
-<title>Introducing Fixtures for Lithium - daschl writes. sometimes.</title>
-<meta property="og:title" content="Introducing Fixtures for Lithium - daschl writes. sometimes.">
+<title>Introducing Fixtures for Lithium – daschl writes. sometimes.</title>
 
 
 
@@ -18,6 +17,28 @@
 
 
 
+<link href="/atom.xml" rel="alternate" type="application/atom+xml" title="daschl writes. sometimes." />
+
+<meta property="og:title" content="Introducing Fixtures for Lithium" />
+<meta property="og:description" content="With the new li3_fixtures plugin you can simplify your tests, DRY them up and make them more readable." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://nitschinger.at/Introducing-Fixtures-for-Lithium/" />
+<meta property="article:published_time" content="2010-12-04T00:00:00+00:00" />
+<meta property="article:modified_time" content="2010-12-04T00:00:00+00:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Introducing Fixtures for Lithium"/>
+<meta name="twitter:description" content="With the new li3_fixtures plugin you can simplify your tests, DRY them up and make them more readable."/>
+
+<meta itemprop="name" content="Introducing Fixtures for Lithium">
+<meta itemprop="description" content="With the new li3_fixtures plugin you can simplify your tests, DRY them up and make them more readable.">
+<meta itemprop="datePublished" content="2010-12-04T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2010-12-04T00:00:00+00:00" />
+<meta itemprop="wordCount" content="453">
+
+
+
+<meta itemprop="keywords" content="php,fixtures,lithium,plugin," />
 
 
 <link rel="stylesheet" href="https://nitschinger.at/css/main.css" media="all">
@@ -28,30 +49,27 @@
     <div class="wrapper">
       <header class="header">
         <nav class="nav">
-  <a href="https://nitschinger.at/" class="nav-title">
-    daschl blogs. sometimes.
+  <a href="https://nitschinger.at/" class="nav-logo">
+    <img src="https://nitschinger.at/images/"
+         width="" 
+         height="" 
+         alt="">
   </a>
+  <a href="https://nitschinger.at/" class="nav-title">daschl writes. sometimes.</a>
 
   <ul class="nav-links">
     
-    <li>
-      <a href="/tags">tags</a>
-    </li>
+    <li><a href="/tags">tags</a></li>
     
-    <li>
-      <a href="/imprint/">imprint</a>
-    </li>
+    <li><a href="/imprint/">imprint</a></li>
     
-    <li>
-      <a href="https://twitter.com/daschl">-&gt; twitter</a>
-    </li>
+    <li><a href="https://twitter.com/daschl">-&gt; twitter</a></li>
     
-    <li>
-      <a href="https://github.com/daschl">-&gt; github</a>
-    </li>
+    <li><a href="https://github.com/daschl">-&gt; github</a></li>
     
   </ul>
 </nav>
+
       </header>
 
 
@@ -59,12 +77,11 @@
   <article class="article">
     <h1 class="article-title">Introducing Fixtures for Lithium</h1>
     
-    <span class="article-date">2010-12-04</span>
+    <span class="article-date">4 December 2010</span>
     
 
     <div class="article-content">
       <p>When you write tests for your classes (and you should), you may run into the problem that you create large arrays of test data in your code. Consider the following example:</p>
-
 <pre><code>$expected = array(
     'post1' =&gt; array(
         'title' =&gt; 'My First Post',
@@ -83,23 +100,16 @@
 $this-&gt;assertEqual($expected[0], Post::first());
 /* more tests down here */
 </code></pre>
-
 <p>This creates a nested array of test data where each inner array mocks a <code>post</code> stored in the database. If we have to do this more than once (maybe in an other test we insert this data into the database to test validations), we may put the snippet in the <code>setUp()</code> method. A better approach would be to move this code in fixture files. The <code>li3_fixtures</code> plugin tries to help you with that and provides a simple and convenient approach to integrate fixtures in your tests.</p>
-
 <p>Before we can use the plugin, we need to install it first. <code>li3_fixtures</code> doesn&rsquo;t have any dependencies, so this is straightforward. Note that for now you need a rad-dev.org-account to clone the repository.</p>
-
 <pre><code>$ cd /path/to/app/libraries
 $ git clone code@rad-dev.org:li3_fixtures.git
 $ mkdir /path/to/app/tests/fixtures
 </code></pre>
-
 <p>Now we need to tell our app to use the plugin, so fire up your editor and modify your <code>app/config/bootstrap/libraries.php</code>.</p>
-
 <pre><code>Libraries::add('li3_fixtures');
 </code></pre>
-
 <p>After that, we can create a sample fixture file in <code>app/tests/fixtures/posts.json</code>. Currently only json-files are supported, but xml-support is planned.</p>
-
 <pre><code>{
     &quot;post1&quot;: {
         &quot;title&quot;: &quot;My First Post&quot;,
@@ -115,50 +125,22 @@ $ mkdir /path/to/app/tests/fixtures
     }
 }
 </code></pre>
-
 <p>Now that we have our fixture file in place, lets see how the <code>$this-&gt;assertEqual()</code> looks like (don&rsquo;t forget to use the <code>li3_fixtures</code> plugin with <code>use li3_fixtures\test\Fixture;</code>):</p>
-
 <pre><code>$fixtures = Fixture::load('Post');
 $this-&gt;assertEqual($fixtures-&gt;first(), Post::first());
 </code></pre>
-
 <p>By convention, your <code>$model</code> in <code>Fixture::load($model)</code>well be lowercased and pluralized by the Inflector (so &lsquo;Post&rsquo; loads &lsquo;posts.json&rsquo;). The <code>load</code>-method also takes an optional argument where you can override various default settings like the extension or location of the fixture-file.</p>
-
 <p>As you can see, your test code is significantly smaller and easier to read. You may also notice the <code>first()</code>-method here. <code>li3_fixtures</code> makes use of the built in <code>lithium\util\Collection</code> class, which provides a powerful set of collection management methods like <code>first()</code>, <code>next()</code> or <code>prev()</code>. Check out the <code>lithium\util\Collection</code> documentation for more info on that.</p>
-
 <p>The project can be found at <a href="http://rad-dev.org/li3_fixtures">rad-dev.org/li3_fixtures</a> and is maintained by me, so if you have any comments or questions, feel free to ask comment here or contact me directly.</p>
 
     </div>
-
-    <div id="disqus_thread"></div>
-<script type="application/javascript">
-    var disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "daschl" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
-
+ 
     <ul class="article-taxonomy">
-       
+      
+    
+      
       <li>
-        <i class="fa fa-tags"></i>
-        <a href="/%20tags/%20php">php</a>
-        <a href="/%20tags/%20fixtures">fixtures</a>
-        <a href="/%20tags/%20lithium">lithium</a>
-        <a href="/%20tags/%20plugin">plugin</a>
+        <i class="fa fa-tags"></i><a href="/tags/php">php</a><a href="/tags/fixtures">fixtures</a><a href="/tags/lithium">lithium</a><a href="/tags/plugin">plugin</a>
       </li>
       
   </article>
@@ -168,30 +150,24 @@ $this-&gt;assertEqual($fixtures-&gt;first(), Post::first());
 <footer class="footer">
   <ul class="footer-links">
     <li>
-      <a href="https://nitschinger.at/index.xml" type="application/rss+xml" target="_blank">
-        <i class="fa fa-rss"></i> RSS feed</a>
+      <a href="/atom.xml" type="application/atom+xml" target="_blank"><i class="fa fa-rss"></i> Atom feed</a>
     </li>
     <li>
-      <a href="https://github.com/mobybit/hugo-natrium-theme">
-        <i class="fa fa-github"></i> Built with Hugo &amp; Natrium Theme</a>
+      <a href="https://github.com/daschl"><i class="fa fa-github"></i> GitHub</a>
+    </li>
+    <li>
+      <a href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
+    </li>
+    <li>
+      <a href="https://www.linkedin.com/in/michaelnitschinger/"><i class="fa fa-linkedin"></i> LinkedIn</a>
     </li>
   </ul>
 </footer>
 
 </div>
 
-<script>
-  (function (i, s, o, g, r, a, m) {
-    i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
-      (i[r].q = i[r].q || []).push(arguments)
-    }, i[r].l = 1 * new Date(); a = s.createElement(o),
-      m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
-  })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
 
-  ga('create', 'UA-19686689-1', 'auto');
-  ga('send', 'pageview');
-  ga('set', 'anonymizeIp', true);
-</script>
+
 </body>
 
 </html>

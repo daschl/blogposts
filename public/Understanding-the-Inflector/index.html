@@ -3,11 +3,10 @@
   <head>
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Hugo 0.54.0" />
+<meta name="generator" content="Hugo 0.74.3" />
 
 
-<title>Understanding the Inflector - daschl writes. sometimes.</title>
-<meta property="og:title" content="Understanding the Inflector - daschl writes. sometimes.">
+<title>Understanding the Inflector – daschl writes. sometimes.</title>
 
 
 
@@ -18,6 +17,28 @@
 
 
 
+<link href="/atom.xml" rel="alternate" type="application/atom+xml" title="daschl writes. sometimes." />
+
+<meta property="og:title" content="Understanding the Inflector" />
+<meta property="og:description" content="In this post you&#39;ll explore the Inflector and hopefully get a better understanding how it works and what it can do for you." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://nitschinger.at/Understanding-the-Inflector/" />
+<meta property="article:published_time" content="2010-12-16T00:00:00+00:00" />
+<meta property="article:modified_time" content="2010-12-16T00:00:00+00:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Understanding the Inflector"/>
+<meta name="twitter:description" content="In this post you&#39;ll explore the Inflector and hopefully get a better understanding how it works and what it can do for you."/>
+
+<meta itemprop="name" content="Understanding the Inflector">
+<meta itemprop="description" content="In this post you&#39;ll explore the Inflector and hopefully get a better understanding how it works and what it can do for you.">
+<meta itemprop="datePublished" content="2010-12-16T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2010-12-16T00:00:00+00:00" />
+<meta itemprop="wordCount" content="1073">
+
+
+
+<meta itemprop="keywords" content="php,lithium,inflector," />
 
 
 <link rel="stylesheet" href="https://nitschinger.at/css/main.css" media="all">
@@ -28,30 +49,27 @@
     <div class="wrapper">
       <header class="header">
         <nav class="nav">
-  <a href="https://nitschinger.at/" class="nav-title">
-    daschl blogs. sometimes.
+  <a href="https://nitschinger.at/" class="nav-logo">
+    <img src="https://nitschinger.at/images/"
+         width="" 
+         height="" 
+         alt="">
   </a>
+  <a href="https://nitschinger.at/" class="nav-title">daschl writes. sometimes.</a>
 
   <ul class="nav-links">
     
-    <li>
-      <a href="/tags">tags</a>
-    </li>
+    <li><a href="/tags">tags</a></li>
     
-    <li>
-      <a href="/imprint/">imprint</a>
-    </li>
+    <li><a href="/imprint/">imprint</a></li>
     
-    <li>
-      <a href="https://twitter.com/daschl">-&gt; twitter</a>
-    </li>
+    <li><a href="https://twitter.com/daschl">-&gt; twitter</a></li>
     
-    <li>
-      <a href="https://github.com/daschl">-&gt; github</a>
-    </li>
+    <li><a href="https://github.com/daschl">-&gt; github</a></li>
     
   </ul>
 </nav>
+
       </header>
 
 
@@ -59,28 +77,19 @@
   <article class="article">
     <h1 class="article-title">Understanding the Inflector</h1>
     
-    <span class="article-date">2010-12-16</span>
+    <span class="article-date">16 December 2010</span>
     
 
     <div class="article-content">
-      
-
-<h3 id="introduction">Introduction</h3>
-
+      <h3 id="introduction">Introduction</h3>
 <p>The Inflector is one of many utility classes that ship with Lithium out of the box. Those classes are designed to assist you with common tasks that need to be done.</p>
-
 <p>One of those tasks may be to pluralize, singularize, camel-case or humanize strings, database keys or other dynamic content. Let&rsquo;s see how the class itself is described:</p>
-
 <blockquote>
 <p>Utility for modifying format of words. Change singular to plural and vice versa. Under_score a CamelCased word and vice versa. Replace spaces and special characters. Create a human readable word from the others. Used when consistency in naming conventions must be enforced.</p>
 </blockquote>
-
 <p>The Inflector can be found in <code>lithium\util</code> and you can get it into your namespace with <code>use lithium\util\Inflector</code>. The documentation can be found online at <a href="http://lithify.me/docs/lithium/util/Inflector">lithify.me/docs</a>.</p>
-
 <h3 id="methods">Methods</h3>
-
 <p>Here is a comprehensive list of the methods that the Inflector provides to you (the descriptions are quoted from their documentation):</p>
-
 <ul>
 <li><strong>pluralize</strong>: changes the form of a word from singular to plural.</li>
 <li><strong>singularize</strong>: changes the form of a word from plural to singular.</li>
@@ -91,144 +100,81 @@
 <li><strong>tableize</strong>: takes a CamelCased class name and returns corresponding under_scored table name.</li>
 <li><strong>classify</strong>: takes a under_scored table name and returns corresponding class name.</li>
 </ul>
-
 <p>There are more public methods in there, but we&rsquo;ll get to those later on. Now that you have an idea what the Inflector can do for you, we&rsquo;ll explore each of these methods in detail. One quick note: if you need more examples, the <a href="http://rad-dev.org/lithium/source/libraries/lithium/tests/cases/util/InflectorTest.php#highlight">tests</a> are a great place to find some.</p>
-
-<h4 id="inflector-pluralize">Inflector::pluralize()</h4>
-
+<h4 id="inflectorpluralize">Inflector::pluralize()</h4>
 <p>The <code>pluralize()</code> method takes a singular word (string) and returns you the pluralized version of it. Here are some examples:</p>
-
 <pre><code>Inflector::pluralize('Apple'); // returns &quot;Apples&quot;
 Inflector::pluralize('Menu'); // returns &quot;Menus&quot;
 Inflector::pluralize('News'); // returns &quot;News&quot;
 </code></pre>
-
 <p>If you are not sure what the pluralized word will look like, take a look at the <code>lithium\util\Inflector::$_plural</code> property.</p>
-
-<h4 id="inflector-singularize">Inflector::singularize()</h4>
-
+<h4 id="inflectorsingularize">Inflector::singularize()</h4>
 <p>The <code>singularize()</code> method takes a plural word (string) and returns you the singularized version of it. Here are some examples:</p>
-
 <pre><code>Inflector::singularize('Houses'); // returns &quot;House&quot;
 Inflector::singularize('Bananas'); // returns &quot;Banana&quot;
 Inflector::singularize('Men'); // returns &quot;Man&quot;
 </code></pre>
-
 <p>If you are not sure what the pluralized word will look like, take a look at the <code>lithium\util\Inflector::$_singular</code> property.</p>
-
-<h4 id="inflector-camelize">Inflector::camelize()</h4>
-
+<h4 id="inflectorcamelize">Inflector::camelize()</h4>
 <p>You can hand the <code>camelize()</code> method either a slugged or a under_scored word and it will return you this word CamelCased or camelBacked (if you provide <code>false</code> as the second argument). Some examples:</p>
-
-<pre><code>Inflector::camelize('foo_bar'); // returns &quot;FooBar&quot; 
+<pre><code>Inflector::camelize('foo_bar'); // returns &quot;FooBar&quot;	
 Inflector::camelize('foo_bar', false); // returns &quot;fooBar&quot;
 </code></pre>
-
-<h4 id="inflector-slug">Inflector::slug()</h4>
-
-<p>The <code>slug()</code> method takes a string and creates a &ldquo;slugged&rdquo; representation of it. This basically means that all spaces will be replaced with a given character (defaults to &ldquo;-&rdquo;), non-word characters will be removed and characters with accents like &ldquo;ä&rdquo; will be translated to their ASCII representation. Here are some examples:</p>
-
+<h4 id="inflectorslug">Inflector::slug()</h4>
+<p>The <code>slug()</code> method takes a string and creates a &ldquo;slugged&rdquo; representation of it. This basically means that all spaces will be replaced with a given character (defaults to &ldquo;-&quot;), non-word characters will be removed and characters with accents like &ldquo;ä&rdquo; will be translated to their ASCII representation. Here are some examples:</p>
 <pre><code>Inflector::slug('The truth - and- more- news'); // returns &quot;The-truth-and-more-news&quot;
 Inflector::slug('!@$#exciting stuff! - what !@-# was that?'); // returns &quot;exciting-stuff-what-was-that&quot;
 </code></pre>
-
-<h4 id="inflector-underscore">Inflector::underscore()</h4>
-
+<h4 id="inflectorunderscore">Inflector::underscore()</h4>
 <p>The <code>underscore()</code> method basically takes a camel-cased word, slugs it and lowercases all characters.</p>
-
 <pre><code>Inflector::underscore('TestField') // returns test_field
 Inflector::underscore('FeineÄpfel') // returns feine_aepfel
 </code></pre>
-
 <p>Note here that characters with accents will be transliterated, because of the translation into a slug. I don&rsquo;t know if this is the intended behavior so this may change in future releases.</p>
-
-<h4 id="inflector-humanize">Inflector::humanize()</h4>
-
-<p>The <code>humanize()</code> method takes an underscored word, removes a given seperator (defaults to &ldquo;_&ldquo;) and uppercases the first characters of the words. Some examples from the core tests:</p>
-
+<h4 id="inflectorhumanize">Inflector::humanize()</h4>
+<p>The <code>humanize()</code> method takes an underscored word, removes a given seperator (defaults to &ldquo;_&quot;) and uppercases the first characters of the words. Some examples from the core tests:</p>
 <pre><code>Inflector::humanize('posts'); // returns &quot;Posts&quot;
 Inflector::humanize('posts_tags'); // returns &quot;Posts Tags&quot;
 Inflector::humanize('file_systems'); // returns  &quot;File Systems&quot;
 </code></pre>
-
-<h4 id="inflector-tableize">Inflector::tableize()</h4>
-
+<h4 id="inflectortableize">Inflector::tableize()</h4>
 <p>The <code>tableize()</code> method takes your string, underscores (remember the slug?) and finally pluralizes it. As you can see, those methods use other low level methods provided to build exactly what you need. With this method, you can hand over a Model name and get the correct table name for it.</p>
-
 <pre><code>Inflector::tableize('Post'); // returns &quot;posts&quot;
 Inflector::tableize('ArtistsGenre'); // returns &quot;artists_genres&quot;
 Inflector::tableize('FileSystem'); // returns &quot;file_systems&quot;
 </code></pre>
-
-<h4 id="inflector-classify">Inflector::classify()</h4>
-
+<h4 id="inflectorclassify">Inflector::classify()</h4>
 <p>The <code>classify()</code> method is basically the opposite to the <code>tabelize()</code> method. You hand it over a table name and get the correct class (Model) name back. It singularizes and camelizes the given string.</p>
-
 <pre><code>    Inflector::classify('artists_genres'); // returns &quot;ArtistsGenre&quot;
     Inflector::classify('file_systems'); // returns &quot;FileSystem&quot;
     Inflector::classify('news'); // returns &quot;News&quot;
 </code></pre>
-
 <h3 id="add-your-own-rules">Add your own rules</h3>
-
 <p>If you need, you can add your own rules and/or override default rules. The <code>Inflector::rules()</code> method is responsible for that and works as a setter or getter for all stored rules. The core tests provide an example:</p>
-
 <pre><code>Inflector::rules('singular', array('/rata/' =&gt; '\1ratus'));
 </code></pre>
-
 <p>You can also add transliterations that maps language specific or accented characters to ASCII ones (they are used to create slugs, for example). The core tests also provide a nice example:</p>
-
 <pre><code>$this-&gt;assertNotEqual(Inflector::slug('JØRGEN'), 'JORGEN');
 Inflector::rules('transliteration', array('/Ø/' =&gt; 'O'));
 $this-&gt;assertEqual(Inflector::slug('JØRGEN'), 'JORGEN');
 </code></pre>
-
 <p>Good practice is to store your custom rules in a bootstrap file, so that they are immediately available to your application when it is fully loaded. If you need to do that on-the-fly, be sure to read the next chapter about caching translation results.</p>
-
 <h3 id="caching">Caching</h3>
-
 <p>You&rsquo;ve probably heard or used the methods above previously. What you maybe don&rsquo;t know is, that the Inflector caches your <code>singularize</code>, <code>pluralize</code>,&hellip; calls and if you call the same method with the same word again it will be served directly out of an array.</p>
-
 <p>That&rsquo;s pretty neat and doesn&rsquo;t do any harm when you properly define your custom rules in a bootstrap file. But you may run into issues when you call a translation method for word X, then add your own rules that affect X and then call the method again. It will be served straight out of the cache and your rules won&rsquo;t match.</p>
-
 <p>You can fix this by calling <code>Inflector::reset()</code> before you apply your rules (this will empty the caches). The next call will then apply your custom rules.</p>
-
 <h3 id="conclusion">Conclusion</h3>
-
 <p>The Inflector is a nice utility library that is used widely in the Lithium core and can easily be used by your application too. It&rsquo;s a fast and extensible way of dealing with dynamic content that needs to be pluralized, singularized, slugged and so on.</p>
-
 <p>Finally, it does not have any external dependencies so you can even use the Inflector in your own libraries or frameworks.</p>
 
     </div>
-
-    <div id="disqus_thread"></div>
-<script type="application/javascript">
-    var disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "daschl" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
-
+ 
     <ul class="article-taxonomy">
-       
+      
+    
+      
       <li>
-        <i class="fa fa-tags"></i>
-        <a href="/%20tags/%20php">php</a>
-        <a href="/%20tags/%20lithium">lithium</a>
-        <a href="/%20tags/%20inflector">inflector</a>
+        <i class="fa fa-tags"></i><a href="/tags/php">php</a><a href="/tags/lithium">lithium</a><a href="/tags/inflector">inflector</a>
       </li>
       
   </article>
@@ -238,30 +184,24 @@ $this-&gt;assertEqual(Inflector::slug('JØRGEN'), 'JORGEN');
 <footer class="footer">
   <ul class="footer-links">
     <li>
-      <a href="https://nitschinger.at/index.xml" type="application/rss+xml" target="_blank">
-        <i class="fa fa-rss"></i> RSS feed</a>
+      <a href="/atom.xml" type="application/atom+xml" target="_blank"><i class="fa fa-rss"></i> Atom feed</a>
     </li>
     <li>
-      <a href="https://github.com/mobybit/hugo-natrium-theme">
-        <i class="fa fa-github"></i> Built with Hugo &amp; Natrium Theme</a>
+      <a href="https://github.com/daschl"><i class="fa fa-github"></i> GitHub</a>
+    </li>
+    <li>
+      <a href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
+    </li>
+    <li>
+      <a href="https://www.linkedin.com/in/michaelnitschinger/"><i class="fa fa-linkedin"></i> LinkedIn</a>
     </li>
   </ul>
 </footer>
 
 </div>
 
-<script>
-  (function (i, s, o, g, r, a, m) {
-    i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
-      (i[r].q = i[r].q || []).push(arguments)
-    }, i[r].l = 1 * new Date(); a = s.createElement(o),
-      m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
-  })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
 
-  ga('create', 'UA-19686689-1', 'auto');
-  ga('send', 'pageview');
-  ga('set', 'anonymizeIp', true);
-</script>
+
 </body>
 
 </html>

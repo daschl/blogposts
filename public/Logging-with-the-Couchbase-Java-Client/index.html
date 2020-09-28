@@ -3,11 +3,10 @@
   <head>
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Hugo 0.54.0" />
+<meta name="generator" content="Hugo 0.74.3" />
 
 
-<title>Logging with the Couchbase Java Client - daschl writes. sometimes.</title>
-<meta property="og:title" content="Logging with the Couchbase Java Client - daschl writes. sometimes.">
+<title>Logging with the Couchbase Java Client – daschl writes. sometimes.</title>
 
 
 
@@ -18,6 +17,28 @@
 
 
 
+<link href="/atom.xml" rel="alternate" type="application/atom+xml" title="daschl writes. sometimes." />
+
+<meta property="og:title" content="Logging with the Couchbase Java Client" />
+<meta property="og:description" content="This blog post shows you everything that you need to know about logging with the Couchbase Java Client (and Spymemcached)." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://nitschinger.at/Logging-with-the-Couchbase-Java-Client/" />
+<meta property="article:published_time" content="2013-05-16T00:00:00+00:00" />
+<meta property="article:modified_time" content="2013-05-16T00:00:00+00:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Logging with the Couchbase Java Client"/>
+<meta name="twitter:description" content="This blog post shows you everything that you need to know about logging with the Couchbase Java Client (and Spymemcached)."/>
+
+<meta itemprop="name" content="Logging with the Couchbase Java Client">
+<meta itemprop="description" content="This blog post shows you everything that you need to know about logging with the Couchbase Java Client (and Spymemcached).">
+<meta itemprop="datePublished" content="2013-05-16T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2013-05-16T00:00:00+00:00" />
+<meta itemprop="wordCount" content="1880">
+
+
+
+<meta itemprop="keywords" content="java,couchbase,logging," />
 
 
 <link rel="stylesheet" href="https://nitschinger.at/css/main.css" media="all">
@@ -28,30 +49,27 @@
     <div class="wrapper">
       <header class="header">
         <nav class="nav">
-  <a href="https://nitschinger.at/" class="nav-title">
-    daschl blogs. sometimes.
+  <a href="https://nitschinger.at/" class="nav-logo">
+    <img src="https://nitschinger.at/images/"
+         width="" 
+         height="" 
+         alt="">
   </a>
+  <a href="https://nitschinger.at/" class="nav-title">daschl writes. sometimes.</a>
 
   <ul class="nav-links">
     
-    <li>
-      <a href="/tags">tags</a>
-    </li>
+    <li><a href="/tags">tags</a></li>
     
-    <li>
-      <a href="/imprint/">imprint</a>
-    </li>
+    <li><a href="/imprint/">imprint</a></li>
     
-    <li>
-      <a href="https://twitter.com/daschl">-&gt; twitter</a>
-    </li>
+    <li><a href="https://twitter.com/daschl">-&gt; twitter</a></li>
     
-    <li>
-      <a href="https://github.com/daschl">-&gt; github</a>
-    </li>
+    <li><a href="https://github.com/daschl">-&gt; github</a></li>
     
   </ul>
 </nav>
+
       </header>
 
 
@@ -59,20 +77,14 @@
   <article class="article">
     <h1 class="article-title">Logging with the Couchbase Java Client</h1>
     
-    <span class="article-date">2013-05-16</span>
+    <span class="article-date">16 May 2013</span>
     
 
     <div class="article-content">
-      
-
-<h2 id="introduction">Introduction</h2>
-
+      <h2 id="introduction">Introduction</h2>
 <p>There is a huge variety in logging frameworks for Java, and its hard to please everyone. To understand how logging is currently handled in the SDK, we have to go back a few years. As you may know, the SDK depends on the <a href="https://code.google.com/p/spymemcached/">spymemcached</a> library and therefore also inherits its logging mechanisms. Back in the days when <a href="https://twitter.com/dlsspy">@dustin</a> wrote spy, there was no good abstraction for logging available (like SLF4J), so he wrote his own. Nowadays things have changed, but spy still inherits this legacy.</p>
-
 <p>At the time of writing, the SDK supports logging to a simple default logger (logs to STDERR from INFO level up), <a href="http://logging.apache.org/log4j/1.2/">Log4J</a> and the SunLogger (java.util.logging). In the upcoming 2.9.0 release of spymemcached, it will also support the SLF4J logging facade where you can plug in your own implementation. The next version of the SDK (most likely 1.1.7) will depend on spy 2.9, so you&rsquo;ll also get the benefits there.</p>
-
 <p>Before we dig into the concepts, here are the supported Log Levels (defined by <code>net.spy.memcached.compat.log.Level</code>):</p>
-
 <ul>
 <li>TRACE (with 2.9)</li>
 <li>DEBUG</li>
@@ -81,35 +93,22 @@
 <li>ERROR</li>
 <li>FATAL</li>
 </ul>
-
 <p>Keep in mind that different loggers implement different levels, so for some of them a mapping needs top happen. This will be noted during the descriptions of each implementation.</p>
-
 <p>We&rsquo;ll now look at the different logging mechanisms available and how you can configure them. SLF4J will be covered towards the end.</p>
-
 <h2 id="switching-logging">Switching Logging</h2>
-
 <p>If you don&rsquo;t change anything, the default logger will be used. This mechanism just prints log messages to STDERR (from INFO level upwards). Chances are that you want to integrate the SDK with the same logging library that you use as well. The LoggerFactory inside spy decides at construction which one to choose, based on a system property. So you can either change this programmatically or through a param to the <code>java</code> command.</p>
-
 <p>If you want to use the Log4JLogger programmatically, do it this way (before initializing the <code>CouchbaseClient</code> object):</p>
-
 <pre><code>Properties systemProperties = System.getProperties();
 systemProperties.put(&quot;net.spy.log.LoggerImpl&quot;, &quot;net.spy.memcached.compat.log.Log4JLogger&quot;);
 System.setProperties(systemProperties);
 </code></pre>
-
 <p>Of course, you need to add the Log4J JAR to your CLASSPATH to make it work (as we&rsquo;ll see later). Alternatively, you can set it this way on the comman dline:</p>
-
 <pre><code>java -Dnet.spy.log.LoggerImpl=net.spy.memcached.compat.log.Log4JLogger ...
 </code></pre>
-
 <p>Now that we know how to enable the different implementations, let&rsquo;s look at them in greater detail.</p>
-
 <h2 id="the-simple-default-logger">The Simple Default Logger</h2>
-
 <p>If you don&rsquo;t change anything, the SDK will use the DefaultLogger (net.spy.memcached.compat.log.DefaultLogger). This logger has no dependencies and prints every log message that is INFO level or higher (INFO, WARN, ERROR and FATAL) to the systems STDERR. Since the STDERR is covered by most IDEs automatically, you&rsquo;ll also see them in the console output window.</p>
-
 <p>Since its so simple, you can&rsquo;t customize this behavior. Every log message gets timestamped as well (the format is <code>yyyy-MM-dd HH:mm:ss.SSS</code>). Connecting to Couchbase commonly looks like this:</p>
-
 <pre><code>2013-05-07 12:28:41.852 INFO com.couchbase.client.CouchbaseConnection:  Added {QA sa=/127.0.0.1:11210, #Rops=0, #Wops=0, #iq=0, topRop=null, topWop=null, toWrite=0, interested=0} to connect queue
 2013-05-07 12:28:41.862 INFO com.couchbase.client.CouchbaseConnection:  Connection state changed for sun.nio.ch.SelectionKeyImpl@3d9360e2
 2013-05-07 12:28:41.887 INFO com.couchbase.client.ViewConnection:  Added localhost to connect queue
@@ -118,13 +117,9 @@ System.setProperties(systemProperties);
 2013-05-07 12:28:41.991 INFO com.couchbase.client.ViewConnection:  Node localhost has no ops in the queue
 2013-05-07 12:28:41.992 INFO com.couchbase.client.ViewNode:  I/O reactor terminated for localhost
 </code></pre>
-
 <p>So the format is always: <code>&lt;timestamp&gt; &lt;level&gt; &lt;classname&gt; &lt;message&gt;</code>. Remeber that DEBUG messages or so will not be logged, so you won&rsquo;t see them with the DefaultLogger.</p>
-
-<h2 id="the-sunlogger-java-util-logging">The SunLogger (java.util.logging)</h2>
-
+<h2 id="the-sunlogger-javautillogging">The SunLogger (java.util.logging)</h2>
 <p>The SunLogger also doesn&rsquo;t introduce additional dependencies, since it depends on the <code>java.util.logging</code> implementation. The <code>java.util.logging.Level</code> enum defines the following levels: ALL, CONFIG, FINEST, FINER, FINE, INFO, WARNING, SEVERE and OFF. Since this does not map well to our defined Levels, here is the mapping that happens:</p>
-
 <ul>
 <li>TRACE to FINEST (with 2.9)</li>
 <li>DEBUG to FINE</li>
@@ -133,9 +128,7 @@ System.setProperties(systemProperties);
 <li>ERROR to SEVERE</li>
 <li>FATAL to SEVERE</li>
 </ul>
-
 <p>Without any further changes, the SunLogger also prints from INFO level upwards like this:</p>
-
 <pre><code>May 7, 2013 12:42:16 PM com.couchbase.client.CouchbaseProperties setPropertyFile
 INFO: Could not load properties file &quot;cbclient.properties&quot; because: File not found with system classloader.
 May 7, 2013 12:42:16 PM net.spy.memcached.MemcachedConnection createConnections
@@ -153,23 +146,17 @@ INFO: Node localhost has no ops in the queue
 May 7, 2013 12:42:16 PM com.couchbase.client.ViewNode$1 run
 INFO: I/O reactor terminated for localhost
 </code></pre>
-
 <p>If you want to change the log level to DEBUG and lower, you can do it like this:</p>
-
 <pre><code>Logger.getLogger(&quot;com.couchbase.client&quot;).setLevel(Level.FINEST);
 </code></pre>
-
 <p>Now there is one more thing you need to do if you want to print all debug messages to the console. You set the logging level correctly, but the <code>ConsoleHandler</code> is not set to debug yet (so most likely you will pay the price for debug logging, but won&rsquo;t actually see anything in your IDE).</p>
-
 <pre><code>for(Handler h : Logger.getLogger(&quot;com.couchbase.client&quot;).getParent().getHandlers()) {
     if(h instanceof ConsoleHandler) {
         h.setLevel(Level.FINEST);
     }
 }
 </code></pre>
-
 <p>So, here is a full example on how to use the <code>SunLogger</code> and get all Debug messages on the console.</p>
-
 <pre><code>Properties systemProperties = System.getProperties();
 systemProperties.put(&quot;net.spy.log.LoggerImpl&quot;, &quot;net.spy.memcached.compat.log.SunLogger&quot;);
 System.setProperties(systemProperties);
@@ -182,9 +169,7 @@ for(Handler h : logger.getParent().getHandlers()) {
     }
 }
 </code></pre>
-
 <p>Then just go ahead and create your <code>CouchbaseClient</code> object, you will see detailed output like this (trimmed here):</p>
-
 <pre><code>May 7, 2013 12:54:34 PM com.couchbase.client.vbucket.ReconfigurableObserver update
 FINEST: Received an update, notifying reconfigurables about a com.couchbase.client.vbucket.config.Bucketcom.couchbase.client.vbucket.config.Bucket@3d77949
 May 7, 2013 12:54:34 PM com.couchbase.client.vbucket.ReconfigurableObserver update
@@ -194,32 +179,22 @@ FINEST: It says it is default and it's talking to /pools/default/bucketsStreamin
 May 7, 2013 12:54:34 PM com.couchbase.client.vbucket.ReconfigurableObserver update
 FINEST: It says it is default and it's talking to /pools/default/bucketsStreaming/default?bucket_uuid=adfff22b70e09fafaa26ca37b7e05e9d
 </code></pre>
-
 <h2 id="log4j">Log4J</h2>
-
 <p>Most people will need more flexibility, and Log4J was (and still is) standard in lots of applications. The SDK provides support for Log4J as well. To make it work, you first need to set the instance correctly:</p>
-
 <pre><code>Properties systemProperties = System.getProperties();
 systemProperties.put(&quot;net.spy.log.LoggerImpl&quot;, &quot;net.spy.memcached.compat.log.Log4JLogger&quot;);
 System.setProperties(systemProperties);
 </code></pre>
-
 <p>Now if you run this, you&rsquo;ll get an error that some of the Log4J classes can not be found. This is not a surprise, because its not on the classpath. Let&rsquo;s fix this by adding it accordingly. If you use maven, add the <code>log4j.log4j</code> dependency (current version is 1.2.17). You can also just download the JAR and add it to the CLASSPATH as needed.</p>
-
 <p>Now if we run it again, we get another error:</p>
-
 <pre><code>log4j:WARN No appenders could be found for logger (com.couchbase.client.vbucket.ConfigurationProviderHTTP).
 log4j:WARN Please initialize the log4j system properly.
 log4j:WARN See http://logging.apache.org/log4j/1.2/faq.html#noconfig for more info.
 </code></pre>
-
 <p>One way to fix this is to get a correct <code>log4j.xml</code> configuration file into our CLASSPATH, but to make it work quickly Log4J provides a <code>BasicConfigurator</code>. Right after the system property configurations, add this:</p>
-
 <pre><code>org.apache.log4j.BasicConfigurator.configure();
 </code></pre>
-
 <p>If you run it with the code change applied, you will see that we get nicely printed log messages. You can also see that they show up straight from the DEBUG level (and even contain information from which thread they got logged):</p>
-
 <pre><code>69 [main] INFO com.couchbase.client.CouchbaseConnection  - Added {QA sa=/127.0.0.1:11210, #Rops=0, #Wops=0, #iq=0, topRop=null, topWop=null, toWrite=0, interested=0} to connect queue
 70 [main] DEBUG com.couchbase.client.vbucket.VBucketNodeLocator  - Updating nodesMap in VBucketNodeLocator.
 73 [main] DEBUG com.couchbase.client.vbucket.VBucketNodeLocator  - Adding node with hostname 127.0.0.1:11210.
@@ -229,26 +204,17 @@ log4j:WARN See http://logging.apache.org/log4j/1.2/faq.html#noconfig for more in
 79 [Memcached IO over {MemcachedConnection to localhost/127.0.0.1:11210}] DEBUG com.couchbase.client.CouchbaseConnection  - Selected 1, selected 1 keys
 79 [Memcached IO over
 </code></pre>
-
 <p>You can control the logging levels through the usual Log4J mechanisms. I won&rsquo;t go into detail about them here, so please <a href="http://logging.apache.org/log4j/1.2/manual.html">check out</a> their official documentation (for example on how to use the <code>PropertyConfigurator</code> instead).</p>
-
 <p>Speaking of Log4J, <a href="https://twitter.com/zooldk">Steffen Larsen</a> implemented a <a href="https://github.com/zooldk/log4j-couchbase">Log4J appender</a> to store logs in Couchbase (instead of a file)!</p>
-
 <h2 id="the-new-facade-slf4j">The new Facade: SLF4J</h2>
-
 <p>Not binding the application to a specific logging library is always a good idea. SLF4J is a facade for various pluggable logging frameworks behind it. So you can choose the logging implementation during runtime, be it <a href="http://logback.qos.ch/">logback</a>, Log4J or others. Since we already tried Log4J, let&rsquo;s make SLF4J work with Logback, one of the other very common log frameworks out there.</p>
-
 <p>Note that SLF4J support will be available in the 1.9.0 release of spymemcached and therefore also in one of the next releases of the Couchbase Java SDK.</p>
-
 <p>First, we need to configure it accordingly:</p>
-
 <pre><code>Properties systemProperties = System.getProperties();
 systemProperties.put(&quot;net.spy.log.LoggerImpl&quot;, &quot;net.spy.memcached.compat.log.SLF4JLogger&quot;);
 System.setProperties(systemProperties);
 </code></pre>
-
 <p>Now, we need to include two JARs into our classpath. The first one is the SLF4J facade API and the other one is our logging framework of choice. The facade API package is called <code>slf4j-api</code> (this package always needs to be in place) and since we want to use logback we need to include the <code>logback-classic</code> JAR. Note that this is not specific to the SDK, you can find this information <a href="http://logback.qos.ch/manual/introduction.html">here</a>. If you use maven, you can use this snippet:</p>
-
 <pre><code>&lt;dependency&gt;
   &lt;groupId&gt;org.slf4j&lt;/groupId&gt;
   &lt;artifactId&gt;slf4j-api&lt;/artifactId&gt;
@@ -260,9 +226,7 @@ System.setProperties(systemProperties);
   &lt;version&gt;1.0.12&lt;/version&gt;
 &lt;/dependency&gt;
 </code></pre>
-
 <p>SLF4J will automatically pick up our logback implementation, so the logs will look like this:</p>
-
 <pre><code>13:25:43.692 [main] INFO  c.c.client.CouchbaseConnection - Added {QA sa=/127.0.0.1:11210, #Rops=0, #Wops=0, #iq=0, topRop=null, topWop=null, toWrite=0, interested=0} to connect queue
 13:25:43.694 [main] DEBUG c.c.c.vbucket.VBucketNodeLocator - Updating nodesMap in VBucketNodeLocator.
 13:25:43.697 [main] DEBUG c.c.c.vbucket.VBucketNodeLocator - Adding node with hostname 127.0.0.1:11210.
@@ -274,52 +238,24 @@ System.setProperties(systemProperties);
 13:25:43.703 [Memcached IO over {MemcachedConnection to localhost/127.0.0.1:11210}] INFO  c.c.client.CouchbaseConnection - Connection state changed for sun.nio.ch.SelectionKeyImpl@48ff2413
 13:25:43.713
 </code></pre>
-
 <p>As you can see, they also include DEBUG level logging here. If you don&rsquo;t include the logging implementation during runtime, SLF4J will complain at startup:</p>
-
 <pre><code>SLF4J: Failed to load class &quot;org.slf4j.impl.StaticLoggerBinder&quot;.
 SLF4J: Defaulting to no-operation (NOP) logger implementation
 SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details
 </code></pre>
-
 <p>If you want to learn how to configure logback, <a href="http://logback.qos.ch/manual/configuration.html">look here</a>.</p>
-
 <h2 id="summary">Summary</h2>
-
 <p>Once you know the abstraction in spymemcached and how it works, switching logging implementations is easy and straightforward. If you work with one of the Couchbase people to report errors, please try to include output with DEBUG turned on, because this includes lots of useful information that can be used to determine the failure sources.</p>
-
 <p>With the SLF4J facade added in the next spy release (2.9), you will be able to plug every large logging framework out there into the SDK. Let us know if you see a use case not covered with these mechanisms or if you have other comments on this.</p>
 
     </div>
-
-    <div id="disqus_thread"></div>
-<script type="application/javascript">
-    var disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "daschl" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
-
+ 
     <ul class="article-taxonomy">
-       
+      
+    
+      
       <li>
-        <i class="fa fa-tags"></i>
-        <a href="/%20tags/%20java">java</a>
-        <a href="/%20tags/%20couchbase">couchbase</a>
-        <a href="/%20tags/%20logging">logging</a>
+        <i class="fa fa-tags"></i><a href="/tags/java">java</a><a href="/tags/couchbase">couchbase</a><a href="/tags/logging">logging</a>
       </li>
       
   </article>
@@ -329,30 +265,24 @@ SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further detail
 <footer class="footer">
   <ul class="footer-links">
     <li>
-      <a href="https://nitschinger.at/index.xml" type="application/rss+xml" target="_blank">
-        <i class="fa fa-rss"></i> RSS feed</a>
+      <a href="/atom.xml" type="application/atom+xml" target="_blank"><i class="fa fa-rss"></i> Atom feed</a>
     </li>
     <li>
-      <a href="https://github.com/mobybit/hugo-natrium-theme">
-        <i class="fa fa-github"></i> Built with Hugo &amp; Natrium Theme</a>
+      <a href="https://github.com/daschl"><i class="fa fa-github"></i> GitHub</a>
+    </li>
+    <li>
+      <a href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
+    </li>
+    <li>
+      <a href="https://www.linkedin.com/in/michaelnitschinger/"><i class="fa fa-linkedin"></i> LinkedIn</a>
     </li>
   </ul>
 </footer>
 
 </div>
 
-<script>
-  (function (i, s, o, g, r, a, m) {
-    i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
-      (i[r].q = i[r].q || []).push(arguments)
-    }, i[r].l = 1 * new Date(); a = s.createElement(o),
-      m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
-  })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
 
-  ga('create', 'UA-19686689-1', 'auto');
-  ga('send', 'pageview');
-  ga('set', 'anonymizeIp', true);
-</script>
+
 </body>
 
 </html>

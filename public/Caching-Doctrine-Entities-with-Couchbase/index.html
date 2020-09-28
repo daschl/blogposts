@@ -3,11 +3,10 @@
   <head>
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Hugo 0.54.0" />
+<meta name="generator" content="Hugo 0.74.3" />
 
 
-<title>Caching Doctrine Entities with Couchbase - daschl writes. sometimes.</title>
-<meta property="og:title" content="Caching Doctrine Entities with Couchbase - daschl writes. sometimes.">
+<title>Caching Doctrine Entities with Couchbase – daschl writes. sometimes.</title>
 
 
 
@@ -18,6 +17,28 @@
 
 
 
+<link href="/atom.xml" rel="alternate" type="application/atom+xml" title="daschl writes. sometimes." />
+
+<meta property="og:title" content="Caching Doctrine Entities with Couchbase" />
+<meta property="og:description" content="This blog post gives you an introduction on how you can speed up your Doctrine ORM layer by using Couchbase Server 2.0 as a simple, fast and elastic cache in front of your entities." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://nitschinger.at/Caching-Doctrine-Entities-with-Couchbase/" />
+<meta property="article:published_time" content="2013-01-08T00:00:00+00:00" />
+<meta property="article:modified_time" content="2013-01-08T00:00:00+00:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Caching Doctrine Entities with Couchbase"/>
+<meta name="twitter:description" content="This blog post gives you an introduction on how you can speed up your Doctrine ORM layer by using Couchbase Server 2.0 as a simple, fast and elastic cache in front of your entities."/>
+
+<meta itemprop="name" content="Caching Doctrine Entities with Couchbase">
+<meta itemprop="description" content="This blog post gives you an introduction on how you can speed up your Doctrine ORM layer by using Couchbase Server 2.0 as a simple, fast and elastic cache in front of your entities.">
+<meta itemprop="datePublished" content="2013-01-08T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2013-01-08T00:00:00+00:00" />
+<meta itemprop="wordCount" content="1369">
+
+
+
+<meta itemprop="keywords" content="doctrine,couchbase,php,cache," />
 
 
 <link rel="stylesheet" href="https://nitschinger.at/css/main.css" media="all">
@@ -28,30 +49,27 @@
     <div class="wrapper">
       <header class="header">
         <nav class="nav">
-  <a href="https://nitschinger.at/" class="nav-title">
-    daschl blogs. sometimes.
+  <a href="https://nitschinger.at/" class="nav-logo">
+    <img src="https://nitschinger.at/images/"
+         width="" 
+         height="" 
+         alt="">
   </a>
+  <a href="https://nitschinger.at/" class="nav-title">daschl writes. sometimes.</a>
 
   <ul class="nav-links">
     
-    <li>
-      <a href="/tags">tags</a>
-    </li>
+    <li><a href="/tags">tags</a></li>
     
-    <li>
-      <a href="/imprint/">imprint</a>
-    </li>
+    <li><a href="/imprint/">imprint</a></li>
     
-    <li>
-      <a href="https://twitter.com/daschl">-&gt; twitter</a>
-    </li>
+    <li><a href="https://twitter.com/daschl">-&gt; twitter</a></li>
     
-    <li>
-      <a href="https://github.com/daschl">-&gt; github</a>
-    </li>
+    <li><a href="https://github.com/daschl">-&gt; github</a></li>
     
   </ul>
 </nav>
+
       </header>
 
 
@@ -59,26 +77,17 @@
   <article class="article">
     <h1 class="article-title">Caching Doctrine Entities with Couchbase</h1>
     
-    <span class="article-date">2013-01-08</span>
+    <span class="article-date">8 January 2013</span>
     
 
     <div class="article-content">
-      
-
-<h2 id="motivation">Motivation</h2>
-
+      <h2 id="motivation">Motivation</h2>
 <p>As part of our ongoing efforts to make Couchbase more integrated with frameworks and libraries, we added caching support for the <a href="http://www.doctrine-project.org/">Doctrine ORM</a>. Recently, the pull request has been merged into the master branch and is scheduled to be published along with the <a href="http://doctrine-project.org/jira/browse/DCOM/fixforversion/10327">2.4</a> release.</p>
-
 <p>Caching can either be used standalone (through the API provided by <a href="http://www.doctrine-project.org/projects/common.html">doctrine/common</a>) or integrated with the ORM functionality. We&rsquo;ll look at both variants through simple examples, a good documentation can also be found <a href="http://docs.doctrine-project.org/en/latest/reference/caching.html">here</a>. Note that at the time of writing, the CouchbaseCache is not mentioned as a caching driver because the documentation still needs to be updated.</p>
-
 <p>Since 2.4 has not been released yet, we need to work against the <code>2.4.x-dev</code> branch. We&rsquo;ll be using <a href="http://getcomposer.org/">Composer</a> to fetch our dependencies, so just need change the version number if you want to pin it down to 2.4 later.</p>
-
 <h2 id="simple-caching">Simple Caching</h2>
-
 <p>Our first example shows how the caching API can be used directly. If you are familiar with the Couchbase API, you may think that it&rsquo;s more or less just a different API with the same (and maybe less) semantics, but the point is that it uses the Doctrine Cache API interface and as a result you can switch between different caching implementations very easily.</p>
-
 <p>Create a directory called <code>couchbase-doctrine-simple</code> with the following <code>composer.json</code> inside:</p>
-
 <pre><code>{
     &quot;require&quot;: {
         &quot;doctrine/common&quot;: &quot;2.4.x-dev&quot;,
@@ -86,11 +95,8 @@
     }
 }
 </code></pre>
-
 <p>This installs the <a href="https://packagist.org/packages/doctrine/common">doctrine/common</a> package and also makes sure that we have the <code>couchbase.so</code> extension in place. If you haven&rsquo;t installed the Couchbase PHP extension already, head over to the <a href="http://www.couchbase.com/develop/php/current">official website</a> and install it based on the tutorial and the docs.</p>
-
 <p>Create a <code>index.php</code> with the following content (we&rsquo;ll break up the code afterwards):</p>
-
 <pre><code>&lt;?php
 // 0: Composer Autoloader
 require 'vendor/autoload.php';
@@ -112,38 +118,25 @@ if(!$cacheDriver-&gt;contains($key)) {
 }
 ?&gt;
 </code></pre>
-
 <p>First, we need to bootstrap the composer autoloader so we don&rsquo;t have to write all <code>require</code> statements on our own. The next thing we need to do is actually connect to the Couchbase cluster:</p>
-
 <pre><code>// 1: Open the Couchbase Connection
 $couchbase = new Couchbase(&quot;127.0.0.1&quot;, &quot;&quot;, &quot;&quot;, &quot;default&quot;);
 </code></pre>
-
 <p>Here, we&rsquo;re connecting to a node in the cluster which points at <code>localhost</code>, but you can pass in an array of nodes as well. We connect to the <code>default</code> bucket, which has no password. Now that we have our connection established, we can instantiate the cache driver and inject our Couchbase client:</p>
-
 <pre><code>// 2: Instantiate the Driver &amp; Inject the Connection
 $cacheDriver = new \Doctrine\Common\Cache\CouchbaseCache();
 $cacheDriver-&gt;setCouchbase($couchbase);
 </code></pre>
-
 <p>From here on, the API is the same for all cache drivers. The following code checks if the cache contains a key. If it is present, it prints out the document but if it isn&rsquo;t it creates a new one. This is a very simple example but shows how you can start to use Couchbase caching in your own projects with just a few lines of bootstrapping!</p>
-
 <p>Aside from these three methods, there is also a <code>delete</code> method available. Finally, you can pass an optional third param on <code>save</code> with a <code>$lifeTime</code> so that the cache item vanishes automatically.</p>
-
 <p>Since Couchbase Server doesn&rsquo;t care what you store, you can also save and fetch any kind of datatype (aside from resources):</p>
-
 <pre><code>$cacheDriver-&gt;save($key, array('foo' =&gt; 'bar'));
 var_dump($cacheDriver-&gt;fetch($key));
 </code></pre>
-
 <p>Note that when you use the driver at this level, try to store JSON strings when you can (use <code>json_encode</code>/<code>json_decode</code> on your datastructures) This way you can take advantage of the brand new view engine inside Couchbase Server 2.0. You can always just store serialized objects as well (like we need to do with ORM integration) since for Couchbase Server it&rsquo;s just a byte stream.</p>
-
 <p>We can now build on this foundation and see how this works with ORM integration.</p>
-
 <h2 id="orm-integration">ORM Integration</h2>
-
 <p>Create a new directory called <code>couchbase-doctrine-orm</code> with the following <code>composer.json</code>:</p>
-
 <pre><code>{
     &quot;require&quot;: {
         &quot;doctrine/orm&quot;: &quot;2.4.x-dev&quot;,
@@ -158,11 +151,8 @@ var_dump($cacheDriver-&gt;fetch($key));
     }
 }
 </code></pre>
-
 <p>This time our <code>composer.json</code> file is a little bit longer, because we need to define all of our dependencies by hand (since we don&rsquo;t want to work against the stable release). Since we need to define Doctrine Entities we pass the composer autoloader the custom directory (<code>src/</code>).</p>
-
 <p>The next thing we need is our actual entity that we want to manage through Doctrine. Go ahead and create a <code>Person.php</code> file inside the <code>src/Entities</code> directory with the following content:</p>
-
 <pre><code>&lt;?php
 
 namespace Entities;
@@ -201,11 +191,8 @@ class Person {
 
 ?&gt;
 </code></pre>
-
 <p>This is a very simple Doctrine Entity that has some properties and also a autogenerated <code>ID</code> field. I&rsquo;m going to use <a href="http://www.sqlite.org/">SQLite</a> in the following example, but feel free to use MySQL or any other relational database that you have available.</p>
-
 <p>To wire everything together, we&rsquo;re going to create a <code>index.php</code> file in the root directory of the project. Again, here is the full content and we&rsquo;re going to break it apart afterwards:</p>
-
 <pre><code>&lt;?php
 // Composer autoloader.
 $loader = require 'vendor/autoload.php';
@@ -250,16 +237,12 @@ $results = $query-&gt;getResult();
 
 ?&gt;
 </code></pre>
-
 <p>Since this may be a lot to grasp, let&rsquo;s break it into smaller sized chunks.</p>
-
 <pre><code>$couchbase = new Couchbase(&quot;127.0.0.1&quot;, &quot;&quot;, &quot;&quot;, &quot;default&quot;);
 $cacheDriver = new \Doctrine\Common\Cache\CouchbaseCache();
 $cacheDriver-&gt;setCouchbase($couchbase);
 </code></pre>
-
 <p>After our bootstrapping the autoloader, we&rsquo;re initializing the cache driver. You already know what this means because we&rsquo;ve used the same code in the simple example before.</p>
-
 <pre><code>$paths = array(__DIR__ . '/src/Entities/');
 $isDevMode = true;
 $dbParams = array(
@@ -272,11 +255,8 @@ $dbParams = array(
 $config = \Doctrine\ORM\Tools\Setup::createAnnotationMetadataConfiguration($paths, $isDevMode, null, $cacheDriver);
 $em = \Doctrine\ORM\EntityManager::create($dbParams, $config);
 </code></pre>
-
 <p>The <code>\Doctrine\ORM\EntityManager</code> is one of the major building blocks inside Doctrine and needs to be initialized accordingly. Therefore, we need to provide it a valid configuration. Here we&rsquo;re going to use annotations (as seen on the Doctrine Entity, but you can also do it through XML or YAML). We also need to provide our database connection and the path to the entities. The important part here is that we pass the <code>$cacheDriver</code> to the factory method. This automatically initializes our <code>CouchbaseCache</code> to be used for all kinds of caching (Query, Metadata and Result caching).</p>
-
 <p>Now we can go ahead and create a record:</p>
-
 <pre><code>$person = new \Entities\Person();
 $person-&gt;setFirstname(&quot;Michael&quot;);
 $person-&gt;setLastname(&quot;Nitschinger&quot;);
@@ -284,53 +264,24 @@ $person-&gt;setLastname(&quot;Nitschinger&quot;);
 $em-&gt;persist($person);
 $em-&gt;flush();
 </code></pre>
-
 <p>Afterwards, we can fetch it back through a query:</p>
-
 <pre><code>$query = $em-&gt;createQuery('select p from Entities\Person p');
 $query-&gt;useResultCache(true);
 $results = $query-&gt;getResult();
 </code></pre>
-
 <p>Note that we explicitely tell it to cache this query result for us (by default, result caching won&rsquo;t be used). If open the browser and point it to your Couchbase Server 2.0 management UI, you can see that Doctrine did create lots of documents behind the scenes. These are subsequently used to boost your application performance.</p>
-
 <h2 id="summary">Summary</h2>
-
 <p>As you can see, using Couchbase as a Cache for Doctrine is not hard. You just need to initialize it and pass it into the configuration. From this point on, everything happens behind the scenes. And don&rsquo;t forget that you not only get exceptional performance, but also persistence, scalability and all the cool stuff that Couchbase Server provides out of the box.</p>
-
 <p>If you have any questions or input, please let me know in the comments! Finally, thanks to <a href="https://twitter.com/Ocramius">Marco Pivetta</a> for helping me debug an <a href="https://github.com/doctrine/common/pull/240">issue</a> with ORM integration!</p>
 
     </div>
-
-    <div id="disqus_thread"></div>
-<script type="application/javascript">
-    var disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "daschl" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
-
+ 
     <ul class="article-taxonomy">
-       
+      
+    
+      
       <li>
-        <i class="fa fa-tags"></i>
-        <a href="/%20tags/%20doctrine">doctrine</a>
-        <a href="/%20tags/%20couchbase">couchbase</a>
-        <a href="/%20tags/%20php">php</a>
-        <a href="/%20tags/%20cache">cache</a>
+        <i class="fa fa-tags"></i><a href="/tags/doctrine">doctrine</a><a href="/tags/couchbase">couchbase</a><a href="/tags/php">php</a><a href="/tags/cache">cache</a>
       </li>
       
   </article>
@@ -340,30 +291,24 @@ $results = $query-&gt;getResult();
 <footer class="footer">
   <ul class="footer-links">
     <li>
-      <a href="https://nitschinger.at/index.xml" type="application/rss+xml" target="_blank">
-        <i class="fa fa-rss"></i> RSS feed</a>
+      <a href="/atom.xml" type="application/atom+xml" target="_blank"><i class="fa fa-rss"></i> Atom feed</a>
     </li>
     <li>
-      <a href="https://github.com/mobybit/hugo-natrium-theme">
-        <i class="fa fa-github"></i> Built with Hugo &amp; Natrium Theme</a>
+      <a href="https://github.com/daschl"><i class="fa fa-github"></i> GitHub</a>
+    </li>
+    <li>
+      <a href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
+    </li>
+    <li>
+      <a href="https://www.linkedin.com/in/michaelnitschinger/"><i class="fa fa-linkedin"></i> LinkedIn</a>
     </li>
   </ul>
 </footer>
 
 </div>
 
-<script>
-  (function (i, s, o, g, r, a, m) {
-    i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
-      (i[r].q = i[r].q || []).push(arguments)
-    }, i[r].l = 1 * new Date(); a = s.createElement(o),
-      m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
-  })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
 
-  ga('create', 'UA-19686689-1', 'auto');
-  ga('send', 'pageview');
-  ga('set', 'anonymizeIp', true);
-</script>
+
 </body>
 
 </html>

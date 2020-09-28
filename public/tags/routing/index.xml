@@ -1,9 +1,9 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Routing on daschl writes. sometimes.</title>
+    <title>routing on daschl writes. sometimes.</title>
     <link>https://nitschinger.at/tags/routing/</link>
-    <description>Recent content in Routing on daschl writes. sometimes.</description>
+    <description>Recent content in routing on daschl writes. sometimes.</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Thu, 24 Feb 2011 00:00:00 +0000</lastBuildDate>
@@ -18,7 +18,7 @@
       
       <guid>https://nitschinger.at/Understanding-the-Lithium-Router-Part-2/</guid>
       <description>Introduction Routes play an essential role in your request/response-cycle and therefore should also be tested like any other component that you develop. As the Lithium routing infrastructure also consists of classes and methods, we can run unit and integration tests against them.
-If we follow the testing conventions, we need to differentiate two distinct methods of testing. The first one (the so called &amp;ldquo;Unit Test&amp;rdquo;), is used to test your routes one by one, isolated from your application and ideally all dependencies are mocked away.</description>
+If we follow the testing conventions, we need to differentiate two distinct methods of testing. The first one (the so called &amp;ldquo;Unit Test&amp;quot;), is used to test your routes one by one, isolated from your application and ideally all dependencies are mocked away.</description>
     </item>
     
     <item>

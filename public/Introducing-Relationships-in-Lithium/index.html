@@ -3,11 +3,10 @@
   <head>
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Hugo 0.54.0" />
+<meta name="generator" content="Hugo 0.74.3" />
 
 
-<title>Introducing Relationships in Lithium - daschl writes. sometimes.</title>
-<meta property="og:title" content="Introducing Relationships in Lithium - daschl writes. sometimes.">
+<title>Introducing Relationships in Lithium – daschl writes. sometimes.</title>
 
 
 
@@ -18,6 +17,28 @@
 
 
 
+<link href="/atom.xml" rel="alternate" type="application/atom+xml" title="daschl writes. sometimes." />
+
+<meta property="og:title" content="Introducing Relationships in Lithium" />
+<meta property="og:description" content="This post introduces you to model relationships in Lithium." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://nitschinger.at/Introducing-Relationships-in-Lithium/" />
+<meta property="article:published_time" content="2012-03-03T00:00:00+00:00" />
+<meta property="article:modified_time" content="2012-03-03T00:00:00+00:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Introducing Relationships in Lithium"/>
+<meta name="twitter:description" content="This post introduces you to model relationships in Lithium."/>
+
+<meta itemprop="name" content="Introducing Relationships in Lithium">
+<meta itemprop="description" content="This post introduces you to model relationships in Lithium.">
+<meta itemprop="datePublished" content="2012-03-03T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2012-03-03T00:00:00+00:00" />
+<meta itemprop="wordCount" content="1919">
+
+
+
+<meta itemprop="keywords" content="php,relationships,lithium,models," />
 
 
 <link rel="stylesheet" href="https://nitschinger.at/css/main.css" media="all">
@@ -28,30 +49,27 @@
     <div class="wrapper">
       <header class="header">
         <nav class="nav">
-  <a href="https://nitschinger.at/" class="nav-title">
-    daschl blogs. sometimes.
+  <a href="https://nitschinger.at/" class="nav-logo">
+    <img src="https://nitschinger.at/images/"
+         width="" 
+         height="" 
+         alt="">
   </a>
+  <a href="https://nitschinger.at/" class="nav-title">daschl writes. sometimes.</a>
 
   <ul class="nav-links">
     
-    <li>
-      <a href="/tags">tags</a>
-    </li>
+    <li><a href="/tags">tags</a></li>
     
-    <li>
-      <a href="/imprint/">imprint</a>
-    </li>
+    <li><a href="/imprint/">imprint</a></li>
     
-    <li>
-      <a href="https://twitter.com/daschl">-&gt; twitter</a>
-    </li>
+    <li><a href="https://twitter.com/daschl">-&gt; twitter</a></li>
     
-    <li>
-      <a href="https://github.com/daschl">-&gt; github</a>
-    </li>
+    <li><a href="https://github.com/daschl">-&gt; github</a></li>
     
   </ul>
 </nav>
+
       </header>
 
 
@@ -59,31 +77,20 @@
   <article class="article">
     <h1 class="article-title">Introducing Relationships in Lithium</h1>
     
-    <span class="article-date">2012-03-03</span>
+    <span class="article-date">3 March 2012</span>
     
 
     <div class="article-content">
-      
-
-<h1 id="introduction">Introduction</h1>
-
+      <h1 id="introduction">Introduction</h1>
 <p>The model relationship support in Lithium is one of the hottest topics on IRC lately, so I thought it would be a good idea to blog about it.</p>
-
 <p>Currently, Lithium supports 1:1 and 1:n relationships for relational databases. There is no m:n support out of the box (like CakePHP&rsquo;s <code>$hasAndBelongsToMany</code>). This also means that MongoDB relationships are not implemented for now. If you look at the <a href="https://github.com/UnionOfRAD/lithium/wiki/Roadmap">Roadmap</a>, you can see that this is on the &ldquo;pre 1.0&rdquo; list and will be addressed before the 1.0 version is released.</p>
-
 <p>This post gives you a little background on relationship types and their database representations before we implement a simple example in PHP.</p>
-
 <h1 id="basics-first">Basics First</h1>
-
 <p>If you know how the three &ldquo;big&rdquo; relationship types 1:1, 1:n and m:n are implemented on the database side, feel free to jump straight to the practical example. This is not a exhaustive guide to the relational database model and should only set the stage for the practical example later. Note that I didn&rsquo;t add any foreign key constraints on the database level to make it easier to follow along.</p>
-
 <p>If you work with a relational data model, and have a (more or less) <a href="http://en.wikipedia.org/wiki/Database_normalization">normalized</a> schema, you need to find a way to model relationships between relations (speak &ldquo;entities&rdquo; or &ldquo;tables&rdquo;). In pratice, these relationships fall into three categories:</p>
-
-<h2 id="1-1-relationships">1:1 Relationships</h2>
-
+<h2 id="11-relationships">1:1 Relationships</h2>
 <p>Exactly one entity belongs to exactly one other entity. For example, think of a <code>people</code> relation and you want to model
 the relationship between married people. One husband can only belong to one wife and vice versa (depending from where you are reading this post this might be different ;)). In a physical database schema, it may look like this.</p>
-
 <pre><code>mysql&gt; describe people;
 +-----------+--------------+------+-----+---------+----------------+
 | Field     | Type         | Null | Key | Default | Extra          |
@@ -94,9 +101,7 @@ the relationship between married people. One husband can only belong to one wife
 +-----------+--------------+------+-----+---------+----------------+
 3 rows in set (0.01 sec)
 </code></pre>
-
 <p>The <code>spouse_id</code> references a different person (note that it is not important if you reference an entity in the same or a different table. Here&rsquo;s some example data:</p>
-
 <pre><code>mysql&gt; select * from people;
 +----+--------+-----------+
 | id | name   | spouse_id |
@@ -106,13 +111,9 @@ the relationship between married people. One husband can only belong to one wife
 +----+--------+-----------+
 4 rows in set (0.00 sec)
 </code></pre>
-
 <p><code>Bob</code> and <code>Alice</code> are married and their relationship is identified over the foreign key <code>spouse id</code>. In Lithium, this type of relation is called <code>hasOne</code>.</p>
-
-<h2 id="1-n-relationships">1:n Relationships</h2>
-
+<h2 id="1n-relationships">1:n Relationships</h2>
 <p>Exactly one entity belongs to zero or more other entites. This is easy: a user can write zero or more blog posts. Let&rsquo;s model this accordingly:</p>
-
 <pre><code>mysql&gt; describe posts;
 +---------+--------------+------+-----+---------+----------------+
 | Field   | Type         | Null | Key | Default | Extra          |
@@ -132,9 +133,7 @@ mysql&gt; describe users;
 +-------+--------------+------+-----+---------+----------------+
 2 rows in set (0.01 sec)
 </code></pre>
-
 <p>Here&rsquo;s some example data to work with:</p>
-
 <pre><code>mysql&gt; select * from posts;
 +----+--------------+---------+
 | id | title        | user_id |
@@ -153,14 +152,10 @@ mysql&gt; select * from users;
 +----+-----------+
 1 row in set (0.00 sec)
 </code></pre>
-
 <p>It&rsquo;s easy to see that Bob wrote two posts while Alice didn&rsquo;t write a single one. We can look at these relations from two different angles (and can also answer two different questions): &ldquo;What posts did Bob write?&rdquo; and &ldquo;Who is the author of the first post?&rdquo;. To answer both questions
- orrectly, Lithium uses two different relation types for the models: <code>hasMany</code> and <code>belongsTo</code>. One user <code>hasMany</code> blog posts, but one post <code>belongsTo</code> only one user. The wording also implies where the foreign key is placed: in a <code>hasMany</code> relationship, the foreign key is expected on the other model, while <code>belongsTo</code> expects it in the current model. We&rsquo;ll see shortly how this works out in practice.</p>
-
-<h2 id="m-n-relationships">m:n Relationships</h2>
-
+orrectly, Lithium uses two different relation types for the models: <code>hasMany</code> and <code>belongsTo</code>. One user <code>hasMany</code> blog posts, but one post <code>belongsTo</code> only one user. The wording also implies where the foreign key is placed: in a <code>hasMany</code> relationship, the foreign key is expected on the other model, while <code>belongsTo</code> expects it in the current model. We&rsquo;ll see shortly how this works out in practice.</p>
+<h2 id="mn-relationships">m:n Relationships</h2>
 <p>Lastly, zero or more entities can belong to zero or more other entities. This is a bit tricky, because we need a third table to model this relationship efficiently. For example, a user can belong to zero or more groups and groups can have zero or more members.</p>
-
 <pre><code>mysql&gt; describe users;
 +-------+--------------+------+-----+---------+----------------+
 | Field | Type         | Null | Key | Default | Extra          |
@@ -188,9 +183,7 @@ mysql&gt; describe users_groups;
 +----------+---------+------+-----+---------+-------+
 2 rows in set (0.01 sec)
 </code></pre>
-
 <p>You can see that we need a third table to &ldquo;glue&rdquo; the other two together. Here&rsquo;s some example data:</p>
-
 <pre><code>mysql&gt; select * from users;
 +----+-----------+
 | id | name      |
@@ -220,21 +213,16 @@ mysql&gt; select * from users_groups;
 +----------+---------+
 3 rows in set (0.00 sec)
 </code></pre>
-
 <p><code>John</code> has access to both groups, while the <code>Administrator</code> group has two members. Lithium doesn&rsquo;t support this kind of relationship for now, but in CakePHP it is called <code>hasAndBelongsToMany</code>.</p>
-
 <h1 id="the-blog-example">The Blog example</h1>
-
 <p>Now that we&rsquo;ve got the basics settled, let&rsquo;s get our hands on some code and implement the &ldquo;Hello World 2.0&rdquo; example -
 a blog. Along the way we can reuse some of the tables above.</p>
-
 <p>Let&rsquo;s assume we want to store blog posts and their authors. For simplicity, every author can belong to only one group and a group can only have one member. This way, we can practice 1:n and 1:1 relationships. Let&rsquo;s create the appropriate data model using the MySQL DDL:</p>
-
 <pre><code>CREATE TABLE groups (
     id integer auto_increment primary key,
     name varchar(255) not null
 );
-
+	
 CREATE TABLE authors (
     id integer auto_increment primary key,
     firstname varchar(255) not null,
@@ -249,9 +237,7 @@ CREATE TABLE posts (
     author_id integer
 );
 </code></pre>
-
 <p>Let&rsquo;s insert some demo data to work with:</p>
-
 <pre><code>insert into groups (name) values ('Admins');
 insert into groups (name) values ('Editors');
 
@@ -264,9 +250,7 @@ insert into posts (author_id, title, body) values (2, 'Irish on the ROCKS', '...
 insert into posts (author_id, title, body) values (2, 'Without fear.', '...');
 insert into posts (author_id, title, body) values (3, 'On drinking Bourbon', '...');
 </code></pre>
-
 <p>Next, grab a fresh copy of Lithium and create a connection in <code>config/bootstrap/connections.php</code>:</p>
-
 <pre><code>Connections::add('default', array(
     'type' =&gt; 'database',
     'adapter' =&gt; 'MySql',
@@ -277,9 +261,7 @@ insert into posts (author_id, title, body) values (3, 'On drinking Bourbon', '..
     'encoding' =&gt; 'UTF-8'
 ));
 </code></pre>
-
 <p>Now, let&rsquo;s create three bare-bone models in <code>app\models</code> to start with:</p>
-
 <pre><code>&lt;?php
 // Filename: /app/models/Posts.php
 namespace app\models;
@@ -307,9 +289,7 @@ class Groups extends \lithium\data\Model {
 }
 ?&gt;
 </code></pre>
-
 <p>To produce meaningful output in the browser, we&rsquo;d better add a controller and a view template.</p>
-
 <pre><code>&lt;?php
 // Filename: /app/controllers/PostsController.php
 namespace app\controllers;
@@ -321,9 +301,9 @@ use app\models\Groups;
 class PostsController extends \lithium\action\Controller {
 
     public function index() {
-
+		
     }
-
+	
 }
 ?&gt;
 
@@ -333,9 +313,7 @@ class PostsController extends \lithium\action\Controller {
 
 More stuff will be here soon.
 </code></pre>
-
 <p>Now that we have everything in place, we can define our relationships in Lithium. Place the following snippets in their appropriate models:</p>
-
 <pre><code>// Posts:
 public $belongsTo = array('Authors');
 
@@ -345,9 +323,7 @@ public $hasMany = array('Posts');
 // Groups:
 public $hasOne = array('Authors');
 </code></pre>
-
 <p>As our database tables rely on conventional column names, we don&rsquo;t have to provide more configuration params to Lithium. Now, let&rsquo;s read all posts, their corresponding authors and print them in the template.</p>
-
 <pre><code>// PostsController:
 public function index() {
     $posts = Posts::all(array('with' =&gt; 'Authors'));
@@ -365,11 +341,8 @@ public function index() {
     &lt;?php endforeach; ?&gt;
 &lt;/ul&gt;
 </code></pre>
-
 <p>The <code>with</code> param controls what relationships you want to fetch. In this case, as a post belongs to one author, Lithium knows that only one <code>Record</code> is returned and you can use the <code>author</code> directly. If you don&rsquo;t provide the appropriate class there, Lithium won&rsquo;t call the associated model and an error will be raised (because <code>$post-&gt;author</code> isn&rsquo;t set, PHP complains that you want to access <code>firstname</code> from a non-object). This is a common mistake, so keep it in mind!</p>
-
 <p>Lithium is very flexible on the data layer, and you can write instance methods on your model and access them through the relation. Let&rsquo;s say we want to provide the full name at the model layer, so that we don&rsquo;t have to read both the first- and the lastname in the template.</p>
-
 <pre><code>// Authors:
 public function fullName($entity) {
     return $entity-&gt;firstname.&quot; &quot;.$entity-&gt;lastname;
@@ -378,61 +351,31 @@ public function fullName($entity) {
 // index.html.php:
 &lt;strong&gt;&lt;?= $post-&gt;title; ?&gt;&lt;/strong&gt;, by &lt;?= $post-&gt;author-&gt;fullName(); ?&gt;
 </code></pre>
-
 <p>We can also read all posts that belong to a particular author:</p>
-
 <pre><code>$posts = Authors::first(array(
     'conditions' =&gt; array('posts.id' =&gt; $author_id), 
     'with' =&gt; 'Posts'
 ))-&gt;posts;
 </code></pre>
-
 <p>To find data through our 1:1 relation, we can use the same mechanisms:</p>
-
 <pre><code>// Find the author name for a group:
 $name = Groups::first(array(
     'conditions' =&gt; array('groups.id' =&gt; $group_id),
     'with' =&gt; array('Authors')
 ))-&gt;author-&gt;fullName();
 </code></pre>
-
 <p>Note that if we want to find the name of the associated group for an author, we would need to add a foreign key to the <code>groups</code> table (there is no real difference between <code>hasOne</code> and <code>hasMany</code>, just the fact that <code>hasOne</code> returns exactly one entity instead of zero or more and therefore no <code>Collection</code> is needed).</p>
-
 <h1 id="wrapping-up">Wrapping up</h1>
-
 <p>This post has covered the basics of model relationships and how to model the 1:1 and 1:n types in Lithium. We now set the stage for more advanced topics, including: form integration, faking the m:n relationship for relational databases, faking relationships for MongoDB and advanced relationship handling through the <code>Relationship</code> class. If you have any other interesting topics that you want to read about soon, share your ideas!</p>
 
     </div>
-
-    <div id="disqus_thread"></div>
-<script type="application/javascript">
-    var disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "daschl" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
-
+ 
     <ul class="article-taxonomy">
-       
+      
+    
+      
       <li>
-        <i class="fa fa-tags"></i>
-        <a href="/%20tags/%20php">php</a>
-        <a href="/%20tags/%20relationships">relationships</a>
-        <a href="/%20tags/%20lithium">lithium</a>
-        <a href="/%20tags/%20models">models</a>
+        <i class="fa fa-tags"></i><a href="/tags/php">php</a><a href="/tags/relationships">relationships</a><a href="/tags/lithium">lithium</a><a href="/tags/models">models</a>
       </li>
       
   </article>
@@ -442,30 +385,24 @@ $name = Groups::first(array(
 <footer class="footer">
   <ul class="footer-links">
     <li>
-      <a href="https://nitschinger.at/index.xml" type="application/rss+xml" target="_blank">
-        <i class="fa fa-rss"></i> RSS feed</a>
+      <a href="/atom.xml" type="application/atom+xml" target="_blank"><i class="fa fa-rss"></i> Atom feed</a>
     </li>
     <li>
-      <a href="https://github.com/mobybit/hugo-natrium-theme">
-        <i class="fa fa-github"></i> Built with Hugo &amp; Natrium Theme</a>
+      <a href="https://github.com/daschl"><i class="fa fa-github"></i> GitHub</a>
+    </li>
+    <li>
+      <a href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
+    </li>
+    <li>
+      <a href="https://www.linkedin.com/in/michaelnitschinger/"><i class="fa fa-linkedin"></i> LinkedIn</a>
     </li>
   </ul>
 </footer>
 
 </div>
 
-<script>
-  (function (i, s, o, g, r, a, m) {
-    i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
-      (i[r].q = i[r].q || []).push(arguments)
-    }, i[r].l = 1 * new Date(); a = s.createElement(o),
-      m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
-  })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
 
-  ga('create', 'UA-19686689-1', 'auto');
-  ga('send', 'pageview');
-  ga('set', 'anonymizeIp', true);
-</script>
+
 </body>
 
 </html>

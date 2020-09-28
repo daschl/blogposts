@@ -3,11 +3,10 @@
   <head>
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Hugo 0.54.0" />
+<meta name="generator" content="Hugo 0.74.3" />
 
 
-<title>Using JMH for Java Microbenchmarking - daschl writes. sometimes.</title>
-<meta property="og:title" content="Using JMH for Java Microbenchmarking - daschl writes. sometimes.">
+<title>Using JMH for Java Microbenchmarking – daschl writes. sometimes.</title>
 
 
 
@@ -18,6 +17,28 @@
 
 
 
+<link href="/atom.xml" rel="alternate" type="application/atom+xml" title="daschl writes. sometimes." />
+
+<meta property="og:title" content="Using JMH for Java Microbenchmarking" />
+<meta property="og:description" content="This post shows you how to write solid microbenchmarks using the new OpenJDK JMH library." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://nitschinger.at/Using-JMH-for-Java-Microbenchmarking/" />
+<meta property="article:published_time" content="2013-11-22T00:00:00+00:00" />
+<meta property="article:modified_time" content="2013-11-22T00:00:00+00:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Using JMH for Java Microbenchmarking"/>
+<meta name="twitter:description" content="This post shows you how to write solid microbenchmarks using the new OpenJDK JMH library."/>
+
+<meta itemprop="name" content="Using JMH for Java Microbenchmarking">
+<meta itemprop="description" content="This post shows you how to write solid microbenchmarks using the new OpenJDK JMH library.">
+<meta itemprop="datePublished" content="2013-11-22T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2013-11-22T00:00:00+00:00" />
+<meta itemprop="wordCount" content="1877">
+
+
+
+<meta itemprop="keywords" content="java,jmh," />
 
 
 <link rel="stylesheet" href="https://nitschinger.at/css/main.css" media="all">
@@ -28,30 +49,27 @@
     <div class="wrapper">
       <header class="header">
         <nav class="nav">
-  <a href="https://nitschinger.at/" class="nav-title">
-    daschl blogs. sometimes.
+  <a href="https://nitschinger.at/" class="nav-logo">
+    <img src="https://nitschinger.at/images/"
+         width="" 
+         height="" 
+         alt="">
   </a>
+  <a href="https://nitschinger.at/" class="nav-title">daschl writes. sometimes.</a>
 
   <ul class="nav-links">
     
-    <li>
-      <a href="/tags">tags</a>
-    </li>
+    <li><a href="/tags">tags</a></li>
     
-    <li>
-      <a href="/imprint/">imprint</a>
-    </li>
+    <li><a href="/imprint/">imprint</a></li>
     
-    <li>
-      <a href="https://twitter.com/daschl">-&gt; twitter</a>
-    </li>
+    <li><a href="https://twitter.com/daschl">-&gt; twitter</a></li>
     
-    <li>
-      <a href="https://github.com/daschl">-&gt; github</a>
-    </li>
+    <li><a href="https://github.com/daschl">-&gt; github</a></li>
     
   </ul>
 </nav>
+
       </header>
 
 
@@ -59,101 +77,88 @@
   <article class="article">
     <h1 class="article-title">Using JMH for Java Microbenchmarking</h1>
     
-    <span class="article-date">2013-11-22</span>
+    <span class="article-date">22 November 2013</span>
     
 
     <div class="article-content">
-      
-
-<p>So before we dive in, let&rsquo;s rule two things out. First, I&rsquo;m not a JVM expert and second, microbenchmarking is hard. The bigger problem is that it isn&rsquo;t only hard but also looks very easy if you start. You put your test code in a loop, use <code>System.nanoTime</code> or something similar to measure the total time of the run and divide it by the number of runs. Doing it that way, you could very well let your cat estimate the results (mine would do it for proper catnip).</p>
-
+      <p>So before we dive in, let&rsquo;s rule two things out. First, I&rsquo;m not a JVM expert and second, microbenchmarking is hard. The bigger problem is that it isn&rsquo;t only hard but also looks very easy if you start. You put your test code in a loop, use <code>System.nanoTime</code> or something similar to measure the total time of the run and divide it by the number of runs. Doing it that way, you could very well let your cat estimate the results (mine would do it for proper catnip).</p>
 <p>Larger companies like Google started their own projects to remedy all kinds of pitfalls and libraries like <a href="https://code.google.com/p/caliper/">Caliper</a> popped out of that. Now finally, some fine folks of the OpenJDK team thought they&rsquo;ll do their own and share it for everyone to use. The tool is called <a href="http://openjdk.java.net/projects/code-tools/jmh/">jmh</a> or also known as &ldquo;Java Microbenchmarking Harness&rdquo;.</p>
-
 <p>In this post I just show you how to get started, but there are still lots of things you need to think about. I really recommend you to watch <a href="http://vimeo.com/78900556">the talk by Aleksey Shipilev</a> which dives into concepts and pitfalls. You can also find the slides <a href="http://shipilev.net/pub/talks/devoxx-Nov2013-benchmarking.pdf">here</a>.</p>
-
 <h2 id="using-jmh">Using JMH</h2>
-
 <p>There are a few ways to use it and all of them are explained on the official website linked above. In general, you want to use the self-contained jar and run them on the command line, but there is also an easy way to run them directly out of your IDE - this is what I&rsquo;m showing you in a second. If you just want to run it from the command line, you do it like (but you need to build the jar first):</p>
-
 <pre><code>$ java -jar target/microbenchmarks.jar -h
-</code></pre>
-
-<p>Let&rsquo;s start a maven project in our IDE and add the following dependency (mad props to <a href="https://twitter.com/_godin_/status/403668134206242817">Evgeny Mandrikov</a> for putting it on maven central recently):</p>
-<div class="highlight"><div style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+</code></pre><p>Let&rsquo;s start a maven project in our IDE and add the following dependency (mad props to <a href="https://twitter.com/_godin_/status/403668134206242817">Evgeny Mandrikov</a> for putting it on maven central recently):</p>
+<div class="highlight"><div style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">1
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">2
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">3
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">4
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">5
+<pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2"><code><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">5
 </span></code></pre></td>
-<td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#6ab825;font-weight:bold">&lt;dependency&gt;</span>
-  <span style="color:#6ab825;font-weight:bold">&lt;groupId&gt;</span>org.openjdk.jmh<span style="color:#6ab825;font-weight:bold">&lt;/groupId&gt;</span>
-  <span style="color:#6ab825;font-weight:bold">&lt;artifactId&gt;</span>jmh-core<span style="color:#6ab825;font-weight:bold">&lt;/artifactId&gt;</span>
-  <span style="color:#6ab825;font-weight:bold">&lt;version&gt;</span>0.1<span style="color:#6ab825;font-weight:bold">&lt;/version&gt;</span>
-<span style="color:#6ab825;font-weight:bold">&lt;/dependency&gt;</span></code></pre></td></tr></table>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;dependency&gt;</span>
+  <span style="color:#f92672">&lt;groupId&gt;</span>org.openjdk.jmh<span style="color:#f92672">&lt;/groupId&gt;</span>
+  <span style="color:#f92672">&lt;artifactId&gt;</span>jmh-core<span style="color:#f92672">&lt;/artifactId&gt;</span>
+  <span style="color:#f92672">&lt;version&gt;</span>0.1<span style="color:#f92672">&lt;/version&gt;</span>
+<span style="color:#f92672">&lt;/dependency&gt;</span>
+</code></pre></td></tr></table>
 </div>
-</div>
-<p>Now let&rsquo;s write a main method that calls the underlying method of JMH so we can run it easily form our IDE:</p>
-<div class="highlight"><div style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+</div><p>Now let&rsquo;s write a main method that calls the underlying method of JMH so we can run it easily form our IDE:</p>
+<div class="highlight"><div style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">1
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">2
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">3
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">4
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">5
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">6
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">7
+<pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2"><code><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">5
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">6
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">7
 </span></code></pre></td>
-<td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">org.openjdk.jmh.Main</span>;
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2"><code class="language-java" data-lang="java"><span style="color:#f92672">import</span> org.openjdk.jmh.Main<span style="color:#f92672">;</span>
 
-<span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf;text-decoration:underline">Start</span> {
-  <span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">static</span> <span style="color:#6ab825;font-weight:bold">void</span> <span style="color:#447fcf">main</span>(String... args) {
-    Main.<span style="color:#bbb">main</span>(args);
-  }
-}</code></pre></td></tr></table>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Start</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">main</span><span style="color:#f92672">(</span>String<span style="color:#f92672">...</span> args<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    Main<span style="color:#f92672">.</span><span style="color:#a6e22e">main</span><span style="color:#f92672">(</span>args<span style="color:#f92672">);</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></td></tr></table>
 </div>
-</div>
-<p>If we hit run, all we&rsquo;ll see is:</p>
-
+</div><p>If we hit run, all we&rsquo;ll see is:</p>
 <pre><code>No matching benchmarks. Miss-spelled regexp? Use -v for verbose output.
-</code></pre>
-
-<p>Which is good, because we know JMH is working and looking for our benchmarks. Let&rsquo;s write an empty one to get a feeling of how it works.</p>
-<div class="highlight"><div style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+</code></pre><p>Which is good, because we know JMH is working and looking for our benchmarks. Let&rsquo;s write an empty one to get a feeling of how it works.</p>
+<div class="highlight"><div style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 1
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 2
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 3
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 4
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 5
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 6
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 7
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 8
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 9
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">10
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">11
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">12
+<pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2"><code><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12
 </span></code></pre></td>
-<td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">package</span> <span style="color:#447fcf;text-decoration:underline">benchmarks</span>;
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2"><code class="language-java" data-lang="java"><span style="color:#f92672">package</span> benchmarks<span style="color:#f92672">;</span>
 
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">org.openjdk.jmh.annotations.GenerateMicroBenchmark</span>;
+<span style="color:#f92672">import</span> org.openjdk.jmh.annotations.GenerateMicroBenchmark<span style="color:#f92672">;</span>
 
-<span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf;text-decoration:underline">HelloWorld</span> {
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">HelloWorld</span> <span style="color:#f92672">{</span>
 
-  <span style="color:#ffa500">@GenerateMicroBenchmark</span>
-  <span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">void</span> <span style="color:#447fcf">helloWorld</span>() {
+  <span style="color:#a6e22e">@GenerateMicroBenchmark</span>
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">helloWorld</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
 
-  }
+  <span style="color:#f92672">}</span>
 
-}</code></pre></td></tr></table>
+<span style="color:#f92672">}</span>
+</code></pre></td></tr></table>
 </div>
-</div>
-<p>JMH will automatically pick it up from the CLASSPATH and start to run our benchmark. You will see lots of output (forks, warmup runs), but be patient until the end and you&rsquo;ll see something like this:</p>
-
+</div><p>JMH will automatically pick it up from the CLASSPATH and start to run our benchmark. You will see lots of output (forks, warmup runs), but be patient until the end and you&rsquo;ll see something like this:</p>
 <pre><code># Fork: 1 of 1
 # Warmup: 20 iterations, 1 s each
 # Measurement: 10 iterations, 1 s each
@@ -179,370 +184,331 @@ Result : 3073969.337 ±(95%) 45679.588 ±(99%) 65631.592 ops/ms
 
 Benchmark                   Mode Thr     Count  Sec         Mean   Mean error    Units
 b.HelloWorld.helloWorld    thrpt   1        10    1  3073969.337    65631.592   ops/ms
-</code></pre>
-
-<p>Note that both the output and the results may look different on your machine. To not fork as often and don&rsquo;t do so many measure runs (for demo purposes), you can apply the following flags for the command in your IDE: <code>-i 10 -f 1</code>. This will only run one fork and do 10 iterations after warming up. There are dozens of flags you can tune to your needs.</p>
-
+</code></pre><p>Note that both the output and the results may look different on your machine. To not fork as often and don&rsquo;t do so many measure runs (for demo purposes), you can apply the following flags for the command in your IDE: <code>-i 10 -f 1</code>. This will only run one fork and do 10 iterations after warming up. There are dozens of flags you can tune to your needs.</p>
 <h2 id="benchmarking-real-code">Benchmarking real code</h2>
-
 <p>Now all is fun, but let&rsquo;s test some real code. In Spymemcached, before we put a document on the wire we check that the key is not longer than allowed and - for ascii based operations - also check if they do not contain whitespace and so on. The code in question currently looks like this:</p>
-<div class="highlight"><div style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<div class="highlight"><div style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 1
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 2
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 3
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 4
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 5
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 6
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 7
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 8
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 9
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">10
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">11
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">12
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">13
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">14
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">15
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">16
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">17
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">18
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">19
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">20
+<pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2"><code><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20
 </span></code></pre></td>
-<td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">static</span> <span style="color:#6ab825;font-weight:bold">void</span> <span style="color:#447fcf">validateKey</span>(String key, <span style="color:#6ab825;font-weight:bold">boolean</span> binary) {
-  <span style="color:#6ab825;font-weight:bold">byte</span>[] keyBytes = KeyUtil.<span style="color:#bbb">getKeyBytes</span>(key);
-  <span style="color:#6ab825;font-weight:bold">if</span> (keyBytes.<span style="color:#bbb">length</span> &gt; MemcachedClientIF.<span style="color:#bbb">MAX_KEY_LENGTH</span>) {
-    <span style="color:#6ab825;font-weight:bold">throw</span> <span style="color:#6ab825;font-weight:bold">new</span> IllegalArgumentException(<span style="color:#ed9d13">&#34;Key is too long (maxlen = &#34;</span>
-        + MemcachedClientIF.<span style="color:#bbb">MAX_KEY_LENGTH</span> + <span style="color:#ed9d13">&#34;)&#34;</span>);
-  }
-  <span style="color:#6ab825;font-weight:bold">if</span> (keyBytes.<span style="color:#bbb">length</span> == 0) {
-    <span style="color:#6ab825;font-weight:bold">throw</span> <span style="color:#6ab825;font-weight:bold">new</span> IllegalArgumentException(
-        <span style="color:#ed9d13">&#34;Key must contain at least one character.&#34;</span>);
-  }
-  <span style="color:#6ab825;font-weight:bold">if</span>(!binary) {
-    <span style="color:#999;font-style:italic">// Validate the key
-</span><span style="color:#999;font-style:italic"></span>    <span style="color:#6ab825;font-weight:bold">for</span> (<span style="color:#6ab825;font-weight:bold">byte</span> b : keyBytes) {
-      <span style="color:#6ab825;font-weight:bold">if</span> (b == <span style="color:#ed9d13">&#39; &#39;</span> || b == <span style="color:#a61717;background-color:#e3d2d2">&#39;\\</span>n<span style="color:#a61717;background-color:#e3d2d2">&#39;</span> || b == <span style="color:#a61717;background-color:#e3d2d2">&#39;\\</span>r<span style="color:#a61717;background-color:#e3d2d2">&#39;</span> || b == 0) {
-        <span style="color:#6ab825;font-weight:bold">throw</span> <span style="color:#6ab825;font-weight:bold">new</span> IllegalArgumentException(
-            <span style="color:#ed9d13">&#34;Key contains invalid characters:  ``&#34;</span> + key + <span style="color:#ed9d13">&#34;&#39;&#39;&#34;</span>);
-      }
-    }
-  }
-}</code></pre></td></tr></table>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">validateKey</span><span style="color:#f92672">(</span>String key<span style="color:#f92672">,</span> <span style="color:#66d9ef">boolean</span> binary<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">byte</span><span style="color:#f92672">[]</span> keyBytes <span style="color:#f92672">=</span> KeyUtil<span style="color:#f92672">.</span><span style="color:#a6e22e">getKeyBytes</span><span style="color:#f92672">(</span>key<span style="color:#f92672">);</span>
+  <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>keyBytes<span style="color:#f92672">.</span><span style="color:#a6e22e">length</span> <span style="color:#f92672">&gt;</span> MemcachedClientIF<span style="color:#f92672">.</span><span style="color:#a6e22e">MAX_KEY_LENGTH</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">throw</span> <span style="color:#66d9ef">new</span> IllegalArgumentException<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Key is too long (maxlen = &#34;</span>
+        <span style="color:#f92672">+</span> MemcachedClientIF<span style="color:#f92672">.</span><span style="color:#a6e22e">MAX_KEY_LENGTH</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34;)&#34;</span><span style="color:#f92672">);</span>
+  <span style="color:#f92672">}</span>
+  <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>keyBytes<span style="color:#f92672">.</span><span style="color:#a6e22e">length</span> <span style="color:#f92672">==</span> 0<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">throw</span> <span style="color:#66d9ef">new</span> IllegalArgumentException<span style="color:#f92672">(</span>
+        <span style="color:#e6db74">&#34;Key must contain at least one character.&#34;</span><span style="color:#f92672">);</span>
+  <span style="color:#f92672">}</span>
+  <span style="color:#66d9ef">if</span><span style="color:#f92672">(!</span>binary<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+    <span style="color:#75715e">// Validate the key
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">for</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">byte</span> b <span style="color:#f92672">:</span> keyBytes<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+      <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>b <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39; &#39;</span> <span style="color:#f92672">||</span> b <span style="color:#f92672">==</span> <span style="color:#960050;background-color:#1e0010">&#39;\\</span>n<span style="color:#960050;background-color:#1e0010">&#39;</span> <span style="color:#f92672">||</span> b <span style="color:#f92672">==</span> <span style="color:#960050;background-color:#1e0010">&#39;\\</span>r<span style="color:#960050;background-color:#1e0010">&#39;</span> <span style="color:#f92672">||</span> b <span style="color:#f92672">==</span> 0<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">throw</span> <span style="color:#66d9ef">new</span> IllegalArgumentException<span style="color:#f92672">(</span>
+            <span style="color:#e6db74">&#34;Key contains invalid characters:  ``&#34;</span> <span style="color:#f92672">+</span> key <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34;&#39;&#39;&#34;</span><span style="color:#f92672">);</span>
+      <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></td></tr></table>
 </div>
-</div>
-<p>Let&rsquo;s say we don&rsquo;t care about optimizing it yet, but we want to see how it performs if the &ldquo;binary&rdquo; flag is applied or not. Obviously less work is done but we want to see how that turns out in practice. Let&rsquo;s add the dependency so we can use the static method directly from the code:</p>
-<div class="highlight"><div style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+</div><p>Let&rsquo;s say we don&rsquo;t care about optimizing it yet, but we want to see how it performs if the &ldquo;binary&rdquo; flag is applied or not. Obviously less work is done but we want to see how that turns out in practice. Let&rsquo;s add the dependency so we can use the static method directly from the code:</p>
+<div class="highlight"><div style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">1
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">2
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">3
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">4
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">5
+<pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2"><code><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">5
 </span></code></pre></td>
-<td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#6ab825;font-weight:bold">&lt;dependency&gt;</span>
-  <span style="color:#6ab825;font-weight:bold">&lt;groupId&gt;</span>net.spy<span style="color:#6ab825;font-weight:bold">&lt;/groupId&gt;</span>
-  <span style="color:#6ab825;font-weight:bold">&lt;artifactId&gt;</span>spymemcached<span style="color:#6ab825;font-weight:bold">&lt;/artifactId&gt;</span>
-  <span style="color:#6ab825;font-weight:bold">&lt;version&gt;</span>2.10.2<span style="color:#6ab825;font-weight:bold">&lt;/version&gt;</span>
-<span style="color:#6ab825;font-weight:bold">&lt;/dependency&gt;</span></code></pre></td></tr></table>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;dependency&gt;</span>
+  <span style="color:#f92672">&lt;groupId&gt;</span>net.spy<span style="color:#f92672">&lt;/groupId&gt;</span>
+  <span style="color:#f92672">&lt;artifactId&gt;</span>spymemcached<span style="color:#f92672">&lt;/artifactId&gt;</span>
+  <span style="color:#f92672">&lt;version&gt;</span>2.10.2<span style="color:#f92672">&lt;/version&gt;</span>
+<span style="color:#f92672">&lt;/dependency&gt;</span>
+</code></pre></td></tr></table>
 </div>
-</div>
-<p>And write a new benchmark that compares both approaches with variation.</p>
-<div class="highlight"><div style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+</div><p>And write a new benchmark that compares both approaches with variation.</p>
+<div class="highlight"><div style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 1
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 2
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 3
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 4
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 5
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 6
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 7
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 8
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 9
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">10
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">11
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">12
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">13
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">14
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">15
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">16
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">17
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">18
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">19
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">20
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">21
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">22
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">23
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">24
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">25
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">26
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">27
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">28
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">29
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">30
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">31
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">32
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">33
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">34
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">35
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">36
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">37
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">38
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">39
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">40
+<pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2"><code><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">23
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">24
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">25
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">26
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">27
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">28
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">29
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">30
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">31
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">32
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">33
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">34
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">35
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">36
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">37
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">38
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">39
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">40
 </span></code></pre></td>
-<td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">package</span> <span style="color:#447fcf;text-decoration:underline">benchmarks</span>;
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2"><code class="language-java" data-lang="java"><span style="color:#f92672">package</span> benchmarks<span style="color:#f92672">;</span>
 
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">net.spy.memcached.util.StringUtils</span>;
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">org.openjdk.jmh.annotations.GenerateMicroBenchmark</span>;
+<span style="color:#f92672">import</span> net.spy.memcached.util.StringUtils<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> org.openjdk.jmh.annotations.GenerateMicroBenchmark<span style="color:#f92672">;</span>
 
-<span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf;text-decoration:underline">KeyBench</span> {
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">KeyBench</span> <span style="color:#f92672">{</span>
 
-  <span style="color:#999;font-style:italic">/**
-</span><span style="color:#999;font-style:italic">   * 12 chars long
-</span><span style="color:#999;font-style:italic">   */</span>
-  <span style="color:#6ab825;font-weight:bold">private</span> <span style="color:#6ab825;font-weight:bold">static</span> <span style="color:#6ab825;font-weight:bold">final</span> String SHORT_KEY = <span style="color:#ed9d13">&#34;user:michael&#34;</span>;
+  <span style="color:#75715e">/**
+</span><span style="color:#75715e">   * 12 chars long
+</span><span style="color:#75715e">   */</span>
+  <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> String SHORT_KEY <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;user:michael&#34;</span><span style="color:#f92672">;</span>
 
-  <span style="color:#999;font-style:italic">/**
-</span><span style="color:#999;font-style:italic">   * 240 chars long
-</span><span style="color:#999;font-style:italic">   */</span>
-  <span style="color:#6ab825;font-weight:bold">private</span> <span style="color:#6ab825;font-weight:bold">static</span> <span style="color:#6ab825;font-weight:bold">final</span> String LONG_KEY = <span style="color:#ed9d13">&#34;thisIsAFunkyKeyWith_underscores_AndAlso334&#34;</span> +
-      <span style="color:#ed9d13">&#34;3252545345NumberslthisIsAFunkyKeyWith_underscores_AndAlso3343252545345Numbe&#34;</span> +
-      <span style="color:#ed9d13">&#34;rslthisIsAFunkyKeyWith_underscores_AndAlso3343252545345NumberslthisIsAFunkyK&#34;</span> +
-      <span style="color:#ed9d13">&#34;eyWith_underscores_AndAlso3343252545345Numbersl&#34;</span>;
+  <span style="color:#75715e">/**
+</span><span style="color:#75715e">   * 240 chars long
+</span><span style="color:#75715e">   */</span>
+  <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> String LONG_KEY <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;thisIsAFunkyKeyWith_underscores_AndAlso334&#34;</span> <span style="color:#f92672">+</span>
+      <span style="color:#e6db74">&#34;3252545345NumberslthisIsAFunkyKeyWith_underscores_AndAlso3343252545345Numbe&#34;</span> <span style="color:#f92672">+</span>
+      <span style="color:#e6db74">&#34;rslthisIsAFunkyKeyWith_underscores_AndAlso3343252545345NumberslthisIsAFunkyK&#34;</span> <span style="color:#f92672">+</span>
+      <span style="color:#e6db74">&#34;eyWith_underscores_AndAlso3343252545345Numbersl&#34;</span><span style="color:#f92672">;</span>
 
-  <span style="color:#ffa500">@GenerateMicroBenchmark</span>
-  <span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">void</span> <span style="color:#447fcf">validateShortKeyBinary</span>() {
-    StringUtils.<span style="color:#bbb">validateKey</span>(SHORT_KEY, <span style="color:#6ab825;font-weight:bold">true</span>);
-  }
+  <span style="color:#a6e22e">@GenerateMicroBenchmark</span>
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">validateShortKeyBinary</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    StringUtils<span style="color:#f92672">.</span><span style="color:#a6e22e">validateKey</span><span style="color:#f92672">(</span>SHORT_KEY<span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">);</span>
+  <span style="color:#f92672">}</span>
 
-  <span style="color:#ffa500">@GenerateMicroBenchmark</span>
-  <span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">void</span> <span style="color:#447fcf">validateShortKeyAscii</span>() {
-    StringUtils.<span style="color:#bbb">validateKey</span>(SHORT_KEY, <span style="color:#6ab825;font-weight:bold">false</span>);
-  }
+  <span style="color:#a6e22e">@GenerateMicroBenchmark</span>
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">validateShortKeyAscii</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    StringUtils<span style="color:#f92672">.</span><span style="color:#a6e22e">validateKey</span><span style="color:#f92672">(</span>SHORT_KEY<span style="color:#f92672">,</span> <span style="color:#66d9ef">false</span><span style="color:#f92672">);</span>
+  <span style="color:#f92672">}</span>
 
-  <span style="color:#ffa500">@GenerateMicroBenchmark</span>
-  <span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">void</span> <span style="color:#447fcf">validateLongKeyBinary</span>() {
-    StringUtils.<span style="color:#bbb">validateKey</span>(LONG_KEY, <span style="color:#6ab825;font-weight:bold">true</span>);
-  }
+  <span style="color:#a6e22e">@GenerateMicroBenchmark</span>
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">validateLongKeyBinary</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    StringUtils<span style="color:#f92672">.</span><span style="color:#a6e22e">validateKey</span><span style="color:#f92672">(</span>LONG_KEY<span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">);</span>
+  <span style="color:#f92672">}</span>
 
-  <span style="color:#ffa500">@GenerateMicroBenchmark</span>
-  <span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">void</span> <span style="color:#447fcf">validateLongKeyAscii</span>() {
-    StringUtils.<span style="color:#bbb">validateKey</span>(LONG_KEY, <span style="color:#6ab825;font-weight:bold">false</span>);
-  }
-}</code></pre></td></tr></table>
+  <span style="color:#a6e22e">@GenerateMicroBenchmark</span>
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">validateLongKeyAscii</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    StringUtils<span style="color:#f92672">.</span><span style="color:#a6e22e">validateKey</span><span style="color:#f92672">(</span>LONG_KEY<span style="color:#f92672">,</span> <span style="color:#66d9ef">false</span><span style="color:#f92672">);</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></td></tr></table>
 </div>
-</div>
-<p>We also see how the performance differs for long and short keys. The first run we do is with 10 iterations and 1 fork:</p>
-
+</div><p>We also see how the performance differs for long and short keys. The first run we do is with 10 iterations and 1 fork:</p>
 <p>Result : 18093.561 ±(95%) 65.824 ±(99%) 94.575 ops/ms
-    Statistics: (min, avg, max) = (17920.967, 18093.561, 18240.197), stdev = 92.022
-    Confidence intervals: 95% [18027.737, 18159.385], 99% [17998.986, 18188.136]</p>
-
+Statistics: (min, avg, max) = (17920.967, 18093.561, 18240.197), stdev = 92.022
+Confidence intervals: 95% [18027.737, 18159.385], 99% [17998.986, 18188.136]</p>
 <p>Benchmark                             Mode Thr     Count  Sec         Mean   Mean error    Units
-  b.KeyBench.validateLongKeyAscii      thrpt   1        10    1     1718.532        8.504   ops/ms
-  b.KeyBench.validateLongKeyBinary     thrpt   1        10    1     3632.664       24.579   ops/ms
-  b.KeyBench.validateShortKeyAscii     thrpt   1        10    1    13198.597       71.557   ops/ms
-  b.KeyBench.validateShortKeyBinary    thrpt   1        10    1    18093.561       94.575   ops/ms</p>
-
+b.KeyBench.validateLongKeyAscii      thrpt   1        10    1     1718.532        8.504   ops/ms
+b.KeyBench.validateLongKeyBinary     thrpt   1        10    1     3632.664       24.579   ops/ms
+b.KeyBench.validateShortKeyAscii     thrpt   1        10    1    13198.597       71.557   ops/ms
+b.KeyBench.validateShortKeyBinary    thrpt   1        10    1    18093.561       94.575   ops/ms</p>
 <p>The first observation we can make is that - without surprise - shorter keys are faster than longer keys. But we can also see that the results are much more consistent for longer keys than shorter ones. So let&rsquo;s grab a coffee (this test took over 10 minutes to complete) and run the results with 20 iterations and 10 forks:</p>
-
 <p>Result : 17796.673 ±(95%) 56.110 ±(99%) 76.699 ops/ms
-    Statistics: (min, avg, max) = (17441.465, 17796.673, 17947.702), stdev = 119.891
-    Confidence intervals: 95% [17740.563, 17852.783], 99% [17719.974, 17873.371]</p>
-
+Statistics: (min, avg, max) = (17441.465, 17796.673, 17947.702), stdev = 119.891
+Confidence intervals: 95% [17740.563, 17852.783], 99% [17719.974, 17873.371]</p>
 <p>Benchmark                             Mode Thr     Count  Sec         Mean   Mean error    Units
-  b.KeyBench.validateLongKeyAscii      thrpt   1       200    1     1719.010        2.160   ops/ms
-  b.KeyBench.validateLongKeyBinary     thrpt   1       200    1     3745.221       12.101   ops/ms
-  b.KeyBench.validateShortKeyAscii     thrpt   1       200    1    13144.629       16.918   ops/ms
-  b.KeyBench.validateShortKeyBinary    thrpt   1       200    1    17886.628       31.513   ops/ms</p>
-
+b.KeyBench.validateLongKeyAscii      thrpt   1       200    1     1719.010        2.160   ops/ms
+b.KeyBench.validateLongKeyBinary     thrpt   1       200    1     3745.221       12.101   ops/ms
+b.KeyBench.validateShortKeyAscii     thrpt   1       200    1    13144.629       16.918   ops/ms
+b.KeyBench.validateShortKeyBinary    thrpt   1       200    1    17886.628       31.513   ops/ms</p>
 <p>We get similar results, but our mean error rate went down which gives us further confidence in our numbers.</p>
-
 <p>Now here comes the important part: while microbenchmarking definitely helps to find bottlenecks and shows you pointers where to go fix your code, it (I think more importantly) shows you code that you do not need to optimize. Say if the numbers shown above fit our application purpose we can &ldquo;check them off&rdquo; the list and go look somewhere else to optimize.</p>
-
 <p>Also, if you are running those benchmarks on your notebook (and not on the servers, where you should too), make sure you don&rsquo;t enable power management so your CPUs work full steam during the full runs. Also, close all other programs that are not essential and leave it alone until the benchmark finishes. That way you reduce the probability of other tasks inferring with your benchmark results and helping you to get more consistent ones.</p>
-
 <h2 id="further-considerations">Further Considerations</h2>
-
 <p>Funny enough, JMH not only makes your microbenchmarks more accurate, I think they are also much easier to write. You don&rsquo;t need to fight with things happening in the JVM and your operating system while the tests run. You can integrate those benchmarks into your CI runs when someone checks in a new piece of code and look at historically accurate performance numbers (for crucial pieces in your codebase).</p>
-
 <p>One thing I need to tell you before finishing this post. Please go watch the video shown above, since there is still a lot to consider, even with JMH. Also a very good pointer is the examples section located <a href="http://hg.openjdk.java.net/code-tools/jmh/file/tip/jmh-samples/src/main/java/org/openjdk/jmh/samples/">here</a>. You should especially be on the lookout for dead code elimination, and the proper use of black holes in JMH.</p>
-
 <p>Please share your findings and additions in the comments section below!</p>
-
 <h2 id="additional-information">Additional Information</h2>
-
 <p>As <a href="https://twitter.com/shipilev">Aleksey Shipilёv</a> points out in the comments, there is also a nice Java API that you can use, instead of just proxying &ldquo;main&rdquo; and emulating the command line. Here is an example that shows how to use it. Note that iterating the MAP is optional, but it gives you a code-readable way of the results. If you just call <code>new Runner(opts).run();</code>, you will see the identical output as above.</p>
-<div class="highlight"><div style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<div class="highlight"><div style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 1
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 2
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 3
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 4
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 5
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 6
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 7
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 8
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 9
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">10
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">11
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">12
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">13
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">14
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">15
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">16
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">17
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">18
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">19
+<pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2"><code><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19
 </span></code></pre></td>
-<td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">static</span> <span style="color:#6ab825;font-weight:bold">void</span> <span style="color:#447fcf">main</span>(String... args) <span style="color:#6ab825;font-weight:bold">throws</span> Exception {
-  Options opts = <span style="color:#6ab825;font-weight:bold">new</span> OptionsBuilder()
-      .<span style="color:#bbb">include</span>(<span style="color:#ed9d13">&#34;.*&#34;</span>)
-      .<span style="color:#bbb">warmupIterations</span>(10)
-      .<span style="color:#bbb">measurementIterations</span>(10)
-      .<span style="color:#bbb">jvmArgs</span>(<span style="color:#ed9d13">&#34;-server&#34;</span>)
-      .<span style="color:#bbb">forks</span>(1)
-      .<span style="color:#bbb">outputFormat</span>(OutputFormatType.<span style="color:#bbb">TextReport</span>)
-      .<span style="color:#bbb">build</span>();
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">main</span><span style="color:#f92672">(</span>String<span style="color:#f92672">...</span> args<span style="color:#f92672">)</span> <span style="color:#66d9ef">throws</span> Exception <span style="color:#f92672">{</span>
+  Options opts <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> OptionsBuilder<span style="color:#f92672">()</span>
+      <span style="color:#f92672">.</span><span style="color:#a6e22e">include</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;.*&#34;</span><span style="color:#f92672">)</span>
+      <span style="color:#f92672">.</span><span style="color:#a6e22e">warmupIterations</span><span style="color:#f92672">(</span>10<span style="color:#f92672">)</span>
+      <span style="color:#f92672">.</span><span style="color:#a6e22e">measurementIterations</span><span style="color:#f92672">(</span>10<span style="color:#f92672">)</span>
+      <span style="color:#f92672">.</span><span style="color:#a6e22e">jvmArgs</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;-server&#34;</span><span style="color:#f92672">)</span>
+      <span style="color:#f92672">.</span><span style="color:#a6e22e">forks</span><span style="color:#f92672">(</span>1<span style="color:#f92672">)</span>
+      <span style="color:#f92672">.</span><span style="color:#a6e22e">outputFormat</span><span style="color:#f92672">(</span>OutputFormatType<span style="color:#f92672">.</span><span style="color:#a6e22e">TextReport</span><span style="color:#f92672">)</span>
+      <span style="color:#f92672">.</span><span style="color:#a6e22e">build</span><span style="color:#f92672">();</span>
 
-  Map&lt;BenchmarkRecord,RunResult&gt; records = <span style="color:#6ab825;font-weight:bold">new</span> Runner(opts).<span style="color:#bbb">run</span>();
-  <span style="color:#6ab825;font-weight:bold">for</span> (Map.<span style="color:#bbb">Entry</span>&lt;BenchmarkRecord, RunResult&gt; result : records.<span style="color:#bbb">entrySet</span>()) {
-    Result r = result.<span style="color:#bbb">getValue</span>().<span style="color:#bbb">getPrimaryResult</span>();
-    System.<span style="color:#bbb">out</span>.<span style="color:#bbb">println</span>(<span style="color:#ed9d13">&#34;API replied benchmark score: &#34;</span>
-      + r.<span style="color:#bbb">getScore</span>() + <span style="color:#ed9d13">&#34; &#34;</span>
-      + r.<span style="color:#bbb">getScoreUnit</span>() + <span style="color:#ed9d13">&#34; over &#34;</span>
-      + r.<span style="color:#bbb">getStatistics</span>().<span style="color:#bbb">getN</span>() + <span style="color:#ed9d13">&#34; iterations&#34;</span>);
-  }
-}</code></pre></td></tr></table>
+  Map<span style="color:#f92672">&lt;</span>BenchmarkRecord<span style="color:#f92672">,</span>RunResult<span style="color:#f92672">&gt;</span> records <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Runner<span style="color:#f92672">(</span>opts<span style="color:#f92672">).</span><span style="color:#a6e22e">run</span><span style="color:#f92672">();</span>
+  <span style="color:#66d9ef">for</span> <span style="color:#f92672">(</span>Map<span style="color:#f92672">.</span><span style="color:#a6e22e">Entry</span><span style="color:#f92672">&lt;</span>BenchmarkRecord<span style="color:#f92672">,</span> RunResult<span style="color:#f92672">&gt;</span> result <span style="color:#f92672">:</span> records<span style="color:#f92672">.</span><span style="color:#a6e22e">entrySet</span><span style="color:#f92672">())</span> <span style="color:#f92672">{</span>
+    Result r <span style="color:#f92672">=</span> result<span style="color:#f92672">.</span><span style="color:#a6e22e">getValue</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getPrimaryResult</span><span style="color:#f92672">();</span>
+    System<span style="color:#f92672">.</span><span style="color:#a6e22e">out</span><span style="color:#f92672">.</span><span style="color:#a6e22e">println</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;API replied benchmark score: &#34;</span>
+      <span style="color:#f92672">+</span> r<span style="color:#f92672">.</span><span style="color:#a6e22e">getScore</span><span style="color:#f92672">()</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34; &#34;</span>
+      <span style="color:#f92672">+</span> r<span style="color:#f92672">.</span><span style="color:#a6e22e">getScoreUnit</span><span style="color:#f92672">()</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34; over &#34;</span>
+      <span style="color:#f92672">+</span> r<span style="color:#f92672">.</span><span style="color:#a6e22e">getStatistics</span><span style="color:#f92672">().</span><span style="color:#a6e22e">getN</span><span style="color:#f92672">()</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34; iterations&#34;</span><span style="color:#f92672">);</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></td></tr></table>
 </div>
-</div>
-<p>Also, the constant keys used in the above example are subject to constant optimizations. To work around that, there is the @State annotation for the class and the static fields need to be instance variables. Here is the updated code sample for clarity, the numbers don&rsquo;t change for the purpose of this post.</p>
-<div class="highlight"><div style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+</div><p>Also, the constant keys used in the above example are subject to constant optimizations. To work around that, there is the @State annotation for the class and the static fields need to be instance variables. Here is the updated code sample for clarity, the numbers don&rsquo;t change for the purpose of this post.</p>
+<div class="highlight"><div style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 1
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 2
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 3
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 4
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 5
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 6
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 7
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 8
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 9
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">10
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">11
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">12
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">13
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">14
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">15
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">16
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">17
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">18
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">19
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">20
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">21
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">22
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">23
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">24
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">25
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">26
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">27
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">28
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">29
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">30
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">31
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">32
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">33
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">34
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">35
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">36
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">37
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">38
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">39
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">40
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">41
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">42
+<pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2"><code><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">23
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">24
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">25
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">26
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">27
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">28
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">29
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">30
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">31
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">32
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">33
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">34
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">35
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">36
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">37
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">38
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">39
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">40
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">41
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">42
 </span></code></pre></td>
-<td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">package</span> <span style="color:#447fcf;text-decoration:underline">benchmarks</span>;
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2"><code class="language-java" data-lang="java"><span style="color:#f92672">package</span> benchmarks<span style="color:#f92672">;</span>
 
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">net.spy.memcached.util.StringUtils</span>;
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">org.openjdk.jmh.annotations.GenerateMicroBenchmark</span>;
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">org.openjdk.jmh.annotations.State</span>;
+<span style="color:#f92672">import</span> net.spy.memcached.util.StringUtils<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> org.openjdk.jmh.annotations.GenerateMicroBenchmark<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> org.openjdk.jmh.annotations.State<span style="color:#f92672">;</span>
 
-<span style="color:#ffa500">@State</span>
-<span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf;text-decoration:underline">KeyBench</span> {
+<span style="color:#a6e22e">@State</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">KeyBench</span> <span style="color:#f92672">{</span>
 
-  <span style="color:#999;font-style:italic">/**
-</span><span style="color:#999;font-style:italic">   * 12 chars long
-</span><span style="color:#999;font-style:italic">   */</span>
-  <span style="color:#6ab825;font-weight:bold">private</span> String SHORT_KEY = <span style="color:#ed9d13">&#34;user:michael&#34;</span>;
+  <span style="color:#75715e">/**
+</span><span style="color:#75715e">   * 12 chars long
+</span><span style="color:#75715e">   */</span>
+  <span style="color:#66d9ef">private</span> String SHORT_KEY <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;user:michael&#34;</span><span style="color:#f92672">;</span>
 
-  <span style="color:#999;font-style:italic">/**
-</span><span style="color:#999;font-style:italic">   * 240 chars long
-</span><span style="color:#999;font-style:italic">   */</span>
-  <span style="color:#6ab825;font-weight:bold">private</span> String LONG_KEY = <span style="color:#ed9d13">&#34;thisIsAFunkyKeyWith_underscores_AndAlso334&#34;</span> +
-      <span style="color:#ed9d13">&#34;3252545345NumberslthisIsAFunkyKeyWith_underscores_AndAlso3343252545345Numbe&#34;</span> +
-      <span style="color:#ed9d13">&#34;rslthisIsAFunkyKeyWith_underscores_AndAlso3343252545345NumberslthisIsAFunkyK&#34;</span> +
-      <span style="color:#ed9d13">&#34;eyWith_underscores_AndAlso3343252545345Numbersl&#34;</span>;
+  <span style="color:#75715e">/**
+</span><span style="color:#75715e">   * 240 chars long
+</span><span style="color:#75715e">   */</span>
+  <span style="color:#66d9ef">private</span> String LONG_KEY <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;thisIsAFunkyKeyWith_underscores_AndAlso334&#34;</span> <span style="color:#f92672">+</span>
+      <span style="color:#e6db74">&#34;3252545345NumberslthisIsAFunkyKeyWith_underscores_AndAlso3343252545345Numbe&#34;</span> <span style="color:#f92672">+</span>
+      <span style="color:#e6db74">&#34;rslthisIsAFunkyKeyWith_underscores_AndAlso3343252545345NumberslthisIsAFunkyK&#34;</span> <span style="color:#f92672">+</span>
+      <span style="color:#e6db74">&#34;eyWith_underscores_AndAlso3343252545345Numbersl&#34;</span><span style="color:#f92672">;</span>
 
-  <span style="color:#ffa500">@GenerateMicroBenchmark</span>
-  <span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">void</span> <span style="color:#447fcf">validateShortKeyBinary</span>() {
-    StringUtils.<span style="color:#bbb">validateKey</span>(SHORT_KEY, <span style="color:#6ab825;font-weight:bold">true</span>);
-  }
+  <span style="color:#a6e22e">@GenerateMicroBenchmark</span>
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">validateShortKeyBinary</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    StringUtils<span style="color:#f92672">.</span><span style="color:#a6e22e">validateKey</span><span style="color:#f92672">(</span>SHORT_KEY<span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">);</span>
+  <span style="color:#f92672">}</span>
 
-  <span style="color:#ffa500">@GenerateMicroBenchmark</span>
-  <span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">void</span> <span style="color:#447fcf">validateShortKeyAscii</span>() {
-    StringUtils.<span style="color:#bbb">validateKey</span>(SHORT_KEY, <span style="color:#6ab825;font-weight:bold">false</span>);
-  }
+  <span style="color:#a6e22e">@GenerateMicroBenchmark</span>
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">validateShortKeyAscii</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    StringUtils<span style="color:#f92672">.</span><span style="color:#a6e22e">validateKey</span><span style="color:#f92672">(</span>SHORT_KEY<span style="color:#f92672">,</span> <span style="color:#66d9ef">false</span><span style="color:#f92672">);</span>
+  <span style="color:#f92672">}</span>
 
-  <span style="color:#ffa500">@GenerateMicroBenchmark</span>
-  <span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">void</span> <span style="color:#447fcf">validateLongKeyBinary</span>() {
-    StringUtils.<span style="color:#bbb">validateKey</span>(LONG_KEY, <span style="color:#6ab825;font-weight:bold">true</span>);
-  }
+  <span style="color:#a6e22e">@GenerateMicroBenchmark</span>
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">validateLongKeyBinary</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    StringUtils<span style="color:#f92672">.</span><span style="color:#a6e22e">validateKey</span><span style="color:#f92672">(</span>LONG_KEY<span style="color:#f92672">,</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">);</span>
+  <span style="color:#f92672">}</span>
 
-  <span style="color:#ffa500">@GenerateMicroBenchmark</span>
-  <span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">void</span> <span style="color:#447fcf">validateLongKeyAscii</span>() {
-    StringUtils.<span style="color:#bbb">validateKey</span>(LONG_KEY, <span style="color:#6ab825;font-weight:bold">false</span>);
-  }
-}</code></pre></td></tr></table>
+  <span style="color:#a6e22e">@GenerateMicroBenchmark</span>
+  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">validateLongKeyAscii</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+    StringUtils<span style="color:#f92672">.</span><span style="color:#a6e22e">validateKey</span><span style="color:#f92672">(</span>LONG_KEY<span style="color:#f92672">,</span> <span style="color:#66d9ef">false</span><span style="color:#f92672">);</span>
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></td></tr></table>
 </div>
-</div>
-<p>Thanks for pointing it out Aleksey!</p>
+</div><p>Thanks for pointing it out Aleksey!</p>
 
     </div>
-
-    <div id="disqus_thread"></div>
-<script type="application/javascript">
-    var disqus_config = function () {
-    this.page.identifier = '23a93829d88ddda2cac2f4d4c5ec7870a63530838c5e5c0d6cb5e74699602db0eb3c24d16f1649e984e828bcf2beb16e7782b2d7849239c53e057bd489088495';
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "daschl" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
-
+ 
     <ul class="article-taxonomy">
-       
+      
+    
+      
       <li>
-        <i class="fa fa-tags"></i>
-        <a href="/%20tags/%20java">java</a>
-        <a href="/%20tags/%20jmh">jmh</a>
+        <i class="fa fa-tags"></i><a href="/tags/java">java</a><a href="/tags/jmh">jmh</a>
       </li>
       
   </article>
@@ -552,30 +518,24 @@ b.HelloWorld.helloWorld    thrpt   1        10    1  3073969.337    65631.592   
 <footer class="footer">
   <ul class="footer-links">
     <li>
-      <a href="https://nitschinger.at/index.xml" type="application/rss+xml" target="_blank">
-        <i class="fa fa-rss"></i> RSS feed</a>
+      <a href="/atom.xml" type="application/atom+xml" target="_blank"><i class="fa fa-rss"></i> Atom feed</a>
     </li>
     <li>
-      <a href="https://github.com/mobybit/hugo-natrium-theme">
-        <i class="fa fa-github"></i> Built with Hugo &amp; Natrium Theme</a>
+      <a href="https://github.com/daschl"><i class="fa fa-github"></i> GitHub</a>
+    </li>
+    <li>
+      <a href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
+    </li>
+    <li>
+      <a href="https://www.linkedin.com/in/michaelnitschinger/"><i class="fa fa-linkedin"></i> LinkedIn</a>
     </li>
   </ul>
 </footer>
 
 </div>
 
-<script>
-  (function (i, s, o, g, r, a, m) {
-    i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
-      (i[r].q = i[r].q || []).push(arguments)
-    }, i[r].l = 1 * new Date(); a = s.createElement(o),
-      m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
-  })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
 
-  ga('create', 'UA-19686689-1', 'auto');
-  ga('send', 'pageview');
-  ga('set', 'anonymizeIp', true);
-</script>
+
 </body>
 
 </html>

@@ -1,9 +1,9 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Lithium on daschl writes. sometimes.</title>
+    <title>lithium on daschl writes. sometimes.</title>
     <link>https://nitschinger.at/tags/lithium/</link>
-    <description>Recent content in Lithium on daschl writes. sometimes.</description>
+    <description>Recent content in lithium on daschl writes. sometimes.</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Sat, 03 Mar 2012 00:00:00 +0000</lastBuildDate>
@@ -111,7 +111,8 @@ The main purpose of this post is to show you how core tests work and were the co
 Authentication &amp;amp; Security li3_access: Access control library by tmaiaroto.
 li3_ids: Intrusion detection integration (phpids) by weluse.
 li3_oauth: OAuth library by gwoo.
-APIs and Externals li3_delayed_job: Ruby&amp;rsquo;s Delayed::Job port to Lithium by cgarvis.</description>
+APIs and Externals li3_delayed_job: Ruby&amp;rsquo;s Delayed::Job port to Lithium by cgarvis.
+li3_facebook: Facebook API wrapper by tmaiaroto.</description>
     </item>
     
   </channel>

@@ -3,11 +3,10 @@
   <head>
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Hugo 0.54.0" />
+<meta name="generator" content="Hugo 0.74.3" />
 
 
-<title>Understanding the Lithium Router - Part 2 - daschl writes. sometimes.</title>
-<meta property="og:title" content="Understanding the Lithium Router - Part 2 - daschl writes. sometimes.">
+<title>Understanding the Lithium Router - Part 2 – daschl writes. sometimes.</title>
 
 
 
@@ -18,6 +17,28 @@
 
 
 
+<link href="/atom.xml" rel="alternate" type="application/atom+xml" title="daschl writes. sometimes." />
+
+<meta property="og:title" content="Understanding the Lithium Router - Part 2" />
+<meta property="og:description" content="In this part we will look at testing your routes. This post covers unit testing, integration testing and reverse routing tests." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://nitschinger.at/Understanding-the-Lithium-Router-Part-2/" />
+<meta property="article:published_time" content="2011-02-24T00:00:00+00:00" />
+<meta property="article:modified_time" content="2011-02-24T00:00:00+00:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Understanding the Lithium Router - Part 2"/>
+<meta name="twitter:description" content="In this part we will look at testing your routes. This post covers unit testing, integration testing and reverse routing tests."/>
+
+<meta itemprop="name" content="Understanding the Lithium Router - Part 2">
+<meta itemprop="description" content="In this part we will look at testing your routes. This post covers unit testing, integration testing and reverse routing tests.">
+<meta itemprop="datePublished" content="2011-02-24T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2011-02-24T00:00:00+00:00" />
+<meta itemprop="wordCount" content="2105">
+
+
+
+<meta itemprop="keywords" content="php,lithium,routing,testing," />
 
 
 <link rel="stylesheet" href="https://nitschinger.at/css/main.css" media="all">
@@ -28,30 +49,27 @@
     <div class="wrapper">
       <header class="header">
         <nav class="nav">
-  <a href="https://nitschinger.at/" class="nav-title">
-    daschl blogs. sometimes.
+  <a href="https://nitschinger.at/" class="nav-logo">
+    <img src="https://nitschinger.at/images/"
+         width="" 
+         height="" 
+         alt="">
   </a>
+  <a href="https://nitschinger.at/" class="nav-title">daschl writes. sometimes.</a>
 
   <ul class="nav-links">
     
-    <li>
-      <a href="/tags">tags</a>
-    </li>
+    <li><a href="/tags">tags</a></li>
     
-    <li>
-      <a href="/imprint/">imprint</a>
-    </li>
+    <li><a href="/imprint/">imprint</a></li>
     
-    <li>
-      <a href="https://twitter.com/daschl">-&gt; twitter</a>
-    </li>
+    <li><a href="https://twitter.com/daschl">-&gt; twitter</a></li>
     
-    <li>
-      <a href="https://github.com/daschl">-&gt; github</a>
-    </li>
+    <li><a href="https://github.com/daschl">-&gt; github</a></li>
     
   </ul>
 </nav>
+
       </header>
 
 
@@ -59,30 +77,19 @@
   <article class="article">
     <h1 class="article-title">Understanding the Lithium Router - Part 2</h1>
     
-    <span class="article-date">2011-02-24</span>
+    <span class="article-date">24 February 2011</span>
     
 
     <div class="article-content">
-      
-
-<h3 id="introduction">Introduction</h3>
-
+      <h3 id="introduction">Introduction</h3>
 <p>Routes play an essential role in your request/response-cycle and therefore should also be tested like any other component that you develop. As the Lithium routing infrastructure also consists of classes and methods, we can run unit and integration tests against them.</p>
-
-<p>If we follow the testing conventions, we need to differentiate two distinct methods of testing. The first one (the so called &ldquo;<a href="http://en.wikipedia.org/wiki/Unit_testing">Unit Test</a>&rdquo;), is used to test your routes one by one, isolated from your application and ideally all dependencies are mocked away. The second one (called &ldquo;<a href="http://en.wikipedia.org/wiki/Integration_testing">Integration Test</a>&rdquo;), takes the state of your actual application into account and therefore tests the routes in a &ldquo;real environment&rdquo;. This way we can validate their functionality in isolation, and when we are confident with that we can check that no dependencies or other interfaces change the expected behavior.</p>
-
+<p>If we follow the testing conventions, we need to differentiate two distinct methods of testing. The first one (the so called &ldquo;<a href="http://en.wikipedia.org/wiki/Unit_testing">Unit Test</a>&quot;), is used to test your routes one by one, isolated from your application and ideally all dependencies are mocked away. The second one (called &ldquo;<a href="http://en.wikipedia.org/wiki/Integration_testing">Integration Test</a>&quot;), takes the state of your actual application into account and therefore tests the routes in a &ldquo;real environment&rdquo;. This way we can validate their functionality in isolation, and when we are confident with that we can check that no dependencies or other interfaces change the expected behavior.</p>
 <p>Let&rsquo;s cover unit tests first and then move on to the integration tests. Afterwards, we&rsquo;ll look at testing reverse routes (more on that later).</p>
-
 <h3 id="unit-testing">Unit Testing</h3>
-
 <p>Let me clarify one thing first: in general, you don&rsquo;t need to unit test your routes (instead you only need to do integration testing, but more on that later). There core developers did an awesome job in unit testing the routing infrastructure for you, so there is no need for you to duplicate their tests.</p>
-
 <p>Nevertheless, learning  something about unit testing routes has two benefits. On the one hand, you get some practice in writing unit tests and on the other hand you get a better understand on how the routing system works internally. So i really recommend you to read through this section and play around with the code.</p>
-
 <p>If we don&rsquo;t know how to implement unit tests, it is always a good idea to look at the core tests, as they show us how to do this properly and at the same time give us use cases that we can use in our own application. We can also copy and modify some tests, because often our own tests will be similar.</p>
-
 <p>Before we can unit test some routes, we need to add a unit test file. According to the namespace standard, let&rsquo;s create the appropriate file (<code>RouteTest.php</code>) in <code>app\tests\cases\net\http</code>:</p>
-
 <pre><code>&lt;?php
 namespace app\tests\cases\net\http;
 
@@ -95,9 +102,7 @@ class RouteTest extends \lithium\test\Unit {
 
 ?&gt;
 </code></pre>
-
-<p>In our first test, we want to make sure that the route <code>/foo</code>, matches the <code>FooController</code> and the <code>index</code> action. Insert the following test case in your previously created class and run it through the test runner (&ldquo;<a href="http://example.com/test/app/tests/cases/net/http/RouteTest&quot;">http://example.com/test/app/tests/cases/net/http/RouteTest&quot;</a>).</p>
-
+<p>In our first test, we want to make sure that the route <code>/foo</code>, matches the <code>FooController</code> and the <code>index</code> action. Insert the following test case in your previously created class and run it through the test runner (&ldquo;<a href="http://example.com/test/app/tests/cases/net/http/RouteTest%22)">http://example.com/test/app/tests/cases/net/http/RouteTest&quot;)</a>.</p>
 <pre><code>public function testFooRoute() {
     $params = array('controller' =&gt; 'foo', 'action' =&gt; 'index');
     $route = new Route(array(
@@ -112,13 +117,10 @@ class RouteTest extends \lithium\test\Unit {
     $this-&gt;assertEqual($params, $result-&gt;params);
 }
 </code></pre>
-
 <p>If we run <code>Router::connect()</code>, the <code>Router</code> basically creates a new <code>Route</code> object and passes the arguments to its constructor. In our tests we do the same, but we initialize the Route directly. This way, we can test the route in isolation. When we create a new route, the <code>template</code> param is the URL that our route will match (remember that it can also contain non-static identifiers). The params argument tells
 the route what to return when the template matches the request. We then create a simple <code>Request</code> object (that mimics a request by the browser) and hard-code a URL (in the real application, the <code>$request-&gt;url</code> will be dynamically assigned). Now we run <code>parse()</code>,
 that&rsquo;s exactly what the Router does route for route when the <code>Dispatcher</code> asks him to route the request. The parse method returns a <code>Request</code> object with the params set accordingly when it matches, and false when it does not.</p>
-
 <p>To get more familiar, we&rsquo;ll add some more assertions to this test, just append them after the last <code>assertEqual()</code> and run the tests again. You can see that this route really matches only <code>/foo</code> and nothing else:</p>
-
 <pre><code>$request-&gt;url = '/bar';
 $result = $route-&gt;parse($request);
 $this-&gt;assertFalse($result);
@@ -127,9 +129,7 @@ $request-&gt;url = '/foo/edit';
 $result = $route-&gt;parse($request);
 $this-&gt;assertFalse($result);
 </code></pre>
-
 <p>Now that we wrote some basic tests, let&rsquo;s move on to a slightly more complex example with a non-static routing template. The route <code>/users/{:id}</code> matches with or without an ID given and passes it as a param in the returned request object.</p>
-
 <pre><code>public function testUserWithIdRoute() {
     $params = array('id' =&gt; null, 'action' =&gt; 'index', 'controller' =&gt; 'users');
     $route = new Route(array(
@@ -148,10 +148,7 @@ $this-&gt;assertFalse($result);
     $this-&gt;assertEqual(4, $result-&gt;params['id']);
 }
 </code></pre>
-
-<p>We can also test for various HTTP parameters like the request type (typically GET, PUT, POST and DELETE). Let&rsquo;s assume we want to match <code>/cocktails/delete/{:id}</code> only when the id is present (non-optional), it is numeric and the request method is <code>delete</code>. The equivalent router call in our <code>routes.php</code> file would be <code>Router::connect('/cocktails/delete/{:id:\d+}, array('controller' =&gt; 'cocktails', 
-'action' =&gt; 'delete', 'http:method' =&gt; 'DELETE'));</code>.</p>
-
+<p>We can also test for various HTTP parameters like the request type (typically GET, PUT, POST and DELETE). Let&rsquo;s assume we want to match <code>/cocktails/delete/{:id}</code> only when the id is present (non-optional), it is numeric and the request method is <code>delete</code>. The equivalent router call in our <code>routes.php</code> file would be <code>Router::connect('/cocktails/delete/{:id:\d+}, array('controller' =&gt; 'cocktails',  'action' =&gt; 'delete', 'http:method' =&gt; 'DELETE'));</code>.</p>
 <pre><code>public function testCocktailDeleteRoute() {
     $params = array(
         'controller' =&gt; 'cocktails',
@@ -179,11 +176,8 @@ $this-&gt;assertFalse($result);
     $this-&gt;assertEqual(4, $result-&gt;params['id']);
 }
 </code></pre>
-
 <p>As stated in the first lines of this section, you won&rsquo;t need to do this in your application code, but writing this kind of tests has one more benefit: if something goes wrong, it is a great tool to understand the inner workings and also to test scenarios in isolation. If you encounter any bugs in the router, writing a unit test that shows the failure is also highly recommended, so that the core team is able to track down your problem and reproduce it in their environments. Also, writing failing test cases ensures that after a bug is fixed, it never happens again.</p>
-
 <p>A great way to inspect and debug routes is the <code>export()</code> method. With this method, you can inspect the full state of an route and run assertions against it. Let&rsquo;s try this in a test:</p>
-
 <pre><code>public function testExport() {
     $params = array('controller' =&gt; 'posts', 'action' =&gt; 'index');
     $route = new Route(array(
@@ -197,15 +191,10 @@ $this-&gt;assertFalse($result);
     $this-&gt;assertFalse($exported['handler']);
 }
 </code></pre>
-
 <p>Now let&rsquo;s move on to something that we should really use in our applications, integration testing.</p>
-
 <h3 id="integration-testing">Integration Testing</h3>
-
 <p>Now that we&rsquo;ve tested each route in isolation, it&rsquo;s time to get a higher-level view of our application. When we test more than one class in isolation, we call that &ldquo;Integration Testing&rdquo;. Technically, these tests are similar to normal unit tests, so you don&rsquo;t need to learn something new. In a typical framework request, the <code>Dispatcher</code> calls the <code>Router</code> with a <code>Request</code>, and the router matches it against all connected routes and checks if there is a match.</p>
-
 <p>The following code snippets are suited for a default installation. Create a <code>RouterTest.php</code> file in <code>app/tests/integration/net/http</code>. Additionally, you may also need to create the appropriate subdirectories in there.</p>
-
 <pre><code>&lt;?php
 namespace app\tests\integration\net\http;
 use lithium\net\http\Router;
@@ -216,9 +205,7 @@ class RouterTest extends \lithium\test\Unit {
 
 ?&gt;
 </code></pre>
-
 <p>We can issue a request against the router and check that the output is correct. Let&rsquo;s do that for a subset of our default routes:</p>
-
 <pre><code>public function testRootRoute() {
     $expected = array('controller' =&gt; 'pages', 'action' =&gt; 'view');
 
@@ -279,11 +266,8 @@ public function testDefaultRoutes() {
     $this-&gt;assertEqual($expected, $result-&gt;params);
 }
 </code></pre>
-
 <p>Most of the code should look familiar to you, the most interesting part is the call of <code>Router::process()</code>. This method is also called by the dispatcher (but with the actual Request object). For every call to the Router, we simulate a request by the client browser. This code contains a high amount of duplication, so you may want to compact this and create a helper method in your test class that wraps and simplifies the duplicated code.</p>
-
 <p>Here is another example for a route that we can test:</p>
-
 <pre><code>use app\models\Post;
 
 Router::connect('/{:slug:[\w\-]+}', array('Posts::show'), function($request) {
@@ -302,9 +286,7 @@ Router::connect('/{:slug:[\w\-]+}', array('Posts::show'), function($request) {
 
 });
 </code></pre>
-
 <p>When this route is placed right before the default routes, it should correctly match URLs like <code>/a-cool-article</code>. The code inside the closure calls the database and checks if the given slug really exists in the database. If it does, it returns the request (and false if not). The router iterates over each route and when false is returned, he tries the next route. So when we return the <code>Request</code>-object, we tell the router that our route is the one he has searched for. To ensure that everything works as expected, we can write some integration tests.</p>
-
 <pre><code>public function testSlugRoute() {
     $request = new Request();
 
@@ -340,17 +322,11 @@ Router::connect('/{:slug:[\w\-]+}', array('Posts::show'), function($request) {
     $this-&gt;assertFalse(isset($result-&gt;params['slug']));
 }
 </code></pre>
-
 <p>This code assumes that your database has a reproducible set of posts stored in it. I&rsquo;d recommend you to load a set of posts with the <a href="http://rad-dev.org/li3_fixtures">li3_fixtures</a> plugin and then populate the database in the <code>setUp()</code> method. If you want to play around with it some more, I&rsquo;d suggest you to check the current <a href="http://lithify.me/docs/lithium/core/Environment">Environment</a> and test the different behavior for different environments.</p>
-
 <p>With this tools at hand, you should be able to test everything that has to do with your routes and make sure that they are connected in the correct order and return the response you&rsquo;ve intended.</p>
-
 <h3 id="reverse-routing">Reverse Routing</h3>
-
 <p>As the router also handles reverse routing (which is used by the HTML helper to generate links), we can test it here too. Because we look at the router and its routes, reverse routing fits well into our router integration tests.</p>
-
 <p>Testing reverse routing is straightforward, so let&rsquo;s start with some examples and work them through afterwards.</p>
-
 <pre><code>public function testReverseRouting() {
     $expected = '/foo/bar';
     $params = array('controller' =&gt; 'foo', 'action' =&gt; 'bar');
@@ -368,48 +344,21 @@ Router::connect('/{:slug:[\w\-]+}', array('Posts::show'), function($request) {
     $this-&gt;assertEqual($expected, $result);
 }
 </code></pre>
-
 <p>Here, we test the opposite direction. We pass the router a set of arguments and get an URL back. As it&rsquo;s the case with normal
 routing, if two routes compete for the same URL, the first one wins. We call <code>Router::match()</code> with our request params and get a URL as a string returned. This way, we can test that our HTML helper will return the desired URLs in our application. Of course, you can also add some tests to the HTML Helper (where you can make sure that the echoed HTML code is correct). If the router is not able to translate your params into a URL, it will raise an exception.</p>
-
 <h3 id="wrapping-up">Wrapping up</h3>
-
 <p>In part two of our series we&rsquo;ve looked at unit testing routes, running integration tests against them and also testing the reverse routing
 mechanism. Of course, these tests depend heavily on your application and will surely become more complex as the previous examples. The next higher level would be to do add some acceptance tests with <a href="http://seleniumhq.org/">Selenium</a>, so that you can test routes in combination with links and forms on your page, to make sure that the data flow works as expected between pages. Also, I&rsquo;m working on a BDD plugin for Lithium that works similar to <a href="http://cukes.info/">Cucumber</a>, so stay tuned.</p>
-
 <p>I really hope that you&rsquo;ve enjoyed the second part of this series. Also, thanks again to <a href="http://twitter.com/#!/nateabele">@nateabele</a> for his helpful comments.</p>
 
     </div>
-
-    <div id="disqus_thread"></div>
-<script type="application/javascript">
-    var disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "daschl" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
-
+ 
     <ul class="article-taxonomy">
-       
+      
+    
+      
       <li>
-        <i class="fa fa-tags"></i>
-        <a href="/%20tags/%20php">php</a>
-        <a href="/%20tags/%20lithium">lithium</a>
-        <a href="/%20tags/%20routing">routing</a>
-        <a href="/%20tags/%20testing">testing</a>
+        <i class="fa fa-tags"></i><a href="/tags/php">php</a><a href="/tags/lithium">lithium</a><a href="/tags/routing">routing</a><a href="/tags/testing">testing</a>
       </li>
       
   </article>
@@ -419,30 +368,24 @@ mechanism. Of course, these tests depend heavily on your application and will su
 <footer class="footer">
   <ul class="footer-links">
     <li>
-      <a href="https://nitschinger.at/index.xml" type="application/rss+xml" target="_blank">
-        <i class="fa fa-rss"></i> RSS feed</a>
+      <a href="/atom.xml" type="application/atom+xml" target="_blank"><i class="fa fa-rss"></i> Atom feed</a>
     </li>
     <li>
-      <a href="https://github.com/mobybit/hugo-natrium-theme">
-        <i class="fa fa-github"></i> Built with Hugo &amp; Natrium Theme</a>
+      <a href="https://github.com/daschl"><i class="fa fa-github"></i> GitHub</a>
+    </li>
+    <li>
+      <a href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
+    </li>
+    <li>
+      <a href="https://www.linkedin.com/in/michaelnitschinger/"><i class="fa fa-linkedin"></i> LinkedIn</a>
     </li>
   </ul>
 </footer>
 
 </div>
 
-<script>
-  (function (i, s, o, g, r, a, m) {
-    i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
-      (i[r].q = i[r].q || []).push(arguments)
-    }, i[r].l = 1 * new Date(); a = s.createElement(o),
-      m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
-  })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
 
-  ga('create', 'UA-19686689-1', 'auto');
-  ga('send', 'pageview');
-  ga('set', 'anonymizeIp', true);
-</script>
+
 </body>
 
 </html>

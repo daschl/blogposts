@@ -1,15 +1,25 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Rust on daschl writes. sometimes.</title>
+    <title>rust on daschl writes. sometimes.</title>
     <link>https://nitschinger.at/tags/rust/</link>
-    <description>Recent content in Rust on daschl writes. sometimes.</description>
+    <description>Recent content in rust on daschl writes. sometimes.</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Mon, 02 Jan 2017 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Mon, 28 Sep 2020 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="https://nitschinger.at/tags/rust/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Rusty-PID: Porting the TSic sensor from C to Rust</title>
+      <link>https://nitschinger.at/Rusty-PID-Porting-the-TSic-sensor-from-C-to-Rust/</link>
+      <pubDate>Mon, 28 Sep 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Rusty-PID-Porting-the-TSic-sensor-from-C-to-Rust/</guid>
+      <description>This post is part of my &amp;ldquo;Rusty-PID&amp;rdquo; series, in which you can follow my adventure building a PID Controller for my Rancilio Silvia in Rust.
+In this blog post we&amp;rsquo;ll dive into how to read temperature measurements from the TSic sensor in Rust. It goes pretty deep into the implementation details and the porting process, so if you just want to use it go straight to the tsic-rs repository and don&amp;rsquo;t look back.</description>
+    </item>
     
     <item>
       <title>Rust on the WiFi Pineapple (and OpenWrt)</title>
@@ -17,7 +27,8 @@
       <pubDate>Mon, 02 Jan 2017 00:00:00 +0000</pubDate>
       
       <guid>https://nitschinger.at/Rust-on-the-Wifi-Pineapple-and-OpenWRT/</guid>
-      <description>Over the holidays I wanted to get a very simple Rust application running on my WiFi Pineapple Nano. Since I don&amp;rsquo;t have much experience with embedded systems and cross-compilation, it sounded like something fun to do and I was sure I might learn a thing or two. Many hours later and lots of frustration, I ended up with a simple solution that I&amp;rsquo;d like to share in this post.</description>
+      <description>Over the holidays I wanted to get a very simple Rust application running on my WiFi Pineapple Nano. Since I don&amp;rsquo;t have much experience with embedded systems and cross-compilation, it sounded like something fun to do and I was sure I might learn a thing or two. Many hours later and lots of frustration, I ended up with a simple solution that I&amp;rsquo;d like to share in this post.
+The major obstacle to overcome is building your own standard library, since Rust doesn&amp;rsquo;t ship with one for our target out of the box.</description>
     </item>
     
     <item>

@@ -3,11 +3,10 @@
   <head>
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Hugo 0.54.0" />
+<meta name="generator" content="Hugo 0.74.3" />
 
 
-<title>A Real-Time chat with Play, Java and Couchbase - Part 1 - daschl writes. sometimes.</title>
-<meta property="og:title" content="A Real-Time chat with Play, Java and Couchbase - Part 1 - daschl writes. sometimes.">
+<title>A Real-Time chat with Play, Java and Couchbase - Part 1 – daschl writes. sometimes.</title>
 
 
 
@@ -18,6 +17,28 @@
 
 
 
+<link href="/atom.xml" rel="alternate" type="application/atom+xml" title="daschl writes. sometimes." />
+
+<meta property="og:title" content="A Real-Time chat with Play, Java and Couchbase - Part 1" />
+<meta property="og:description" content="This first post of a longer series introduces you to our project and helps you get everything up and running." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://nitschinger.at/A-Real-Time-chat-with-Play-Java-and-Couchbase-Part-1/" />
+<meta property="article:published_time" content="2012-07-17T00:00:00+00:00" />
+<meta property="article:modified_time" content="2012-07-17T00:00:00+00:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="A Real-Time chat with Play, Java and Couchbase - Part 1"/>
+<meta name="twitter:description" content="This first post of a longer series introduces you to our project and helps you get everything up and running."/>
+
+<meta itemprop="name" content="A Real-Time chat with Play, Java and Couchbase - Part 1">
+<meta itemprop="description" content="This first post of a longer series introduces you to our project and helps you get everything up and running.">
+<meta itemprop="datePublished" content="2012-07-17T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2012-07-17T00:00:00+00:00" />
+<meta itemprop="wordCount" content="2660">
+
+
+
+<meta itemprop="keywords" content="java,couchbase,play," />
 
 
 <link rel="stylesheet" href="https://nitschinger.at/css/main.css" media="all">
@@ -28,30 +49,27 @@
     <div class="wrapper">
       <header class="header">
         <nav class="nav">
-  <a href="https://nitschinger.at/" class="nav-title">
-    daschl blogs. sometimes.
+  <a href="https://nitschinger.at/" class="nav-logo">
+    <img src="https://nitschinger.at/images/"
+         width="" 
+         height="" 
+         alt="">
   </a>
+  <a href="https://nitschinger.at/" class="nav-title">daschl writes. sometimes.</a>
 
   <ul class="nav-links">
     
-    <li>
-      <a href="/tags">tags</a>
-    </li>
+    <li><a href="/tags">tags</a></li>
     
-    <li>
-      <a href="/imprint/">imprint</a>
-    </li>
+    <li><a href="/imprint/">imprint</a></li>
     
-    <li>
-      <a href="https://twitter.com/daschl">-&gt; twitter</a>
-    </li>
+    <li><a href="https://twitter.com/daschl">-&gt; twitter</a></li>
     
-    <li>
-      <a href="https://github.com/daschl">-&gt; github</a>
-    </li>
+    <li><a href="https://github.com/daschl">-&gt; github</a></li>
     
   </ul>
 </nav>
+
       </header>
 
 
@@ -59,50 +77,29 @@
   <article class="article">
     <h1 class="article-title">A Real-Time chat with Play, Java and Couchbase - Part 1</h1>
     
-    <span class="article-date">2012-07-17</span>
+    <span class="article-date">17 July 2012</span>
     
 
     <div class="article-content">
-      
-
-<h2 id="introduction">Introduction</h2>
-
+      <h2 id="introduction">Introduction</h2>
 <p>I&rsquo;ve been mostly blogging about PHP and <a href="http://lithify.me">Lithium</a>, but recently I&rsquo;ve also been looking into a very promising framework on the JVM - the <a href="http://www.playframework.org/">play! framework</a>. The current version (2.0) brings lots of enhancements and features and is (at least to me) the first framework that really boosts developer productivity on the JVM (and that I would work with in my free time).</p>
-
 <p>In this project, we&rsquo;ll develop a chat application (called <code>couchplay</code>) that allows people to login with a username and then talk to others in real-time. We&rsquo;ll make use of the built-in <a href="http://en.wikipedia.org/wiki/Comet_%28programming%29">Comet</a> functionality and also work with various other aspects of the whole stack. Our application will be powered by <a href="http://www.couchbase.com/">Couchbase</a>, a very fast and flexible NoSQL database that is exactly suited for an application like this.</p>
-
 <p>Note that this tutorial requires a reasonable amount of Java knowledge. Play! itself is mostly written in <a href="http://www.scala-lang.org/">Scala</a> (and uses it for its templates), but I think it should be easy to grasp - at least for the part we&rsquo;ll cover here.</p>
-
 <p>I&rsquo;ve also added the code to a <a href="https://github.com/daschl/couchplay/">repository</a> on GitHub for your convenience. You can find a tag for every post I&rsquo;ll publish so you can just clone the repository and checkout the appropriate tag to follow along.</p>
-
 <h2 id="about-the-stack">About the stack</h2>
-
 <p>Our language of choice will be Java. I first thought about writing it in Scala, but then I realized that with Java I could attract a larger group of readers. Also, I did most of my past explorations in Scala, so this is a great opportunity for me to use the framework from the Java-side as well. The good thing is that the framework allows you to use both languages in parallel, so you can start out with one and then evolve if you need to.</p>
-
 <p>As I said, the play! framework is mostly written in Scala. As a result, the default template engine requires a bit of Scala knowledge, but for our examples here the concepts should not be too hard to learn.  If you come from a mostly servlet-oriented background I predict you a very refreshing look on how web applications can be built also (it is built on top of <a href="http://netty.io/">netty</a> and <a href="http://akka.io/">akka</a>). Once you get the hang of it, you think twice about going back. If you don&rsquo;t believe me now, just follow along.</p>
-
 <p>The framework provides support for relational databases out of the box, but to make things more interesting we&rsquo;re going to use a different database. Couchbase is a high-performant and flexible &ldquo;NoSQL&rdquo; database that is mostly used in real-time analytics, session stores and in general where you need sub-millisecond response times. At the end of the blog series you should have a good idea how you can use it for your own projects. Note that I also wrote a blog post on getting started with Couchbase on either <a href="http://nitschinger.at/Getting-Started-with-Couchbase-and-PHP">PHP</a> and <a href="http://nitschinger.at/Accessing-Couchbase-from-Scala">Scala</a>, so you might want to check them out. For this tutorial, we&rsquo;re going to use the <a href="http://www.couchbase.com/develop/java/next">Couchbase Java SDK</a>, which has everything built-in that we need.</p>
-
 <p>From here on I assume that you have Java 1.6 or later installed and included it in your <code>PATH</code>. If you haven&rsquo;t, there should be plenty of material available on the internet.</p>
-
 <h2 id="installing-couchbase">Installing Couchbase</h2>
-
 <p>Before we start digging into the framework, we need to stop for a second and install our backend database.</p>
-
 <p>Depending on your operating system, you have different choices available. Couchbase provides installers for Windows and Mac OS X, for Linux-based systems I&rsquo;d recommend the package-manager installations. You can find all packages <a href="http://www.couchbase.com/download">here</a>.</p>
-
 <p>We are going to use Couchbase 2.0, which is currently in developer preview (at the time of writing). Just download it, it is very stable and a beta release will be released soon. We are going to use this version because it includes a mechanism called &ldquo;views&rdquo; that allows us to query our data in a very flexible manner (if you&rsquo;re familiar with the <a href="http://en.wikipedia.org/wiki/MapReduce">Map/Reduce-Pattern</a>, this is the method we&rsquo;re going to use here). We&rsquo;ll cover all of those aspects in a later post.</p>
-
 <p>After the installation has finished, open your browser, head over to <code>http://localhost:8091</code> and click through the setup wizard. You can go with the default settings, just make sure to give it a reasonable amount of RAM. If you run into trouble, the official <a href="http://www.couchbase.com/docs/couchbase-manual-2.0/couchbase-getting-started-install.html">docs</a> are there to help you out.</p>
-
 <h2 id="setting-up-our-play-project">Setting up our play! project</h2>
-
 <p>Now that we have our database installed, it&rsquo;s time to set up the actual play! project. Go to <a href="http://www.playframework.org/">their official website</a> and download the current stable release (2.0.2 at the time of writing).</p>
-
 <p>After the download has finished, unpack the zipfile. Copy it over to a place where it doesn&rsquo;t get accidentally deleted and add it to your <code>PATH</code>. Adding it to the <code>PATH</code> here is pure convenience as I don&rsquo;t like to remember the full path everytime I need to run it.</p>
-
 <p>Now we can use the <code>play new</code> command to setup a new project. I&rsquo;m using Ubuntu Linux here, but the command also works the same on Windows (I haven&rsquo;t tried it on a Mac but it shouldn&rsquo;t be much different).</p>
-
 <pre><code>michael@daschl:~$ play new couchplay
     _            _
 _ __ | | __ _ _  _| |
@@ -129,11 +126,8 @@ OK, application couchplay is created.
 
 Have fun!
 </code></pre>
-
 <p>The application generator asks you for an application name and if you want to either generate a Scala or Java application. You don&rsquo;t have to choose the language for your final application here, it only wants to know in what language it should generats the sample controller for example.</p>
-
 <p>To make sure it&rsquo;s up and running, change into the directory and run the <code>play</code> command again. This should bring up the play console. For now, just type <code>run</code> and point your browser to <code>http://localhost:9000</code>. You should see the default welcome page of the framework.</p>
-
 <pre><code>michael@daschl:~/couchplay$ play
 Getting org.scala-sbt sbt_2.9.1 0.11.3 ...
 :: retrieving :: org.scala-sbt#boot-app
@@ -162,23 +156,15 @@ play! 2.0.2, http://www.playframework.org
 
 (Server started, use Ctrl+D to stop and go back to the console...)
 </code></pre>
-
 <p>As you can see, the initial dependencies are resolved and loaded automatically. If you already have something running on port <code>9000</code> (like <a href="http://php-fpm.org/">php-fpm</a>), then you can use the <code>run [PORTNUM]</code> command to specify a different port. There are lots of other possibilities here and we&rsquo;ll cover some of them as we progress further. If you&rsquo;re curious, you can type <code>help</code> to see the available commands.</p>
-
 <p>You may experience a large response time (a few seconds) when you open up the page for the first time. This is because in development mode, play! compiles everything for you on the fly. If you don&rsquo;t change anything, the next reload should be pretty fast. Since we only modify short bits of code between every refresh, the compiling times should not be an issue. In production, everything is precompiled anyway. If you look on your console, you can see that the files have been compiled automatically for you:</p>
-
 <pre><code>[info] Compiling 4 Scala sources and 2 Java sources to /home/michael/couchplay/target/scala-2.9.1/classes...
 [info] play - Application started (Dev)
 </code></pre>
-
 <p>One last tip here: if you use <code>~run</code> instead of <code>run</code>, the framework will detect code changes immediately (when you save your file) and compile it on the fly. If you use <code>run</code>, it will start compiling when you reload the page. As a result, when using <code>~run</code> the compile times should be even less noticable since you also need some time to switch back and forth between your IDE and the browser. Also keep in mind that all this is handled for you and you don&rsquo;t need to setup tomcat in your IDE and make sure everything is pushed correctly. If you are like me and have spent hours and hours of configuring eclipse and tomcat, this is pretty awesome news. You can of course still use Eclipse (or any other IDE), but you can concentrate on writing code, the rest will be done for you in the background.</p>
-
 <h2 id="connecting-to-couchbase">Connecting to Couchbase</h2>
-
 <p>Currently, our application doesn&rsquo;t know about our backend database. Since play! doesn&rsquo;t have built-in support for Couchbase, we&rsquo;re going to use the Couchbase Java SDK to fill the gap.</p>
-
 <p>Couchbase thankfully provides a Maven repository, so we just need to define and load the dependency. Head over to the <code>project/Build.scala</code> file and add the following:</p>
-
 <pre><code>val appDependencies = Seq(
     &quot;couchbase&quot; % &quot;couchbase-client&quot; % &quot;1.1-dp&quot;
 )
@@ -187,30 +173,28 @@ val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).s
     resolvers += &quot;Couchbase Maven Repository&quot; at &quot;http://files.couchbase.com/maven2&quot;
 )
 </code></pre>
-
 <p>Back in the play console, hit <code>ctrl-d</code> to stop the server and type <code>reload</code> and <code>update</code> to fetch the new dependencies. If everything finished without errors, type &ldquo;~run&rdquo; again.</p>
-
 <pre><code>[couchplay] $ reload
 [info] Loading project definition from /home/michael/couchplay/project
 [info] Set current project to couchplay (in build file:/home/michael/couchplay/)
 [couchplay] $ update
 [info] Updating {file:/home/michael/couchplay/}couchplay...
 [info] Resolving org.hibernate.javax.persistence#hibernate-jpa-2.0-api;1.0.1.Fin                                                                                [info] downloading http://files.couchbase.com/maven2/couchbase/couchbase-client/1.1-dp/couchbase-client-1.1-dp.jar ...
-[info]  [SUCCESSFUL ] couchbase#couchbase-client;1.1-dp!couchbase-client.jar (1821ms)
+[info] 	[SUCCESSFUL ] couchbase#couchbase-client;1.1-dp!couchbase-client.jar (1821ms)
 [info] downloading http://repo.typesafe.com/typesafe/releases/org/jboss/netty/netty/3.2.0.Final/netty-3.2.0.Final.jar ...
-[info]  [SUCCESSFUL ] org.jboss.netty#netty;3.2.0.Final!netty.jar(bundle) (3661ms)
+[info] 	[SUCCESSFUL ] org.jboss.netty#netty;3.2.0.Final!netty.jar(bundle) (3661ms)
 [info] downloading http://repo.typesafe.com/typesafe/releases/org/codehaus/jettison/jettison/1.1/jettison-1.1.jar ...
-[info]  [SUCCESSFUL ] org.codehaus.jettison#jettison;1.1!jettison.jar(bundle) (828ms)
+[info] 	[SUCCESSFUL ] org.codehaus.jettison#jettison;1.1!jettison.jar(bundle) (828ms)
 [info] downloading http://repo.typesafe.com/typesafe/releases/commons-codec/commons-codec/1.5/commons-codec-1.5.jar ...
-[info]  [SUCCESSFUL ] commons-codec#commons-codec;1.5!commons-codec.jar (835ms)
+[info] 	[SUCCESSFUL ] commons-codec#commons-codec;1.5!commons-codec.jar (835ms)
 [info] downloading http://repo.typesafe.com/typesafe/releases/spy/spymemcached/2.8.1/spymemcached-2.8.1.jar ...
-[info]  [SUCCESSFUL ] spy#spymemcached;2.8.1!spymemcached.jar (1446ms)
+[info] 	[SUCCESSFUL ] spy#spymemcached;2.8.1!spymemcached.jar (1446ms)
 [info] downloading http://repo.typesafe.com/typesafe/releases/org/apache/httpcomponents/httpcore/4.1.1/httpcore-4.1.1.jar ...
-[info]  [SUCCESSFUL ] org.apache.httpcomponents#httpcore;4.1.1!httpcore.jar (1059ms)
+[info] 	[SUCCESSFUL ] org.apache.httpcomponents#httpcore;4.1.1!httpcore.jar (1059ms)
 [info] downloading http://repo.typesafe.com/typesafe/releases/org/apache/httpcomponents/httpcore-nio/4.1.1/httpcore-nio-4.1.1.jar ...
-[info]  [SUCCESSFUL ] org.apache.httpcomponents#httpcore-nio;4.1.1!httpcore-nio.jar (1062ms)
+[info] 	[SUCCESSFUL ] org.apache.httpcomponents#httpcore-nio;4.1.1!httpcore-nio.jar (1062ms)
 [info] downloading http://repo.typesafe.com/typesafe/releases/stax/stax-api/1.0.1/stax-api-1.0.1.jar ...
-[info]  [SUCCESSFUL ] stax#stax-api;1.0.1!stax-api.jar (1556ms)
+[info] 	[SUCCESSFUL ] stax#stax-api;1.0.1!stax-api.jar (1556ms)
 [info] Done updating.
 [success] Total time: 39 s, completed Jul 7, 2012 9:25:52 AM
 [couchplay] $ ~run
@@ -221,13 +205,9 @@ val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).s
 
 (Server started, use Ctrl+D to stop and go back to the console...)
 </code></pre>
-
 <p>I&rsquo;m quite sure you wonder about the strange syntax we&rsquo;ve been using to define our dependency. This is actually Scala code, since play! uses the awesome <a href="http://www.scala-sbt.org/">sbt</a> to manage its dependencies (the play console also builds upon it). There is a good introduction <a href="http://www.youtube.com/watch?v=V2rl62CZPVc">video</a> available if you want to learn more.</p>
-
 <p>The dependency is now in place, but we also need to connect to the database when the application starts and disconnect from it when it stops. If we&rsquo;d use the databases supported by the framework, this would be handled for us (but that&rsquo;s half the fun, right?). Since this is not the case, we need to &ldquo;hook&rdquo; into some kind of <code>start</code> and <code>stop</code> events.</p>
-
 <p>Play! provides us with something called the <a href="http://www.playframework.org/documentation/2.0.2/JavaGlobal">application Global object</a> that has methods we can override. Create a new file called <code>Global.java</code> inside the <code>app</code> directory and insert the following.</p>
-
 <pre><code>import play.*;
 
 import datasources.Couchbase;
@@ -246,9 +226,7 @@ public class Global extends GlobalSettings {
 
 }
 </code></pre>
-
 <p>We override the <code>onStart</code> and <code>onStop</code> methods to place our custom connect logic in there (and do some logging as well). We make use of a <code>Couchabase</code> connection class to abstract our connection logic, so we&rsquo;d better write that one too. Create a new file called <code>Couchbase.java</code> inside the <code>app/datasources</code> directory (which you also need to create).</p>
-
 <pre><code>package datasources;
 
 import java.net.URI;
@@ -326,13 +304,9 @@ public final class Couchbase {
 
 }
 </code></pre>
-
 <p>We basically define a <code>connect</code> and a <code>disconnect</code> method, which get called from our <code>Gobal.java</code> class. Inside the <code>connect</code> method we read configuration settings (more on that shortly) and then try to open the Couchbase connection. The <code>disconnect</code> method waits 3 seconds to finish any queued operations and then disconnects. Also, we provide a <code>getConnection()</code> method that returns the actual instance of the client object (which we&rsquo;ll use later in our models).</p>
-
 <p>It is always a good idea to just open one connection for the whole lifecycle instead of opening a new connection every time a request comes in. This removes unneeded handshake-latency and should therefore improve the overall performance of the application.</p>
-
 <p>You may have noticed the various <code>Play.application().configuration().getString();</code> calls. With these method calls you can read the values from your <code>conf/application.conf</code> configuration file. By defining your connection settings there instead of the actual implementation, you can easily swap the settings if you deploy your application into production. More on the configuration file can be found <a href="http://www.playframework.org/documentation/2.0.2/Configuration">here</a>. To define the settings we need, open your <code>application.conf</code> file and add the following to the end (or somewhere in between):</p>
-
 <pre><code># Couchbase configuration
 # ~~~~~
 couchbase.hostname=&quot;localhost&quot;
@@ -340,9 +314,7 @@ couchbase.port=8091
 couchbase.bucket=&quot;default&quot;
 couchbase.password=&quot;&quot;
 </code></pre>
-
 <p>Now we have everything in place to configure the settings and connect to the database. If you start the server again and load the page for the first time, you can see the debug output of the Couchbase SDK:</p>
-
 <pre><code>[info] application - Application started
 2012-07-17 19:12:43.788 INFO com.couchbase.client.CouchbaseConnection:  Added {QA sa=/127.0.0.1:11210, #Rops=0, #Wops=0, #iq=0, topRop=null, topWop=null, toWrite=0, interested=0} to connect queue
 2012-07-17 19:12:43.789 INFO com.couchbase.client.CouchbaseClient:  viewmode property isn't defined. Setting viewmode to production mode
@@ -350,53 +322,25 @@ couchbase.password=&quot;&quot;
 2012-07-17 19:12:43.794 INFO com.couchbase.client.CouchbaseConnection:  Connection state changed for sun.nio.ch.SelectionKeyImpl@1d179fb
 [info] play - Application started (Dev)
 </code></pre>
-
 <p>Note that since we haven&rsquo;t defined a <code>viewmode</code> setting, Couchbase assumes you&rsquo;re running in production mode. You can change this setting, but I haven&rsquo;t done this here (we&rsquo;ll push our views into production before we use them inside the application).</p>
-
 <p>If you press <code>ctrl+d</code> to stop the application, you can see that Couchbase correctly closes the connection:</p>
-
 <pre><code>[info] application - Application stopped
 2012-07-17 19:24:52.216 INFO com.couchbase.client.CouchbaseConnection:  Shut down Couchbase client
 2012-07-17 19:24:52.226 INFO com.couchbase.client.ViewConnection:  Shut down Couchbase client
 2012-07-17 19:24:52.226 INFO com.couchbase.client.ViewNode:  Couchbase I/O reactor terminated
 </code></pre>
-
 <h2 id="wrapping-up">Wrapping up</h2>
-
 <p>This post hopefully gave you an overview of what we&rsquo;re going to implement, namely a real-time web chat application. We&rsquo;re going to use Java, the play! framework and Couchbase. Also we&rsquo;ve set up the database, the project itself and connected both. In the next post we&rsquo;ll build on this foundation and add session management to let users sign in and out.</p>
-
 <p>As always, comment below if you have any thoughts on this!</p>
 
     </div>
-
-    <div id="disqus_thread"></div>
-<script type="application/javascript">
-    var disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "daschl" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
-
+ 
     <ul class="article-taxonomy">
-       
+      
+    
+      
       <li>
-        <i class="fa fa-tags"></i>
-        <a href="/%20tags/%20java">java</a>
-        <a href="/%20tags/%20couchbase">couchbase</a>
-        <a href="/%20tags/%20play">play</a>
+        <i class="fa fa-tags"></i><a href="/tags/java">java</a><a href="/tags/couchbase">couchbase</a><a href="/tags/play">play</a>
       </li>
       
   </article>
@@ -406,30 +350,24 @@ couchbase.password=&quot;&quot;
 <footer class="footer">
   <ul class="footer-links">
     <li>
-      <a href="https://nitschinger.at/index.xml" type="application/rss+xml" target="_blank">
-        <i class="fa fa-rss"></i> RSS feed</a>
+      <a href="/atom.xml" type="application/atom+xml" target="_blank"><i class="fa fa-rss"></i> Atom feed</a>
     </li>
     <li>
-      <a href="https://github.com/mobybit/hugo-natrium-theme">
-        <i class="fa fa-github"></i> Built with Hugo &amp; Natrium Theme</a>
+      <a href="https://github.com/daschl"><i class="fa fa-github"></i> GitHub</a>
+    </li>
+    <li>
+      <a href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
+    </li>
+    <li>
+      <a href="https://www.linkedin.com/in/michaelnitschinger/"><i class="fa fa-linkedin"></i> LinkedIn</a>
     </li>
   </ul>
 </footer>
 
 </div>
 
-<script>
-  (function (i, s, o, g, r, a, m) {
-    i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
-      (i[r].q = i[r].q || []).push(arguments)
-    }, i[r].l = 1 * new Date(); a = s.createElement(o),
-      m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
-  })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
 
-  ga('create', 'UA-19686689-1', 'auto');
-  ga('send', 'pageview');
-  ga('set', 'anonymizeIp', true);
-</script>
+
 </body>
 
 </html>

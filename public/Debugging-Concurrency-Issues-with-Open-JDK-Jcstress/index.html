@@ -3,11 +3,10 @@
   <head>
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Hugo 0.54.0" />
+<meta name="generator" content="Hugo 0.74.3" />
 
 
-<title>Debugging Concurrency Issues with OpenJDK Jcstress - daschl writes. sometimes.</title>
-<meta property="og:title" content="Debugging Concurrency Issues with OpenJDK Jcstress - daschl writes. sometimes.">
+<title>Debugging Concurrency Issues with OpenJDK Jcstress – daschl writes. sometimes.</title>
 
 
 
@@ -18,6 +17,28 @@
 
 
 
+<link href="/atom.xml" rel="alternate" type="application/atom+xml" title="daschl writes. sometimes." />
+
+<meta property="og:title" content="Debugging Concurrency Issues with OpenJDK Jcstress" />
+<meta property="og:description" content="Learn about how to use the JCStress tool from the OpenJDK team to debug concurrency issues." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://nitschinger.at/Debugging-Concurrency-Issues-with-Open-JDK-Jcstress/" />
+<meta property="article:published_time" content="2014-05-27T00:00:00+00:00" />
+<meta property="article:modified_time" content="2014-05-27T00:00:00+00:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Debugging Concurrency Issues with OpenJDK Jcstress"/>
+<meta name="twitter:description" content="Learn about how to use the JCStress tool from the OpenJDK team to debug concurrency issues."/>
+
+<meta itemprop="name" content="Debugging Concurrency Issues with OpenJDK Jcstress">
+<meta itemprop="description" content="Learn about how to use the JCStress tool from the OpenJDK team to debug concurrency issues.">
+<meta itemprop="datePublished" content="2014-05-27T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2014-05-27T00:00:00+00:00" />
+<meta itemprop="wordCount" content="1671">
+
+
+
+<meta itemprop="keywords" content="java,jcstress,openjdk," />
 
 
 <link rel="stylesheet" href="https://nitschinger.at/css/main.css" media="all">
@@ -28,30 +49,27 @@
     <div class="wrapper">
       <header class="header">
         <nav class="nav">
-  <a href="https://nitschinger.at/" class="nav-title">
-    daschl blogs. sometimes.
+  <a href="https://nitschinger.at/" class="nav-logo">
+    <img src="https://nitschinger.at/images/"
+         width="" 
+         height="" 
+         alt="">
   </a>
+  <a href="https://nitschinger.at/" class="nav-title">daschl writes. sometimes.</a>
 
   <ul class="nav-links">
     
-    <li>
-      <a href="/tags">tags</a>
-    </li>
+    <li><a href="/tags">tags</a></li>
     
-    <li>
-      <a href="/imprint/">imprint</a>
-    </li>
+    <li><a href="/imprint/">imprint</a></li>
     
-    <li>
-      <a href="https://twitter.com/daschl">-&gt; twitter</a>
-    </li>
+    <li><a href="https://twitter.com/daschl">-&gt; twitter</a></li>
     
-    <li>
-      <a href="https://github.com/daschl">-&gt; github</a>
-    </li>
+    <li><a href="https://github.com/daschl">-&gt; github</a></li>
     
   </ul>
 </nav>
+
       </header>
 
 
@@ -59,310 +77,291 @@
   <article class="article">
     <h1 class="article-title">Debugging Concurrency Issues with OpenJDK Jcstress</h1>
     
-    <span class="article-date">2014-05-27</span>
+    <span class="article-date">27 May 2014</span>
     
 
     <div class="article-content">
-      
-
-<p>I fell in love with the Java Microbenchmarking Harness (<a href="http://openjdk.java.net/projects/code-tools/jmh/">JMH</a>) a few months ago since (in my opinion) it is the only sane way to do microbenchmarks of JVM code right now. I also poked around on their website for other tools they provide, and found that there is another very interesting tool called <a href="http://openjdk.java.net/projects/code-tools/jcstress/">jcstress</a>. It stands for Java Concurrency Stress tests and is used mainly by the OpenJDK people itself to make sure their code works correctly with regards to concurrency.</p>
-
+      <p>I fell in love with the Java Microbenchmarking Harness (<a href="http://openjdk.java.net/projects/code-tools/jmh/">JMH</a>) a few months ago since (in my opinion) it is the only sane way to do microbenchmarks of JVM code right now. I also poked around on their website for other tools they provide, and found that there is another very interesting tool called <a href="http://openjdk.java.net/projects/code-tools/jcstress/">jcstress</a>. It stands for Java Concurrency Stress tests and is used mainly by the OpenJDK people itself to make sure their code works correctly with regards to concurrency.</p>
 <p>As always, you need a motivating factor so today <a href="https://www.couchbase.com/issues/browse/SPY-170">a ticket</a> got opened which reported a race condition inside a utility class in the <a href="https://code.google.com/p/spymemcached/">spymemcached</a> library (which is also used by the Couchbase Java SDK). Before coming up with complicated code that simulates multi-threaded consumers of the API I thought I could just try out <code>jcstress</code> first.</p>
-
 <p>TL;DR: I managed to find, fix and verify the concurrency issue. If you want to learn how, read along.</p>
-
 <p>A short disclaimer: as you can guess, I&rsquo;m far away from an expert on the <code>jcstress</code> library and there could be information provided here that is plain wrong. The intent of this post is to show you how to set up <code>jcstress</code> and run your code against it. Also, I&rsquo;d like to thank <a href="https://twitter.com/shipilev">Aleksey Shipilёv</a> to help me verify/improve the test and look over it. He also told me that <code>jcstress</code> is not (yet) ready for a broad public consumption, so your mileage may vary.</p>
-
 <h1 id="setup">Setup</h1>
-
 <p>As <a href="http://openjdk.java.net/projects/code-tools/jcstress/">described</a> on the website, you need to clone the repository and build the whole thing. Also, make sure to have Java 8 installed for compiling it (I think running with older versions afterwards works).</p>
-
 <pre><code>$ hg clone http://hg.openjdk.java.net/code-tools/jcstress/ jcstress
 $ cd jcstress/
-</code></pre>
-
-<p>Now, go import the maven project in your favorite IDE (<a href="http://www.jetbrains.com/idea/">IntelliJ, what else?</a>). We need to add our own code and tests so that it can be picked up later. You can either add your code under test as a dependency into the <code>pom.xml</code> file or just copy it over to the project if it is self contained (so it&rsquo;s easier to play and poke around). If you want to follow along, add the <code>StringUtils.java</code> and the <code>StringUtilsTest.java</code> files to the <code>com.couchbase.client.tests.util</code> package:</p>
-<div class="highlight"><div style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+</code></pre><p>Now, go import the maven project in your favorite IDE (<a href="http://www.jetbrains.com/idea/">IntelliJ, what else?</a>). We need to add our own code and tests so that it can be picked up later. You can either add your code under test as a dependency into the <code>pom.xml</code> file or just copy it over to the project if it is self contained (so it&rsquo;s easier to play and poke around). If you want to follow along, add the <code>StringUtils.java</code> and the <code>StringUtilsTest.java</code> files to the <code>com.couchbase.client.tests.util</code> package:</p>
+<div class="highlight"><div style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 1
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 2
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 3
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 4
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 5
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 6
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 7
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 8
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 9
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">10
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">11
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">12
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">13
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">14
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">15
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">16
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">17
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">18
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">19
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">20
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">21
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">22
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">23
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">24
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">25
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">26
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">27
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">28
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">29
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">30
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">31
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">32
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">33
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">34
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">35
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">36
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">37
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">38
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">39
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">40
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">41
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">42
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">43
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">44
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">45
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">46
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">47
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">48
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">49
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">50
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">51
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">52
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">53
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">54
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">55
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">56
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">57
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">58
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">59
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">60
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">61
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">62
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">63
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">64
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">65
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">66
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">67
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">68
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">69
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">70
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">71
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">72
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">73
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">74
+<pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2"><code><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">23
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">24
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">25
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">26
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">27
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">28
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">29
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">30
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">31
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">32
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">33
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">34
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">35
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">36
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">37
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">38
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">39
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">40
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">41
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">42
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">43
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">44
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">45
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">46
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">47
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">48
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">49
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">50
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">51
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">52
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">53
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">54
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">55
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">56
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">57
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">58
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">59
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">60
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">61
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">62
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">63
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">64
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">65
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">66
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">67
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">68
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">69
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">70
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">71
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">72
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">73
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">74
 </span></code></pre></td>
-<td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">package</span> <span style="color:#447fcf;text-decoration:underline">com.couchbase.client.tests.util</span>;
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2"><code class="language-java" data-lang="java"><span style="color:#f92672">package</span> com.couchbase.client.tests.util<span style="color:#f92672">;</span>
 
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">java.util.regex.Matcher</span>;
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">java.util.regex.Pattern</span>;
+<span style="color:#f92672">import</span> java.util.regex.Matcher<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> java.util.regex.Pattern<span style="color:#f92672">;</span>
 
-<span style="color:#999;font-style:italic">/**
-</span><span style="color:#999;font-style:italic"> * Utility methods on string objects.
-</span><span style="color:#999;font-style:italic"> */</span>
-<span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">final</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf;text-decoration:underline">StringUtils</span> {
+<span style="color:#75715e">/**
+</span><span style="color:#75715e"> * Utility methods on string objects.
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">final</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">StringUtils</span> <span style="color:#f92672">{</span>
 
-    <span style="color:#999;font-style:italic">/**
-</span><span style="color:#999;font-style:italic">     * A pattern to match on a signed integer value.
-</span><span style="color:#999;font-style:italic">     */</span>
-    <span style="color:#6ab825;font-weight:bold">private</span> <span style="color:#6ab825;font-weight:bold">static</span> <span style="color:#6ab825;font-weight:bold">final</span> Pattern decimalPattern = Pattern.<span style="color:#bbb">compile</span>(<span style="color:#ed9d13">&#34;^-?\\d+$&#34;</span>);
+    <span style="color:#75715e">/**
+</span><span style="color:#75715e">     * A pattern to match on a signed integer value.
+</span><span style="color:#75715e">     */</span>
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> Pattern decimalPattern <span style="color:#f92672">=</span> Pattern<span style="color:#f92672">.</span><span style="color:#a6e22e">compile</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;^-?\\d+$&#34;</span><span style="color:#f92672">);</span>
 
-    <span style="color:#999;font-style:italic">/**
-</span><span style="color:#999;font-style:italic">     * The matcher for the decimal pattern regex.
-</span><span style="color:#999;font-style:italic">     */</span>
-    <span style="color:#6ab825;font-weight:bold">private</span> <span style="color:#6ab825;font-weight:bold">static</span> <span style="color:#6ab825;font-weight:bold">final</span> Matcher decimalMatcher = decimalPattern.<span style="color:#bbb">matcher</span>(<span style="color:#ed9d13">&#34;&#34;</span>);
+    <span style="color:#75715e">/**
+</span><span style="color:#75715e">     * The matcher for the decimal pattern regex.
+</span><span style="color:#75715e">     */</span>
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> Matcher decimalMatcher <span style="color:#f92672">=</span> decimalPattern<span style="color:#f92672">.</span><span style="color:#a6e22e">matcher</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;&#34;</span><span style="color:#f92672">);</span>
 
-    <span style="color:#999;font-style:italic">/**
-</span><span style="color:#999;font-style:italic">     * Maximum supported key length.
-</span><span style="color:#999;font-style:italic">     */</span>
-    <span style="color:#6ab825;font-weight:bold">private</span> <span style="color:#6ab825;font-weight:bold">static</span> <span style="color:#6ab825;font-weight:bold">final</span> <span style="color:#6ab825;font-weight:bold">int</span> MAX_KEY_LENGTH = 250;
+    <span style="color:#75715e">/**
+</span><span style="color:#75715e">     * Maximum supported key length.
+</span><span style="color:#75715e">     */</span>
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> <span style="color:#66d9ef">int</span> MAX_KEY_LENGTH <span style="color:#f92672">=</span> 250<span style="color:#f92672">;</span>
 
-    <span style="color:#999;font-style:italic">/**
-</span><span style="color:#999;font-style:italic">     * Exception thrown if the input key is too long.
-</span><span style="color:#999;font-style:italic">     */</span>
-    <span style="color:#6ab825;font-weight:bold">private</span> <span style="color:#6ab825;font-weight:bold">static</span> <span style="color:#6ab825;font-weight:bold">final</span> IllegalArgumentException KEY_TOO_LONG_EXCEPTION =
-        <span style="color:#6ab825;font-weight:bold">new</span> IllegalArgumentException(<span style="color:#ed9d13">&#34;Key is too long (maxlen = &#34;</span>
-            + MAX_KEY_LENGTH + <span style="color:#ed9d13">&#34;)&#34;</span>);
+    <span style="color:#75715e">/**
+</span><span style="color:#75715e">     * Exception thrown if the input key is too long.
+</span><span style="color:#75715e">     */</span>
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> IllegalArgumentException KEY_TOO_LONG_EXCEPTION <span style="color:#f92672">=</span>
+        <span style="color:#66d9ef">new</span> IllegalArgumentException<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Key is too long (maxlen = &#34;</span>
+            <span style="color:#f92672">+</span> MAX_KEY_LENGTH <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34;)&#34;</span><span style="color:#f92672">);</span>
 
-    <span style="color:#999;font-style:italic">/**
-</span><span style="color:#999;font-style:italic">     * Exception thrown if the input key is empty.
-</span><span style="color:#999;font-style:italic">     */</span>
-    <span style="color:#6ab825;font-weight:bold">private</span> <span style="color:#6ab825;font-weight:bold">static</span> <span style="color:#6ab825;font-weight:bold">final</span> IllegalArgumentException KEY_EMPTY_EXCEPTION =
-        <span style="color:#6ab825;font-weight:bold">new</span> IllegalArgumentException(<span style="color:#ed9d13">&#34;Key must contain at least one character.&#34;</span>);
+    <span style="color:#75715e">/**
+</span><span style="color:#75715e">     * Exception thrown if the input key is empty.
+</span><span style="color:#75715e">     */</span>
+    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> IllegalArgumentException KEY_EMPTY_EXCEPTION <span style="color:#f92672">=</span>
+        <span style="color:#66d9ef">new</span> IllegalArgumentException<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Key must contain at least one character.&#34;</span><span style="color:#f92672">);</span>
 
-    <span style="color:#999;font-style:italic">/**
-</span><span style="color:#999;font-style:italic">     * Preset the stack traces for the static exceptions.
-</span><span style="color:#999;font-style:italic">     */</span>
-    <span style="color:#6ab825;font-weight:bold">static</span> {
-        KEY_TOO_LONG_EXCEPTION.<span style="color:#bbb">setStackTrace</span>(<span style="color:#6ab825;font-weight:bold">new</span> StackTraceElement[0]);
-        KEY_EMPTY_EXCEPTION.<span style="color:#bbb">setStackTrace</span>(<span style="color:#6ab825;font-weight:bold">new</span> StackTraceElement[0]);
-    }
+    <span style="color:#75715e">/**
+</span><span style="color:#75715e">     * Preset the stack traces for the static exceptions.
+</span><span style="color:#75715e">     */</span>
+    <span style="color:#66d9ef">static</span> <span style="color:#f92672">{</span>
+        KEY_TOO_LONG_EXCEPTION<span style="color:#f92672">.</span><span style="color:#a6e22e">setStackTrace</span><span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> StackTraceElement<span style="color:#f92672">[</span>0<span style="color:#f92672">]);</span>
+        KEY_EMPTY_EXCEPTION<span style="color:#f92672">.</span><span style="color:#a6e22e">setStackTrace</span><span style="color:#f92672">(</span><span style="color:#66d9ef">new</span> StackTraceElement<span style="color:#f92672">[</span>0<span style="color:#f92672">]);</span>
+    <span style="color:#f92672">}</span>
 
-    <span style="color:#999;font-style:italic">/**
-</span><span style="color:#999;font-style:italic">     * Private constructor, since this is a purely static class.
-</span><span style="color:#999;font-style:italic">     */</span>
-    <span style="color:#6ab825;font-weight:bold">private</span> <span style="color:#447fcf">StringUtils</span>() {
-        <span style="color:#6ab825;font-weight:bold">throw</span> <span style="color:#6ab825;font-weight:bold">new</span> UnsupportedOperationException();
-    }
+    <span style="color:#75715e">/**
+</span><span style="color:#75715e">     * Private constructor, since this is a purely static class.
+</span><span style="color:#75715e">     */</span>
+    <span style="color:#66d9ef">private</span> <span style="color:#a6e22e">StringUtils</span><span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">throw</span> <span style="color:#66d9ef">new</span> UnsupportedOperationException<span style="color:#f92672">();</span>
+    <span style="color:#f92672">}</span>
 
-    <span style="color:#999;font-style:italic">/**
-</span><span style="color:#999;font-style:italic">     * Check if a given string is a JSON object.
-</span><span style="color:#999;font-style:italic">     *
-</span><span style="color:#999;font-style:italic">     * @param s the input string.
-</span><span style="color:#999;font-style:italic">     * @return true if it is a JSON object, false otherwise.
-</span><span style="color:#999;font-style:italic">     */</span>
-    <span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">static</span> <span style="color:#6ab825;font-weight:bold">boolean</span> <span style="color:#447fcf">isJsonObject</span>(<span style="color:#6ab825;font-weight:bold">final</span> String s) {
-        <span style="color:#6ab825;font-weight:bold">if</span> (s == <span style="color:#6ab825;font-weight:bold">null</span> || s.<span style="color:#bbb">isEmpty</span>()) {
-            <span style="color:#6ab825;font-weight:bold">return</span> <span style="color:#6ab825;font-weight:bold">false</span>;
-        }
+    <span style="color:#75715e">/**
+</span><span style="color:#75715e">     * Check if a given string is a JSON object.
+</span><span style="color:#75715e">     *
+</span><span style="color:#75715e">     * @param s the input string.
+</span><span style="color:#75715e">     * @return true if it is a JSON object, false otherwise.
+</span><span style="color:#75715e">     */</span>
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">boolean</span> <span style="color:#a6e22e">isJsonObject</span><span style="color:#f92672">(</span><span style="color:#66d9ef">final</span> String s<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>s <span style="color:#f92672">==</span> <span style="color:#66d9ef">null</span> <span style="color:#f92672">||</span> s<span style="color:#f92672">.</span><span style="color:#a6e22e">isEmpty</span><span style="color:#f92672">())</span> <span style="color:#f92672">{</span>
+            <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">false</span><span style="color:#f92672">;</span>
+        <span style="color:#f92672">}</span>
 
-        <span style="color:#6ab825;font-weight:bold">if</span> (s.<span style="color:#bbb">startsWith</span>(<span style="color:#ed9d13">&#34;{&#34;</span>) || s.<span style="color:#bbb">startsWith</span>(<span style="color:#ed9d13">&#34;[&#34;</span>)
-            || <span style="color:#ed9d13">&#34;true&#34;</span>.<span style="color:#bbb">equals</span>(s) || <span style="color:#ed9d13">&#34;false&#34;</span>.<span style="color:#bbb">equals</span>(s)
-            || <span style="color:#ed9d13">&#34;null&#34;</span>.<span style="color:#bbb">equals</span>(s) || decimalMatcher.<span style="color:#bbb">reset</span>(s).<span style="color:#bbb">matches</span>()) {
-            <span style="color:#6ab825;font-weight:bold">return</span> <span style="color:#6ab825;font-weight:bold">true</span>;
-        }
+        <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>s<span style="color:#f92672">.</span><span style="color:#a6e22e">startsWith</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;{&#34;</span><span style="color:#f92672">)</span> <span style="color:#f92672">||</span> s<span style="color:#f92672">.</span><span style="color:#a6e22e">startsWith</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;[&#34;</span><span style="color:#f92672">)</span>
+            <span style="color:#f92672">||</span> <span style="color:#e6db74">&#34;true&#34;</span><span style="color:#f92672">.</span><span style="color:#a6e22e">equals</span><span style="color:#f92672">(</span>s<span style="color:#f92672">)</span> <span style="color:#f92672">||</span> <span style="color:#e6db74">&#34;false&#34;</span><span style="color:#f92672">.</span><span style="color:#a6e22e">equals</span><span style="color:#f92672">(</span>s<span style="color:#f92672">)</span>
+            <span style="color:#f92672">||</span> <span style="color:#e6db74">&#34;null&#34;</span><span style="color:#f92672">.</span><span style="color:#a6e22e">equals</span><span style="color:#f92672">(</span>s<span style="color:#f92672">)</span> <span style="color:#f92672">||</span> decimalMatcher<span style="color:#f92672">.</span><span style="color:#a6e22e">reset</span><span style="color:#f92672">(</span>s<span style="color:#f92672">).</span><span style="color:#a6e22e">matches</span><span style="color:#f92672">())</span> <span style="color:#f92672">{</span>
+            <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">;</span>
+        <span style="color:#f92672">}</span>
 
-        <span style="color:#6ab825;font-weight:bold">return</span> <span style="color:#6ab825;font-weight:bold">false</span>;
-    }
+        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">false</span><span style="color:#f92672">;</span>
+    <span style="color:#f92672">}</span>
 
-}</code></pre></td></tr></table>
+<span style="color:#f92672">}</span>
+</code></pre></td></tr></table>
 </div>
-</div>
-<p>And the test:</p>
-<div class="highlight"><div style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+</div><p>And the test:</p>
+<div class="highlight"><div style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 1
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 2
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 3
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 4
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 5
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 6
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 7
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 8
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 9
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">10
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">11
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">12
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">13
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">14
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">15
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">16
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">17
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">18
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">19
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">20
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">21
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">22
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">23
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">24
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">25
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">26
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">27
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">28
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">29
+<pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2"><code><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">23
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">24
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">25
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">26
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">27
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">28
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">29
 </span></code></pre></td>
-<td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#6ab825;font-weight:bold">package</span> <span style="color:#447fcf;text-decoration:underline">com.couchbase.client.tests.util</span>;
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2"><code class="language-java" data-lang="java"><span style="color:#f92672">package</span> com.couchbase.client.tests.util<span style="color:#f92672">;</span>
 
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">org.openjdk.jcstress.annotations.Actor</span>;
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">org.openjdk.jcstress.annotations.JCStressTest</span>;
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">org.openjdk.jcstress.annotations.State</span>;
-<span style="color:#6ab825;font-weight:bold">import</span> <span style="color:#447fcf;text-decoration:underline">org.openjdk.jcstress.infra.results.IntResult2</span>;
+<span style="color:#f92672">import</span> org.openjdk.jcstress.annotations.Actor<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> org.openjdk.jcstress.annotations.JCStressTest<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> org.openjdk.jcstress.annotations.State<span style="color:#f92672">;</span>
+<span style="color:#f92672">import</span> org.openjdk.jcstress.infra.results.IntResult2<span style="color:#f92672">;</span>
 
-<span style="color:#ffa500">@JCStressTest</span>
-<span style="color:#ffa500">@State</span>
-<span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">class</span> <span style="color:#447fcf;text-decoration:underline">StringUtilsTest</span> {
+<span style="color:#a6e22e">@JCStressTest</span>
+<span style="color:#a6e22e">@State</span>
+<span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">StringUtilsTest</span> <span style="color:#f92672">{</span>
 
-    <span style="color:#ffa500">@Actor</span>
-    <span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">void</span> <span style="color:#447fcf">actor1</span>(IntResult2 result) {
-        <span style="color:#6ab825;font-weight:bold">try</span> {
-            result.<span style="color:#bbb">r1</span> = StringUtils.<span style="color:#bbb">isJsonObject</span>(<span style="color:#ed9d13">&#34;1234&#34;</span>) ? 1 : 0;
-        } <span style="color:#6ab825;font-weight:bold">catch</span>(Exception ex) {
-            result.<span style="color:#bbb">r1</span> = -1;
-        }
-    }
+    <span style="color:#a6e22e">@Actor</span>
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">actor1</span><span style="color:#f92672">(</span>IntResult2 result<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+            result<span style="color:#f92672">.</span><span style="color:#a6e22e">r1</span> <span style="color:#f92672">=</span> StringUtils<span style="color:#f92672">.</span><span style="color:#a6e22e">isJsonObject</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;1234&#34;</span><span style="color:#f92672">)</span> <span style="color:#f92672">?</span> 1 <span style="color:#f92672">:</span> 0<span style="color:#f92672">;</span>
+        <span style="color:#f92672">}</span> <span style="color:#66d9ef">catch</span><span style="color:#f92672">(</span>Exception ex<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+            result<span style="color:#f92672">.</span><span style="color:#a6e22e">r1</span> <span style="color:#f92672">=</span> <span style="color:#f92672">-</span>1<span style="color:#f92672">;</span>
+        <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>
 
-    <span style="color:#ffa500">@Actor</span>
-    <span style="color:#6ab825;font-weight:bold">public</span> <span style="color:#6ab825;font-weight:bold">void</span> <span style="color:#447fcf">actor2</span>(IntResult2 result) {
-        <span style="color:#6ab825;font-weight:bold">try</span> {
-            result.<span style="color:#bbb">r2</span> = StringUtils.<span style="color:#bbb">isJsonObject</span>(<span style="color:#ed9d13">&#34;5678&#34;</span>) ? 1 : 0;
-        } <span style="color:#6ab825;font-weight:bold">catch</span>(Exception ex) {
-            result.<span style="color:#bbb">r2</span> = -1;
-        }
-    }
-}</code></pre></td></tr></table>
+    <span style="color:#a6e22e">@Actor</span>
+    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">actor2</span><span style="color:#f92672">(</span>IntResult2 result<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">try</span> <span style="color:#f92672">{</span>
+            result<span style="color:#f92672">.</span><span style="color:#a6e22e">r2</span> <span style="color:#f92672">=</span> StringUtils<span style="color:#f92672">.</span><span style="color:#a6e22e">isJsonObject</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;5678&#34;</span><span style="color:#f92672">)</span> <span style="color:#f92672">?</span> 1 <span style="color:#f92672">:</span> 0<span style="color:#f92672">;</span>
+        <span style="color:#f92672">}</span> <span style="color:#66d9ef">catch</span><span style="color:#f92672">(</span>Exception ex<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+            result<span style="color:#f92672">.</span><span style="color:#a6e22e">r2</span> <span style="color:#f92672">=</span> <span style="color:#f92672">-</span>1<span style="color:#f92672">;</span>
+        <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></td></tr></table>
 </div>
-</div>
-<p>The test uses <code>@Actor</code> annotations to define the different actors of the system. You can see that both actors access the same static method and put the result (which is abbreviated to a simple true (1) / false (0) pattern) in the <code>IntResult2</code> object. Both actors share their results and if an exception
+</div><p>The test uses <code>@Actor</code> annotations to define the different actors of the system. You can see that both actors access the same static method and put the result (which is abbreviated to a simple true (1) / false (0) pattern) in the <code>IntResult2</code> object. Both actors share their results and if an exception
 is raised we store -1. Now what is that good for?</p>
-
 <p>We also need to add a description file for our test which sets the expecations on allowed and disallowed value combinations. Note that I tried to add my own .xml file, but somehow it didn&rsquo;t get picked up, so I modified an existing xml (to be specific the <code>resources/org/openjdk/jcstress/desc/atomic-boolean.xml</code>) and added the following:</p>
-<div class="highlight"><div style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<div class="highlight"><div style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 1
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 2
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 3
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 4
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 5
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 6
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 7
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 8
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868"> 9
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">10
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">11
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">12
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">13
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">14
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">15
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">16
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">17
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">18
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#686868">19
+<pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2"><code><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19
 </span></code></pre></td>
-<td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="color:#d0d0d0;background-color:#202020;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-xml" data-lang="xml"><span style="color:#6ab825;font-weight:bold">&lt;test</span> <span style="color:#bbb">name=</span><span style="color:#ed9d13">&#34;com.couchbase.client.tests.util.StringUtilsTest&#34;</span><span style="color:#6ab825;font-weight:bold">&gt;</span>
-    <span style="color:#6ab825;font-weight:bold">&lt;contributed-by&gt;</span>Michael Nitschinger<span style="color:#6ab825;font-weight:bold">&lt;/contributed-by&gt;</span>
-    <span style="color:#6ab825;font-weight:bold">&lt;description&gt;</span>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:2;-o-tab-size:2;tab-size:2"><code class="language-xml" data-lang="xml"><span style="color:#f92672">&lt;test</span> <span style="color:#a6e22e">name=</span><span style="color:#e6db74">&#34;com.couchbase.client.tests.util.StringUtilsTest&#34;</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#f92672">&lt;contributed-by&gt;</span>Michael Nitschinger<span style="color:#f92672">&lt;/contributed-by&gt;</span>
+    <span style="color:#f92672">&lt;description&gt;</span>
         Tests the thread-safeness of the StringUtil class.
-    <span style="color:#6ab825;font-weight:bold">&lt;/description&gt;</span>
-    <span style="color:#6ab825;font-weight:bold">&lt;case&gt;</span>
-        <span style="color:#6ab825;font-weight:bold">&lt;match&gt;</span>[1, 1]<span style="color:#6ab825;font-weight:bold">&lt;/match&gt;</span>
-        <span style="color:#6ab825;font-weight:bold">&lt;expect&gt;</span>ACCEPTABLE<span style="color:#6ab825;font-weight:bold">&lt;/expect&gt;</span>
-        <span style="color:#6ab825;font-weight:bold">&lt;description&gt;</span>
+    <span style="color:#f92672">&lt;/description&gt;</span>
+    <span style="color:#f92672">&lt;case&gt;</span>
+        <span style="color:#f92672">&lt;match&gt;</span>[1, 1]<span style="color:#f92672">&lt;/match&gt;</span>
+        <span style="color:#f92672">&lt;expect&gt;</span>ACCEPTABLE<span style="color:#f92672">&lt;/expect&gt;</span>
+        <span style="color:#f92672">&lt;description&gt;</span>
             Acceptable to see true.
-        <span style="color:#6ab825;font-weight:bold">&lt;/description&gt;</span>
-    <span style="color:#6ab825;font-weight:bold">&lt;/case&gt;</span>
-    <span style="color:#6ab825;font-weight:bold">&lt;unmatched&gt;</span>
-        <span style="color:#6ab825;font-weight:bold">&lt;expect&gt;</span>FORBIDDEN<span style="color:#6ab825;font-weight:bold">&lt;/expect&gt;</span>
-        <span style="color:#6ab825;font-weight:bold">&lt;description&gt;</span>
+        <span style="color:#f92672">&lt;/description&gt;</span>
+    <span style="color:#f92672">&lt;/case&gt;</span>
+    <span style="color:#f92672">&lt;unmatched&gt;</span>
+        <span style="color:#f92672">&lt;expect&gt;</span>FORBIDDEN<span style="color:#f92672">&lt;/expect&gt;</span>
+        <span style="color:#f92672">&lt;description&gt;</span>
             Other cases are not expected. -1 would mean an exception raised.
-        <span style="color:#6ab825;font-weight:bold">&lt;/description&gt;</span>
-    <span style="color:#6ab825;font-weight:bold">&lt;/unmatched&gt;</span>
-<span style="color:#6ab825;font-weight:bold">&lt;/test&gt;</span></code></pre></td></tr></table>
+        <span style="color:#f92672">&lt;/description&gt;</span>
+    <span style="color:#f92672">&lt;/unmatched&gt;</span>
+<span style="color:#f92672">&lt;/test&gt;</span>
+</code></pre></td></tr></table>
 </div>
-</div>
-<p>You can see that the only thing which is acceptable is that both actors always get <code>true</code> returned, all other combinations are simply forbidden (that is, marked as failure).</p>
-
+</div><p>You can see that the only thing which is acceptable is that both actors always get <code>true</code> returned, all other combinations are simply forbidden (that is, marked as failure).</p>
 <p>Now that we&rsquo;ve got that set up, we need to compile the thing on the command line through maven:</p>
-
 <pre><code>$ mvn clean install -pl tests-custom -am
-</code></pre>
-
-<p>Finally, we run the shaded jar and give it a regex so that only our own test gets picked up:</p>
-
+</code></pre><p>Finally, we run the shaded jar and give it a regex so that only our own test gets picked up:</p>
 <pre><code>$ java -jar tests-custom/target/jcstress.jar -t &quot;.*StringUtils.*&quot;
-</code></pre>
-
-<p>The resulting output is as follows:</p>
-
+</code></pre><p>The resulting output is as follows:</p>
 <pre><code>Java Concurrency Stress Tests
 ---------------------------------------------------------------------------------
 Rev: a119fb6622e3+, built by michael with 1.8.0_05 at 20140527-1040
@@ -411,12 +410,8 @@ com.couchbase.client.tests.util.StringUtilsTest: Observed forbidden state: [1, 0
 	at org.openjdk.jcstress.infra.grading.ExceptionReportPrinter.parse(ExceptionReportPrinter.java:119)
 	at org.openjdk.jcstress.JCStress.run(JCStress.java:134)
 	at org.openjdk.jcstress.Main.main(Main.java:85)
-</code></pre>
-
-<p>The command line output is very descriptive, but you can also open the <code>results/index.html</code> file for a nicer visualization. We can see that most of the time the output was acceptable, but 280 times we got non-consistent output. In those cases, one of the actors got <code>false</code> as a response instead of <code>true</code> pretty bad if you ask me!</p>
-
+</code></pre><p>The command line output is very descriptive, but you can also open the <code>results/index.html</code> file for a nicer visualization. We can see that most of the time the output was acceptable, but 280 times we got non-consistent output. In those cases, one of the actors got <code>false</code> as a response instead of <code>true</code> pretty bad if you ask me!</p>
 <p>You can look through the code if you want to find the race condition, but for those who are too lazy here is the code fix:</p>
-
 <pre><code>   /**
     * Exception thrown if the input key is empty.
 @@ -112,7 +106,7 @@ public final class StringUtils {
@@ -427,10 +422,7 @@ com.couchbase.client.tests.util.StringUtilsTest: Observed forbidden state: [1, 0
 +      || &quot;null&quot;.equals(s) || decimalPattern.matcher(s).matches()) {
        return true;
      }
-</code></pre>
-
-<p>As it turns out, the <code>matcher</code> is not thread safe and there is a race condition between resetting the characters and matching them afterwards. If we fix it to always create a new <code>matcher</code>, the race condition should go away. So let&rsquo;s make the proposed changes and run the test again (don&rsquo;t forget to run <code>mvn clean install -pl tests-custom -am</code> again since we changed the code):</p>
-
+</code></pre><p>As it turns out, the <code>matcher</code> is not thread safe and there is a race condition between resetting the characters and matching them afterwards. If we fix it to always create a new <code>matcher</code>, the race condition should go away. So let&rsquo;s make the proposed changes and run the test again (don&rsquo;t forget to run <code>mvn clean install -pl tests-custom -am</code> again since we changed the code):</p>
 <pre><code>*snip*
  (ETA:        n/a) (R: 1.82E+09) (T:   1/1) (F: 1/1) (I: 1/5)       [OK] com.couchbase.client.tests.util.StringUtilsTest
  (ETA:   00:00:02) (R: 1.13E+07) (T:   1/1) (F: 1/1) (I: 2/5)       [OK] com.couchbase.client.tests.util.StringUtilsTest
@@ -443,42 +435,17 @@ Look at results/index.html for the complete run results.
 
 Will throw any pending exceptions at this point.
 Done.
-</code></pre>
-
-<p>Look at that! Our results are now consistent. We can now be confident that our bugfix actually solved the race condition here.</p>
-
+</code></pre><p>Look at that! Our results are now consistent. We can now be confident that our bugfix actually solved the race condition here.</p>
 <p>Give it a shot if you also need to debug concurrency issues in your codebase, but keep in mind that your mileage may vary. Thanks again to <a href="https://twitter.com/shipilev">Aleksey Shipilёv</a> for eyeballing the code and giving suggestions.</p>
 
     </div>
-
-    <div id="disqus_thread"></div>
-<script type="application/javascript">
-    var disqus_config = function () {
-    this.page.identifier = 'a3564b8d59a2331a4c30acf6f0179b8f85001b7edca74d867e07ef6a77aa09d3654416020a9327c1ad0acc8e0e32de1d1f0e768da8a660024fb44cc0ca974a9d';
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "daschl" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
-
+ 
     <ul class="article-taxonomy">
-       
+      
+    
+      
       <li>
-        <i class="fa fa-tags"></i>
-        <a href="/%20tags/%20java">java</a>
-        <a href="/%20tags/%20jcstress">jcstress</a>
-        <a href="/%20tags/%20openjdk">openjdk</a>
+        <i class="fa fa-tags"></i><a href="/tags/java">java</a><a href="/tags/jcstress">jcstress</a><a href="/tags/openjdk">openjdk</a>
       </li>
       
   </article>
@@ -488,30 +455,24 @@ Done.
 <footer class="footer">
   <ul class="footer-links">
     <li>
-      <a href="https://nitschinger.at/index.xml" type="application/rss+xml" target="_blank">
-        <i class="fa fa-rss"></i> RSS feed</a>
+      <a href="/atom.xml" type="application/atom+xml" target="_blank"><i class="fa fa-rss"></i> Atom feed</a>
     </li>
     <li>
-      <a href="https://github.com/mobybit/hugo-natrium-theme">
-        <i class="fa fa-github"></i> Built with Hugo &amp; Natrium Theme</a>
+      <a href="https://github.com/daschl"><i class="fa fa-github"></i> GitHub</a>
+    </li>
+    <li>
+      <a href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
+    </li>
+    <li>
+      <a href="https://www.linkedin.com/in/michaelnitschinger/"><i class="fa fa-linkedin"></i> LinkedIn</a>
     </li>
   </ul>
 </footer>
 
 </div>
 
-<script>
-  (function (i, s, o, g, r, a, m) {
-    i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
-      (i[r].q = i[r].q || []).push(arguments)
-    }, i[r].l = 1 * new Date(); a = s.createElement(o),
-      m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
-  })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
 
-  ga('create', 'UA-19686689-1', 'auto');
-  ga('send', 'pageview');
-  ga('set', 'anonymizeIp', true);
-</script>
+
 </body>
 
 </html>

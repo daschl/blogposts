@@ -1,9 +1,69 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>https://nitschinger.at/</loc>
+    <lastmod>2020-09-28T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/embedded/</loc>
+    <lastmod>2020-09-28T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/nRF52840/</loc>
+    <lastmod>2020-09-28T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/post/</loc>
+    <lastmod>2020-09-28T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/rust/</loc>
+    <lastmod>2020-09-28T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/Rusty-PID-Porting-the-TSic-sensor-from-C-to-Rust/</loc>
+    <lastmod>2020-09-28T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/rustypid/</loc>
+    <lastmod>2020-09-28T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/</loc>
+    <lastmod>2020-09-28T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/tsic/</loc>
+    <lastmod>2020-09-28T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/java/</loc>
+    <lastmod>2019-04-01T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/reactive/</loc>
+    <lastmod>2019-04-01T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://nitschinger.at/Reactive-Barriers-with-Reactor/</loc>
+    <lastmod>2019-04-01T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/reactor/</loc>
     <lastmod>2019-04-01T00:00:00+00:00</lastmod>
   </url>
   
@@ -13,13 +73,48 @@
   </url>
   
   <url>
+    <loc>https://nitschinger.at/tags/openwrt/</loc>
+    <lastmod>2017-01-02T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://nitschinger.at/Rust-on-the-Wifi-Pineapple-and-OpenWRT/</loc>
     <lastmod>2017-01-02T00:00:00+00:00</lastmod>
   </url>
   
   <url>
+    <loc>https://nitschinger.at/tags/wifipineapple/</loc>
+    <lastmod>2017-01-02T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/analysis/</loc>
+    <lastmod>2016-10-28T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/indexing/</loc>
+    <lastmod>2016-10-28T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/text/</loc>
+    <lastmod>2016-10-28T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://nitschinger.at/Text-Analysis-in-Rust-Tokenization/</loc>
     <lastmod>2016-10-28T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/kqueue/</loc>
+    <lastmod>2016-06-15T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/osx/</loc>
+    <lastmod>2016-06-15T00:00:00+00:00</lastmod>
   </url>
   
   <url>
@@ -33,7 +128,22 @@
   </url>
   
   <url>
+    <loc>https://nitschinger.at/tags/jni/</loc>
+    <lastmod>2016-02-19T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://nitschinger.at/Binding-Threads-And-Processes-to-CPUs-in-Rust/</loc>
+    <lastmod>2016-02-11T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/cpu/</loc>
+    <lastmod>2016-02-11T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/hwloc/</loc>
     <lastmod>2016-02-11T00:00:00+00:00</lastmod>
   </url>
   
@@ -48,8 +158,33 @@
   </url>
   
   <url>
+    <loc>https://nitschinger.at/tags/jcstress/</loc>
+    <lastmod>2014-05-27T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/openjdk/</loc>
+    <lastmod>2014-05-27T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://nitschinger.at/Bootstrapping-from-DNS-SRV-records-in-Java/</loc>
     <lastmod>2014-01-29T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/couchbase/</loc>
+    <lastmod>2014-01-29T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/dns/</loc>
+    <lastmod>2014-01-29T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/jmh/</loc>
+    <lastmod>2013-11-22T00:00:00+00:00</lastmod>
   </url>
   
   <url>
@@ -63,8 +198,38 @@
   </url>
   
   <url>
+    <loc>https://nitschinger.at/tags/tcp/</loc>
+    <lastmod>2013-08-13T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://nitschinger.at/Using-the-Reactor-Processor-for-High-Performance-TCP/</loc>
     <lastmod>2013-08-13T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/c/</loc>
+    <lastmod>2013-08-06T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/links/</loc>
+    <lastmod>2013-08-06T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/net/</loc>
+    <lastmod>2013-08-06T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/php/</loc>
+    <lastmod>2013-08-06T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/ruby/</loc>
+    <lastmod>2013-08-06T00:00:00+00:00</lastmod>
   </url>
   
   <url>
@@ -73,8 +238,23 @@
   </url>
   
   <url>
+    <loc>https://nitschinger.at/tags/assembler/</loc>
+    <lastmod>2013-06-24T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/jvm/</loc>
+    <lastmod>2013-06-24T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://nitschinger.at/Printing-JVM-generated-Assembler-on-Mac-OS-X/</loc>
     <lastmod>2013-06-24T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/encoding/</loc>
+    <lastmod>2013-06-18T00:00:00+00:00</lastmod>
   </url>
   
   <url>
@@ -83,8 +263,28 @@
   </url>
   
   <url>
+    <loc>https://nitschinger.at/tags/messagepack/</loc>
+    <lastmod>2013-06-18T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://nitschinger.at/A-Couchbase-Cluster-in-Minutes-with-Vagrant-and-Puppet/</loc>
     <lastmod>2013-05-27T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/puppet/</loc>
+    <lastmod>2013-05-27T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/vagrant/</loc>
+    <lastmod>2013-05-27T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/logging/</loc>
+    <lastmod>2013-05-16T00:00:00+00:00</lastmod>
   </url>
   
   <url>
@@ -95,6 +295,11 @@
   <url>
     <loc>https://nitschinger.at/Couchbase-Java-SDK-Internals/</loc>
     <lastmod>2013-04-17T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/netty/</loc>
+    <lastmod>2013-03-05T00:00:00+00:00</lastmod>
   </url>
   
   <url>
@@ -113,7 +318,27 @@
   </url>
   
   <url>
+    <loc>https://nitschinger.at/tags/cache/</loc>
+    <lastmod>2013-01-30T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/json/</loc>
+    <lastmod>2013-01-30T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/serialize/</loc>
+    <lastmod>2013-01-30T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://nitschinger.at/Caching-Doctrine-Entities-with-Couchbase/</loc>
+    <lastmod>2013-01-08T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/doctrine/</loc>
     <lastmod>2013-01-08T00:00:00+00:00</lastmod>
   </url>
   
@@ -123,12 +348,37 @@
   </url>
   
   <url>
+    <loc>https://nitschinger.at/tags/sdk/</loc>
+    <lastmod>2012-11-07T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/couchconf/</loc>
+    <lastmod>2012-10-22T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://nitschinger.at/New-Job-Couchbase-Server-2-0-and-Couch-Conf-Berlin/</loc>
     <lastmod>2012-10-22T00:00:00+00:00</lastmod>
   </url>
   
   <url>
+    <loc>https://nitschinger.at/tags/elasticsearch/</loc>
+    <lastmod>2012-08-20T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://nitschinger.at/Elastic-Search-and-SQL-Server-are-sitting-in-a-tree/</loc>
+    <lastmod>2012-08-20T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/jdbc/</loc>
+    <lastmod>2012-08-20T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/sql-server/</loc>
     <lastmod>2012-08-20T00:00:00+00:00</lastmod>
   </url>
   
@@ -138,13 +388,38 @@
   </url>
   
   <url>
+    <loc>https://nitschinger.at/tags/play/</loc>
+    <lastmod>2012-07-17T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://nitschinger.at/Announcing-the-Vienna-PHP-User-Group/</loc>
+    <lastmod>2012-07-07T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/usergroup/</loc>
+    <lastmod>2012-07-07T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/vienna/</loc>
     <lastmod>2012-07-07T00:00:00+00:00</lastmod>
   </url>
   
   <url>
     <loc>https://nitschinger.at/How-to-store-PHP-sessions-in-Couchbase/</loc>
     <lastmod>2012-06-25T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/sessions/</loc>
+    <lastmod>2012-06-25T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/session/</loc>
+    <lastmod>2012-06-21T00:00:00+00:00</lastmod>
   </url>
   
   <url>
@@ -163,12 +438,37 @@
   </url>
   
   <url>
+    <loc>https://nitschinger.at/tags/exceptions/</loc>
+    <lastmod>2012-05-22T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/lexer/</loc>
+    <lastmod>2012-05-10T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/parser/</loc>
+    <lastmod>2012-05-10T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/regex/</loc>
+    <lastmod>2012-05-10T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://nitschinger.at/Writing-a-simple-lexer-in-PHP/</loc>
     <lastmod>2012-05-10T00:00:00+00:00</lastmod>
   </url>
   
   <url>
     <loc>https://nitschinger.at/Accessing-Couchbase-from-Scala/</loc>
+    <lastmod>2012-04-26T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/scala/</loc>
     <lastmod>2012-04-26T00:00:00+00:00</lastmod>
   </url>
   
@@ -183,13 +483,53 @@
   </url>
   
   <url>
+    <loc>https://nitschinger.at/tags/lithium/</loc>
+    <lastmod>2012-03-03T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/models/</loc>
+    <lastmod>2012-03-03T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/relationships/</loc>
+    <lastmod>2012-03-03T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/li3_fixtures/</loc>
+    <lastmod>2012-02-24T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/plugin/</loc>
+    <lastmod>2012-02-24T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://nitschinger.at/RFC-li3_fixtures-Rewrite/</loc>
     <lastmod>2012-02-24T00:00:00+00:00</lastmod>
   </url>
   
   <url>
+    <loc>https://nitschinger.at/tags/composer/</loc>
+    <lastmod>2012-01-23T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/packagist/</loc>
+    <lastmod>2012-01-23T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://nitschinger.at/Playing-with-Composer-and-Lithium/</loc>
     <lastmod>2012-01-23T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/cookies/</loc>
+    <lastmod>2012-01-20T00:00:00+00:00</lastmod>
   </url>
   
   <url>
@@ -203,7 +543,22 @@
   </url>
   
   <url>
+    <loc>https://nitschinger.at/tags/redirect/</loc>
+    <lastmod>2011-09-16T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/router/</loc>
+    <lastmod>2011-09-16T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://nitschinger.at/Letters-from-Lithium-2/</loc>
+    <lastmod>2011-09-05T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/lfl/</loc>
     <lastmod>2011-09-05T00:00:00+00:00</lastmod>
   </url>
   
@@ -213,8 +568,23 @@
   </url>
   
   <url>
+    <loc>https://nitschinger.at/tags/environments/</loc>
+    <lastmod>2011-07-19T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://nitschinger.at/Using-Environments-in-Lithium/</loc>
     <lastmod>2011-07-19T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/core/</loc>
+    <lastmod>2011-07-09T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/testing/</loc>
+    <lastmod>2011-07-09T00:00:00+00:00</lastmod>
   </url>
   
   <url>
@@ -223,12 +593,37 @@
   </url>
   
   <url>
+    <loc>https://nitschinger.at/tags/community/</loc>
+    <lastmod>2011-06-22T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://nitschinger.at/Lithium-plugin-roundup/</loc>
     <lastmod>2011-06-22T00:00:00+00:00</lastmod>
   </url>
   
   <url>
+    <loc>https://nitschinger.at/tags/plugins/</loc>
+    <lastmod>2011-06-22T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/controller/</loc>
+    <lastmod>2011-06-08T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/helper/</loc>
+    <lastmod>2011-06-08T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://nitschinger.at/Securing-Lithium-Forms/</loc>
+    <lastmod>2011-06-08T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/security/</loc>
     <lastmod>2011-06-08T00:00:00+00:00</lastmod>
   </url>
   
@@ -238,8 +633,28 @@
   </url>
   
   <url>
+    <loc>https://nitschinger.at/tags/finders/</loc>
+    <lastmod>2011-06-03T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/model/</loc>
+    <lastmod>2011-06-03T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/mysql/</loc>
+    <lastmod>2011-06-03T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://nitschinger.at/Caching-responses-in-Lithium/</loc>
     <lastmod>2011-05-30T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/routing/</loc>
+    <lastmod>2011-02-24T00:00:00+00:00</lastmod>
   </url>
   
   <url>
@@ -253,8 +668,18 @@
   </url>
   
   <url>
+    <loc>https://nitschinger.at/tags/inflector/</loc>
+    <lastmod>2010-12-16T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://nitschinger.at/Understanding-the-Inflector/</loc>
     <lastmod>2010-12-16T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/tags/fixtures/</loc>
+    <lastmod>2010-12-04T00:00:00+00:00</lastmod>
   </url>
   
   <url>
@@ -273,511 +698,27 @@
   </url>
   
   <url>
-    <loc>https://nitschinger.at/Lithium-Routes-And-Mongo-DB/</loc>
-    <lastmod>2010-11-19T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/analysis/</loc>
-    <lastmod>2016-10-28T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/assembler/</loc>
-    <lastmod>2013-06-24T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/c/</loc>
-    <lastmod>2013-08-06T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/cache/</loc>
-    <lastmod>2013-01-30T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/categories/</loc>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/community/</loc>
-    <lastmod>2011-06-22T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/composer/</loc>
-    <lastmod>2012-01-23T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/controller/</loc>
-    <lastmod>2011-06-08T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/cookies/</loc>
-    <lastmod>2012-01-20T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/core/</loc>
-    <lastmod>2011-07-09T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/couchbase/</loc>
-    <lastmod>2014-01-29T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/couchconf/</loc>
-    <lastmod>2012-10-22T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/cpu/</loc>
-    <lastmod>2016-02-11T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/dns/</loc>
-    <lastmod>2014-01-29T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/doctrine/</loc>
-    <lastmod>2013-01-08T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/elasticsearch/</loc>
-    <lastmod>2012-08-20T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/encoding/</loc>
-    <lastmod>2013-06-18T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/environments/</loc>
-    <lastmod>2011-07-19T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/exceptions/</loc>
-    <lastmod>2012-05-22T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/finders/</loc>
-    <lastmod>2011-06-03T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/fixtures/</loc>
-    <lastmod>2010-12-04T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/helper/</loc>
-    <lastmod>2011-06-08T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/hwloc/</loc>
-    <lastmod>2016-02-11T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/indexing/</loc>
-    <lastmod>2016-10-28T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/inflector/</loc>
-    <lastmod>2010-12-16T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/java/</loc>
-    <lastmod>2019-04-01T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/jcstress/</loc>
-    <lastmod>2014-05-27T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/jdbc/</loc>
-    <lastmod>2012-08-20T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/jmh/</loc>
-    <lastmod>2013-11-22T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/jni/</loc>
-    <lastmod>2016-02-19T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/json/</loc>
-    <lastmod>2013-01-30T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/jvm/</loc>
-    <lastmod>2013-06-24T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/kqueue/</loc>
-    <lastmod>2016-06-15T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/lexer/</loc>
-    <lastmod>2012-05-10T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/lfl/</loc>
-    <lastmod>2011-09-05T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/li3_fixtures/</loc>
-    <lastmod>2012-02-24T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/links/</loc>
-    <lastmod>2013-08-06T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/lithium/</loc>
-    <lastmod>2012-03-03T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/logging/</loc>
-    <lastmod>2013-05-16T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/messagepack/</loc>
-    <lastmod>2013-06-18T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/model/</loc>
-    <lastmod>2011-06-03T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/models/</loc>
-    <lastmod>2012-03-03T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/mongodb/</loc>
-    <lastmod>2010-11-19T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/mysql/</loc>
-    <lastmod>2011-06-03T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/net/</loc>
-    <lastmod>2013-08-06T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/netty/</loc>
-    <lastmod>2013-03-05T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/openjdk/</loc>
-    <lastmod>2014-05-27T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/openwrt/</loc>
-    <lastmod>2017-01-02T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/osx/</loc>
-    <lastmod>2016-06-15T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/packagist/</loc>
-    <lastmod>2012-01-23T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/parser/</loc>
-    <lastmod>2012-05-10T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/php/</loc>
-    <lastmod>2013-08-06T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/play/</loc>
-    <lastmod>2012-07-17T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/plugin/</loc>
-    <lastmod>2012-02-24T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/plugins/</loc>
-    <lastmod>2011-06-22T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/post/</loc>
-    <lastmod>2019-04-01T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/puppet/</loc>
-    <lastmod>2013-05-27T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/reactive/</loc>
-    <lastmod>2019-04-01T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/reactor/</loc>
-    <lastmod>2019-04-01T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/redirect/</loc>
-    <lastmod>2011-09-16T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/regex/</loc>
-    <lastmod>2012-05-10T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/relationships/</loc>
-    <lastmod>2012-03-03T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/router/</loc>
-    <lastmod>2011-09-16T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/routing/</loc>
-    <lastmod>2011-02-24T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
     <loc>https://nitschinger.at/tags/rss/</loc>
     <lastmod>2010-11-20T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/ruby/</loc>
-    <lastmod>2013-08-06T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/rust/</loc>
-    <lastmod>2017-01-02T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/scala/</loc>
-    <lastmod>2012-04-26T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/sdk/</loc>
-    <lastmod>2012-11-07T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/security/</loc>
-    <lastmod>2011-06-08T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/serialize/</loc>
-    <lastmod>2013-01-30T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/session/</loc>
-    <lastmod>2012-06-21T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/sessions/</loc>
-    <lastmod>2012-06-25T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/sql-server/</loc>
-    <lastmod>2012-08-20T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/</loc>
-    <lastmod>2016-10-28T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/tcp/</loc>
-    <lastmod>2013-08-13T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/testing/</loc>
-    <lastmod>2011-07-09T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/text/</loc>
-    <lastmod>2016-10-28T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/usergroup/</loc>
-    <lastmod>2012-07-07T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/vagrant/</loc>
-    <lastmod>2013-05-27T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://nitschinger.at/tags/vienna/</loc>
-    <lastmod>2012-07-07T00:00:00+00:00</lastmod>
-    <priority>0</priority>
   </url>
   
   <url>
     <loc>https://nitschinger.at/tags/view/</loc>
     <lastmod>2010-11-20T00:00:00+00:00</lastmod>
-    <priority>0</priority>
   </url>
   
   <url>
-    <loc>https://nitschinger.at/tags/wifipineapple/</loc>
-    <lastmod>2017-01-02T00:00:00+00:00</lastmod>
-    <priority>0</priority>
+    <loc>https://nitschinger.at/Lithium-Routes-And-Mongo-DB/</loc>
+    <lastmod>2010-11-19T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>https://nitschinger.at/</loc>
-    <lastmod>2019-04-01T00:00:00+00:00</lastmod>
-    <priority>0</priority>
+    <loc>https://nitschinger.at/tags/mongodb/</loc>
+    <lastmod>2010-11-19T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://nitschinger.at/categories/</loc>
   </url>
   
 </urlset>

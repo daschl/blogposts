@@ -3,11 +3,10 @@
   <head>
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Hugo 0.54.0" />
+<meta name="generator" content="Hugo 0.74.3" />
 
 
-<title>Never awaitUninterruptibly() on Netty Channels - daschl writes. sometimes.</title>
-<meta property="og:title" content="Never awaitUninterruptibly() on Netty Channels - daschl writes. sometimes.">
+<title>Never awaitUninterruptibly() on Netty Channels – daschl writes. sometimes.</title>
 
 
 
@@ -18,6 +17,28 @@
 
 
 
+<link href="/atom.xml" rel="alternate" type="application/atom+xml" title="daschl writes. sometimes." />
+
+<meta property="og:title" content="Never awaitUninterruptibly() on Netty Channels" />
+<meta property="og:description" content="A quick tip about waiting on Channels in Netty." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://nitschinger.at/Never-await-Uninterruptibly-on-Netty-Channels/" />
+<meta property="article:published_time" content="2013-03-05T00:00:00+00:00" />
+<meta property="article:modified_time" content="2013-03-05T00:00:00+00:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Never awaitUninterruptibly() on Netty Channels"/>
+<meta name="twitter:description" content="A quick tip about waiting on Channels in Netty."/>
+
+<meta itemprop="name" content="Never awaitUninterruptibly() on Netty Channels">
+<meta itemprop="description" content="A quick tip about waiting on Channels in Netty.">
+<meta itemprop="datePublished" content="2013-03-05T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2013-03-05T00:00:00+00:00" />
+<meta itemprop="wordCount" content="471">
+
+
+
+<meta itemprop="keywords" content="java,couchbase,netty," />
 
 
 <link rel="stylesheet" href="https://nitschinger.at/css/main.css" media="all">
@@ -28,30 +49,27 @@
     <div class="wrapper">
       <header class="header">
         <nav class="nav">
-  <a href="https://nitschinger.at/" class="nav-title">
-    daschl blogs. sometimes.
+  <a href="https://nitschinger.at/" class="nav-logo">
+    <img src="https://nitschinger.at/images/"
+         width="" 
+         height="" 
+         alt="">
   </a>
+  <a href="https://nitschinger.at/" class="nav-title">daschl writes. sometimes.</a>
 
   <ul class="nav-links">
     
-    <li>
-      <a href="/tags">tags</a>
-    </li>
+    <li><a href="/tags">tags</a></li>
     
-    <li>
-      <a href="/imprint/">imprint</a>
-    </li>
+    <li><a href="/imprint/">imprint</a></li>
     
-    <li>
-      <a href="https://twitter.com/daschl">-&gt; twitter</a>
-    </li>
+    <li><a href="https://twitter.com/daschl">-&gt; twitter</a></li>
     
-    <li>
-      <a href="https://github.com/daschl">-&gt; github</a>
-    </li>
+    <li><a href="https://github.com/daschl">-&gt; github</a></li>
     
   </ul>
 </nav>
+
       </header>
 
 
@@ -59,14 +77,12 @@
   <article class="article">
     <h1 class="article-title">Never awaitUninterruptibly() on Netty Channels</h1>
     
-    <span class="article-date">2013-03-05</span>
+    <span class="article-date">5 March 2013</span>
     
 
     <div class="article-content">
       <p>TL:DR; When acquiring <a href="http://netty.io/3.6/api/org/jboss/netty/channel/Channel.html">Channels</a> in <a href="http://netty.io">Netty</a>, always use a <a href="http://netty.io/3.6/api/org/jboss/netty/channel/ChannelFutureListener.html">ChannelFutureListener</a> and never <a href="http://docs.jboss.org/netty/3.2/api/org/jboss/netty/channel/ChannelFuture.html#awaitUninterruptibly()">awaitUninterruptibly()</a>. Curious why? Read on.</p>
-
 <p>In the <a href="http://www.couchbase.com/develop/java/current">Java SDK</a> for <a href="http://www.couchbase.com/">Couchbase</a>, we use Netty to establish and maintain a streaming connection to one of the cluster nodes in order to get notified when topology changes happen. This streaming connection needs to be established during the bootstrap process of the client and we need to block until the connection is established (actually we don&rsquo;t need to, but the current implementation works that way). The old implementation to acquire the Channel looked like this:</p>
-
 <pre><code>ClientBootstrap bootstrap = new ClientBootstrap(factory);
 bootstrap.setPipelineFactory(new BucketMonitorPipelineFactory());
 ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
@@ -77,14 +93,10 @@ if (!future.isSuccess()) {
   throw new ConnectionException(&quot;Something bad happened...&quot;);
 }
 </code></pre>
-
 <p>This works great, but there is a problem associated that is not obvious in the first place. As long as you use this code only in a client side context, Netty will not complain and happily work with your code. When people started to use our client library inside a Netty based server framework (for example <a href="http://www.playframework.com/">Play</a>), Netty complained like this:</p>
-
 <pre><code>Unexpected exception[IllegalStateException: await*() in I/O thread causes a dead lock or sudden performance drop. Use addListener() instead or call await*() from a different thread.]
 </code></pre>
-
 <p>The environment where this happens is clearly defined: we are bootstrapping a Netty client inside the I/O thread of a Netty server, so we basically have two Netty environments running and one is complaining about the other. Once you are aware of this situation, it is more or less easy to fix:</p>
-
 <pre><code>bootstrap = new ClientBootstrap(factory);
 bootstrap.setPipelineFactory(new BucketMonitorPipelineFactory());
 ChannelFuture future =  bootstrap.connect(new InetSocketAddress(host, port));
@@ -100,9 +112,7 @@ channelFuture.addListener(new ChannelFutureListener() {
   }
 });
 </code></pre>
-
 <p>Now, instead of waiting on the caller thread, we move the waiting part to a separate thread managed by the Netty execution context. There&rsquo;s only one problem left: we still need to block, because the code down the stack depends on a established Channel to work with. To solve this issue, we can use a <a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/CountDownLatch.html">CountDownLatch</a> like this:</p>
-
 <pre><code>final CountDownLatch channelLatch = new CountDownLatch(1);
 channelFuture.addListener(new ChannelFutureListener() {
   @Override
@@ -124,39 +134,16 @@ try {
     + &quot;connection to arrive.&quot;);
 }
 </code></pre>
-
 <p>In the end we still block on the caller thread, but we are compliant with Netty. The main takeaway for me is that you should never block on acquiring Channels in Netty, just because of the fact that your client side code may be used in a server side context as well. This is especially true for library developers like me.</p>
 
     </div>
-
-    <div id="disqus_thread"></div>
-<script type="application/javascript">
-    var disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "daschl" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
-
+ 
     <ul class="article-taxonomy">
-       
+      
+    
+      
       <li>
-        <i class="fa fa-tags"></i>
-        <a href="/%20tags/%20java">java</a>
-        <a href="/%20tags/%20couchbase">couchbase</a>
-        <a href="/%20tags/%20netty">netty</a>
+        <i class="fa fa-tags"></i><a href="/tags/java">java</a><a href="/tags/couchbase">couchbase</a><a href="/tags/netty">netty</a>
       </li>
       
   </article>
@@ -166,30 +153,24 @@ try {
 <footer class="footer">
   <ul class="footer-links">
     <li>
-      <a href="https://nitschinger.at/index.xml" type="application/rss+xml" target="_blank">
-        <i class="fa fa-rss"></i> RSS feed</a>
+      <a href="/atom.xml" type="application/atom+xml" target="_blank"><i class="fa fa-rss"></i> Atom feed</a>
     </li>
     <li>
-      <a href="https://github.com/mobybit/hugo-natrium-theme">
-        <i class="fa fa-github"></i> Built with Hugo &amp; Natrium Theme</a>
+      <a href="https://github.com/daschl"><i class="fa fa-github"></i> GitHub</a>
+    </li>
+    <li>
+      <a href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
+    </li>
+    <li>
+      <a href="https://www.linkedin.com/in/michaelnitschinger/"><i class="fa fa-linkedin"></i> LinkedIn</a>
     </li>
   </ul>
 </footer>
 
 </div>
 
-<script>
-  (function (i, s, o, g, r, a, m) {
-    i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
-      (i[r].q = i[r].q || []).push(arguments)
-    }, i[r].l = 1 * new Date(); a = s.createElement(o),
-      m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
-  })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
 
-  ga('create', 'UA-19686689-1', 'auto');
-  ga('send', 'pageview');
-  ga('set', 'anonymizeIp', true);
-</script>
+
 </body>
 
 </html>

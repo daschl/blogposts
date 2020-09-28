@@ -3,11 +3,10 @@
   <head>
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Hugo 0.54.0" />
+<meta name="generator" content="Hugo 0.74.3" />
 
 
-<title>What&#39;s new in the Couchbase Java SDK 1.2 - daschl writes. sometimes.</title>
-<meta property="og:title" content="What&#39;s new in the Couchbase Java SDK 1.2 - daschl writes. sometimes.">
+<title>What&#39;s new in the Couchbase Java SDK 1.2 – daschl writes. sometimes.</title>
 
 
 
@@ -18,6 +17,28 @@
 
 
 
+<link href="/atom.xml" rel="alternate" type="application/atom+xml" title="daschl writes. sometimes." />
+
+<meta property="og:title" content="What&#39;s new in the Couchbase Java SDK 1.2" />
+<meta property="og:description" content="Read on to see whats new in the latest Couchbase Java SDK!" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://nitschinger.at/What-s-new-in-the-Couchbase-Java-SDK-1-2/" />
+<meta property="article:published_time" content="2013-10-11T00:00:00+00:00" />
+<meta property="article:modified_time" content="2013-10-11T00:00:00+00:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="What&#39;s new in the Couchbase Java SDK 1.2"/>
+<meta name="twitter:description" content="Read on to see whats new in the latest Couchbase Java SDK!"/>
+
+<meta itemprop="name" content="What&#39;s new in the Couchbase Java SDK 1.2">
+<meta itemprop="description" content="Read on to see whats new in the latest Couchbase Java SDK!">
+<meta itemprop="datePublished" content="2013-10-11T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2013-10-11T00:00:00+00:00" />
+<meta itemprop="wordCount" content="1401">
+
+
+
+<meta itemprop="keywords" content="java,couchbase," />
 
 
 <link rel="stylesheet" href="https://nitschinger.at/css/main.css" media="all">
@@ -28,30 +49,27 @@
     <div class="wrapper">
       <header class="header">
         <nav class="nav">
-  <a href="https://nitschinger.at/" class="nav-title">
-    daschl blogs. sometimes.
+  <a href="https://nitschinger.at/" class="nav-logo">
+    <img src="https://nitschinger.at/images/"
+         width="" 
+         height="" 
+         alt="">
   </a>
+  <a href="https://nitschinger.at/" class="nav-title">daschl writes. sometimes.</a>
 
   <ul class="nav-links">
     
-    <li>
-      <a href="/tags">tags</a>
-    </li>
+    <li><a href="/tags">tags</a></li>
     
-    <li>
-      <a href="/imprint/">imprint</a>
-    </li>
+    <li><a href="/imprint/">imprint</a></li>
     
-    <li>
-      <a href="https://twitter.com/daschl">-&gt; twitter</a>
-    </li>
+    <li><a href="https://twitter.com/daschl">-&gt; twitter</a></li>
     
-    <li>
-      <a href="https://github.com/daschl">-&gt; github</a>
-    </li>
+    <li><a href="https://github.com/daschl">-&gt; github</a></li>
     
   </ul>
 </nav>
+
       </header>
 
 
@@ -59,20 +77,14 @@
   <article class="article">
     <h1 class="article-title">What&#39;s new in the Couchbase Java SDK 1.2</h1>
     
-    <span class="article-date">2013-10-11</span>
+    <span class="article-date">11 October 2013</span>
     
 
     <div class="article-content">
-      
-
-<p>For all users of our Java SDK, we prepared some nice additions for you. This post covers them in detail and shows how you can get more productive.</p>
-
+      <p>For all users of our Java SDK, we prepared some nice additions for you. This post covers them in detail and shows how you can get more productive.</p>
 <p>Note that this blog post assumes you are running the 1.2.1 release, because there have been some slight changes between 1.2.0 and 1.2.1 that affect for example the listener support and metrics collection.</p>
-
 <h2 id="maven-central-distribution">Maven Central Distribution</h2>
-
 <p>From the 1.2.0 release forward, the Java SDK is distributed directly from Maven Central. This means that you don&rsquo;t need to include the Couchbase repository anymore. The following maven code is enough to get started (note that the groupId has changed):</p>
-
 <pre><code>&lt;dependencies&gt;
     &lt;dependency&gt;
         &lt;groupId&gt;com.couchbase.client&lt;/groupId&gt;
@@ -81,22 +93,16 @@
     &lt;/dependency&gt;
 &lt;/dependencies&gt;
 </code></pre>
-
 <p>This will automatically load the latest spymemcached dependency in as well (for 1.2.0 it&rsquo;s 2.10.0). Before we dig into what has changed, <a href="http://docs.couchbase.com/couchbase-sdk-java-1.2/#release-notes-for-couchbase-client-library-java-120-ga-13-september-2013">here</a> are the release notes for a quick reference.</p>
-
 <h2 id="listener-support">Listener Support</h2>
-
 <p>Until now, there were two ways to get the result of an asynchronous request. Either by blocking the current thread like so:</p>
-
 <pre><code>// do an async operation (returns immediately)
 OperationFuture&lt;Boolean&gt; setFuture = client.set(&quot;key&quot;, &quot;value&quot;);
 
 // block the current thread
 Boolean result = setFuture.get();
 </code></pre>
-
 <p>Or to loop on the non-blocking future methods. This is especially helpful if you are dealing with a list of futures.</p>
-
 <pre><code>List&lt;OperationFuture&lt;Boolean&gt;&gt; futures = new ArrayList&lt;OperationFuture&lt;Boolean&gt;&gt;();
 for (int i = 0; i &lt; 100; i++) {
   futures.add(client.set(&quot;key-&quot; + i, &quot;value&quot;));
@@ -112,9 +118,7 @@ while (!futures.isEmpty()) {
   }
 }
 </code></pre>
-
 <p>Now since 1.2.0, there is a new way to deal with responses - adding listeners. The idea is to supply a callback to the future which will be executed once the operation is done. A simple example is shown here:</p>
-
 <pre><code>OperationFuture&lt;Boolean&gt; setFuture = client.set(&quot;key&quot;, &quot;value&quot;);
 setFuture.addListener(new OperationCompletionListener() {
   @Override
@@ -123,9 +127,7 @@ setFuture.addListener(new OperationCompletionListener() {
   }
 });
 </code></pre>
-
 <p>Note that the <code>.get()</code> method on the future will not block anymore because the result is already computed. Whatever you put in the callback method will be executed asynchronously on the thread pool. To see how flexible that approach is, let&rsquo;s rewrite the example from above waiting until the 100 futures are done.</p>
-
 <pre><code>final CountDownLatch latch = new CountDownLatch(100);
 for (int i = 0; i &lt; 100; i++) {
   OperationFuture&lt;Boolean&gt; future = client.set(&quot;key-&quot; + i, &quot;value&quot;);
@@ -138,11 +140,8 @@ for (int i = 0; i &lt; 100; i++) {
 }
 latch.await();
 </code></pre>
-
 <p>Here we are using a <a href="http://docs.oracle.com/javase/7/docs/api/java/util/concurrent/CountDownLatch.html">CountDownLatch</a> which waits on the current thread as long as it has been counted down a hundred times. Exactly what we need in our situation, but the code is much easier to read. More importantly, its much more flexible because other things like firing off a new request, querying a web service or calculating a result can be done.</p>
-
 <p>It is also possible to override the default <code>ExecutorService</code> implementation with a custom one. This may be needed if the default behavior (Basically a upper-bounded cachedThreadPool) does not suite your needs. Also, you should use this approach if you create a bunch of <code>CouchbaseClient</code> instances so you can share the same service across all of them.</p>
-
 <pre><code>// Create the Builder
 CouchbaseConnectionFactoryBuilder builder = new CouchbaseConnectionFactoryBuilder();
 
@@ -154,32 +153,23 @@ builder.setListenerExecutorService(service);
 // Create the instance
 CouchbaseClient client = new CouchbaseClient(builder.buildCouchbaseConnection(...));
 </code></pre>
-
 <h2 id="enhanced-profiling-capabilities">Enhanced Profiling Capabilities</h2>
-
 <p>Getting insight into a running application is always difficult, so we set out to make it easier for you. We incorporated a library called <a href="http://metrics.codahale.com/">metrics</a> that profiles, depending on the configuration level chosen.</p>
-
 <p>Before you can use it, you need to add this optional dependency:</p>
-
 <pre><code>&lt;dependency&gt;
     &lt;groupId&gt;com.codahale.metrics&lt;/groupId&gt;
     &lt;artifactId&gt;metrics-core&lt;/artifactId&gt;
     &lt;version&gt;3.0.1&lt;/version&gt;
 &lt;/dependency&gt;
 </code></pre>
-
 <p>On the builder, there is a method that allows you to activate the the profiler:</p>
-
 <pre><code>CouchbaseConnectionFactoryBuilder builder = new CouchbaseConnectionFactoryBuilder();
 
 // enable metric collection
 builder.setEnableMetrics(MetricType.PERFORMANCE);
 </code></pre>
-
 <p>If you look at the <code>MetricType</code> enumeration you can see that there are three types of values you can choose from: OFF (which keeps metric collection off), PERFORMANCE (which only collects performance-relevant metrics) and DEBUG (which collects all kinds of metrics, including the performance ones). While the metrics library is quite efficient, keep in mind that metric collection takes some resources away from your application.</p>
-
 <p>By default, the metric information will be printed out on the console every 30 seconds. You can run the following test code from your IDE and see how it looks:</p>
-
 <pre><code>CouchbaseConnectionFactoryBuilder builder = new CouchbaseConnectionFactoryBuilder();
 builder.setEnableMetrics(MetricType.PERFORMANCE);
 
@@ -193,9 +183,7 @@ while(true) {
   Thread.sleep(100);
 }
 </code></pre>
-
 <p>Now wait 30 seconds and you&rsquo;ll see output like this in the console:</p>
-
 <pre><code>  10/8/13 12:04:14 PM ============================================================
 
   -- Histograms ------------------------------------------------------------------
@@ -249,25 +237,15 @@ while(true) {
        1-minute rate = 9.85 events/second
        5-minute rate = 9.68 events/second
       15-minute rate = 9.63 events/second
-</code></pre>
-
-<p>I won&rsquo;t go into detail of all these metrics in this blog post, please refer to the documentation for a more complete picture. One more thing I want to show you is that the metrics library is also able to expose these metrics through JMX. All you need to do is set a system property that changes the output mode: <code>net.spy.metrics.reporter.type=jmx</code>. Other possible settings are <code>csv</code> and slf4j<code>. If you choose a logger that prints out information at a given interval you can change it by setting</code>net.spy.metrics.reporter.interval` to anything else than 30.</p>
-
+</code></pre><p>I won&rsquo;t go into detail of all these metrics in this blog post, please refer to the documentation for a more complete picture. One more thing I want to show you is that the metrics library is also able to expose these metrics through JMX. All you need to do is set a system property that changes the output mode: <code>net.spy.metrics.reporter.type=jmx</code>. Other possible settings are <code>csv</code> and slf4j<code>. If you choose a logger that prints out information at a given interval you can change it by setting </code>net.spy.metrics.reporter.interval` to anything else than 30.</p>
 <p>So if you put the line <code>System.setProperty(&quot;net.spy.metrics.reporter.type&quot;, &quot;jmx&quot;);</code> before the code shown above, you can open (for example) jConsole and switch to the MBeans tab of the application. You&rsquo;ll see a <code>metrics</code> subsection exposed that contains the same metrics as they would show up in the logs.</p>
-
 <h2 id="cas-with-timeout">CAS with Timeout</h2>
-
 <p>Before 1.2.0, it was not possible in one command to do a <code>cas</code> update and set a new timeout at the same time. You had to do a second <code>touch</code> operation which was not efficient nor atomic. Now, the API exposes a new <code>cas()</code> method that allows you to pass in the timeout at the same time. It is easy to use:</p>
-
 <pre><code>client.cas(&quot;key&quot;, cas, nexExpiration, value);
 </code></pre>
-
 <p>The asynchronous variations have been exposed since 1.2.1 as well.</p>
-
 <h2 id="initializing-through-properties">Initializing through Properties</h2>
-
 <p>One thing that comes in handy if your cluster ip addresses change often is that you can now initialize a <code>CouchbaseClient</code> object based on system properties. Here is an example:</p>
-
 <pre><code>System.setProperty(&quot;cbclient.nodes&quot;, &quot;http://127.0.0.1:8091/pools&quot;);
 System.setProperty(&quot;cbclient.bucket&quot;, &quot;default&quot;);
 System.setProperty(&quot;cbclient.password&quot;, &quot;&quot;);
@@ -276,9 +254,7 @@ CouchbaseConnectionFactoryBuilder builder = new CouchbaseConnectionFactoryBuilde
 CouchbaseConnectionFactory cf = builder.buildCouchbaseConnection();
 CouchbaseClient client = new CouchbaseClient(cf);
 </code></pre>
-
 <p>Of course you can set these properties in your application container or during startup, so it&rsquo;s very flexible and not tied into your code directly. Note that if you forget to set one of these properties, the code will warn you like this:</p>
-
 <pre><code>Exception in thread &quot;main&quot; java.lang.IllegalArgumentException: System property cbclient.nodes not set or empty
     at com.couchbase.client.CouchbaseConnectionFactory.&lt;init&gt;(CouchbaseConnectionFactory.java:160)
     at com.couchbase.client.CouchbaseConnectionFactoryBuilder$2.&lt;init&gt;(CouchbaseConnectionFactoryBuilder.java:318)
@@ -289,43 +265,18 @@ CouchbaseClient client = new CouchbaseClient(cf);
     at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
     at java.lang.reflect.Method.invoke(Method.java:601)
     at com.intellij.rt.execution.application.AppMain.main(AppMain.java:120)
-</code></pre>
-
-<h2 id="other-changes">Other Changes</h2>
-
+</code></pre><h2 id="other-changes">Other Changes</h2>
 <p>In addition to the enhancements shown above, the release includes - as always - numerous smaller bugfixes. The default poll interval for <code>ReplicateTo</code> and <code>PersistTo</code> has been lowered to <code>10ms</code> to account for performance changes that went into the Couchbase Sever 2.2 release. Also, the client now uses the <code>CRAM-MD5</code> authentication mechanism automatically if the server supports it (since 2.2 as well).</p>
-
 <p>These awesome new features should be enough reason to upgrade right now! If anything pops up that doesn&rsquo;t work as expected, please ask customer support or open a ticket <a href="http://www.couchbase.com/issues/browse/JCBC">here</a>.</p>
 
     </div>
-
-    <div id="disqus_thread"></div>
-<script type="application/javascript">
-    var disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "daschl" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
-
+ 
     <ul class="article-taxonomy">
-       
+      
+    
+      
       <li>
-        <i class="fa fa-tags"></i>
-        <a href="/%20tags/%20java">java</a>
-        <a href="/%20tags/%20couchbase">couchbase</a>
+        <i class="fa fa-tags"></i><a href="/tags/java">java</a><a href="/tags/couchbase">couchbase</a>
       </li>
       
   </article>
@@ -335,30 +286,24 @@ CouchbaseClient client = new CouchbaseClient(cf);
 <footer class="footer">
   <ul class="footer-links">
     <li>
-      <a href="https://nitschinger.at/index.xml" type="application/rss+xml" target="_blank">
-        <i class="fa fa-rss"></i> RSS feed</a>
+      <a href="/atom.xml" type="application/atom+xml" target="_blank"><i class="fa fa-rss"></i> Atom feed</a>
     </li>
     <li>
-      <a href="https://github.com/mobybit/hugo-natrium-theme">
-        <i class="fa fa-github"></i> Built with Hugo &amp; Natrium Theme</a>
+      <a href="https://github.com/daschl"><i class="fa fa-github"></i> GitHub</a>
+    </li>
+    <li>
+      <a href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
+    </li>
+    <li>
+      <a href="https://www.linkedin.com/in/michaelnitschinger/"><i class="fa fa-linkedin"></i> LinkedIn</a>
     </li>
   </ul>
 </footer>
 
 </div>
 
-<script>
-  (function (i, s, o, g, r, a, m) {
-    i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
-      (i[r].q = i[r].q || []).push(arguments)
-    }, i[r].l = 1 * new Date(); a = s.createElement(o),
-      m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
-  })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
 
-  ga('create', 'UA-19686689-1', 'auto');
-  ga('send', 'pageview');
-  ga('set', 'anonymizeIp', true);
-</script>
+
 </body>
 
 </html>

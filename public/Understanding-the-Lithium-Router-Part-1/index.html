@@ -3,11 +3,10 @@
   <head>
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Hugo 0.54.0" />
+<meta name="generator" content="Hugo 0.74.3" />
 
 
-<title>Understanding the Lithium Router - Part 1 - daschl writes. sometimes.</title>
-<meta property="og:title" content="Understanding the Lithium Router - Part 1 - daschl writes. sometimes.">
+<title>Understanding the Lithium Router - Part 1 – daschl writes. sometimes.</title>
 
 
 
@@ -18,6 +17,28 @@
 
 
 
+<link href="/atom.xml" rel="alternate" type="application/atom+xml" title="daschl writes. sometimes." />
+
+<meta property="og:title" content="Understanding the Lithium Router - Part 1" />
+<meta property="og:description" content="In this article series we&#39;ll take an in-depth look at the Lithium router. This first part bootstraps your knowledge and lays a foundation for more advanced topics." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://nitschinger.at/Understanding-the-Lithium-Router-Part-1/" />
+<meta property="article:published_time" content="2011-02-05T00:00:00+00:00" />
+<meta property="article:modified_time" content="2011-02-05T00:00:00+00:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Understanding the Lithium Router - Part 1"/>
+<meta name="twitter:description" content="In this article series we&#39;ll take an in-depth look at the Lithium router. This first part bootstraps your knowledge and lays a foundation for more advanced topics."/>
+
+<meta itemprop="name" content="Understanding the Lithium Router - Part 1">
+<meta itemprop="description" content="In this article series we&#39;ll take an in-depth look at the Lithium router. This first part bootstraps your knowledge and lays a foundation for more advanced topics.">
+<meta itemprop="datePublished" content="2011-02-05T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2011-02-05T00:00:00+00:00" />
+<meta itemprop="wordCount" content="1715">
+
+
+
+<meta itemprop="keywords" content="php,lithium,routing," />
 
 
 <link rel="stylesheet" href="https://nitschinger.at/css/main.css" media="all">
@@ -28,30 +49,27 @@
     <div class="wrapper">
       <header class="header">
         <nav class="nav">
-  <a href="https://nitschinger.at/" class="nav-title">
-    daschl blogs. sometimes.
+  <a href="https://nitschinger.at/" class="nav-logo">
+    <img src="https://nitschinger.at/images/"
+         width="" 
+         height="" 
+         alt="">
   </a>
+  <a href="https://nitschinger.at/" class="nav-title">daschl writes. sometimes.</a>
 
   <ul class="nav-links">
     
-    <li>
-      <a href="/tags">tags</a>
-    </li>
+    <li><a href="/tags">tags</a></li>
     
-    <li>
-      <a href="/imprint/">imprint</a>
-    </li>
+    <li><a href="/imprint/">imprint</a></li>
     
-    <li>
-      <a href="https://twitter.com/daschl">-&gt; twitter</a>
-    </li>
+    <li><a href="https://twitter.com/daschl">-&gt; twitter</a></li>
     
-    <li>
-      <a href="https://github.com/daschl">-&gt; github</a>
-    </li>
+    <li><a href="https://github.com/daschl">-&gt; github</a></li>
     
   </ul>
 </nav>
+
       </header>
 
 
@@ -59,56 +77,34 @@
   <article class="article">
     <h1 class="article-title">Understanding the Lithium Router - Part 1</h1>
     
-    <span class="article-date">2011-02-05</span>
+    <span class="article-date">5 February 2011</span>
     
 
     <div class="article-content">
-      
-
-<h3 id="introduction">Introduction</h3>
-
+      <h3 id="introduction">Introduction</h3>
 <p>The router is an integral part of the framework and has two main purposes. The first one is to match a URL against a set of previously connected routes, the second one is to generate a URL from a set of arguments (reverse routing). The router itself is very flexible as we&rsquo;ll see later on, but getting started is pretty easy. Lithium comes with a set of sensible default routes that help you to get on track immediately. While developing, you can always add, modify or remove routes and the application will instantly take these changes into account. When you are running in production mode, routes should be cached for performance reasons, because compiling and analyzing routes takes some time for every request. We&rsquo;ll see how this works in one of the upcoming posts.</p>
-
 <p>At the time of writing, there is no full featured guide available. Nevertheless, Lithium provides an extensive API documentation that covers nearly every aspect of the routing system. For your convenience, here are some short links to <a href="http://lithify.me/docs/lithium/net/http/Router">the Router</a> and <a href="http://lithify.me/docs/lithium/net/http/Route">the Route</a> classes. Usually a good place for examples are unit tests, and the core developers worked hard to implement high code coverage and extensive unit tests. You can find them online <a href="http://dev.lithify.me/lithium/source/libraries/lithium/tests/cases/net/http">here</a>.</p>
-
-<h4 id="the-request-response-cycle">The Request/Response-Cycle</h4>
-
+<h4 id="the-requestresponse-cycle">The Request/Response-Cycle</h4>
 <p>Before we dive into the router itself, it would be a good idea to take a look where the router is placed in the request/response-cycle and how it participates in the typical dispatching process.</p>
-
 <p>The index.php-Page creates a new request object and hands it over to the dispatcher. The dispatcher hands this request object over to the router, who matches it against his connected routes and returns parameters that tell the dispatcher which controller and action to execute. If no matching route is found, an exception is raised. The dispatcher then instantiates the correct Controller object, which returns - after processing the associated models, controller actions and views - a response object. The dispatcher then sends the headers
 and the content of the response object back to the browser.</p>
-
 <p>After reading this, you may notice that the flow of the request and response objects is really straightforward. It is possible to modify or exchange every part of this dispatching process, so you have the full flexibility at your fingertips if you need it.</p>
-
 <p>The whole Lithium routing functionality is organized in separate classes that perform distinct operations. Two classes mainly participate in the routing process. The <code>lithium\net\http\Router</code> has one or more  instances of <code>lithium\net\http\Route</code> connected to itself. When the router has to route the request, it iterates over the connected routes and checks if one of them match. The routes are checked in the same order as they&rsquo;re connected, so the first match wins the race. Therefore you need to be careful when designing your routes, as this may have some impact on your performance. When no matching routes are found (and no default routes are in place), then a <code>lithium\net\http\RoutingException</code> is raised. We&rsquo;ll use this behavior in the second part to render a 404-Page.</p>
-
 <p>Enough talk, let&rsquo;s get started.</p>
-
 <h3 id="basics-first">Basics First</h3>
-
 <p>Usually, there is only one file you&rsquo;ll need to modify when you want to add or modify your application routes. The <code>app/config/routes.php</code> file is part of the bootstrap process and connects your routes to the router. If you open the file, you&rsquo;ll see that there are already a few routes defined. We&rsquo;ll look at them route by route, because they cover most of the syntax we&rsquo;ll usually need.</p>
-
 <p>We always use the  <code>Router::connect()</code> method if we want to bind a given URL to a set of parameters. The first route is also called the &ldquo;root&rdquo;, because this route will be used if the user hits your application with no additional parameters (like <code>http://www.example.com</code>).</p>
-
 <pre><code>Router::connect('/', array('Pages::view', 'args' =&gt; array('home')));
 </code></pre>
-
 <p>The <code>Router::connect()</code> method expects at least one argument, two more can also be specified. We&rsquo;ll see more of them in later examples. The first argument is a string with the URL, the second one can be just a string or an array with information on how to map the URL to controllers and actions. For the first route, when the user hits the application with the root URL &ldquo;/&rdquo;, the <code>app\controllers\PagesController</code> and its <code>view</code> action is called. Additionally, a &ldquo;args&rdquo; param with the value &lsquo;home&rsquo; is passed to the controller. This argument is used afterwards in the controller action to render the <code>home</code> view. Of course this is not necessary, but it showcases the flexibility of routes.</p>
-
 <p>The next route connects URLs like <code>/pages/foo</code> or <code>/pages/bar</code> to the PagesController and the view action.</p>
-
 <pre><code>Router::connect('/pages/{:args}', 'Pages::view');
 </code></pre>
-
 <p>If you re-read the first route now, you should see obvious similarities. These two routes call the same controller and the same action, but the first route sets the <code>args</code> param to a static value, while the second route sets it dynamically (based on the request). You can also pass an array as the second argument, which can give you more flexibility. The equal method call with an array passed as the second argument would look like this:</p>
-
 <pre><code>Router::connect('/pages/{:args}', array('controller' =&gt; 'pages', 'action' =&gt; 'view'));
 </code></pre>
-
 <p>This way of calling <code>Router::connect()</code>allows you to specify more arguments, but if you only need to route to a Controller/Action combination without further arguments, the first example is much shorter and as a result way easier to read.</p>
-
 <p>The <code>{:args}</code> string acts as a placeholder, so let&rsquo;s have a look at the controller and see how he uses the passed arguments (<code>app\controllers\PagesController</code>).</p>
-
 <pre><code>public function view() {
     $path = func_get_args();
 
@@ -118,34 +114,23 @@ and the content of the response object back to the browser.</p>
     $this-&gt;render(array('template' =&gt; join('/', $path)));
 }
 </code></pre>
-
 <p>The <code>args</code> keyword defined in the route is passed to the view action as a param. If no path was set, the action sets it to &ldquo;home&rdquo;. Afterwards, the correct template is rendered. This is just one way to use the passed arguments, we&rsquo;ll see different methods in a minute.</p>
-
 <p>The next code snippet connects testing routes, but only when we are not in the production environment. You see that the routing system is flexible enough to take other conditions of the environment into account.</p>
-
 <pre><code>if (!Environment::is('production')) {
     Router::connect('/test/{:args}', array('controller' =&gt; 'lithium\test\Controller'));
     Router::connect('/test', array('controller' =&gt; 'lithium\test\Controller'));
 }
 </code></pre>
-
 <p>By default, Lithium searches for the controller in the <code>app\controllers</code> namespace, so if you want to specify a controller in a different path, you&rsquo;ll need to give Lithium the fully namespaced path (for example if you need to match a route against a controller in a plugin). These two routes match <code>/test</code> and also <code>/test/lithium/tests/cases/action/ControllerTest</code>.</p>
-
 <p>The last routes you&rsquo;ll find in the <code>routes.php</code> file are the so called &ldquo;default routes&rdquo;. Because of the fact that route matching occurs in the same order as they are connected, they need to be connected at last (otherwise these routes would always match every request).</p>
-
 <pre><code>Router::connect('/{:controller}/{:action}/{:id:[0-9]+}.{:type}', array('id' =&gt; null));
 Router::connect('/{:controller}/{:action}/{:id:[0-9]+}');
 Router::connect('/{:controller}/{:action}/{:args}');
 </code></pre>
-
 <p>The <code>{:controller}</code>, <code>{:action}</code>and <code>{:type}</code> keywords are treated specially. These three keywords are used by the router to dynamically find and match the correct Controller/Action combination and render the result as the correct <code>lithium\net\http\Media</code>-type. If a optional <code>{:id}</code> is given, it is also passed down to the action. By convention, if no action is given <code>YourController::index()</code> is assumed. The default routes also make it easy to define a separate output type (like JSON or XML), which can be used to render the data in an other format instead of HTML. If you want to learn more about this feature, be sure to read my blog post about <a href="http://nitschinger.at/Add-an-RSS-Feed-to-your-blog-with-Lithium">&ldquo;Adding an RSS Feed to your blog with Lithium&rdquo;</a>.</p>
-
 <p>These default routes match nearly everything, like <code>/posts</code>, <code>/posts/show/4</code> or <code>/posts/index.json</code>. This default routes work perfectly with ids generated by MySQL auto increment (or anything similar), but it doesn&rsquo;t work with MongoDB-IDs. Check out my blog post about <a href="http://nitschinger.at/Lithium-Routes-And-Mongo-DB">&ldquo;Lithium Routes And MongoDB&rdquo;</a>.</p>
-
 <p>To understand the routing process full-stack, we also need to investigate how we can access the <code>Request</code>-object and its params. In the next snippet you&rsquo;ll find various examples of routes and how their params can be used in your controller. They always follow the same schema, so once you get used to it you should not need to look up the documentation again.</p>
-
 <p>The slug-route is a bit more complex for now, but we&rsquo;ll cover these kind of routes in the next part.</p>
-
 <pre><code>/**
  * connects the root URL to the PostsController and the &quot;index&quot;-action.
  */
@@ -178,57 +163,28 @@ public function show() {
     return compact('post');
 }
 </code></pre>
-
 <h4 id="generating-urls">Generating URLs</h4>
-
 <p>As said previously, the routing infrastructure is not only capable of matching URLs to routes, but also matching a set of given parameters and generate a URL out of them. This technique is called &ldquo;reverse routing&rdquo;. The HTML-Helper for example does this for if you use its <a href="http://lithify.me/docs/lithium/template/helper/Html::link%28%29">&ldquo;link&rdquo;</a>-method. If you want to trigger the reverse routing functionality manually, you can do this by querying the <code>Router::match()</code> method. Here is an example from the Lithium documentation that illustrates this behavior. Both <code>Router::match()</code> queries return the URL &ldquo;/login&rdquo; as a result:</p>
-
 <pre><code>Router::connect('/login', array('controller' =&gt; 'users', 'action' =&gt; 'login'));
 // params as an array
 $url = Router::match(array('controller' =&gt; 'users', 'action' =&gt; 'login'));
 // a more compact syntax
 $url = Router::match('User::login');
 </code></pre>
-
 <p>By using this method to generate URLs, you also make sure that your application is portable and works even if you place the application under a subdirectory on the server.</p>
-
 <h3 id="wrapping-up">Wrapping Up</h3>
-
 <p>After reading this post you should have a basic understanding on how the router works and how it participates in the whole request/response cycle. The next posts will cover more advanced topics like testing routes,
 <a href="http://en.wikipedia.org/wiki/Representational_State_Transfer">REST</a>ful routes, namespaces/prefixes, bypassing the framework altogether, catching exceptions and even various production deployment considerations.</p>
-
 <p>If you want to read about a specific topic, feel free to comment below. Any feedback would be also greatly appreciated. Lastly, special thanks to <a href="http://twitter.com/#!/nateabele">@nateabele</a> for reading through this post and providing important feedback.</p>
 
     </div>
-
-    <div id="disqus_thread"></div>
-<script type="application/javascript">
-    var disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "daschl" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
-
+ 
     <ul class="article-taxonomy">
-       
+      
+    
+      
       <li>
-        <i class="fa fa-tags"></i>
-        <a href="/%20tags/%20php">php</a>
-        <a href="/%20tags/%20lithium">lithium</a>
-        <a href="/%20tags/%20routing">routing</a>
+        <i class="fa fa-tags"></i><a href="/tags/php">php</a><a href="/tags/lithium">lithium</a><a href="/tags/routing">routing</a>
       </li>
       
   </article>
@@ -238,30 +194,24 @@ $url = Router::match('User::login');
 <footer class="footer">
   <ul class="footer-links">
     <li>
-      <a href="https://nitschinger.at/index.xml" type="application/rss+xml" target="_blank">
-        <i class="fa fa-rss"></i> RSS feed</a>
+      <a href="/atom.xml" type="application/atom+xml" target="_blank"><i class="fa fa-rss"></i> Atom feed</a>
     </li>
     <li>
-      <a href="https://github.com/mobybit/hugo-natrium-theme">
-        <i class="fa fa-github"></i> Built with Hugo &amp; Natrium Theme</a>
+      <a href="https://github.com/daschl"><i class="fa fa-github"></i> GitHub</a>
+    </li>
+    <li>
+      <a href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
+    </li>
+    <li>
+      <a href="https://www.linkedin.com/in/michaelnitschinger/"><i class="fa fa-linkedin"></i> LinkedIn</a>
     </li>
   </ul>
 </footer>
 
 </div>
 
-<script>
-  (function (i, s, o, g, r, a, m) {
-    i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
-      (i[r].q = i[r].q || []).push(arguments)
-    }, i[r].l = 1 * new Date(); a = s.createElement(o),
-      m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
-  })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
 
-  ga('create', 'UA-19686689-1', 'auto');
-  ga('send', 'pageview');
-  ga('set', 'anonymizeIp', true);
-</script>
+
 </body>
 
 </html>

@@ -3,11 +3,10 @@
   <head>
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Hugo 0.54.0" />
+<meta name="generator" content="Hugo 0.74.3" />
 
 
-<title>Writing a simple lexer in PHP - daschl writes. sometimes.</title>
-<meta property="og:title" content="Writing a simple lexer in PHP - daschl writes. sometimes.">
+<title>Writing a simple lexer in PHP – daschl writes. sometimes.</title>
 
 
 
@@ -18,6 +17,28 @@
 
 
 
+<link href="/atom.xml" rel="alternate" type="application/atom+xml" title="daschl writes. sometimes." />
+
+<meta property="og:title" content="Writing a simple lexer in PHP" />
+<meta property="og:description" content="This post shows you how to write a simple regex lexer in PHP." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://nitschinger.at/Writing-a-simple-lexer-in-PHP/" />
+<meta property="article:published_time" content="2012-05-10T00:00:00+00:00" />
+<meta property="article:modified_time" content="2012-05-10T00:00:00+00:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Writing a simple lexer in PHP"/>
+<meta name="twitter:description" content="This post shows you how to write a simple regex lexer in PHP."/>
+
+<meta itemprop="name" content="Writing a simple lexer in PHP">
+<meta itemprop="description" content="This post shows you how to write a simple regex lexer in PHP.">
+<meta itemprop="datePublished" content="2012-05-10T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2012-05-10T00:00:00+00:00" />
+<meta itemprop="wordCount" content="1268">
+
+
+
+<meta itemprop="keywords" content="php,regex,lexer,parser," />
 
 
 <link rel="stylesheet" href="https://nitschinger.at/css/main.css" media="all">
@@ -28,30 +49,27 @@
     <div class="wrapper">
       <header class="header">
         <nav class="nav">
-  <a href="https://nitschinger.at/" class="nav-title">
-    daschl blogs. sometimes.
+  <a href="https://nitschinger.at/" class="nav-logo">
+    <img src="https://nitschinger.at/images/"
+         width="" 
+         height="" 
+         alt="">
   </a>
+  <a href="https://nitschinger.at/" class="nav-title">daschl writes. sometimes.</a>
 
   <ul class="nav-links">
     
-    <li>
-      <a href="/tags">tags</a>
-    </li>
+    <li><a href="/tags">tags</a></li>
     
-    <li>
-      <a href="/imprint/">imprint</a>
-    </li>
+    <li><a href="/imprint/">imprint</a></li>
     
-    <li>
-      <a href="https://twitter.com/daschl">-&gt; twitter</a>
-    </li>
+    <li><a href="https://twitter.com/daschl">-&gt; twitter</a></li>
     
-    <li>
-      <a href="https://github.com/daschl">-&gt; github</a>
-    </li>
+    <li><a href="https://github.com/daschl">-&gt; github</a></li>
     
   </ul>
 </nav>
+
       </header>
 
 
@@ -59,62 +77,41 @@
   <article class="article">
     <h1 class="article-title">Writing a simple lexer in PHP</h1>
     
-    <span class="article-date">2012-05-10</span>
+    <span class="article-date">10 May 2012</span>
     
 
     <div class="article-content">
-      
-
-<h1 id="introduction">Introduction</h1>
-
+      <h1 id="introduction">Introduction</h1>
 <p>A lot of developers avoid writing parsers because they think it&rsquo;s pretty hard to do so. Writing an efficient parser for a general purpose language (like PHP, Ruby, Java,&hellip;) is hard, but fortunately, most of the time we don&rsquo;t need that much complexity. Typically we just want to parse input coming from config files or from a specific problem domain (expressed through DSLs). DSLs (Domain Specific Languages) are pretty cool, because they allow you to express logic and flow in a very specific and convenient way for a limited set of tasks.</p>
-
 <p>For example, if you want to map a Route in Lithium to a controller/action, it looks like this:</p>
-
 <pre><code>Router::connect('/login', array('Sessions::add'));
 </code></pre>
-
 <p>Pretty short, but we can do better. Consider the following DSL syntax I just made up:</p>
-
 <pre><code>map /login -&gt; Sessions::add
 </code></pre>
-
 <p>By using a notation like this, it is easer to grasp what&rsquo;s going on, because we can avoid all the PHP specifics like its array or method syntax. Another benefit is that someone who can write a DSL file doesn&rsquo;t need to know the underlying language which implements it. If a Java-guy likes our language, he can write a parser for it as well and the DSL doesn&rsquo;t need to change at all. In our example it doesn&rsquo;t make sense, but the <a href="https://github.com/cucumber/gherkin">Gherkin</a> DSL for behaviour driven development has been ported to various languages. The original implementation was done in Ruby for the <a href="http://cukes.info/">Cucumber</a> project and the <a href="http://behat.org/">Behat</a> project ported it over to PHP.</p>
-
 <p>Okay, back to our example. This is cool, but how can we transform the latter line, so that it executes our original PHP command? We can either explode it by whitespace and then mess around finding the correct keywords. Or, we can write write an interpreter. A compiler (or interpreter) normally consists mainly of two things: a lexer and a parser. The lexer transforms the raw source into a stream of tokens on which the parser operates on. A parser is normally described by a formal notation like <a href="http://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_Form">EBNF</a> or something along that lines and knows what to do when a specific stream of tokens is found.</p>
-
 <p>Let&rsquo;s take our example from above. The <code>map /login -&gt; Sessions::add</code> may be translated into the following token stream by the lexer (for the sake of simplicity we just display them as tuples):</p>
-
 <pre><code>&lt;T_MAP, &quot;map&quot;&gt;
 &lt;T_URL, &quot;/login&quot;&gt;
 &lt;T_BLOCKSTART, &quot;-&gt;&quot;&gt;
 &lt;T_IDENTIFIER, &quot;Sessions::add&quot;&gt;
 </code></pre>
-
 <p>The parser can parse the following notation (note that this is not EBNF, I&rsquo;ve added regex in <code>[]</code> to keep it simple):</p>
-
-<pre><code>&lt;whitespace&gt;     := [\s]
-&lt;map&gt;            := &quot;map&quot;
-&lt;url&gt;            := [a-z/]
-&lt;blockstart&gt;     := &quot;-&gt;&quot;
-&lt;identifier&gt;     := [a-zA-Z0-9:]
-&lt;mapBlock&gt;       := &lt;map&gt; &lt;whitespace&gt;* &lt;url&gt;+ &lt;whitespace&gt;* &lt;blockstart&gt; &lt;whitespace&gt;* &lt;identifier&gt;+
+<pre><code>&lt;whitespace&gt; 	 := [\s]
+&lt;map&gt; 		 	 := &quot;map&quot;
+&lt;url&gt; 		 	 := [a-z/]
+&lt;blockstart&gt; 	 := &quot;-&gt;&quot;
+&lt;identifier&gt; 	 := [a-zA-Z0-9:]
+&lt;mapBlock&gt; 	 	 := &lt;map&gt; &lt;whitespace&gt;* &lt;url&gt;+ &lt;whitespace&gt;* &lt;blockstart&gt; &lt;whitespace&gt;* &lt;identifier&gt;+
 </code></pre>
-
 <p>Every rule identified by a <code>:=</code>is called a production rule. I leave the parsing part for a later post, because that would be too much for a single posting. Nevertheless, you can see that if the parser finds a <code>mapBlock</code>(which consists of smaller production rules), it knows the <code>identifier</code> and can transform it into the appropriate <code>Router::connect()</code> call.</p>
-
 <p>Note that is up to you if you ignore whitespace in your lexer. This depends on design decisions like if you want to use significant whitespace or not. If you parse it as a separate token, make sure your parser is intelligent enough to skip them later.</p>
-
 <p>Enough theory, let&rsquo;s get started with the lexer.</p>
-
 <h1 id="implementation">Implementation</h1>
-
 <p>The basic idea is that we match a list of regexes against the current line. If one of them matches, we store that token and advance our offset to the first character after the match. If no token is found and we are not yet at the end of the line, raise an exception (because something invalid is in front of our offset).</p>
-
 <p>Let&rsquo;s stick with the example already mentioned above. We want to create tokens for an input file like <code>map /login -&gt; Sessions::add</code> or <code>root -&gt; Pages::home</code>.</p>
-
 <p>The <code>root</code> command maps the <code>/</code>URL (like <code>Router::connect('/', array('Pages::home'));</code> in Lithium). The first thing we need is an array of <a href="http://en.wikipedia.org/wiki/Terminal_and_nonterminal_symbols#Terminal_symbols">terminal symbols</a> that map to token identifiers.</p>
-
 <pre><code>&lt;?php
 class Lexer {
     protected static $_terminals = array(
@@ -129,12 +126,10 @@ class Lexer {
 }
 ?&gt;
 </code></pre>
-
 <p>Now, let&rsquo;s implement a <code>run</code> method that accepts an array of source lines and returns an array of tokens. It calls the helper <code>_match</code> method that performs the actual matching and raises an exception if no token was found.</p>
-
 <pre><code>public static function run($source) {
     $tokens = array();
-
+	
     foreach($source as $number =&gt; $line) {            
         $offset = 0;
         while($offset &lt; strlen($line)) {
@@ -146,13 +141,11 @@ class Lexer {
             $offset += strlen($result['match']);
         }
     }
-
+	
     return $tokens;
 }
 </code></pre>
-
 <p>Note that how we advance the offset further every iteration and work towards the end of the string. To get the full picture, here&rsquo;s the <code>_match</code> helper method.</p>
-
 <pre><code>protected static function _match($line, $number, $offset) {
     $string = substr($line, $offset);
 
@@ -169,19 +162,14 @@ class Lexer {
     return false;
 }
 </code></pre>
-
 <p>We use the <code>preg_match</code> method to check if one of our pattern matches the current string. If you look closely, you can see that all of our regexes start at the beginning of the line (<code>^</code>) and
 are enclosed (<code>()</code>) so we can find them exactly at the beginning and get the inner content. We also store the current line, because we need it in our parser and to display helpful error messages.</p>
-
 <p>Let&rsquo;s run our lexer with some example input:</p>
-
 <pre><code>$input = array('root -&gt; Foo::bar');
 $result = Lexer::run($input);
 var_dump($result);
 </code></pre>
-
 <p>We should get the following output:</p>
-
 <pre><code>array
   0 =&gt; 
     array
@@ -219,54 +207,24 @@ var_dump($result);
       'token' =&gt; string 'T_IDENTIFIER' (length=12)
       'line' =&gt; int 1
 </code></pre>
-
 <p>We got a stream of tokens that represents our source file. Let&rsquo;s run it with invalid input:</p>
-
 <pre><code>$input = array('root -&gt; ?invalid');
 $result = Lexer::run($input);
 </code></pre>
-
 <p>This raises an exception with the message <code>Unable to parse line 1.</code>.</p>
-
 <h1 id="wrapping-up">Wrapping Up</h1>
-
 <p>One thing you need to be aware of is that you need to place your token regex in the correct order - namely from special to general. If we put the <code>T_IDENTIFIER</code> before <code>T_ROOT</code>, the <code>root</code> keyword would always be matched as an identifier. While I haven&rsquo;t tried it out yet,<a href="https://twitter.com/#!/nikita_ppv">Nikita Popov</a> <a href="http://nikic.github.com/2011/10/23/Improving-lexing-performance-in-PHP.html">points out</a> that compiling all regexes into a big one leads to better performance.</p>
-
 <p>Writing a simple lexer is not hard and (in my opinion) very flexible. If you need more  in your DSL, just add new regex &lt;-&gt; token mappings. I&rsquo;d recommend to start with a small amount of tokens and writing unit-tests for each of them. If you add more tokens, add more unit tests, so you can be sure that your rules don&rsquo;t override each other and everything still works as expected.</p>
-
 <p>As always, if you have feedback, ideas or improvements, let me know!</p>
 
     </div>
-
-    <div id="disqus_thread"></div>
-<script type="application/javascript">
-    var disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "daschl" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
-
+ 
     <ul class="article-taxonomy">
-       
+      
+    
+      
       <li>
-        <i class="fa fa-tags"></i>
-        <a href="/%20tags/%20php">php</a>
-        <a href="/%20tags/%20regex">regex</a>
-        <a href="/%20tags/%20lexer">lexer</a>
-        <a href="/%20tags/%20parser">parser</a>
+        <i class="fa fa-tags"></i><a href="/tags/php">php</a><a href="/tags/regex">regex</a><a href="/tags/lexer">lexer</a><a href="/tags/parser">parser</a>
       </li>
       
   </article>
@@ -276,30 +234,24 @@ $result = Lexer::run($input);
 <footer class="footer">
   <ul class="footer-links">
     <li>
-      <a href="https://nitschinger.at/index.xml" type="application/rss+xml" target="_blank">
-        <i class="fa fa-rss"></i> RSS feed</a>
+      <a href="/atom.xml" type="application/atom+xml" target="_blank"><i class="fa fa-rss"></i> Atom feed</a>
     </li>
     <li>
-      <a href="https://github.com/mobybit/hugo-natrium-theme">
-        <i class="fa fa-github"></i> Built with Hugo &amp; Natrium Theme</a>
+      <a href="https://github.com/daschl"><i class="fa fa-github"></i> GitHub</a>
+    </li>
+    <li>
+      <a href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
+    </li>
+    <li>
+      <a href="https://www.linkedin.com/in/michaelnitschinger/"><i class="fa fa-linkedin"></i> LinkedIn</a>
     </li>
   </ul>
 </footer>
 
 </div>
 
-<script>
-  (function (i, s, o, g, r, a, m) {
-    i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
-      (i[r].q = i[r].q || []).push(arguments)
-    }, i[r].l = 1 * new Date(); a = s.createElement(o),
-      m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
-  })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
 
-  ga('create', 'UA-19686689-1', 'auto');
-  ga('send', 'pageview');
-  ga('set', 'anonymizeIp', true);
-</script>
+
 </body>
 
 </html>

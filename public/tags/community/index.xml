@@ -1,9 +1,9 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Community on daschl writes. sometimes.</title>
+    <title>community on daschl writes. sometimes.</title>
     <link>https://nitschinger.at/tags/community/</link>
-    <description>Recent content in Community on daschl writes. sometimes.</description>
+    <description>Recent content in community on daschl writes. sometimes.</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Wed, 22 Jun 2011 00:00:00 +0000</lastBuildDate>
@@ -21,7 +21,8 @@
 Authentication &amp;amp; Security li3_access: Access control library by tmaiaroto.
 li3_ids: Intrusion detection integration (phpids) by weluse.
 li3_oauth: OAuth library by gwoo.
-APIs and Externals li3_delayed_job: Ruby&amp;rsquo;s Delayed::Job port to Lithium by cgarvis.</description>
+APIs and Externals li3_delayed_job: Ruby&amp;rsquo;s Delayed::Job port to Lithium by cgarvis.
+li3_facebook: Facebook API wrapper by tmaiaroto.</description>
     </item>
     
   </channel>

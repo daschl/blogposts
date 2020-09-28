@@ -3,11 +3,10 @@
   <head>
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Hugo 0.54.0" />
+<meta name="generator" content="Hugo 0.74.3" />
 
 
-<title>Accessing Couchbase from Scala - daschl writes. sometimes.</title>
-<meta property="og:title" content="Accessing Couchbase from Scala - daschl writes. sometimes.">
+<title>Accessing Couchbase from Scala – daschl writes. sometimes.</title>
 
 
 
@@ -18,6 +17,28 @@
 
 
 
+<link href="/atom.xml" rel="alternate" type="application/atom+xml" title="daschl writes. sometimes." />
+
+<meta property="og:title" content="Accessing Couchbase from Scala" />
+<meta property="og:description" content="This post shows you how to access your Couchbase server from Scala." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://nitschinger.at/Accessing-Couchbase-from-Scala/" />
+<meta property="article:published_time" content="2012-04-26T00:00:00+00:00" />
+<meta property="article:modified_time" content="2012-04-26T00:00:00+00:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Accessing Couchbase from Scala"/>
+<meta name="twitter:description" content="This post shows you how to access your Couchbase server from Scala."/>
+
+<meta itemprop="name" content="Accessing Couchbase from Scala">
+<meta itemprop="description" content="This post shows you how to access your Couchbase server from Scala.">
+<meta itemprop="datePublished" content="2012-04-26T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2012-04-26T00:00:00+00:00" />
+<meta itemprop="wordCount" content="714">
+
+
+
+<meta itemprop="keywords" content="couchbase,scala," />
 
 
 <link rel="stylesheet" href="https://nitschinger.at/css/main.css" media="all">
@@ -28,30 +49,27 @@
     <div class="wrapper">
       <header class="header">
         <nav class="nav">
-  <a href="https://nitschinger.at/" class="nav-title">
-    daschl blogs. sometimes.
+  <a href="https://nitschinger.at/" class="nav-logo">
+    <img src="https://nitschinger.at/images/"
+         width="" 
+         height="" 
+         alt="">
   </a>
+  <a href="https://nitschinger.at/" class="nav-title">daschl writes. sometimes.</a>
 
   <ul class="nav-links">
     
-    <li>
-      <a href="/tags">tags</a>
-    </li>
+    <li><a href="/tags">tags</a></li>
     
-    <li>
-      <a href="/imprint/">imprint</a>
-    </li>
+    <li><a href="/imprint/">imprint</a></li>
     
-    <li>
-      <a href="https://twitter.com/daschl">-&gt; twitter</a>
-    </li>
+    <li><a href="https://twitter.com/daschl">-&gt; twitter</a></li>
     
-    <li>
-      <a href="https://github.com/daschl">-&gt; github</a>
-    </li>
+    <li><a href="https://github.com/daschl">-&gt; github</a></li>
     
   </ul>
 </nav>
+
       </header>
 
 
@@ -59,7 +77,7 @@
   <article class="article">
     <h1 class="article-title">Accessing Couchbase from Scala</h1>
     
-    <span class="article-date">2012-04-26</span>
+    <span class="article-date">26 April 2012</span>
     
 
     <div class="article-content">
@@ -70,9 +88,7 @@ material <a href="http://www.couchbase.com/docs/couchbase-manual-2.0/couchbase-g
 <a href="https://github.com/harrah/xsbt">sbt</a> already installed. The <a href="http://typesafe.com/stack">typesafe stack</a> provides a convenient shortcut to get you
 up and running in minutes, so check it out if you haven&rsquo;t already. For the purpos of simplicity, I assume that your Couchbase instance runs on
 <code>localhost</code>. If it runs elswhere, just modify the URI string later accordingly.</p>
-
 <p>Let&rsquo;s create the standard directory structure for our project. We&rsquo;ll use sbt to manage our dependencies, so create a <code>build.sbt</code> file too.</p>
-
 <pre><code>/couchbase-scala
     /src
         /main
@@ -80,9 +96,7 @@ up and running in minutes, so check it out if you haven&rsquo;t already. For the
                 Main.scala
     build.sbt
 </code></pre>
-
 <p>Let&rsquo;s write the <code>build.sbt</code> first:</p>
-
 <pre><code>name := &quot;couchbase-scala&quot;
 
 version := &quot;1.0&quot;
@@ -93,20 +107,15 @@ resolvers += &quot;Couchbase Maven Repository&quot; at &quot;http://files.couchb
 
 libraryDependencies += &quot;couchbase&quot; % &quot;couchbase-client&quot; % &quot;1.1-dp&quot;
 </code></pre>
-
 <p>We need to add the <a href="http://files.couchbase.com/maven2">Couchbase Maven Repository</a> to our resolvers list, since it contains the Couchbase package and all
 its dependencies. The last line adds the actual dependency. If you want the (older) stable release, use &ldquo;1.0.2&rdquo; instead of &ldquo;1.1-dp&rdquo;. Tip: you can browse the
 repository directly in your browser and see what versions are available.</p>
-
 <p>Let&rsquo;s add a simple <code>Main</code> object in <code>Main.scala</code>:</p>
-
 <pre><code>object Main extends App {
     println(&quot;Hello World&quot;)
 }
 </code></pre>
-
 <p>Now, start sbt and run the application for the first time:</p>
-
 <pre><code>couchbase-scala$ sbt
 &gt; run
 ** ((Omitting Fetch and Compile Output)) **
@@ -114,11 +123,9 @@ repository directly in your browser and see what versions are available.</p>
 Hello World
 [success] Total time: 4 s, completed 24.04.2012 11:01:33
 </code></pre>
-
 <p>I&rsquo;ve omited the part where sbt resolves our dependencies and compiles the libraries, but the output should look like the one above. Now that we have all our
 dependencies in place, we can start talking to the Couchbase server. Here&rsquo;s a short example with synchronous set and get operations (note that no exception
 handling takes place here):</p>
-
 <pre><code>import collection.JavaConversions._ 
 import collection.mutable.ArrayBuffer
 
@@ -130,17 +137,15 @@ import com.couchbase.client.CouchbaseClient;
 object Main extends App {
     val uris = ArrayBuffer(URI.create(&quot;http://127.0.0.1:8091/pools&quot;))
     val client = new CouchbaseClient(uris, &quot;default&quot;, &quot;&quot;)
-
+	
     client.set(&quot;hello&quot;, 0, &quot;world&quot;)
     println(&quot;Receiving -&gt; &quot; + client.get(&quot;hello&quot;))
-
+	
     client.shutdown()
     System.exit(0)
 }
 </code></pre>
-
 <p>Save the file, type <code>run</code> again in sbt and you should get the following output (you only need to leave the REPL if you&rsquo;ve changed the <code>build.sbt</code> file):</p>
-
 <pre><code>[info] Compiling 1 Scala source to &lt;Path\to\Sourcecode&gt;\couchbase-scala\target\scala-2.9.2\classes...
 [info] Running Main
 2012-04-24 11:05:11.850 INFO com.couchbase.client.CouchbaseConnection:  Added {QA sa=/127.0.0.1:11210, #Rops=0, #Wops=0, #iq=0, topRop=null, topWop=null, toWrite=0, interested=0} to connect queue
@@ -153,63 +158,33 @@ Receiving -&gt; world
 2012-04-24 11:05:12.374 INFO com.couchbase.client.ViewNode:  Couchbase I/O reactor terminated
 [success] Total time: 6 s, completed 24.04.2012 11:05:12
 </code></pre>
-
 <p>You see all the Couchbase log messages here, because the default logger logs directly to STDOUT. Right in the middle you can see the output of our synchronous <a href="http://www.couchbase.com/docs/couchbase-sdk-java-1.1/couchbase-sdk-java-retrieve-get.html#table-couchbase-sdk_java_get">get</a> operation. You should also see the
 created document in your Couchbase <a href="http://localhost:8091/index.html#sec=documents&amp;bucketName=default">default bucket</a>.</p>
-
 <p>Let&rsquo;s go through the main code line by line and see what&rsquo;s going on.</p>
-
-<pre><code>val uris = ArrayBuffer(URI.create(&quot;http://127.0.0.1:8091/pools&quot;))   
+<pre><code>val uris = ArrayBuffer(URI.create(&quot;http://127.0.0.1:8091/pools&quot;))	
 val client = new CouchbaseClient(uris, &quot;default&quot;, &quot;&quot;)
 </code></pre>
-
-<p>The <code>CouchbaseClient</code> accepts a list of URIs to communicate with as the first argument (you need to import <code>collection.JavaConversions._</code>, so that <code>ÀrrayBuffer</code> gets
+<p>The <code>CouchbaseClient</code> accepts a list of URIs to communicate with as the first argument (you need to import <code>collection.JavaConversions._ </code>, so that <code>ÀrrayBuffer</code> gets
 converted to a <code>java.util.List</code>). The second argument is the bucket name, the third one is an optional bucket password (which is always empty for the <code>default</code> one).</p>
-
 <pre><code>client.set(&quot;hello&quot;, 0, &quot;world&quot;)
 println(&quot;Receiving -&gt; &quot; + client.get(&quot;hello&quot;))
 </code></pre>
-
 <p>We can now throw all commands at the client, be it synchronous or asynchronous ones. You can find all supported methods <a href="http://www.couchbase.com/docs/couchbase-sdk-java-1.1/api-reference-summary.html">here</a>.</p>
-
 <pre><code>client.shutdown()
 </code></pre>
-
 <p>Finally, we close the connection to the server. You can pass optional timeouts here, so that the client waits for the given amount of time before it finally closes the connection.
 This allows asynchronous commands to finish first.</p>
-
 <p>This post was a very basic introduction on using Couchbase from Scala. The next post will translate the <a href="http://www.couchbase.com/docs/couchbase-sdk-java-1.1/tutorial.html">tutorial</a> to Scala. As always, I&rsquo;m open to suggestions and
 improvements!</p>
 
     </div>
-
-    <div id="disqus_thread"></div>
-<script type="application/javascript">
-    var disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "daschl" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
-
+ 
     <ul class="article-taxonomy">
-       
+      
+    
+      
       <li>
-        <i class="fa fa-tags"></i>
-        <a href="/%20tags/%20couchbase">couchbase</a>
-        <a href="/%20tags/%20scala">scala</a>
+        <i class="fa fa-tags"></i><a href="/tags/couchbase">couchbase</a><a href="/tags/scala">scala</a>
       </li>
       
   </article>
@@ -219,30 +194,24 @@ improvements!</p>
 <footer class="footer">
   <ul class="footer-links">
     <li>
-      <a href="https://nitschinger.at/index.xml" type="application/rss+xml" target="_blank">
-        <i class="fa fa-rss"></i> RSS feed</a>
+      <a href="/atom.xml" type="application/atom+xml" target="_blank"><i class="fa fa-rss"></i> Atom feed</a>
     </li>
     <li>
-      <a href="https://github.com/mobybit/hugo-natrium-theme">
-        <i class="fa fa-github"></i> Built with Hugo &amp; Natrium Theme</a>
+      <a href="https://github.com/daschl"><i class="fa fa-github"></i> GitHub</a>
+    </li>
+    <li>
+      <a href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
+    </li>
+    <li>
+      <a href="https://www.linkedin.com/in/michaelnitschinger/"><i class="fa fa-linkedin"></i> LinkedIn</a>
     </li>
   </ul>
 </footer>
 
 </div>
 
-<script>
-  (function (i, s, o, g, r, a, m) {
-    i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
-      (i[r].q = i[r].q || []).push(arguments)
-    }, i[r].l = 1 * new Date(); a = s.createElement(o),
-      m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
-  })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
 
-  ga('create', 'UA-19686689-1', 'auto');
-  ga('send', 'pageview');
-  ga('set', 'anonymizeIp', true);
-</script>
+
 </body>
 
 </html>

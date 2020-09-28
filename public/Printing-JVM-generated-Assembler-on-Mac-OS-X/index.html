@@ -3,11 +3,10 @@
   <head>
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Hugo 0.54.0" />
+<meta name="generator" content="Hugo 0.74.3" />
 
 
-<title>Printing JVM generated Assembler on Mac OS X - daschl writes. sometimes.</title>
-<meta property="og:title" content="Printing JVM generated Assembler on Mac OS X - daschl writes. sometimes.">
+<title>Printing JVM generated Assembler on Mac OS X – daschl writes. sometimes.</title>
 
 
 
@@ -18,6 +17,28 @@
 
 
 
+<link href="/atom.xml" rel="alternate" type="application/atom+xml" title="daschl writes. sometimes." />
+
+<meta property="og:title" content="Printing JVM generated Assembler on Mac OS X" />
+<meta property="og:description" content="A quick tutorial on how to get a handle on the assembly code produced by the JVM on OS X." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://nitschinger.at/Printing-JVM-generated-Assembler-on-Mac-OS-X/" />
+<meta property="article:published_time" content="2013-06-24T00:00:00+00:00" />
+<meta property="article:modified_time" content="2013-06-24T00:00:00+00:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Printing JVM generated Assembler on Mac OS X"/>
+<meta name="twitter:description" content="A quick tutorial on how to get a handle on the assembly code produced by the JVM on OS X."/>
+
+<meta itemprop="name" content="Printing JVM generated Assembler on Mac OS X">
+<meta itemprop="description" content="A quick tutorial on how to get a handle on the assembly code produced by the JVM on OS X.">
+<meta itemprop="datePublished" content="2013-06-24T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2013-06-24T00:00:00+00:00" />
+<meta itemprop="wordCount" content="486">
+
+
+
+<meta itemprop="keywords" content="java,jvm,assembler," />
 
 
 <link rel="stylesheet" href="https://nitschinger.at/css/main.css" media="all">
@@ -28,30 +49,27 @@
     <div class="wrapper">
       <header class="header">
         <nav class="nav">
-  <a href="https://nitschinger.at/" class="nav-title">
-    daschl blogs. sometimes.
+  <a href="https://nitschinger.at/" class="nav-logo">
+    <img src="https://nitschinger.at/images/"
+         width="" 
+         height="" 
+         alt="">
   </a>
+  <a href="https://nitschinger.at/" class="nav-title">daschl writes. sometimes.</a>
 
   <ul class="nav-links">
     
-    <li>
-      <a href="/tags">tags</a>
-    </li>
+    <li><a href="/tags">tags</a></li>
     
-    <li>
-      <a href="/imprint/">imprint</a>
-    </li>
+    <li><a href="/imprint/">imprint</a></li>
     
-    <li>
-      <a href="https://twitter.com/daschl">-&gt; twitter</a>
-    </li>
+    <li><a href="https://twitter.com/daschl">-&gt; twitter</a></li>
     
-    <li>
-      <a href="https://github.com/daschl">-&gt; github</a>
-    </li>
+    <li><a href="https://github.com/daschl">-&gt; github</a></li>
     
   </ul>
 </nav>
+
       </header>
 
 
@@ -59,116 +77,80 @@
   <article class="article">
     <h1 class="article-title">Printing JVM generated Assembler on Mac OS X</h1>
     
-    <span class="article-date">2013-06-24</span>
+    <span class="article-date">24 June 2013</span>
     
 
     <div class="article-content">
       <p>Thankfully, the JVM abstracts all of the nitty gritty details from us. Sometimes though, we need to peel off the first layers and see what&rsquo;s going on underneath. If you are curious (and here may be dragons) and want to learn about the actual <a href="http://en.wikipedia.org/wiki/Assembly_language">assembler</a> that your code is generating, the JVM provides mechanisms to inspect it.</p>
-
 <p>Since I wanted to make it work on my development machine and didn&rsquo;t find something comprehensive for Mac, here is how to do it.</p>
-
 <p>First, make sure to have a more or less recent JDK installed. Mac ships with Java 6, but I think you want to upgrade to 7. You can grab the JDK packages from <a href="http://www.oracle.com/technetwork/java/javase/downloads/jdk7-downloads-1880260.html">here</a> if you haven&rsquo;t already.</p>
-
 <pre><code>~ $ java -version
 java version &quot;1.7.0_17&quot;
 Java(TM) SE Runtime Environment (build 1.7.0_17-b02)
 Java HotSpot(TM) 64-Bit Server VM (build 23.7-b01, mixed mode)
 </code></pre>
-
 <p>Now to enable the ASM output, you need to pass in two flags, namely <code>UnlockDiagnosticVMOptions</code> and <code>PrintAssembly</code>. Because the generated ASM is different for each runtime, you need to pass it to the <code>java</code> command and not <code>javac</code>.</p>
-
 <p>Create a very simple script like this and name it <code>Main.java</code>:</p>
-
 <pre><code>public class Main {
     public static void main(String[] args) {
         System.out.println(&quot;Hello World&quot;);
     }
 }
 </code></pre>
-
 <p>Now, we&rsquo;re going to compile and run it with those options:</p>
-
 <pre><code>michael@daschlbook ~/Downloads/java $ javac Main.java &amp;&amp; java -XX:+UnlockDiagnosticVMOptions -XX:+PrintAssembly Main
 Java HotSpot(TM) 64-Bit Server VM warning: PrintAssembly is enabled; turning on DebugNonSafepoints to gain additional output
 Could not load hsdis-amd64.dylib; library not loadable; PrintAssembly is disabled
 Hello World
 </code></pre>
-
 <p>Woops, not what we expected. The code did compile properly, but HotSpot complains about <code>hsdis-amd64.dylib</code>. I had to google a bit to find it, but you can download <a href="https://kenai.com/projects/base-hsdis/downloads/download/gnu-versions/hsdis-amd64.dylib">the file</a> from <a href="https://kenai.com/projects/base-hsdis/downloads/directory/gnu-versions">here</a>.</p>
-
 <p>Now we need to put it somewhere to make it loadable, and the easiest thing I found is to put it onto <code>LD_LIBRARY_PATH</code>. Make sure to not override any other settings, but in my case the variable was empty so its straightforward.</p>
-
 <pre><code>export LD_LIBRARY_PATH=~/PathToFile/
 </code></pre>
-
 <p>If you run our command again from before, you should now see &ldquo;beautiful&rdquo; ASM code generated:</p>
-
 <pre><code>michael@daschlbook ~/Downloads/java $ javac Main.java &amp;&amp; java -XX:+UnlockDiagnosticVMOptions -XX:+PrintAssembly Main
 Java HotSpot(TM) 64-Bit Server VM warning: PrintAssembly is enabled; turning on DebugNonSafepoints to gain additional output
 Loaded disassembler from hsdis-amd64.dylib
 Decoding compiled method 0x000000010ac74150:
-  0x000000010ac742ba: add   [eax], al
+  0x000000010ac742ba: add	[eax], al
 [Disassembling for mach='i386(base-hsdis)']
 [Entry Point]
 [Constants]
   # {method} 'hashCode' '()I' in 'java/lang/String'
   #           [sp+0x30]  (sp of caller)
-  0x000000010ac742a0: inc   esp
-  0x000000010ac742a1: mov   edx, [esi+0x8]
-  0x000000010ac742a4: dec   ecx
-  0x000000010ac742a5: shl   edx, 3
-  0x000000010ac742a8: dec   ecx
-  0x000000010ac742a9: cmp   eax, edx
-  0x000000010ac742ab: jnz   0x000000000ac4ba60  ;   {runtime_call}
+  0x000000010ac742a0: inc	esp
+  0x000000010ac742a1: mov	edx, [esi+0x8]
+  0x000000010ac742a4: dec	ecx
+  0x000000010ac742a5: shl	edx, 3
+  0x000000010ac742a8: dec	ecx
+  0x000000010ac742a9: cmp	eax, edx
+  0x000000010ac742ab: jnz	0x000000000ac4ba60  ;   {runtime_call}
   0x000000010ac742b1: nop
-  0x000000010ac742b4: invalid   0x0f #size=0
-  0x000000010ac742b5: pop   ds
-  0x000000010ac742b6: test  [eax], al
-  0x000000010ac742b8: add   [eax], al
-  0x000000010ac742ba: add   [eax], al
+  0x000000010ac742b4: invalid	0x0f #size=0
+  0x000000010ac742b5: pop	ds
+  0x000000010ac742b6: test	[eax], al
+  0x000000010ac742b8: add	[eax], al
+  0x000000010ac742ba: add	[eax], al
   0x000000010ac742bc: nop
 [Verified Entry Point]
-  0x000000010ac742c0: mov   [esp-0x14000], eax
-  0x000000010ac742c7: push  ebp
-  0x000000010ac742c8: dec   eax
-  0x000000010ac742c9: sub   esp, 0x0000000000000020
+  0x000000010ac742c0: mov	[esp-0x14000], eax
+  0x000000010ac742c7: push	ebp
+  0x000000010ac742c8: dec	eax
+  0x000000010ac742c9: sub	esp, 0x0000000000000020
                                                 ;*synchronization entry
                                                 ; - java.lang.String::hashCode@-1 (line 1446)
 ...
 </code></pre>
-
 <p>Now I guess this is were the real fun starts, happy debugging!</p>
 
     </div>
-
-    <div id="disqus_thread"></div>
-<script type="application/javascript">
-    var disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "daschl" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
-
+ 
     <ul class="article-taxonomy">
-       
+      
+    
+      
       <li>
-        <i class="fa fa-tags"></i>
-        <a href="/%20tags/%20java">java</a>
-        <a href="/%20tags/%20jvm">jvm</a>
-        <a href="/%20tags/%20assembler">assembler</a>
+        <i class="fa fa-tags"></i><a href="/tags/java">java</a><a href="/tags/jvm">jvm</a><a href="/tags/assembler">assembler</a>
       </li>
       
   </article>
@@ -178,30 +160,24 @@ Decoding compiled method 0x000000010ac74150:
 <footer class="footer">
   <ul class="footer-links">
     <li>
-      <a href="https://nitschinger.at/index.xml" type="application/rss+xml" target="_blank">
-        <i class="fa fa-rss"></i> RSS feed</a>
+      <a href="/atom.xml" type="application/atom+xml" target="_blank"><i class="fa fa-rss"></i> Atom feed</a>
     </li>
     <li>
-      <a href="https://github.com/mobybit/hugo-natrium-theme">
-        <i class="fa fa-github"></i> Built with Hugo &amp; Natrium Theme</a>
+      <a href="https://github.com/daschl"><i class="fa fa-github"></i> GitHub</a>
+    </li>
+    <li>
+      <a href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
+    </li>
+    <li>
+      <a href="https://www.linkedin.com/in/michaelnitschinger/"><i class="fa fa-linkedin"></i> LinkedIn</a>
     </li>
   </ul>
 </footer>
 
 </div>
 
-<script>
-  (function (i, s, o, g, r, a, m) {
-    i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
-      (i[r].q = i[r].q || []).push(arguments)
-    }, i[r].l = 1 * new Date(); a = s.createElement(o),
-      m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
-  })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
 
-  ga('create', 'UA-19686689-1', 'auto');
-  ga('send', 'pageview');
-  ga('set', 'anonymizeIp', true);
-</script>
+
 </body>
 
 </html>

@@ -3,11 +3,10 @@
   <head>
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Hugo 0.54.0" />
+<meta name="generator" content="Hugo 0.74.3" />
 
 
-<title>New Features in the Couchbase Java Client 1.1-dp4 - daschl writes. sometimes.</title>
-<meta property="og:title" content="New Features in the Couchbase Java Client 1.1-dp4 - daschl writes. sometimes.">
+<title>New Features in the Couchbase Java Client 1.1-dp4 – daschl writes. sometimes.</title>
 
 
 
@@ -18,6 +17,28 @@
 
 
 
+<link href="/atom.xml" rel="alternate" type="application/atom+xml" title="daschl writes. sometimes." />
+
+<meta property="og:title" content="New Features in the Couchbase Java Client 1.1-dp4" />
+<meta property="og:description" content="This post shows off some of the new features shipped with the new Couchbase Java Client 1.1 release." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://nitschinger.at/New-Features-in-the-Couchbase-Java-Client-1-1-dp4/" />
+<meta property="article:published_time" content="2012-11-07T00:00:00+00:00" />
+<meta property="article:modified_time" content="2012-11-07T00:00:00+00:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="New Features in the Couchbase Java Client 1.1-dp4"/>
+<meta name="twitter:description" content="This post shows off some of the new features shipped with the new Couchbase Java Client 1.1 release."/>
+
+<meta itemprop="name" content="New Features in the Couchbase Java Client 1.1-dp4">
+<meta itemprop="description" content="This post shows off some of the new features shipped with the new Couchbase Java Client 1.1 release.">
+<meta itemprop="datePublished" content="2012-11-07T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2012-11-07T00:00:00+00:00" />
+<meta itemprop="wordCount" content="1257">
+
+
+
+<meta itemprop="keywords" content="couchbase,java,sdk," />
 
 
 <link rel="stylesheet" href="https://nitschinger.at/css/main.css" media="all">
@@ -28,30 +49,27 @@
     <div class="wrapper">
       <header class="header">
         <nav class="nav">
-  <a href="https://nitschinger.at/" class="nav-title">
-    daschl blogs. sometimes.
+  <a href="https://nitschinger.at/" class="nav-logo">
+    <img src="https://nitschinger.at/images/"
+         width="" 
+         height="" 
+         alt="">
   </a>
+  <a href="https://nitschinger.at/" class="nav-title">daschl writes. sometimes.</a>
 
   <ul class="nav-links">
     
-    <li>
-      <a href="/tags">tags</a>
-    </li>
+    <li><a href="/tags">tags</a></li>
     
-    <li>
-      <a href="/imprint/">imprint</a>
-    </li>
+    <li><a href="/imprint/">imprint</a></li>
     
-    <li>
-      <a href="https://twitter.com/daschl">-&gt; twitter</a>
-    </li>
+    <li><a href="https://twitter.com/daschl">-&gt; twitter</a></li>
     
-    <li>
-      <a href="https://github.com/daschl">-&gt; github</a>
-    </li>
+    <li><a href="https://github.com/daschl">-&gt; github</a></li>
     
   </ul>
 </nav>
+
       </header>
 
 
@@ -59,35 +77,23 @@
   <article class="article">
     <h1 class="article-title">New Features in the Couchbase Java Client 1.1-dp4</h1>
     
-    <span class="article-date">2012-11-07</span>
+    <span class="article-date">7 November 2012</span>
     
 
     <div class="article-content">
-      
-
-<h2 id="introduction">Introduction</h2>
-
+      <h2 id="introduction">Introduction</h2>
 <p>The latest <a href="http://www.couchbase.com/develop/java/next">Java Developer Preview (dp4)</a> is hot off the press, and therefore I thought it would be a good idea to show you how to use some of the brand-new features that are now available. This post will show you how to use the new <code>ComplexKey</code> class for view queries and also how to create and delete buckets directly from your SDK.</p>
-
 <p>First, we added a very flexible way of providing parameters to view queries. The idea is that, instead of having to deal with JSON strings on your own, you can pass in Java objects and the appropriate JSON string will be created for you. While it may not sound like a big deal first, this also frees you from the worries about encoding it properly so that it can be transferred over HTTP. Before we dig into the inner workings, lets first start with a basic example on how to create a view query.</p>
-
 <p>Every time you query a view, you need to create a <code>Query</code> and a <code>View</code> object. The <code>View</code> both  object defines the name of the design document and the view, and the <code>Query</code> object allows you to control the params that you can supply with the query.</p>
-
 <pre><code>View myview = client.getView(&quot;designdoc&quot;, &quot;viewname&quot;);
 </code></pre>
-
 <p>Instead of creating the <code>View</code> object directly, you use the <code>getView()</code> method on the client object. It is important to know that the SDK actually fetches view information from the server and will throw an exception if either the design document name or the view name are not found. An exception typically looks like this:</p>
-
 <pre><code>com.couchbase.client.protocol.views.InvalidViewException: Could not load view &quot;viewname&quot; for design doc &quot;designdoc&quot;
 </code></pre>
-
 <p>Now that we have our view created, let&rsquo;s instantiate a query object:</p>
-
 <pre><code>Query myquery = new Query();
 </code></pre>
-
 <p>If you don&rsquo;t specify anything else, the query object will work with the default settings. This means that no reduce function will be used and the full documents are not included. If you want to change these settings (or others), the <code>Query</code> instance provides setter methods for all of them. If you want to find out more, look at the SDK documentation or at the <a href="http://www.couchbase.com/docs/couchbase-manual-2.0/couchbase-views-querying-rest-api.html">Couchbase Server manual</a>. Basically, you can control everything that you could too while querying a view from the Couchbase UI. Here are some examples:</p>
-
 <pre><code>// Include the full documents as well
 myquery.setIncludeDocs(true);
 
@@ -97,23 +103,16 @@ myquery.setReduce(true);
 // Set the group level
 myquery.setGroupLevel(2);
 </code></pre>
-
 <p>Note that it doesn&rsquo;t make sense to include the full documents and run the reduce phase, since you don&rsquo;t have document references left after the reduce phase. If you try to set both to true, the SDK complains with the following exception:</p>
-
 <pre><code>// query.setReduce(true); query.setIncludeDocs(true);
 java.lang.UnsupportedOperationException: Reduced views don't contain documents
 </code></pre>
-
 <p>Also, if your view doesn&rsquo;t contain a reduce function and you set <code>reduce</code> to <code>true</code>, you&rsquo;ll see the following:</p>
-
 <pre><code>// query.setReduce(true); on a view with no reduce function defined.
 java.lang.RuntimeException: This view doesn't contain a reduce function
 </code></pre>
-
 <h2 id="querying-with-complexkeys">Querying with ComplexKeys</h2>
-
 <p>Enough with exceptions, here comes the fun part: some query setter methods not only accept boolean or string arguments, they also allow instances of <code>ComplexKey</code>. <code>ComplexKey</code> takes care of translating your Java objects (or primitives) to their appropriate <a href="http://json.org/">JSON</a> representation. Here is a list of the query methods who support it:</p>
-
 <ul>
 <li>setKey(ComplexKey): Return only documents that match the specified key.</li>
 <li>setKeys(ComplexKey): Return only documents that match each of keys specified within the given array.</li>
@@ -121,9 +120,7 @@ java.lang.RuntimeException: This view doesn't contain a reduce function
 <li>setRangeStart(ComplexKey): Return records with a value equal to or greater than the specified key.</li>
 <li>setRangeEnd(ComplexKey): Stop returning records when the specified key is reached.</li>
 </ul>
-
 <p>An instance of a <code>ComplexKey</code> object is obtained through the static <code>of</code> factory method. When the query object is accessed during the view query, the <code>toJSON()</code> method is called on it and as a result the JSON string is generated. Here are some examples:</p>
-
 <pre><code>// JSON Result: 100
 ComplexKey.of(100);
 
@@ -136,29 +133,20 @@ ComplexKey.of(&quot;Hello&quot;, &quot;World&quot;);
 // JSON Result: [1349360771542,1]
 ComplexKey.of(new Date().getTime(), 1);
 </code></pre>
-
 <p>This means that you don&rsquo;t have to deal with building the proper JSON strings for yourself (and make sure the escaping is correct). All methods except <code>setRange()</code> expect exactly one instance of ComplexKey. For example, if you emit keys with a unix timestamp and you want to fetch all records until now, you could do it like so:</p>
-
 <pre><code>Query query = new Query();
 query.setRangeEnd(ComplexKey.of(new Date().getTime()));
 </code></pre>
-
 <p>When converted to a string to send it over the wire, it would look like this: <code>?endkey=1349361137738</code>. This makes it also very easy to create a full range query:</p>
-
 <pre><code>long now = new Date().getTime();
 long tomorrow = now + 86400;
 Query query = new Query();
 query.setRange(ComplexKey.of(now), ComplexKey.of(tomorrow));
 </code></pre>
-
 <p>This converts to <code>?startkey=1349362647742&amp;endkey=1349362734142</code> on the wire.</p>
-
 <h2 id="bucket-management-through-the-clustermanager">Bucket management through the ClusterManager</h2>
-
 <p>Until now, you&rsquo;d have to <a href="http://www.couchbase.com/docs/couchbase-manual-2.0/couchbase-admin-web-console-data-buckets.html">create and delete buckets</a> either manually through the Couchbase UI or by using the REST API directly. With the addition of the <code>ClusterManager</code>, it is now possible to mange your buckets directly through the SDK, be it for testing purposes or to automatically create them when your code is deployed to a new environment. This can be especially useful if you want to automate bucket management in a staging or CI environment.</p>
-
 <p>The management API is not accessible through <code>CouchbaseClient</code>, but through the <code>ClusterManager</code> class. This is because the <code>CouchbaseClient</code> is bound to a specific bucket and was not designed for management purposes like this. Instead, you create a new instance of the <code>ClusterManager</code> class and pass it a list of URIs and the admin user name and password.</p>
-
 <pre><code>List&lt;URI&gt; uris = new LinkedList&lt;URI&gt;();
 uris.add(URI.create(&quot;http://127.0.0.1:8091/pools&quot;));
 ClusterManager manager = new ClusterManager(uris, &quot;Administrator&quot;, &quot;password&quot;);
@@ -167,9 +155,7 @@ ClusterManager manager = new ClusterManager(uris, &quot;Administrator&quot;, &qu
 
 manager.shutdown();
 </code></pre>
-
 <p>You can now create and delete buckets (of type <code>Couchbase</code> or <code>Memcached</code>). You can also list all available buckets in the Couchbase cluster or flush the bucket (if flush is enabled). Here are some examples:</p>
-
 <pre><code>// Create the default bucket with a 100MB memory limit and 0 replicas.
 manager.createDefaultBucket(BucketType.COUCHBASE, 100, 0);
 
@@ -189,49 +175,21 @@ assertTrue(buckets.contains(&quot;mybucket&quot;));
 // Flush the &quot;default&quot; bucket if flush is enabled
 manager.flushBucket(&quot;default&quot;);
 </code></pre>
-
 <p>Note that creating, deleting and flushing may take some time (from milliseconds to seconds, depending on the cluster load). You can either wait a few seconds before you move on (with a Thread.sleep()), or you can wait until <code>listBuckets()</code> contains your created bucket. There is also a callback-approach (which the client library uses internally to minimize waiting times during tests), but this involves more code on the application side.</p>
-
 <h2 id="wrapping-up">Wrapping up</h2>
-
 <p>This post showed you two brand-new features shipped with the 1.1-dp4 release.</p>
-
 <p>While you can still use string-based keys to run range or key queries, the <code>ComplexKey</code> class hopefully provides a convenient addition to your tool belt. While also useful for primitives and single objects, it makes it much more convenient to create JSON arrays or objects since you don&rsquo;t have to deal with brackets and escaping yourself.</p>
-
 <p>The <code>ClusterManager</code> gives you the flexibility to manage your buckets directly from the SDK to avoid separate HTTP calls or even manual interaction through the UI.</p>
-
 <p>The full release notes are available <a href="http://www.couchbase.com/docs/couchbase-sdk-java-1.1/couchbase-sdk-java-rn_1-1-0d.html">here</a>. As always, we&rsquo;re curious what you say about this and if you encounter bugs or know how to enhance it even more, feel free to comment below, create a ticket or post in the forums!</p>
 
     </div>
-
-    <div id="disqus_thread"></div>
-<script type="application/javascript">
-    var disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "daschl" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
-
+ 
     <ul class="article-taxonomy">
-       
+      
+    
+      
       <li>
-        <i class="fa fa-tags"></i>
-        <a href="/%20tags/%20couchbase">couchbase</a>
-        <a href="/%20tags/%20java">java</a>
-        <a href="/%20tags/%20sdk">sdk</a>
+        <i class="fa fa-tags"></i><a href="/tags/couchbase">couchbase</a><a href="/tags/java">java</a><a href="/tags/sdk">sdk</a>
       </li>
       
   </article>
@@ -241,30 +199,24 @@ manager.flushBucket(&quot;default&quot;);
 <footer class="footer">
   <ul class="footer-links">
     <li>
-      <a href="https://nitschinger.at/index.xml" type="application/rss+xml" target="_blank">
-        <i class="fa fa-rss"></i> RSS feed</a>
+      <a href="/atom.xml" type="application/atom+xml" target="_blank"><i class="fa fa-rss"></i> Atom feed</a>
     </li>
     <li>
-      <a href="https://github.com/mobybit/hugo-natrium-theme">
-        <i class="fa fa-github"></i> Built with Hugo &amp; Natrium Theme</a>
+      <a href="https://github.com/daschl"><i class="fa fa-github"></i> GitHub</a>
+    </li>
+    <li>
+      <a href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
+    </li>
+    <li>
+      <a href="https://www.linkedin.com/in/michaelnitschinger/"><i class="fa fa-linkedin"></i> LinkedIn</a>
     </li>
   </ul>
 </footer>
 
 </div>
 
-<script>
-  (function (i, s, o, g, r, a, m) {
-    i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
-      (i[r].q = i[r].q || []).push(arguments)
-    }, i[r].l = 1 * new Date(); a = s.createElement(o),
-      m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
-  })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
 
-  ga('create', 'UA-19686689-1', 'auto');
-  ga('send', 'pageview');
-  ga('set', 'anonymizeIp', true);
-</script>
+
 </body>
 
 </html>

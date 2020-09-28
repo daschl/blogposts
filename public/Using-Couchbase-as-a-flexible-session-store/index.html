@@ -3,11 +3,10 @@
   <head>
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Hugo 0.54.0" />
+<meta name="generator" content="Hugo 0.74.3" />
 
 
-<title>Using Couchbase as a flexible session store - daschl writes. sometimes.</title>
-<meta property="og:title" content="Using Couchbase as a flexible session store - daschl writes. sometimes.">
+<title>Using Couchbase as a flexible session store – daschl writes. sometimes.</title>
 
 
 
@@ -18,6 +17,28 @@
 
 
 
+<link href="/atom.xml" rel="alternate" type="application/atom+xml" title="daschl writes. sometimes." />
+
+<meta property="og:title" content="Using Couchbase as a flexible session store" />
+<meta property="og:description" content="This post digs into the details of storing and querying session data with Couchbase." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://nitschinger.at/Using-Couchbase-as-a-flexible-session-store/" />
+<meta property="article:published_time" content="2012-06-21T00:00:00+00:00" />
+<meta property="article:modified_time" content="2012-06-21T00:00:00+00:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Using Couchbase as a flexible session store"/>
+<meta name="twitter:description" content="This post digs into the details of storing and querying session data with Couchbase."/>
+
+<meta itemprop="name" content="Using Couchbase as a flexible session store">
+<meta itemprop="description" content="This post digs into the details of storing and querying session data with Couchbase.">
+<meta itemprop="datePublished" content="2012-06-21T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2012-06-21T00:00:00+00:00" />
+<meta itemprop="wordCount" content="2639">
+
+
+
+<meta itemprop="keywords" content="php,couchbase,session," />
 
 
 <link rel="stylesheet" href="https://nitschinger.at/css/main.css" media="all">
@@ -28,30 +49,27 @@
     <div class="wrapper">
       <header class="header">
         <nav class="nav">
-  <a href="https://nitschinger.at/" class="nav-title">
-    daschl blogs. sometimes.
+  <a href="https://nitschinger.at/" class="nav-logo">
+    <img src="https://nitschinger.at/images/"
+         width="" 
+         height="" 
+         alt="">
   </a>
+  <a href="https://nitschinger.at/" class="nav-title">daschl writes. sometimes.</a>
 
   <ul class="nav-links">
     
-    <li>
-      <a href="/tags">tags</a>
-    </li>
+    <li><a href="/tags">tags</a></li>
     
-    <li>
-      <a href="/imprint/">imprint</a>
-    </li>
+    <li><a href="/imprint/">imprint</a></li>
     
-    <li>
-      <a href="https://twitter.com/daschl">-&gt; twitter</a>
-    </li>
+    <li><a href="https://twitter.com/daschl">-&gt; twitter</a></li>
     
-    <li>
-      <a href="https://github.com/daschl">-&gt; github</a>
-    </li>
+    <li><a href="https://github.com/daschl">-&gt; github</a></li>
     
   </ul>
 </nav>
+
       </header>
 
 
@@ -59,40 +77,24 @@
   <article class="article">
     <h1 class="article-title">Using Couchbase as a flexible session store</h1>
     
-    <span class="article-date">2012-06-21</span>
+    <span class="article-date">21 June 2012</span>
     
 
     <div class="article-content">
-      
-
-<p>This post shows you how you can use the <a href="http://www.couchbase.com">Couchbase 2.0 server</a> as a flexible session store. What do I mean by flexible? Well, the combination of a highly scalable key-value store and the possibility to query your data through views allows you to gain unique insight inside your data in near realtime.</p>
-
+      <p>This post shows you how you can use the <a href="http://www.couchbase.com">Couchbase 2.0 server</a> as a flexible session store. What do I mean by flexible? Well, the combination of a highly scalable key-value store and the possibility to query your data through views allows you to gain unique insight inside your data in near realtime.</p>
 <p>Let&rsquo;s look at some obstacles that we as application developers face and then see how we may solve them through Couchbase and its functionality. Of course, there are lots of ways to solve the same problem domain and the solutions provided here may not fit your problem as good as another technology/stack/software. I&rsquo;d love to hear your opinions on this if you have a more elegant or flexible approach with a similar technology.</p>
-
 <h2 id="introduction">Introduction</h2>
-
 <p>The root of all session storage problems is that most web applications need to store some kind of state across pages and HTTP is by design <a href="http://en.wikipedia.org/wiki/Stateless_protocol">stateless</a>. Therefore, we need to use some of the solutions that were invented to fill exactly this gap.</p>
-
 <p>As a developer, you can choose between storing session data either on the client-side or on the server-side. The client-side usually is a synonym for <a href="http://en.wikipedia.org/wiki/HTTP_cookie">cookies</a>, but new technologies like <a href="http://www.html5rocks.com/en/tutorials/offline/storage/">HTML 5 client-side storage</a> slowly emerge. Since cookies are stored on the client-side, they are not under complete control of the application and are therefore a possible security issue (and have size limitations that may be too small for your requirements). Solutions like <a href="http://nitschinger.at/Session-Encryption-with-Lithium">encryption</a> and <a href="http://en.wikipedia.org/wiki/HMAC">HMAC</a> exist, but still they lack the dynamic part of backend databases.</p>
-
 <p>On the server-side, you can usually choose between either a storage mechanism provided by your language/application server or a standalone software. For example, PHP provides a <a href="http://www.php.net/manual/en/reserved.variables.session.php">$_SESSION</a> superglobal that stores data across requests.  In Java, you can work with <a href="http://docs.oracle.com/cd/E17802_01/webservices/webservices/docs/1.6/api/javax/servlet/http/HttpSession.html">HttpSession</a> objects that allow you to do the same. All these mechanisms have one limitation: they are bound to the application container/webserver where the application is executed (therefore, they are called &ldquo;sticky&rdquo;). This means that when we need to use more than one application server to scale out at the same time and a <a href="http://haproxy.1wt.eu/">proxy</a> (or load balancer) routes the requests randomly, it is possible that application server 1 has no idea what sessions are active on application server 2. As a result, a user may be logged out on the next request.</p>
-
 <p>To overcome this issue, we need to refactor the session handling part out of the application server into a standalone software. This allows our application servers to read and write from a central session store and as a result all of them share the same session state.</p>
-
 <p>One of the oldest and most used software solutions is <a href="http://memcached.org/">memcached</a>. Memcached was developed by <a href="http://www.danga.com/">Danga Interactive</a> to remedy the scalability issues at <a href="http://www.livejournal.com/">LiveJournal</a>. It provides a distributed memory object caching system that has a key-based lookup mechanism and is fast because all data is stored in-memory. While memcached is amazing, it has one major limitation: it doesn&rsquo;t persist the data on disk, so if one server goes down it may take some time to prime the cache again (called warm-up time).</p>
-
 <p>Some developers identified the additional need and started a full protocol-compatible project that was eventually called <a href="http://en.wikipedia.org/wiki/Membase">Membase</a>. Aside from disk persistence, Membase provided more functionality like replication and live cluster reconfiguration. In 2011, Membase merged with CouchOone (the main driver behind <a href="http://couchdb.apache.org/">Apache CouchDB</a>) to form <a href="http://www.couchbase.com/">Couchbase</a>. Couchbase 1.8 is basically a renamed and slightly enhanced version of Membase, while Couchbase 2.0 (currently in developer preview release) adds incremental map/reduce, distributed indexing and cross-cluster replication.</p>
-
 <p>That&rsquo;s the short story on the origins of Couchbase. Note that there are lots of other awesome projects out there that help you achieve similar results, with <a href="http://redis.io/">Redis</a>, <a href="http://www.mongodb.org/">MongoDB</a> or <a href="http://wiki.basho.com/">Riak</a> as the more prominent ones. Espcially Redis provides more powerful data structures on top of the &ldquo;key/value&rdquo; pattern and is definitely worth a look.</p>
-
 <h2 id="implementation">Implementation</h2>
-
 <p>The most simple use case that all session stores need to fulfill is - of course - to store and read session data in a very performant way. Most of the time, a unique session identifier is used as the key and some arbitrary payload as the value (for example usernames, ids or other related data).</p>
-
 <p>Note that this post aims to be a SDK-independent introduction to the topic, and the exact syntax may vary a bit from SDK to SDK (I&rsquo;m using PHP here, but the syntax is nearly identical for the other SDKs). As the Couchbase API is similar to memcached, you should feel right at home if you&rsquo;ve used it already (at least for the basic commands).</p>
-
 <p>Couchbase provides you with <code>get</code> and <code>set</code> methods to read and store a value identified by a unique key. The key should be a string and the value preferably a JSON object. You can also store serialized or binary data, but you then loose the ability to query it through views. On the <code>set</code>-command, you can also pass in an optional expiration time, which comes in handy if you want to expire sessions automatically. Here&rsquo;s an example to store a session document:</p>
-
 <pre><code>$user = array(
     'username' =&gt; 'daschl',
     'fullname' =&gt; 'Michael Nitschinger'
@@ -100,40 +102,26 @@
 $document = json_encode($user);
 $couchbase-&gt;set('user:1234', $document, 60);
 </code></pre>
-
 <p>This stores the given JSON document with the key <code>user:1234</code> and a expiry time of 60 seconds in Couchbase. If you provide a expiry time that is larger than 30 days, Couchbase assumes that you pass in a unix timestamp (as a result, you can also pass absolute timestamps instead of relative ones).</p>
-
 <p>To read it back afterwards, you can use the <code>get</code> method:</p>
-
 <pre><code>$result = $couchbase-&gt;get('user:1234');
 </code></pre>
-
 <p>If you want to delete the key (for example to destroy the session), you can just remove the key:</p>
-
 <pre><code>$result = $couchbase-&gt;delete('user:1234');
 </code></pre>
-
 <p>You can also just &ldquo;touch&rdquo; the document, so that the expiry key will be refreshed:</p>
-
 <pre><code>$result = $couchbase-&gt;touch('user:1234', 60);
 </code></pre>
-
 <p>Of course that&rsquo;s just the simplest use case, but it is often enough to start with. If you&rsquo;re curious, you can also <a href="http://www.couchbase.com/docs/couchbase-sdk-php-1.1/api-reference-summary.html">look into</a> <code>getMulti</code> and <code>setMulti</code> to fetch more keys at the same time. One thing to remember is that when you specify an expiration time the key will only be deleted on the next fetch and not automatically. If you have a large batch of keys that you want to remove you need some kind of background script that touches them and makes sure they are actually deleted. Note that you can also wait for the Couchbase background job to delete the expired keys for you which runs every hour by default.</p>
-
 <p>Now, all of this can be done with nearly every key/value store out there (let&rsquo;s leave the other capabilities like replication and persistence out for now). Since CouchOne merged with Membase, Couchbase 2.0 includes a key feature of CouchDB: accessing your data through views.</p>
-
 <p>Let&rsquo;s assume we want to write an admin dashboard that allows us to monitor some of our application KPIs to help us understand the current load it is facing. To achieve this, we want to graph the following information in realtime:</p>
-
 <ul>
 <li>How many users are currently active on the website.</li>
 <li>How many users are currently logged in.</li>
 <li>All users that come from Vienna/Austria (since our website sells local food here in Austria).</li>
 </ul>
-
 <p>In order to achieve this, we need some way to differentiate if a user is just visiting the website or is logged in. Also, we need to store the location from where he is coming. Since this a more-or-less SDK-agnostic post, here are some hints how this could be done:</p>
-
 <p>When an anonymous user requests our website, we initiate a session that identifies him by his ip-address and does a lookup of his location based on some external information (for example the <a href="http://www.maxmind.com/app/geolite">MaxMind GeoLite database</a>). We store a session identifier in a cookie and the following document in Couchbase:</p>
-
 <pre><code>// Key: user:&lt;SESSION-IDENTIFIER&gt;
 {
     &quot;namespace&quot;: &quot;sessions&quot;,
@@ -144,9 +132,7 @@ $couchbase-&gt;set('user:1234', $document, 60);
     &quot;location&quot;: &quot;Vienna/Austria&quot;
 }
 </code></pre>
-
 <p>If the user is logged in, we can clear the old session and instantiate a new one with more details about our user:</p>
-
 <pre><code>// Key: user:&lt;SESSION-IDENTIFIER&gt;
 {
     &quot;namespace&quot;: &quot;sessions&quot;,
@@ -159,9 +145,7 @@ $couchbase-&gt;set('user:1234', $document, 60);
     &quot;name&quot;: &quot;&lt;full name&gt;&quot;
 }
 </code></pre>
-
 <p>The whole store, delete and update calls can be done with the basic methods described above, but what I want to concentrate on are the views. If you want to follow along, here is a short PHP script that populates the default bucket with some data to work with:</p>
-
 <pre><code>&lt;?php
     // Open the Connection
     $couchbase = new Couchbase(&quot;127.0.0.1:8091&quot;);
@@ -212,42 +196,31 @@ $couchbase-&gt;set('user:1234', $document, 60);
     }
 ?&gt;
 </code></pre>
-
 <p>Now that we have four documents to work with, we can start creating views from the Couchbase GUI. Head over to the &ldquo;Views&rdquo; section and click on &ldquo;Create Development View&rdquo;. The way Couchbase works is that you write your view queries in development mode on a subset of your documents and when you&rsquo;re finished you can publish them to production. Since we have only four documents in the bucket, it won&rsquo;t make any difference here.</p>
-
 <p>The name of our design document is <code>_design/dev_sessions</code> and the first view is called <code>active</code>. This one will return all currently logged in users:</p>
-
 <pre><code>function (doc) {
     if(doc.namespace == 'sessions') {
         emit(doc._id, doc);
     }
 }
 </code></pre>
-
 <p>If you save it and click <code>Show Results</code>, then you&rsquo;ll see all four documents below that got matched. You can also click on the URI string above <code>?connection_timeout=60000&amp;limit=10&amp;skip=0</code> to see the actual response in your browser. But what if we just want the total number of users logged in? We can use a built-in reduce function for that. In the &ldquo;Reduce&rdquo; textarea to the right just enter <code>_count</code>. If you click save and then show the results again, you can see that we just got one document back with no key and just <code>4</code> as the value.</p>
-
 <p>The nice thing here is that we can pass <code>reduce=true/false</code> as a param and then get either the full response back or just the aggregated version. So this query gives us all active users on the website. Let&rsquo;s write another view that just returns the logged in users:</p>
-
 <p>Modify the view like here and then click <code>Save As...</code> and name it <code>logged_in</code>:</p>
-
 <pre><code>function (doc) {
     if(doc.namespace == 'sessions' &amp;&amp; doc.type == 'user') {
         emit(doc._id, doc);
     }
 }
 </code></pre>
-
 <p>The reduce function can be reused in the same way. As you can see, with just a bit more code in JavaScript we have another view that just returns the logged in users. Now we want to display a third diagram that displays all users from <code>Vienna/Austria</code>. This time, we want to differentiate between anonymous and logged in users so that they can be displayed in two distinct graphs. Our map function may look like this:</p>
-
 <pre><code>function (doc) {
     if(doc.namespace == 'sessions' &amp;&amp; doc.location == 'Vienna/Austria') {
         emit(doc.type, 1);
     }
 }
 </code></pre>
-
 <p>Every time we find a document with the correct location, we emit a document with the key of either <code>anonymous</code> or <code>user</code>. As values we supply a value of <code>1</code> since we can reuse that in our reduce function. The reduce function is again the built in <code>_count</code> function, but this time we pass an additional param <code>group_level</code> with a value of <code>1</code> to our query. This way, Couchbase aggregates our data and returns a document like this:</p>
-
 <pre><code>// Params: ?group_level=1&amp;reduce=true&amp;connection_timeout=60000&amp;limit=10&amp;skip=0
 {
     &quot;rows&quot;: [
@@ -256,20 +229,15 @@ $couchbase-&gt;set('user:1234', $document, 60);
     ]
 }
 </code></pre>
-
 <p>If we insert another <code>user</code> document the counter would display <code>2</code>. If we don&rsquo;t use the grouping level setting, Couchbase would just return the total amount of documents emitted.</p>
-
 <p>All of these views assumed that we have some kind of realtime polling to our backend, because the results didn&rsquo;t include grouping by a distinct timestamp. In order to load a graph with meaningful results for the last hour, we can return it aggregated by timestamp (we can reuse the same <code>_count</code> reduce function and the level 1 grouping):</p>
-
 <pre><code>function (doc) {
     if(doc.namespace == 'sessions') {
         emit(doc.lastSeen, 1);
     }
 }
 </code></pre>
-
 <p>An example output would look like this:</p>
-
 <pre><code>// Params: ?group_level=1&amp;connection_timeout=60000&amp;limit=10&amp;skip=0
 {
     &quot;rows&quot;:[
@@ -278,59 +246,26 @@ $couchbase-&gt;set('user:1234', $document, 60);
     ]
 }
 </code></pre>
-
 <p>Now, if we have record for the last year in our database it won&rsquo;t make much sense to fetch them all on every request. If you look one entry below the <code>group_level</code> param, you&rsquo;ll find <code>startkey</code> and <code>endkey</code> options. With these two you can provide a timerange to fetch the results.</p>
-
 <h2 id="performance">Performance</h2>
-
 <p>I know that synthetic benchmarks never provide reproducible results in production environments, but they provide at least a rough estimation on how the application may be able to perform under certain conditions.</p>
-
 <p>Thankfully, <a href="http://trondn.blogspot.co.at/">Trond Norbye</a> added a nice little program to <a href="http://www.couchbase.com/develop/c/next">libcouchbase</a> that allows you to generate load on your Couchbase server and then analyze the response times directly on the console (of course you can get real-time metrics from the Couchbase GUI as well). The program is called <code>pillowfight</code> and is distributed with the source of libcouchbase. It stores a bunch of keys (1000 by default) and then runs &ldquo;mget&rdquo; operations on them and measures the time they need to get returned. In order to run it, you need to compile it from source (which I&rsquo;ll show in a later post but it&rsquo;s not that hard if you are used to compiling on unix-based systems).</p>
-
 <p>On my middle-class Dell notebook with an average processor (Core2 Duo P8700), 4 gigs of RAM and a SSD drive, 90% of the keys return in about 70 microseconds. If I look at the Couchbase GUI for my bucket, I can see that my instance runs somewhere between 10.000 and 12.000 operations per second. I recommend you to run this program on your dev machine just for fun and to get a feeling how it performs. It is also a handy way to generate a constant load on your Couchbase instances and add a large number of keys in an easy way (you can find more params with the -? switch).</p>
-
 <p>If you ran the program, it would be cool to share your results in the comments below.</p>
-
 <h2 id="wrapping-up">Wrapping Up</h2>
-
 <p>From both its history and current feature set, chances are that Couchbase is a possible solution to your session store needs. It provides you with both fast and flexible querying mechanisms and is capable to scale up to more nodes with just a few clicks if you need it to. There are definitely other good storage systems out there (like redis), so make sure to dig deeper into the concepts to find out if Couchbase is right for your application.</p>
-
 <p>As Couchbase 2.0 comes closer and closer to the final release, I think it&rsquo;s a good time to look into the system and see what it&rsquo;s capable of. Also, if you need any help I found that the guys behind Couchbase are very friendly and helpful. You can also ping me via twitter if you like!</p>
-
 <p>If you&rsquo;re just getting your feet wet with Couchbase, I also have two introductory posts on <a href="http://nitschinger.at/Getting-Started-with-Couchbase-and-PHP">PHP</a> and <a href="http://nitschinger.at/Accessing-Couchbase-from-Scala">Scala</a> that you may find helpful!</p>
-
 <p>Finally, kudos to <a href="http://twitter.com/ingenthr">@ingenthr</a> for reviewing this post and providing valuable insight into Couchbase.</p>
 
     </div>
-
-    <div id="disqus_thread"></div>
-<script type="application/javascript">
-    var disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "daschl" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
-
+ 
     <ul class="article-taxonomy">
-       
+      
+    
+      
       <li>
-        <i class="fa fa-tags"></i>
-        <a href="/%20tags/%20php">php</a>
-        <a href="/%20tags/%20couchbase">couchbase</a>
-        <a href="/%20tags/%20session">session</a>
+        <i class="fa fa-tags"></i><a href="/tags/php">php</a><a href="/tags/couchbase">couchbase</a><a href="/tags/session">session</a>
       </li>
       
   </article>
@@ -340,30 +275,24 @@ $couchbase-&gt;set('user:1234', $document, 60);
 <footer class="footer">
   <ul class="footer-links">
     <li>
-      <a href="https://nitschinger.at/index.xml" type="application/rss+xml" target="_blank">
-        <i class="fa fa-rss"></i> RSS feed</a>
+      <a href="/atom.xml" type="application/atom+xml" target="_blank"><i class="fa fa-rss"></i> Atom feed</a>
     </li>
     <li>
-      <a href="https://github.com/mobybit/hugo-natrium-theme">
-        <i class="fa fa-github"></i> Built with Hugo &amp; Natrium Theme</a>
+      <a href="https://github.com/daschl"><i class="fa fa-github"></i> GitHub</a>
+    </li>
+    <li>
+      <a href="https://twitter.com/daschl"><i class="fa fa-twitter"></i> Twitter</a>
+    </li>
+    <li>
+      <a href="https://www.linkedin.com/in/michaelnitschinger/"><i class="fa fa-linkedin"></i> LinkedIn</a>
     </li>
   </ul>
 </footer>
 
 </div>
 
-<script>
-  (function (i, s, o, g, r, a, m) {
-    i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
-      (i[r].q = i[r].q || []).push(arguments)
-    }, i[r].l = 1 * new Date(); a = s.createElement(o),
-      m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
-  })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
 
-  ga('create', 'UA-19686689-1', 'auto');
-  ga('send', 'pageview');
-  ga('set', 'anonymizeIp', true);
-</script>
+
 </body>
 
 </html>

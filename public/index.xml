@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>daschl writes. sometimes.</title>
@@ -6,9 +5,21 @@
     <description>Recent content on daschl writes. sometimes.</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Mon, 01 Apr 2019 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Mon, 28 Sep 2020 00:00:00 +0000</lastBuildDate>
     
         <atom:link href="https://nitschinger.at/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    
+    <item>
+      <title>Rusty-PID: Porting the TSic sensor from C to Rust</title>
+      <link>https://nitschinger.at/Rusty-PID-Porting-the-TSic-sensor-from-C-to-Rust/</link>
+      <pubDate>Mon, 28 Sep 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Rusty-PID-Porting-the-TSic-sensor-from-C-to-Rust/</guid>
+      <description>This post is part of my &amp;ldquo;Rusty-PID&amp;rdquo; series, in which you can follow my adventure building a PID Controller for my Rancilio Silvia in Rust.
+In this blog post we&amp;rsquo;ll dive into how to read temperature measurements from the TSic sensor in Rust. It goes pretty deep into the implementation details and the porting process, so if you just want to use it go straight to the tsic-rs repository and don&amp;rsquo;t look back.</description>
+    </item>
     
     
     
@@ -33,7 +44,8 @@ Here is how the documentation describes it succinctly:
       <pubDate>Mon, 02 Jan 2017 00:00:00 +0000</pubDate>
       
       <guid>https://nitschinger.at/Rust-on-the-Wifi-Pineapple-and-OpenWRT/</guid>
-      <description>Over the holidays I wanted to get a very simple Rust application running on my WiFi Pineapple Nano. Since I don&amp;rsquo;t have much experience with embedded systems and cross-compilation, it sounded like something fun to do and I was sure I might learn a thing or two. Many hours later and lots of frustration, I ended up with a simple solution that I&amp;rsquo;d like to share in this post.</description>
+      <description>Over the holidays I wanted to get a very simple Rust application running on my WiFi Pineapple Nano. Since I don&amp;rsquo;t have much experience with embedded systems and cross-compilation, it sounded like something fun to do and I was sure I might learn a thing or two. Many hours later and lots of frustration, I ended up with a simple solution that I&amp;rsquo;d like to share in this post.
+The major obstacle to overcome is building your own standard library, since Rust doesn&amp;rsquo;t ship with one for our target out of the box.</description>
     </item>
     
     
@@ -117,6 +129,539 @@ To get the best performance out of hour hardware, it is important to understand 
       <guid>https://nitschinger.at/Bootstrapping-from-DNS-SRV-records-in-Java/</guid>
       <description>I know this topic has a very narrow audience, but I hope that one or two people out there scratching their heads will benefit from it.
 Here&amp;rsquo;s the itch we&amp;rsquo;re trying to scratch: is there an easy way to determine hostnames for - let&amp;rsquo;s say - a database connection? There are many ways to do this, like hardcoding it, providing them through a properties file and so on. All this techniques (maybe aside from fetching it over the network from a central storage) require some modifications on the server once one of the hostnames changes.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Using JMH for Java Microbenchmarking</title>
+      <link>https://nitschinger.at/Using-JMH-for-Java-Microbenchmarking/</link>
+      <pubDate>Fri, 22 Nov 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Using-JMH-for-Java-Microbenchmarking/</guid>
+      <description>So before we dive in, let&amp;rsquo;s rule two things out. First, I&amp;rsquo;m not a JVM expert and second, microbenchmarking is hard. The bigger problem is that it isn&amp;rsquo;t only hard but also looks very easy if you start. You put your test code in a loop, use System.nanoTime or something similar to measure the total time of the run and divide it by the number of runs. Doing it that way, you could very well let your cat estimate the results (mine would do it for proper catnip).</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>What&#39;s new in the Couchbase Java SDK 1.2</title>
+      <link>https://nitschinger.at/What-s-new-in-the-Couchbase-Java-SDK-1-2/</link>
+      <pubDate>Fri, 11 Oct 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/What-s-new-in-the-Couchbase-Java-SDK-1-2/</guid>
+      <description>For all users of our Java SDK, we prepared some nice additions for you. This post covers them in detail and shows how you can get more productive.
+Note that this blog post assumes you are running the 1.2.1 release, because there have been some slight changes between 1.2.0 and 1.2.1 that affect for example the listener support and metrics collection.
+Maven Central Distribution From the 1.2.0 release forward, the Java SDK is distributed directly from Maven Central.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Using the Reactor Processor for High-Performance TCP</title>
+      <link>https://nitschinger.at/Using-the-Reactor-Processor-for-High-Performance-TCP/</link>
+      <pubDate>Tue, 13 Aug 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Using-the-Reactor-Processor-for-High-Performance-TCP/</guid>
+      <description>First, a disclaimer: the all-new Reactor framework is still under heavy development, but it already provides a very promising basement for applications and libraries that need high throughput and low latency. We at Couchbase aim to provide the highest throughput at the lowest latency, so it is very critical to build upon an infrastructure that can provide it. Current, we are performing early investigations for a possible &amp;ldquo;next generation Java SDK&amp;rdquo; and Reactor seems very promising so far.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Useful Couchbase Resources &amp; Blog Posts</title>
+      <link>https://nitschinger.at/Useful-Couchbase-Resources-Blog-Posts/</link>
+      <pubDate>Tue, 06 Aug 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Useful-Couchbase-Resources-Blog-Posts/</guid>
+      <description>The following list is a convenient way to get access to lots of resources, blog posts and material that have been shared throughout the past months. I tried to separate them by area, but of course lots of them overlap to some extent.
+They are sorted by date (so you&amp;rsquo;ll find the most recent ones on top) and include the author where possible. Be aware that some of the older articles may already be outdated or not 100% accurate.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Printing JVM generated Assembler on Mac OS X</title>
+      <link>https://nitschinger.at/Printing-JVM-generated-Assembler-on-Mac-OS-X/</link>
+      <pubDate>Mon, 24 Jun 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Printing-JVM-generated-Assembler-on-Mac-OS-X/</guid>
+      <description>Thankfully, the JVM abstracts all of the nitty gritty details from us. Sometimes though, we need to peel off the first layers and see what&amp;rsquo;s going on underneath. If you are curious (and here may be dragons) and want to learn about the actual assembler that your code is generating, the JVM provides mechanisms to inspect it.
+Since I wanted to make it work on my development machine and didn&amp;rsquo;t find something comprehensive for Mac, here is how to do it.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Fun with Couchbase Views and MessagePack</title>
+      <link>https://nitschinger.at/Fun-with-Couchbase-Views-and-Message-Pack/</link>
+      <pubDate>Tue, 18 Jun 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Fun-with-Couchbase-Views-and-Message-Pack/</guid>
+      <description>Alright, before we start I have to admit that this is a little bit of a hack. Not that it doesn&amp;rsquo;t work, but of course Couchbase Server 2.0 officially only supports JSON documents to be queried through Views. In addition to that, it is not so much known that you have access to all the other documents through Base64 encoding. Recently, Sergey showed us how to very easily analyze binary data in Couchbase Views and this brought me on the idea to take it one step further.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>A Couchbase Cluster in Minutes with Vagrant and Puppet</title>
+      <link>https://nitschinger.at/A-Couchbase-Cluster-in-Minutes-with-Vagrant-and-Puppet/</link>
+      <pubDate>Mon, 27 May 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/A-Couchbase-Cluster-in-Minutes-with-Vagrant-and-Puppet/</guid>
+      <description>Motivation Since I work as part of the engineering team at Couchbase, I need to run my code against a variety of server deployments. We run a multitude of operating systems and software versions, and so do our customers. In order to fix bugs reliably and build new features, it is critical to get a cluster up and running that resembles these deployments as good as possible. I know that I can run all of these combinations on EC2, but the cost for this would be very high and most of the time its overkill.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Logging with the Couchbase Java Client</title>
+      <link>https://nitschinger.at/Logging-with-the-Couchbase-Java-Client/</link>
+      <pubDate>Thu, 16 May 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Logging-with-the-Couchbase-Java-Client/</guid>
+      <description>Introduction There is a huge variety in logging frameworks for Java, and its hard to please everyone. To understand how logging is currently handled in the SDK, we have to go back a few years. As you may know, the SDK depends on the spymemcached library and therefore also inherits its logging mechanisms. Back in the days when @dustin wrote spy, there was no good abstraction for logging available (like SLF4J), so he wrote his own.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Couchbase Java SDK Internals</title>
+      <link>https://nitschinger.at/Couchbase-Java-SDK-Internals/</link>
+      <pubDate>Wed, 17 Apr 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Couchbase-Java-SDK-Internals/</guid>
+      <description>Motivation This blog post is intended to be a very detailed and informative article for those who already have used the Couchbase Java SDK and want to know how the internals work. This is not a introduction on how to use the Java SDK and we&amp;rsquo;ll cover some fairly advanced topics on the way.
+Normally, when talking about the SDK we mean everything that is needed to get you going (Client library, documentation, release notes,&amp;hellip;).</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Never awaitUninterruptibly() on Netty Channels</title>
+      <link>https://nitschinger.at/Never-await-Uninterruptibly-on-Netty-Channels/</link>
+      <pubDate>Tue, 05 Mar 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Never-await-Uninterruptibly-on-Netty-Channels/</guid>
+      <description>TL:DR; When acquiring Channels in Netty, always use a ChannelFutureListener and never awaitUninterruptibly(). Curious why? Read on.
+In the Java SDK for Couchbase, we use Netty to establish and maintain a streaming connection to one of the cluster nodes in order to get notified when topology changes happen. This streaming connection needs to be established during the bootstrap process of the client and we need to block until the connection is established (actually we don&amp;rsquo;t need to, but the current implementation works that way).</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>A Journey on Avoiding Nulls in PHP</title>
+      <link>https://nitschinger.at/A-Journey-on-Avoiding-Nulls-in-PHP/</link>
+      <pubDate>Tue, 19 Feb 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/A-Journey-on-Avoiding-Nulls-in-PHP/</guid>
+      <description>Let&amp;rsquo;s face it: nulls are a hassle and lead to exceptions and inconsistent application state. Tony Hoare, the inventor of QuickSort, even calls it his billion dollar mistake.
+While every developer has kind of accepted their existence, they are suddenly there when we&amp;rsquo;d desperately need them to not show up. How often did you writeif($obj === null) in your PHP code? Can&amp;rsquo;t there be a better, more elegant and fault-tolerant solution to the problem?</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Benchmarking Cache Transcoders in PHP</title>
+      <link>https://nitschinger.at/Benchmarking-Cache-Transcoders-in-PHP/</link>
+      <pubDate>Wed, 30 Jan 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Benchmarking-Cache-Transcoders-in-PHP/</guid>
+      <description>Motivation Storing PHP objects (or simpler data types like arrays) in caches always requires some kind of transformation. You need a way of encoding/decoding data so that it can be stored and loaded properly. In most languages, this process is known as object serialization. PHP provides a mechanism for this out of the box, but in this article we&amp;rsquo;ll also look at igbinary as a drop-in replacement for the default serializer.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Caching Doctrine Entities with Couchbase</title>
+      <link>https://nitschinger.at/Caching-Doctrine-Entities-with-Couchbase/</link>
+      <pubDate>Tue, 08 Jan 2013 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Caching-Doctrine-Entities-with-Couchbase/</guid>
+      <description>Motivation As part of our ongoing efforts to make Couchbase more integrated with frameworks and libraries, we added caching support for the Doctrine ORM. Recently, the pull request has been merged into the master branch and is scheduled to be published along with the 2.4 release.
+Caching can either be used standalone (through the API provided by doctrine/common) or integrated with the ORM functionality. We&amp;rsquo;ll look at both variants through simple examples, a good documentation can also be found here.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>New Features in the Couchbase Java Client 1.1-dp4</title>
+      <link>https://nitschinger.at/New-Features-in-the-Couchbase-Java-Client-1-1-dp4/</link>
+      <pubDate>Wed, 07 Nov 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/New-Features-in-the-Couchbase-Java-Client-1-1-dp4/</guid>
+      <description>Introduction The latest Java Developer Preview (dp4) is hot off the press, and therefore I thought it would be a good idea to show you how to use some of the brand-new features that are now available. This post will show you how to use the new ComplexKey class for view queries and also how to create and delete buckets directly from your SDK.
+First, we added a very flexible way of providing parameters to view queries.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>New Job, Couchbase Server 2.0 and CouchConf Berlin</title>
+      <link>https://nitschinger.at/New-Job-Couchbase-Server-2-0-and-Couch-Conf-Berlin/</link>
+      <pubDate>Mon, 22 Oct 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/New-Job-Couchbase-Server-2-0-and-Couch-Conf-Berlin/</guid>
+      <description>The last weeks have been pretty exciting for me. I joined Couchbase as a Developer Advocate mostly working on the Java and PHP SDKs as well as helping out developers who are getting started with our product or have questions during their development process.
+The 2.0 release is currently in beta and can be downloaded here, you may also want to look into the decent documentation put together by our docs team.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>ElasticSearch and SQL Server are sitting in a tree...</title>
+      <link>https://nitschinger.at/Elastic-Search-and-SQL-Server-are-sitting-in-a-tree/</link>
+      <pubDate>Mon, 20 Aug 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Elastic-Search-and-SQL-Server-are-sitting-in-a-tree/</guid>
+      <description>Motivation With modern NoSQL datastores on the rise, classical relational databases with their rigid data model get challenged every day. Nonetheless, they still own the market and therefore every developer needs to have solid skills in working with them in a reliable and performant way.
+While relational databases have lots of use cases, there are areas where different technologies are a much better fit. One of them is flexible and complex real-time searching.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>A Real-Time chat with Play, Java and Couchbase - Part 1</title>
+      <link>https://nitschinger.at/A-Real-Time-chat-with-Play-Java-and-Couchbase-Part-1/</link>
+      <pubDate>Tue, 17 Jul 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/A-Real-Time-chat-with-Play-Java-and-Couchbase-Part-1/</guid>
+      <description>Introduction I&amp;rsquo;ve been mostly blogging about PHP and Lithium, but recently I&amp;rsquo;ve also been looking into a very promising framework on the JVM - the play! framework. The current version (2.0) brings lots of enhancements and features and is (at least to me) the first framework that really boosts developer productivity on the JVM (and that I would work with in my free time).
+In this project, we&amp;rsquo;ll develop a chat application (called couchplay) that allows people to login with a username and then talk to others in real-time.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Announcing the Vienna PHP User Group</title>
+      <link>https://nitschinger.at/Announcing-the-Vienna-PHP-User-Group/</link>
+      <pubDate>Sat, 07 Jul 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Announcing-the-Vienna-PHP-User-Group/</guid>
+      <description>I&amp;rsquo;ve been looking for a decent PHP user group here in Vienna for some time. Sadly, I haven&amp;rsquo;t found even a bad one. Now, I&amp;rsquo;m trying to change this: meet viennaphp.org.
+My goal is to create a friendly, welcoming and informative user group that allows beginners and experts alike to share their experiences, opinions and knowledge. I have always met great people when I worked with the open-source community and I think lots of people around here would benefit from it too.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>How to store PHP sessions in Couchbase</title>
+      <link>https://nitschinger.at/How-to-store-PHP-sessions-in-Couchbase/</link>
+      <pubDate>Mon, 25 Jun 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/How-to-store-PHP-sessions-in-Couchbase/</guid>
+      <description>My last post about storing sessions in Couchbase was more of a general overview on what&amp;rsquo;s possible. This post builds on the foundations and principles discussed and shows you various ways to store PHP sessions in Couchbase. We start out simple by using the built-in session ini -directives, then head over to the brand new SessionHandlerInterface introduced in PHP 5.4 and finally implement it completely on our own. We&amp;rsquo;ll see how both the complexity and flexibility increase during each of our approaches.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Using Couchbase as a flexible session store</title>
+      <link>https://nitschinger.at/Using-Couchbase-as-a-flexible-session-store/</link>
+      <pubDate>Thu, 21 Jun 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Using-Couchbase-as-a-flexible-session-store/</guid>
+      <description>This post shows you how you can use the Couchbase 2.0 server as a flexible session store. What do I mean by flexible? Well, the combination of a highly scalable key-value store and the possibility to query your data through views allows you to gain unique insight inside your data in near realtime.
+Let&amp;rsquo;s look at some obstacles that we as application developers face and then see how we may solve them through Couchbase and its functionality.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Handling JSON like a boss in PHP</title>
+      <link>https://nitschinger.at/Handling-JSON-like-a-boss-in-PHP/</link>
+      <pubDate>Wed, 06 Jun 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Handling-JSON-like-a-boss-in-PHP/</guid>
+      <description>There are already lots of tutorials out there on handling JSON with PHP, but most of them don&amp;rsquo;t go much deeper than throwing an array against json_encode and hoping for the best. This article aims to be a solid introduction into JSON and how to handle it correctly in combination with PHP. Also, readers who don&amp;rsquo;t use PHP as their programming language can benefit from the first part that acts as a general overview on JSON.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>A primer on PHP exceptions</title>
+      <link>https://nitschinger.at/A-primer-on-PHP-exceptions/</link>
+      <pubDate>Tue, 22 May 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/A-primer-on-PHP-exceptions/</guid>
+      <description>Preface Exceptions are and should be an integral part of any general purpose programming language. PHP introduced them long ago (with the release of PHP 5 or 5.1), but it still seems that many of the concepts are not fully understood or ignored by the community. This post aims to be a solid introduction to exception architecture, handling and testing. At the end of the post you should be able to know when to raise an exception and how it should look like.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Writing a simple lexer in PHP</title>
+      <link>https://nitschinger.at/Writing-a-simple-lexer-in-PHP/</link>
+      <pubDate>Thu, 10 May 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Writing-a-simple-lexer-in-PHP/</guid>
+      <description>Introduction A lot of developers avoid writing parsers because they think it&amp;rsquo;s pretty hard to do so. Writing an efficient parser for a general purpose language (like PHP, Ruby, Java,&amp;hellip;) is hard, but fortunately, most of the time we don&amp;rsquo;t need that much complexity. Typically we just want to parse input coming from config files or from a specific problem domain (expressed through DSLs). DSLs (Domain Specific Languages) are pretty cool, because they allow you to express logic and flow in a very specific and convenient way for a limited set of tasks.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Accessing Couchbase from Scala</title>
+      <link>https://nitschinger.at/Accessing-Couchbase-from-Scala/</link>
+      <pubDate>Thu, 26 Apr 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Accessing-Couchbase-from-Scala/</guid>
+      <description>In my recent adventure on exploring both Couchbase and Scala, I noticed that there are not many tutorials out there using both at the same time. We&amp;rsquo;ll use the couchbase-java driver in its latest version (1.1), because it provides support for views and Couchbase 2.0. Note that I won&amp;rsquo;t cover installing Couchbase here, since there is plenty of material out there. Also, I assume you have scala and sbt already installed.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Getting Started with Couchbase and PHP</title>
+      <link>https://nitschinger.at/Getting-Started-with-Couchbase-and-PHP/</link>
+      <pubDate>Mon, 12 Mar 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Getting-Started-with-Couchbase-and-PHP/</guid>
+      <description>Couchbase is a simple, fast and elastic document-oriented database. It is the product of a merge between the companies behind Memcached (Membase) and CouchDB. The current version is 1.8 and the 2.0 version is already in a developer preview release. If you haven&amp;rsquo;t heard much about Couchbase yet, start at the Couchbase Webinar Series, which will get you up to speed. The full manual is available here.
+As there were a lot of merges, renamings and releases, it was pretty hard to follow up with the current/best database version and SDK to use for your project.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Introducing Relationships in Lithium</title>
+      <link>https://nitschinger.at/Introducing-Relationships-in-Lithium/</link>
+      <pubDate>Sat, 03 Mar 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Introducing-Relationships-in-Lithium/</guid>
+      <description>Introduction The model relationship support in Lithium is one of the hottest topics on IRC lately, so I thought it would be a good idea to blog about it.
+Currently, Lithium supports 1:1 and 1:n relationships for relational databases. There is no m:n support out of the box (like CakePHP&amp;rsquo;s $hasAndBelongsToMany). This also means that MongoDB relationships are not implemented for now. If you look at the Roadmap, you can see that this is on the &amp;ldquo;pre 1.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>RFC: li3_fixtures Rewrite</title>
+      <link>https://nitschinger.at/RFC-li3_fixtures-Rewrite/</link>
+      <pubDate>Fri, 24 Feb 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/RFC-li3_fixtures-Rewrite/</guid>
+      <description>The li3_fixtures plugin was my first Lithium plugin ever, and while it works okay, I feel there is a lot I can do to make it better and more flexible. In this post I want to share my ideas for a new fixture plugin and also want to gather feedback from the community to make it even more awesome.
+As far as I can see, there are three big use cases for fixtures:</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Playing with Composer and Lithium</title>
+      <link>https://nitschinger.at/Playing-with-Composer-and-Lithium/</link>
+      <pubDate>Mon, 23 Jan 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Playing-with-Composer-and-Lithium/</guid>
+      <description>About Composer Composer is a command-line tool that helps you manage your application dependencies. It automatically fetches packages, resolves dependencies and is easy to configure. The really good thing about Composer is that it isn&amp;rsquo;t bound to a specific framework and can be used with every kind of repository. Composer is similar to package managers like npm, so you may feel at home quickly.
+The default repository of Composer is Packagist.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Session Encryption with Lithium</title>
+      <link>https://nitschinger.at/Session-Encryption-with-Lithium/</link>
+      <pubDate>Fri, 20 Jan 2012 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Session-Encryption-with-Lithium/</guid>
+      <description>The Basics If you check out the master branch, you can use the new Encrypt strategy to encrypt your session data automatically. This means that you can read and write session data in cleartext and they will be encrypted on the fly before getting stored (in a cookie, for example). You can read my post about &amp;ldquo;baking cookies like a chef&amp;rdquo; for PHPAdvent 2011 here. The article covers both HMAC signatures and encryption, and is a good place to start.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Quick Tip: Lithium Redirect</title>
+      <link>https://nitschinger.at/Quick-Tip-Lithium-Redirect/</link>
+      <pubDate>Fri, 16 Sep 2011 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Quick-Tip-Lithium-Redirect/</guid>
+      <description>While migrating lithium_bin as part of research over to MongoDB (from CouchDB), I found the following snippet in the routes.php file:
+Router::connect(&#39;/&#39;, array(), function($request) { $location = array(&#39;controller&#39; =&amp;gt; &#39;pastes&#39;, &#39;action&#39; =&amp;gt; &#39;add&#39;); return new Response(compact(&#39;location&#39;)); });  This means that when the user enters the application via the root url (/), he instantly gets redirected to /pastes/add (or a different URL if you have custom routes configured).
+This may seem ok at first, but there&amp;rsquo;s a problem.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Letters from Lithium #2</title>
+      <link>https://nitschinger.at/Letters-from-Lithium-2/</link>
+      <pubDate>Mon, 05 Sep 2011 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Letters-from-Lithium-2/</guid>
+      <description>About Letters from Lithium keeps you up to date about what happens in the Lithium core and community. If you have interesting news to share, comment below or ping me on twitter.
+Core News Routing got a bit more awesome with route continuations. They allow you match more routes in one request, which is very useful in many cases. Take a look at this test case:
+/** * Tests that continuation routes properly fall through and aggregate multiple route parameters.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Letters from Lithium #1</title>
+      <link>https://nitschinger.at/Letters-from-Lithium-1/</link>
+      <pubDate>Tue, 02 Aug 2011 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Letters-from-Lithium-1/</guid>
+      <description>About &amp;ldquo;Letters from Lithium&amp;rdquo; will be published on a regular basis to give you an update on what happens in the Lithium community. If you have interesting topics/plugins/stuff you want to read about, feel free to contact me through twitter or email.
+Core News The Roadmap to 1.0 is going pretty well so far, and relationship support for relational databases has been already merged into master. For the impatient, there is also some documentation for it underway which can be found here.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Using Environments in Lithium</title>
+      <link>https://nitschinger.at/Using-Environments-in-Lithium/</link>
+      <pubDate>Tue, 19 Jul 2011 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Using-Environments-in-Lithium/</guid>
+      <description>Introduction Environments help you to manage multiple configurations for your application. Maybe you have a different database for testing than for production or you use file caching in development but APC in production. If your framework does not support this (or a similar) concept, it can be a pain to code this overhead for yourself. Therefore, Lithium frees you from this by providing a Environment class (in the \lithium\core namespace) which handles everything for you automatically.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Testing the Lithium core for fun and profit</title>
+      <link>https://nitschinger.at/Testing-the-Lithium-core-for-fun-and-profit/</link>
+      <pubDate>Sat, 09 Jul 2011 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Testing-the-Lithium-core-for-fun-and-profit/</guid>
+      <description>In modern web frameworks, testing is one of the most important pillars that ensure a clean, stable and extendable codebase. Testing support in Lithium was built in from the beginning and therefore it already features a great code coverage. The Lithium project aims to work out of the box on many platforms, including Microsoft Windows and its IIS, which was often neglected in the past.
+The main purpose of this post is to show you how core tests work and were the core team needs help to improve things further.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Lithium plugin roundup</title>
+      <link>https://nitschinger.at/Lithium-plugin-roundup/</link>
+      <pubDate>Wed, 22 Jun 2011 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Lithium-plugin-roundup/</guid>
+      <description>Note that this list is by no means complete. If you don&amp;rsquo;t find your own mentioned here, feel free to comment below. I&amp;rsquo;ve also tried to roughly group them so you can find them later more easily.
+Authentication &amp;amp; Security li3_access: Access control library by tmaiaroto.
+li3_ids: Intrusion detection integration (phpids) by weluse.
+li3_oauth: OAuth library by gwoo.
+APIs and Externals li3_delayed_job: Ruby&amp;rsquo;s Delayed::Job port to Lithium by cgarvis.
+li3_facebook: Facebook API wrapper by tmaiaroto.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Securing Lithium Forms</title>
+      <link>https://nitschinger.at/Securing-Lithium-Forms/</link>
+      <pubDate>Wed, 08 Jun 2011 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Securing-Lithium-Forms/</guid>
+      <description>CSRF (Cross-Site-Request-Forgery) attacks work by sending arbitary (form) requests from a victim. Normally, the receiving site (in our case the Controller who processes the form data) doesn&amp;rsquo;t know where the data comes from. The CSRF protection in Lithium aims to solve this problem in an elegant and secure way. You can read more about those attacks here. Note that you&amp;rsquo;ll need to clone the latest master branch of Lithium if you want to try it out now.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Custom Finders with Lithium</title>
+      <link>https://nitschinger.at/Custom-Finders-with-Lithium/</link>
+      <pubDate>Fri, 03 Jun 2011 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Custom-Finders-with-Lithium/</guid>
+      <description>Finders assist you with often-used database queries so you don&amp;rsquo;t have to write them over and over again. Out of the box, Lithium provides you with a bunch of them: all, first, count list and &amp;ldquo;magic finders like&amp;rdquo; findById or findFirstById. How these are constructed in the core is not relevant for now, but Lithium provides you with a mechanism to write your own finders easily.
+To understand how we can implement our own finder, let&amp;rsquo;s take a look at the built-in first one.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Caching responses in Lithium</title>
+      <link>https://nitschinger.at/Caching-responses-in-Lithium/</link>
+      <pubDate>Mon, 30 May 2011 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Caching-responses-in-Lithium/</guid>
+      <description>If you need to cache full Response objects in Lithium (which means that your controllers don&amp;rsquo;t even get called when there&amp;rsquo;s a cache hit), you can place this in your app/config/bootstrap/cache.php file (note that this is certainly not &amp;ldquo;production ready&amp;rdquo;, but it should give you a starting point):
+/** * Cache full Responses */ Dispatcher::applyFilter(&#39;run&#39;, function($self, $params, $chain) { $key = md5(LITHIUM_APP_PATH) . &#39;.app.cache.&#39;.md5($params[&#39;request&#39;]-&amp;gt;url); if($cache = Cache::read(&#39;default&#39;, $key)) { return $cache; } $result = $chain-&amp;gt;next($self, $params, $chain); Cache::write(&#39;default&#39;, $key, $result, &#39;+1 day&#39;); return $result; });  It filters the Dispatcher and first checks if the Response object is already stored in the cache.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Understanding the Lithium Router - Part 2</title>
+      <link>https://nitschinger.at/Understanding-the-Lithium-Router-Part-2/</link>
+      <pubDate>Thu, 24 Feb 2011 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Understanding-the-Lithium-Router-Part-2/</guid>
+      <description>Introduction Routes play an essential role in your request/response-cycle and therefore should also be tested like any other component that you develop. As the Lithium routing infrastructure also consists of classes and methods, we can run unit and integration tests against them.
+If we follow the testing conventions, we need to differentiate two distinct methods of testing. The first one (the so called &amp;ldquo;Unit Test&amp;quot;), is used to test your routes one by one, isolated from your application and ideally all dependencies are mocked away.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Understanding the Lithium Router - Part 1</title>
+      <link>https://nitschinger.at/Understanding-the-Lithium-Router-Part-1/</link>
+      <pubDate>Sat, 05 Feb 2011 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Understanding-the-Lithium-Router-Part-1/</guid>
+      <description>Introduction The router is an integral part of the framework and has two main purposes. The first one is to match a URL against a set of previously connected routes, the second one is to generate a URL from a set of arguments (reverse routing). The router itself is very flexible as we&amp;rsquo;ll see later on, but getting started is pretty easy. Lithium comes with a set of sensible default routes that help you to get on track immediately.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Understanding the Inflector</title>
+      <link>https://nitschinger.at/Understanding-the-Inflector/</link>
+      <pubDate>Thu, 16 Dec 2010 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Understanding-the-Inflector/</guid>
+      <description>Introduction The Inflector is one of many utility classes that ship with Lithium out of the box. Those classes are designed to assist you with common tasks that need to be done.
+One of those tasks may be to pluralize, singularize, camel-case or humanize strings, database keys or other dynamic content. Let&amp;rsquo;s see how the class itself is described:
+ Utility for modifying format of words. Change singular to plural and vice versa.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Introducing Fixtures for Lithium</title>
+      <link>https://nitschinger.at/Introducing-Fixtures-for-Lithium/</link>
+      <pubDate>Sat, 04 Dec 2010 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Introducing-Fixtures-for-Lithium/</guid>
+      <description>When you write tests for your classes (and you should), you may run into the problem that you create large arrays of test data in your code. Consider the following example:
+$expected = array( &#39;post1&#39; =&amp;gt; array( &#39;title&#39; =&amp;gt; &#39;My First Post&#39;, &#39;content&#39; =&amp;gt; &#39;First Content...&#39; ), &#39;post2&#39; =&amp;gt; array( &#39;title&#39; =&amp;gt; &#39;My Second Post&#39;, &#39;content&#39; =&amp;gt; &#39;Also some foobar text&#39; ), &#39;post3&#39; =&amp;gt; array( &#39;title&#39; =&amp;gt; &#39;My Third Post&#39;, &#39;content&#39; =&amp;gt; &#39;I like to write some foobar foo too&#39; ) ); $this-&amp;gt;assertEqual($expected[0], Post::first()); /* more tests down here */  This creates a nested array of test data where each inner array mocks a post stored in the database.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Write your own Helper with Lithium</title>
+      <link>https://nitschinger.at/Write-your-own-Helper-with-Lithium/</link>
+      <pubDate>Tue, 23 Nov 2010 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Write-your-own-Helper-with-Lithium/</guid>
+      <description>Lithium comes with two helpers out of the box. The Form-Helper and the Html-Helper. Both are great and help you to make your View-Code more flexible, maintainable and easier to read.
+But what do you do when you need a functionality that they don&amp;rsquo;t provide? Right, you write your own. Let&amp;rsquo;s imagine you want to tell your blog-readers how many posts you have stored in your database. In our first iteration our code might look like this:</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Add an RSS-Feed to your blog with Lithium</title>
+      <link>https://nitschinger.at/Add-an-RSS-Feed-to-your-blog-with-Lithium/</link>
+      <pubDate>Sat, 20 Nov 2010 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Add-an-RSS-Feed-to-your-blog-with-Lithium/</guid>
+      <description>Adding an RSS-Feed to your blog with li3 is really straightforward, because all the infrastructure you need is already at your fingertips. I assume that you already have some posts stored in your database, you serve them to your users via /posts and the new RSS-File should be accessible via /posts.rss.
+First, we need to tell Lithium that we want to add another Media-Type to our application. Add the following to your app/config/bootstrap/media.</description>
+    </item>
+    
+    
+    
+    <item>
+      <title>Lithium Routes And MongoDB</title>
+      <link>https://nitschinger.at/Lithium-Routes-And-Mongo-DB/</link>
+      <pubDate>Fri, 19 Nov 2010 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Lithium-Routes-And-Mongo-DB/</guid>
+      <description>Lithium comes with a powerful and flexible routing system. However, in its default configuration, you may encounter some problems with MongoDB-ObjectIDs and reverse routing. ObjectIDs are usually the &amp;ldquo;primary keys&amp;rdquo; of your Document in MongoDB, are 12 bytes long and consist of numbers and characters from &amp;lsquo;a&amp;rsquo; to &amp;lsquo;f&amp;rsquo;. A typical ObjectID would look similar to 4ce2d9f99436485e05000000.
+If you take a closer look at the default routes that ship with Lithium, you&amp;rsquo;ll maybe notice that the :id part only matches numbers (and not characters).</description>
     </item>
     
     
