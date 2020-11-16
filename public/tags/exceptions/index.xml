@@ -6,11 +6,7 @@
     <description>Recent content in exceptions on daschl writes. sometimes.</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Tue, 22 May 2012 00:00:00 +0000</lastBuildDate>
-    
-	<atom:link href="https://nitschinger.at/tags/exceptions/index.xml" rel="self" type="application/rss+xml" />
-    
-    
+    <lastBuildDate>Tue, 22 May 2012 00:00:00 +0000</lastBuildDate><atom:link href="https://nitschinger.at/tags/exceptions/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>A primer on PHP exceptions</title>
       <link>https://nitschinger.at/A-primer-on-PHP-exceptions/</link>

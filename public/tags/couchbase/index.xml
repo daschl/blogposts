@@ -6,11 +6,7 @@
     <description>Recent content in couchbase on daschl writes. sometimes.</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 29 Jan 2014 00:00:00 +0000</lastBuildDate>
-    
-	<atom:link href="https://nitschinger.at/tags/couchbase/index.xml" rel="self" type="application/rss+xml" />
-    
-    
+    <lastBuildDate>Wed, 29 Jan 2014 00:00:00 +0000</lastBuildDate><atom:link href="https://nitschinger.at/tags/couchbase/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Bootstrapping from DNS SRV records in Java</title>
       <link>https://nitschinger.at/Bootstrapping-from-DNS-SRV-records-in-Java/</link>

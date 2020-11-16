@@ -6,11 +6,7 @@
     <description>Recent content in tcp on daschl writes. sometimes.</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Tue, 13 Aug 2013 00:00:00 +0000</lastBuildDate>
-    
-	<atom:link href="https://nitschinger.at/tags/tcp/index.xml" rel="self" type="application/rss+xml" />
-    
-    
+    <lastBuildDate>Tue, 13 Aug 2013 00:00:00 +0000</lastBuildDate><atom:link href="https://nitschinger.at/tags/tcp/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Using the Reactor Processor for High-Performance TCP</title>
       <link>https://nitschinger.at/Using-the-Reactor-Processor-for-High-Performance-TCP/</link>

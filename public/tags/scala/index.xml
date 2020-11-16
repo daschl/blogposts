@@ -6,11 +6,7 @@
     <description>Recent content in scala on daschl writes. sometimes.</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 26 Apr 2012 00:00:00 +0000</lastBuildDate>
-    
-	<atom:link href="https://nitschinger.at/tags/scala/index.xml" rel="self" type="application/rss+xml" />
-    
-    
+    <lastBuildDate>Thu, 26 Apr 2012 00:00:00 +0000</lastBuildDate><atom:link href="https://nitschinger.at/tags/scala/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Accessing Couchbase from Scala</title>
       <link>https://nitschinger.at/Accessing-Couchbase-from-Scala/</link>

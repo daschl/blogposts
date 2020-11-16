@@ -6,11 +6,7 @@
     <description>Recent content in parser on daschl writes. sometimes.</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 10 May 2012 00:00:00 +0000</lastBuildDate>
-    
-	<atom:link href="https://nitschinger.at/tags/parser/index.xml" rel="self" type="application/rss+xml" />
-    
-    
+    <lastBuildDate>Thu, 10 May 2012 00:00:00 +0000</lastBuildDate><atom:link href="https://nitschinger.at/tags/parser/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Writing a simple lexer in PHP</title>
       <link>https://nitschinger.at/Writing-a-simple-lexer-in-PHP/</link>

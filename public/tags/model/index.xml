@@ -6,11 +6,7 @@
     <description>Recent content in model on daschl writes. sometimes.</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Fri, 03 Jun 2011 00:00:00 +0000</lastBuildDate>
-    
-	<atom:link href="https://nitschinger.at/tags/model/index.xml" rel="self" type="application/rss+xml" />
-    
-    
+    <lastBuildDate>Fri, 03 Jun 2011 00:00:00 +0000</lastBuildDate><atom:link href="https://nitschinger.at/tags/model/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Custom Finders with Lithium</title>
       <link>https://nitschinger.at/Custom-Finders-with-Lithium/</link>
