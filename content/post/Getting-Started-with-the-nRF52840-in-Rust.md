@@ -106,8 +106,8 @@ This tells us two things: first, the `println!` macro is not available (this is 
 [dependencies]
 cortex-m = "0.6.3"
 cortex-m-rt = "0.6.12"
-defmt = { git = "https://github.com/knurling-rs/defmt", branch = "main" }
-defmt-rtt = { git = "https://github.com/knurling-rs/defmt", branch = "main" }
+defmt = "0.1"
+defmt-rtt = "0.1"
 nrf52840-hal = "0.11.0"
 ```
 
@@ -171,13 +171,13 @@ target/thumbv7em-none-eabihf/debug/nrf52840dk-sample: target/thumbv7em-none-eabi
 
 We did not get any compile errors, but of course we cannot run an arm executable on our host machine. Time to flash our device!
 
-To do this, we need to install `probe-run`. For now we need to install it from git because we need the `defmt` support. At some point in the future I'm sure you can just install it from a stable version:
+To do this, we need to install `probe-run`:
 
 ```
-$ cargo install probe-run --git https://github.com/knurling-rs/probe-run.git --branch main -f --features defmt
+$ cargo install probe-run
 ```
 
-While this installs, we need to open our `.cargo/config.toml` file once again and enable the custom cargo runner:
+Note that if you had it installed before use the `-f` flag to override the older version. While this installs, we need to open our `.cargo/config.toml` file once again and enable the custom cargo runner:
 
 ```
 [target.'cfg(all(target_arch = "arm", target_os = "none"))']
