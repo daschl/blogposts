@@ -16,7 +16,7 @@ A note before we start: I'm using the TSic 306 sensor, which is a digital sensor
 # TSic 306 Fundamentals
 
  - [Data Sheet PDF](https://www.ist-ag.com/sites/default/files/DTTSic20x_30x_E.pdf)
- - [Application Notes PDF](https://www.ist-ag.com/sites/default/files/ATTSic_E.pdf)
+ - [Application Notes PDF](https://www.ist-ag.com/sites/default/files/attsic_e.pdf)
 
 The TSic 306 is a digital sensor which speaks the ZACWire protocol. It has an operating temperature range from -50°C to 150°C and a pretty good resolution. Please see the data sheet (linked above) for all the details. It comes in two different housings (SOP-8 and TO92) but in any case there are three pins that are important:
 

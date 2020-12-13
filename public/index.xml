@@ -5,9 +5,20 @@
     <description>Recent content on daschl writes. sometimes.</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 15 Nov 2020 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sat, 12 Dec 2020 00:00:00 +0000</lastBuildDate>
     
         <atom:link href="https://nitschinger.at/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    
+    <item>
+      <title>Digging into TSIC and ZACWire with the Saleae Logic Analyzer</title>
+      <link>https://nitschinger.at/Digging-into-TSIC-and-ZACWire-with-the-Saleae-Logic-Analyzer/</link>
+      <pubDate>Sat, 12 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://nitschinger.at/Digging-into-TSIC-and-ZACWire-with-the-Saleae-Logic-Analyzer/</guid>
+      <description>My first real adventure into the embedded world has been porting the TSIC temperature sensor code from arduino to Rust. While the code seems to work fine for my use case, there are some pieces in the code which I ported from C but always scratched my head about. I neither owned a Oscilloscope nor a Logic Analyzer, so I was flying blind and had to trust the code I was porting.</description>
+    </item>
     
     
     
